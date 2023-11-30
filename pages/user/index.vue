@@ -157,16 +157,6 @@
 			url: val
 		})
 	}
-	const gainUserAvailable = async () => {
-		const res = await fetchIntegralAccount('A0')
-		if (!res) return
-		integralList[1].value = res.content['000'].value
-	}
-	const showPage = () => {
-		console.log('onLoad =====>')
-		gainUserAvailable()
-	}
-	// onShow(showPage)
 </script>
 
 <style lang="scss" scoped>
