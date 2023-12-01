@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { store } from '@/store'
 import { storageGet, storageSet, storageRemove } from '@/utils/storage'
-import { login, getPrincipalAllInfo, getGeospatialList, getWxOpenId, userUpdateOpenId } from '@/apis/user/principal'
+import { getPrincipalAllInfo, getGeospatialList, getWxOpenId, userUpdateOpenId } from '@/apis/user/principal'
 import { COOKIE_DOMAIN } from '@/config/settings'
 import { usePermissionStoreHook } from './permission'
 import { setToken, setDistrict, removeToken } from '@/utils/auth'
-
+import { aesEncrypt } from '@/utils/cryptojs'
+import globalConfig from '@/config'
 const token = storageGet('authorized-token')
 
 export const useUserStore = defineStore({
@@ -48,40 +49,27 @@ export const useUserStore = defineStore({
 		SET_SCENE(value) {
 			this.scene = value
 		},
-		async thirdLogin(data) {
-			const res = await login(data)
-			if (res.statusCode === 200) {
-				const {
-					access_token,
-					token_type,
-					expires_in
-				} = res.data
-				storageSet('authorized-token', `${token_type} ${access_token}`)
-				uni.setStorageSync()
-				setToken(res.data)
-				usePermissionStoreHook().setAuthority()
-				if (data.username !== '11111112222') {
-					wx.login({
-						success: res => {
-							if (res.code) {
-								getWxOpenId(res.code).then(codeRes => {
-									if (codeRes && codeRes.content) {
-										userUpdateOpenId(codeRes.content.openid)
-									}
-								})
-							} else {
-								uni.showToast({
-									title: '登录失败！' + res.errMsg,
-									icon: 'none'
-								})
-							}
-						}
-					})
+		async thirdLogin(code) {
+			if (!code) return
+			const { content } = await getWxOpenId(code)
+			const openid = content.openid
+			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@WX_PM'))
+			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=thirdParty&openid=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
+			uni.request({
+				url: url,
+				method: 'POST',
+				success(res) {
+					if (res.statusCode === 200) {
+						const {
+							access_token,
+							token_type,
+							expires_in
+						} = res.data
+						setToken(res.data)
+						usePermissionStoreHook().setAuthority()
+					}
 				}
-				uni.redirectTo({
-					url: '/pages/index/index'
-				})
-			}
+			})
 		},
 		async setDict() {
 			const { content } = await getAllDictMap()

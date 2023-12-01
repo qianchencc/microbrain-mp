@@ -11,7 +11,7 @@ const headers = {}
 const successCode = [0]
 
 request.globalRequest = (url, method, data, isForm) => {
-	const token = 'bearer 6504306b-46e1-4709-ad0e-1634743e1c5f' // getToken()
+	const token = getToken()
 	const district = useUserStoreHook().getDistrict.id
 	headers['Authorization'] = token
 	headers['tenantCode'] = district

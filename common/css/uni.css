@@ -65,7 +65,7 @@ form {
 .uni-page-head {
 	/* padding: 35upx; */
 	/* text-align: center; */
-	 /* background-color: #4B96FB; */
+	/* background-color: #4B96FB; */
 	/* background-image: linear-gradient(#108CF4, #4B87FB);//偷颜色上下渐变色 */
 	/* background: linear-gradient(to right, #4B50FB, #4B55FB, #4B5AFB, #4B5FFB, #4B64FB, #4B69FB, #4B6EFB, #4B73FB, #4B78FB, #4B7DFB, #4B82FB, #4B87FB, #4B96FB) */
 }
@@ -476,6 +476,11 @@ checkbox-group label {
 	-webkit-transform: scaleY(.5);
 	transform: scaleY(.5);
 	background-color: #c8c7cc;
+}
+
+.uni-list:before,
+.uni-list:after {
+	background-color: transparent;
 }
 
 .uni-list-cell {
@@ -1226,7 +1231,6 @@ checkbox-group label {
 	position: relative;
 }
 
-
 .uni-timeline-item {
 	display: flex;
 	flex-direction: row;
@@ -1256,8 +1260,6 @@ checkbox-group label {
 	background-color: #bbb;
 }
 
-
-
 .uni-timeline-item-divider::before,
 .uni-timeline-item-divider::after {
 	position: absolute;
@@ -1275,7 +1277,6 @@ checkbox-group label {
 .uni-timeline-item-divider::after {
 	top: 100%;
 }
-
 
 .uni-timeline-last-item .uni-timeline-item-divider:after {
 	display: none;
@@ -1301,7 +1302,6 @@ checkbox-group label {
 .uni-timeline-last-item .uni-timeline-item-divider {
 	background-color: #1AAD19;
 }
-
 
 /* uni-icon */
 
@@ -1704,6 +1704,7 @@ checkbox-group label {
 	left: 0;
 	transform: translateY(50%);
 }
-.font-weight{
+
+.font-weight {
 	font-weight: bold;
 }

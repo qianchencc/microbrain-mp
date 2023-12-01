@@ -1,15 +1,31 @@
 <script>
+	import { useUserStoreHook } from '@/store/modules/user'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
+	import { getToken } from '@/utils/auth'
 	export default {
 		onLaunch: function() {
-			console.log('App Launch')
-			usePermissionStoreHook().setAuthority()
+			this.authLogin()
 		},
 		onShow: function() {
 			console.log('App Show')
 		},
 		onHide: function() {
 			console.log('App Hide')
+		},
+		methods: {
+			authLogin() {
+				if (getToken()) {
+					usePermissionStoreHook().setAuthority()
+				} else {
+					uni.login({
+						provider: 'weixin', //使用微信登录
+						success: function(loginRes) {
+							useUserStoreHook().thirdLogin(loginRes.code)
+						}
+					})
+				}
+
+			}
 		}
 	}
 </script>

@@ -255,10 +255,5 @@
 			border-radius: 15rpx;
 			padding: 10rpx 0;
 		}
-
-		.uni-list:before,
-		.uni-list:after {
-			background-color: transparent;
-		}
 	}
 </style>

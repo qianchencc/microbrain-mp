@@ -1,0 +1,16 @@
+{
+	"name": "microbrain-web",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"menu": "node createMenu.mjs"
+	},
+	"dependencies": {
+		"crypto-js": "^4.1.1",
+		"dayjs": "^1.11.4"
+	},
+	"devDependencies": {
+		"chalk": "^5.0.1",
+		"fs": "^0.0.1-security"
+	}
+}

@@ -14,16 +14,6 @@ export const getPrincipalAllGeospatial = () => request.globalRequest('/identity/
 // 地域空间列表
 export const getGeospatialList = (params) => request.globalRequest('/geospatial/all/list', 'GET', params)
 
-// 登录
-export const login = data => uni.request({
-	url: `${globalConfig.baseUrl}/identity/principal/login`,
-	data: data,
-	method: 'POST',
-	header: {
-		'content-type': 'application/x-www-form-urlencoded;charset=utf-8;'
-	}
-})
-
 // 微信根据code换手机号
 export const getPhoneNumberByCode = (code, source) => request.globalRequest(`/setting/wx/miniProgram/codeToPhone/v2/wans/${code}/${source}`, 'GET')
 
@@ -46,15 +36,10 @@ export const getJztMsg = () => request.globalRequest('/futurecommunity/mini/jtt/
 export const getElderMall = () => request.globalRequest('/futurecommunity/mini/elderSupermarket/code', 'GET')
 
 // 获取微信id
-export const getWxOpenId = (code) => request.globalRequest(`/setting/wx/miniProgram/codeToToken/v2/wans/${code}`, 'GET')
+export const getWxOpenId = (code) => request.globalRequest(`/wx/miniProgram/codeToToken/${code}`, 'GET')
 
 // 用户更新openid
 export const userUpdateOpenId = openId => request.globalRequest(`/identity/principal/wxOpenId/${openId}`, 'GET', { noShow: true })
 
 // 应用下发code获取
 export const getApplyOnAuthCode = data => request.globalRequest(`${applyAddress}/thirdparty/app/service/info/apply/code`, 'POST', data)
-
-// 获取应用列表
-export const fetchApplicationDistributionAppList = () => request.globalRequest('/futurecommunity/applicationDistribution/appList', 'GET')
-// 获取授权码
-export const fetchApplicationDistributionCode = data => request.globalRequest('/futurecommunity/applicationDistribution/code', 'GET', data)

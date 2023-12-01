@@ -1,0 +1,10 @@
+node_modules/
+unpackage/dist
+unpackage/cache
+unpackage/release
+unpackage/debug
+.vscode/
+.idea
+menu.sql
+.DS_Store
+*.iml
