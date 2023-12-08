@@ -24,7 +24,7 @@ export const uploadPrincipalFace = (data) => request.globalRequest('/identity/pr
 export const uploadAvatar = (data) => request.globalRequest('/identity/principal/portrait', 'PUT', data)
 
 // 修改个人信息
-export const updatePrincipalInfo = (id, data) => request.globalRequest(`/identity/principal/${id}`, 'PUT', data)
+export const updatePrincipalInfo = (id, data) => request.globalRequest(`/account/${id}/base/v2`, 'PUT', data)
 
 // 浙住通信息获取
 export const getZztMsg = () => request.globalRequest('/futurecommunity/mini/zzt/sso', 'POST')

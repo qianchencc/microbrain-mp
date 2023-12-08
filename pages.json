@@ -33,6 +33,26 @@
 			}
 		},
 		{
+			"path": "pages/user/principal",
+			"style": {
+				"navigationBarTitleText": "个人信息"
+			}
+		},
+		{
+			"path": "pages/user/info/name",
+			"style": {
+				"navigationBarTitleText": "更改名字"
+			}
+
+		},
+		{
+			"path": "pages/user/info/mobile",
+			"style": {
+				"navigationBarTitleText": "手机号"
+			}
+
+		},
+		{
 			"path": "pages/webView/index",
 			"style": {
 				"navigationBarTitleText": ""

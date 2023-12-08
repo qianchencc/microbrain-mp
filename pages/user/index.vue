@@ -2,12 +2,15 @@
 	<view class="content">
 		<view class="header-view">
 			<view class="header">
-				<img v-if="userInfo.portraitUrl" class="header-image" :src="globalConfig.fileAddr+userInfo.portraitUrl">
-				<img v-else class="header-image"
-					src="https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fpic2.zhimg.com%2F50%2Fv2-95baf91ff4a81c3504eb61d4eaa64f68_hd.jpg&refer=http%3A%2F%2Fpic2.zhimg.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1663753670&t=43b26098480afb171efe4449c254a2bb">
+				<img v-if="userInfo.avatar" class="header-image" :src="globalConfig.fileAddr+userInfo.avatar">
+				<view v-else class="header-image title-avatar">
+					<text>
+						{{userInfo.nickname?userInfo.nickname.charAt(0):userInfo.code.charAt(0)}}
+					</text>
+				</view>
 				<view>
 					<h3>
-						{{userInfo.personalName}}
+						{{userInfo.nickname}}
 					</h3>
 					<view>{{userInfo.code}}</view>
 					<uni-tag v-if="userInfo.faceAuthStatus" :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
@@ -231,6 +234,13 @@
 				border-radius: 50%;
 				margin: 30rpx;
 				border: 12upx solid rgba(255, 255, 255, .2);
+			}
+
+			.title-avatar {
+				font-size: 80rpx;
+				display: flex;
+				align-items: center;
+				justify-content: center;
 			}
 
 			.edit-con {
