@@ -17,12 +17,19 @@
 				if (getToken()) {
 					usePermissionStoreHook().setAuthority()
 				} else {
+					// #ifdef MP-WEIXIN
 					uni.login({
 						provider: 'weixin', //使用微信登录
 						success: function(loginRes) {
 							useUserStoreHook().thirdLogin(loginRes.code)
 						}
 					})
+					// #endif
+					// #ifndef MP-WEIXIN
+					uni.navigateTo({
+						url: '/pages/login/index'
+					})
+					// #endif
 				}
 
 			}

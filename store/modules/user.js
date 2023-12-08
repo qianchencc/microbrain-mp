@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { store } from '@/store'
 import { storageGet, storageSet, storageRemove } from '@/utils/storage'
-import { getPrincipalAllInfo, getGeospatialList, getWxOpenId, userUpdateOpenId } from '@/apis/user/principal'
+import { login, getPrincipalAllInfo, getGeospatialList, getWxOpenId, userUpdateOpenId } from '@/apis/user/principal'
 import { COOKIE_DOMAIN } from '@/config/settings'
 import { usePermissionStoreHook } from './permission'
 import { setToken, setDistrict, removeToken } from '@/utils/auth'
@@ -48,6 +48,32 @@ export const useUserStore = defineStore({
 		},
 		SET_SCENE(value) {
 			this.scene = value
+		},
+		async loginByUsername(model) {
+			const password = aesEncrypt(model.password)
+			const data = {
+				username: aesEncrypt(model.username),
+				password,
+				client_id: '2460feb0ab054e1e',
+				client_secret: 'smaEMjAyMzAzMTExNTI5MzgGQd'
+			}
+			login(data).then(async res => {
+					console.log(res)
+					if (res) {
+						const { token_type, access_token, expires_in } = res.content
+						const token = `${token_type} ${access_token}`
+						const expires = Math.ceil(expires_in / 60 / 60 / 24)
+						console.log(expires)
+						setToken(res.content)
+						usePermissionStoreHook().setAuthority()
+						uni.reLaunch({
+							url: '/pages/index/index'
+						})
+					}
+				})
+				.catch(error => {
+					reject(error)
+				})
 		},
 		async thirdLogin(code) {
 			if (!code) return

@@ -1,19 +1,7 @@
-import {
-	getToken
-} from '@/utils/auth'
+import { getToken } from '@/utils/auth'
 import globalConfig from '@/config'
-import {
-	useUserStoreHook
-} from "../store/modules/user";
-import {
-	menuFuc
-} from "./application";
-import {
-	createAppDailyActivity
-} from "../apis/user/menu";
-import {
-	parseTime
-} from '@/utils/datetime.js'
+import { useUserStoreHook } from "../store/modules/user";
+import { menuFuc } from "./application";
 import { ImageUrl } from '../config/settings';
 
 export const getStaticFile = url => {
@@ -79,14 +67,14 @@ export const gainTencentVideo = (vid) => {
 export const jumpUrl = async menu => {
 	// #ifdef MP-WEIXIN
 	console.log('jumpUrl menu ===>', menu)
-	if (menu.code) {
-		const data = {
-			appCode: menu.code
-		}
-		const res = await createAppDailyActivity(data)
-		if (!res) return
-		console.log('createAppDailyActivity ===>', res)
-	}
+	// if (menu.code) {
+	// 	const data = {
+	// 		appCode: menu.code
+	// 	}
+	// 	const res = await createAppDailyActivity(data)
+	// 	if (!res) return
+	// 	console.log('createAppDailyActivity ===>', res)
+	// }
 	if (menu.uri.startsWith('miniAppId=')) {
 		uni.navigateToMiniProgram({
 			appId: menu.uri.split('=')[1],
@@ -115,7 +103,7 @@ export const jumpUrl = async menu => {
 		})
 	} else {
 		location.href = menu.uri + (menu.uri.includes('?') ? '&token=' : '?token=') + getToken() +
-			'&district=' + useUserStoreHook().getDistrict.id + '&manage=manage'
+			'&tenantCode=' + useUserStoreHook().getDistrict.id
 	}
 	// #endif
 }
@@ -140,8 +128,4 @@ export function getUrl(val) {
 		base = ImageUrl
 	}
 	return base + val
-}
-
-export function formatTime(val) {
-	return val ? parseTime(val, '{y}-{m}-{d} {h}:{i}') : ''
 }

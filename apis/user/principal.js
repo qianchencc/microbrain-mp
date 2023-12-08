@@ -3,7 +3,7 @@ import globalConfig from '@/config'
 import { applyAddress } from '../../config/settings'
 
 // 登录
-// export const login = (data) => request.globalRequest(`/identity/principal/login`, 'POST', data)
+export const login = (data) => request.globalRequest(`/login/word/v2`, 'POST', data)
 
 // 查询用户的所有信息
 export const getPrincipalAllInfo = () => request.globalRequest('/account/me', 'GET')

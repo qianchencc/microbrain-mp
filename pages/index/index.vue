@@ -54,6 +54,7 @@
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { computed, reactive, ref, watch } from 'vue'
+	import { jumpUrl } from '@/utils/tools'
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const topMenu = [{
@@ -77,7 +78,25 @@
 		})
 	}
 	const handleScan = () => {}
-	const change = () => {}
+	const change = (e) => {
+		console.log(e)
+		const {
+			index
+		} = e.detail
+		const menu = menuList.value[index]
+		if (menu.name.includes('incomplete')) {
+			uni.showToast({
+				title: `敬请期待`,
+				icon: 'none'
+			})
+		} else if (menu.name === 'all') {
+			uni.navigateTo({
+				url: './all'
+			})
+		} else {
+			jumpUrl(menu)
+		}
+	}
 </script>
 
 <style lang="scss" scoped>
@@ -250,8 +269,8 @@
 		}
 
 		.box-img_back {
-			width: 99upx;
-			height: 99upx;
+			width: 79upx;
+			height: 79upx;
 			display: flex;
 			align-items: center;
 			justify-content: center;

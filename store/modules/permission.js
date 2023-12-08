@@ -29,7 +29,7 @@ const generateBtns = (routes) => {
 const noChangeUri = ['miniAppId', 'http', 'wxProgram'];
 
 const defaultIndex = [
-	'bkqaixcbtotgagc44zuyqa6ai5sc4y03', // 6 积分商城
+	'lyqqsb0f1lroirbvmn5uq2cigalmlcc9', // 6 访客管理
 	'mnehxitknpynyf7ymvbqrvepxxuv19gz', // 幸福学堂
 	'cb3hi2hwunjiel6hu3qeu5gnidic580l', // 1 党建引领
 	'fecxcinhfzvmwoyfwkgcbykq8cx027d5', // 2 睦邻在线
@@ -81,6 +81,7 @@ export const usePermissionStore = defineStore({
 			/* 注册路由 */
 			let data = []
 			if (MENU_MOCK) {
+
 				data = resource.find((v) => v.name === BASE_NAME).children
 			} else {
 				const {
@@ -97,7 +98,7 @@ export const usePermissionStore = defineStore({
 					// 2.uri不包含http,输入内部跳转，指定子页面
 					// 3.uri包含miniAppId, 属于小程序跳转
 					if (noChangeUri.every(item => !val.uri.includes(item))) {
-						val.uri = SCHEME + COOKIE_DOMAIN + `/${val.name.toLocaleLowerCase()}` + '/#' + (val.uri || '/')
+						val.uri = SCHEME + COOKIE_DOMAIN + `/${val.name.toLocaleLowerCase()}` + (val.uri || '/')
 					}
 				})
 			})
