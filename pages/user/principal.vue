@@ -9,8 +9,7 @@
 				</template>
 				<template v-slot:footer>
 					<image v-if="avatar" class="slot-image" :src="avatar"></image>
-					<img v-else class="slot-image"
-						src="https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fpic2.zhimg.com%2F50%2Fv2-95baf91ff4a81c3504eb61d4eaa64f68_hd.jpg&refer=http%3A%2F%2Fpic2.zhimg.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1663753670&t=43b26098480afb171efe4449c254a2bb">
+					<text v-else class="slot-image">无</text>
 				</template>
 			</uni-list-item>
 			<uni-list-item :border="false" title="名字" :rightText="userInfo.nickname" showArrow link="navigateTo" to="./info/name" />
@@ -39,7 +38,7 @@
 	import globalConfig from '@/config'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { chooseImg } from '@/utils/tools.js'
-	import { uploadAvatar } from '@/apis/user/principal.js'
+	import { updatePrincipalInfo } from '@/apis/user/principal.js'
 	import { goLogin } from '/utils/auth.js'
 
 	const faceAuthStatus = {
@@ -63,13 +62,15 @@
 
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 
-	const avatar = computed(() => globalConfig.fileAddr + userInfo.value.avatar)
-	const face = computed(() => globalConfig.fileAddr + userInfo.value.faceUrl)
+	const avatar = computed(() => userInfo.value.avatar ? globalConfig.ssoUrl + userInfo.value.avatar : null)
+	const face = computed(() => globalConfig.ssoUrl + userInfo.value.faceUrl)
 	const changeAvatar = () => {
 		chooseImg(1, async (uploadFileRes) => {
 			const res = JSON.parse(uploadFileRes.data)
-			const uploadRes = await uploadAvatar({
-				faceUrl: res.content
+			console.log(res);
+			const uploadRes = await updatePrincipalInfo(userInfo.value.id, {
+				...userInfo.value,
+				avatar: res.content,
 			})
 			if (!uploadRes) return
 			avatar.value = globalConfig.fileAddr + res.content
@@ -96,6 +97,7 @@
 	.slot-image {
 		width: 80rpx;
 		height: 80rpx;
+		line-height: 80rpx;
 		border-radius: 10rpx;
 	}
 </style>

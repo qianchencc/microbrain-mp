@@ -2,7 +2,7 @@
 	<view class="content">
 		<view class="header-view">
 			<view class="header">
-				<img v-if="userInfo.avatar" class="header-image" :src="globalConfig.fileAddr+userInfo.avatar">
+				<img v-if="userInfo.avatar" class="header-image" :src="globalConfig.ssoUrl+userInfo.avatar">
 				<view v-else class="header-image title-avatar">
 					<text>
 						{{userInfo.nickname?userInfo.nickname.charAt(0):userInfo.code.charAt(0)}}
@@ -12,7 +12,7 @@
 					<h3>
 						{{userInfo.nickname}}
 					</h3>
-					<view>{{userInfo.personalName}}</view>
+					<view>{{userInfo.code}}</view>
 					<uni-tag v-if="userInfo.faceAuthStatus" :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
 				</view>
 				<view class="edit-con" @click="changeAvatar">
