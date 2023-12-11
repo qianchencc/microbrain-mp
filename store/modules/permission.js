@@ -70,7 +70,6 @@ export const usePermissionStore = defineStore({
 			// 菜单排序
 			const homeMenu = allHomeMenu.sort((a, b) => defaultIndex.indexOf(a.id) - defaultIndex.indexOf(b.id))
 			homeMenu.push(all)
-			console.log(homeMenu);
 			return homeMenu
 		}
 	},

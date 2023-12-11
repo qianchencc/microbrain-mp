@@ -36,10 +36,10 @@
 					<template v-for="(item, index) in menuList" :key="item.id">
 						<uni-grid-item :index="index">
 							<view class="grid-item-box">
-								<view class="box-img_back" v-if="!item.uri.includes('incomplete')">
+								<view class="box-img_back">
 									<image class="box-img" :src="item.icon.startsWith('http') ? item.icon : `/static/images/home/${item.icon}`" alt="" />
 								</view>
-								<uni-icons class="box-img_back icon" v-else type="star" :size="30" :color="'#777'" />
+								<!-- <uni-icons class="box-img_back icon" v-else type="star" :size="30" :color="'#777'" /> -->
 								<text class="text">{{item.title}}</text>
 							</view>
 						</uni-grid-item>
@@ -55,6 +55,7 @@
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { computed, reactive, ref, watch } from 'vue'
 	import { jumpUrl } from '@/utils/tools'
+	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const topMenu = [{
@@ -77,7 +78,43 @@
 			url: './indexlist'
 		})
 	}
-	const handleScan = () => {}
+	const handleScan = () => {
+		// #ifdef MP
+		uni.scanCode({
+			success: function(res) {
+				try {
+					const data = JSON.parse(res.result) || ''
+					console.log(data);
+					if (data.type === 'visitor') {
+						if (false && new Date().getTime() - data.time > 60 * 1000) {
+							uni.showToast({
+								title: '刷新二维码重试',
+								icon: 'none'
+							});
+						} else {
+							uni.navigateTo({
+								url: `/pages/webView/index?path=${SCHEME}${COOKIE_DOMAIN}${data.path}&id=${data.id}`,
+								animationType: 'pop-in'
+							})
+						}
+					}
+				} catch (e) {
+					//TODO handle the exception
+					console.log(e);
+				}
+			}
+
+		})
+		// #endif
+		// #ifdef H5
+		uni.scanCode({
+			success(res) {
+				console.log(res);
+			}
+		})
+		// location.href = 'http://172.16.255.232:9877/visitors/sign?id=f3e60f4c32a7ae40d338297ff41281dd'
+		// #endif
+	}
 	const change = (e) => {
 		console.log(e)
 		const {
