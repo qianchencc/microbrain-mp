@@ -29,18 +29,15 @@ const generateBtns = (routes) => {
 const noChangeUri = ['miniAppId', 'http', 'wxProgram'];
 
 const defaultIndex = [
-	'lyqqsb0f1lroirbvmn5uq2cigalmlcc9', // 6 访客管理
-	'mnehxitknpynyf7ymvbqrvepxxuv19gz', // 幸福学堂
 	'cb3hi2hwunjiel6hu3qeu5gnidic580l', // 1 党建引领
-	'fecxcinhfzvmwoyfwkgcbykq8cx027d5', // 2 睦邻在线
-	'rhxsblfjlhtlatvr6yuwtqxx01ahctvo', // 3 跳蚤市场
-	'tptinhmrfh4qqdj68e7lo2lfj61aenpp', // 4 我要求助
-	'mdeeggfbwdvp0vjfeikes1pvwb22gumd', // 5 便民热线
-	'stmskymriwljg2yq3xkj6xl0fsvug0ko', // 7 活动中心
-	'xf0jjulbifuwreacps3spurpe0t1yhdw', // 8 投票中心
-	'ik3mp1vh2gvxrmnaoztr2omtlpgbhrri', // 9 幸运转盘
-	'ackjlekm3dx1l9u7zczatliccrjzmulc', // 10 调查问卷
-	'yvtw53zzy2qtjm7y0pewqrk4xp4cdod3', // 11 知识题
+	'ebiu0rbag72oysevwitsjvuv8pjfqka4', // 2 智慧门禁
+	'pfi0bimwq4cwlwb30fpmkcuaokcloeer', // 3 智慧停车
+	'braam9wwxsy9vphu2omy7aevrfegvt3y', // 4 视频监控
+	'yj7syptaz0vkpdfk3duqptti6nzzvd7l', // 5 智慧巡更
+	'vhfvtycebjqorpijhcj7u8gqwpaeamj7', // 6 访客管理
+	'pxstjr5bjr7eh3mf5ui4rofdbpfzf3je', // 7 空间预约
+	'qb9vtuad3ruonmsmdi2rm9rqrsoej8b9', // 8 能耗管理
+	'y0z8vu9wigh52gfehulmmdcfo7yn3xu5', // 9 事件协同
 ];
 
 const all = {
@@ -73,6 +70,7 @@ export const usePermissionStore = defineStore({
 			// 菜单排序
 			const homeMenu = allHomeMenu.sort((a, b) => defaultIndex.indexOf(a.id) - defaultIndex.indexOf(b.id))
 			homeMenu.push(all)
+			console.log(homeMenu);
 			return homeMenu
 		}
 	},

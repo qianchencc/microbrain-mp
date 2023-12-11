@@ -12,7 +12,7 @@
 					<h3>
 						{{userInfo.nickname}}
 					</h3>
-					<view>{{userInfo.code}}</view>
+					<view>{{userInfo.personalName}}</view>
 					<uni-tag v-if="userInfo.faceAuthStatus" :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
 				</view>
 				<view class="edit-con" @click="changeAvatar">
@@ -171,7 +171,7 @@
 
 		.header-view {
 			width: 100%;
-			background-color: #09C888;
+			background-color: #3974F6;
 			background-position: center;
 			background-repeat: no-repeat;
 			background-size: cover;

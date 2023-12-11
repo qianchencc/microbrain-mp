@@ -32,14 +32,14 @@
 						<image :src="item.icon" mode="aspectFit"></image>
 					</view>
 				</view>
-				<uni-grid :column="4" :square="false" :showBorder="false" @change="change">
-					<template v-for="(item, index) in menuList">
-						<uni-grid-item v-if="!item.uri.includes('incomplete')" :index="index" :key="item.id">
+				<uni-grid style="background-color: #fff;padding: 20rpx 0;border-radius: 10rpx;" :column="4" :square="false" :showBorder="false" @change="change">
+					<template v-for="(item, index) in menuList" :key="item.id">
+						<uni-grid-item :index="index">
 							<view class="grid-item-box">
 								<view class="box-img_back" v-if="!item.uri.includes('incomplete')">
 									<image class="box-img" :src="item.icon.startsWith('http') ? item.icon : `/static/images/home/${item.icon}`" alt="" />
 								</view>
-								<uni-icons class="icon" v-else type="star" :size="30" :color="'#777'" />
+								<uni-icons class="box-img_back icon" v-else type="star" :size="30" :color="'#777'" />
 								<text class="text">{{item.title}}</text>
 							</view>
 						</uni-grid-item>
@@ -103,7 +103,7 @@
 	.header-back {
 		position: absolute;
 		left: 0;
-		background-color: #09C888;
+		background-color: #3974F6;
 		height: 450rpx;
 		width: 750rpx;
 		// 记得加背景图片
@@ -269,16 +269,19 @@
 		}
 
 		.box-img_back {
-			width: 79upx;
-			height: 79upx;
+			width: 80upx;
+			height: 80upx;
+			background-color: #F5F5F5;
+			border-radius: 50%;
 			display: flex;
 			align-items: center;
 			justify-content: center;
+			margin: 0;
 		}
 
 		.box-img {
-			width: 100%;
-			height: 100%;
+			width: 46rpx;
+			height: 46rpx;
 			margin: 0;
 
 			&.incomplete {
@@ -293,7 +296,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			margin-bottom: 10upx;
+			// margin-bottom: 10upx;
 			background-color: #F5F5F5;
 		}
 	}

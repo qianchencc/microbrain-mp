@@ -91,7 +91,7 @@
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
 		"navigationBarTitleText": "智慧家",
-		"navigationBarBackgroundColor": "#09C888",
+		"navigationBarBackgroundColor": "#3974F6",
 		"backgroundColor": "#ffffff"
 	},
 	"uniIdRouter": {}
