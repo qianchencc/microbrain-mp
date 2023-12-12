@@ -45,7 +45,7 @@
 		<view class="list">
 			<uni-list :border="false">
 				<!--<uni-list-item :border="false" title="我是达人" showArrow clickable @click="toWebView('master')" />-->
-				<uni-list-item :border="false" title="我是业主" showArrow link="navigateTo" to="./owner" />
+				<uni-list-item :border="false" title="组织绑定" showArrow link="navigateTo" to="./owner" />
 				<uni-list-item :border="false" title="我是租户" showArrow link="navigateTo" to="./tenant" />
 			</uni-list>
 		</view>

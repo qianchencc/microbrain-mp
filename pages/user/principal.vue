@@ -12,8 +12,8 @@
 					<text v-else class="slot-image">无</text>
 				</template>
 			</uni-list-item>
-			<uni-list-item :border="false" title="名字" :rightText="userInfo.nickname" showArrow link="navigateTo" to="./info/name" />
-			<uni-list-item :border="false" title="电话" :rightText="userInfo.mobileNumber" showArrow link="navigateTo" to="./info/mobile" />
+			<uni-list-item :border="false" title="昵称" :rightText="userInfo.nickname" showArrow link="navigateTo" to="./info/name" />
+			<!-- <uni-list-item :border="false" title="电话" :rightText="userInfo.mobileNumber" showArrow link="navigateTo" to="./info/mobile" /> -->
 			<!-- <uni-list-item :border="false" link @click="changeFace()">
 				<template v-slot:header>
 					<view class="slot-box">

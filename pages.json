@@ -33,6 +33,12 @@
 			}
 		},
 		{
+			"path": "pages/user/owner",
+			"style": {
+				"navigationBarTitleText": "组织绑定"
+			}
+		},
+		{
 			"path": "pages/user/principal",
 			"style": {
 				"navigationBarTitleText": "个人信息"
