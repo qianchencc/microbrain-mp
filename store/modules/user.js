@@ -79,7 +79,7 @@ export const useUserStore = defineStore({
 			if (!code) return
 			const { content } = await getWxOpenId(code)
 			const openid = content.openid
-			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@WX_PM'))
+			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@WX_MP'))
 			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=thirdParty&openid=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			uni.request({
 				url: url,

@@ -77,7 +77,7 @@ export const usePermissionStore = defineStore({
 		async setAuthority() {
 			/* 注册路由 */
 			let data = []
-			if (MENU_MOCK) {
+			if (true || MENU_MOCK) {
 
 				data = resource.find((v) => v.name === BASE_NAME).children
 			} else {

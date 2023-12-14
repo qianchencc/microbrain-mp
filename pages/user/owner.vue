@@ -12,11 +12,14 @@
 					<uni-forms-item label="联系方式" required name="mobileNumber">
 						<uni-easyinput :clearable="false" v-model="formDate.mobileNumber" placeholder="请输入联系方式" />
 					</uni-forms-item>
-					<uni-forms-item label="备注" type="textarea" name="remarks">
-						<uni-easyinput v-model="formDate.remarks" placeholder="请输入备注" />
+					<uni-forms-item label="备注" name="remarks">
+						<uni-easyinput :clearable="false" type="textarea" v-model="formDate.remarks" placeholder="请输入备注" />
+					</uni-forms-item>
+					<uni-forms-item v-if="formDate.checkRemarks" label="审核建议" name="checkRemarks">
+						<uni-easyinput :clearable="false" type="textarea" v-model="formDate.checkRemarks" />
 					</uni-forms-item>
 				</uni-forms>
-				<button type="primary" @click="submit">{{disabled?status[formDate.status]:'提交'}}</button>
+				<button :type="status[formDate.status].type" @click="submit">{{disabled?status[formDate.status].text:'提交'}}</button>
 			</view>
 		</uni-section>
 	</view>
@@ -63,9 +66,18 @@
 	}
 	const disabled = ref(false)
 	const status = {
-		TO_BE: '待审核',
-		ACCEPT: '已通过',
-		REJECT: '已拒绝'
+		TO_BE: {
+			text: '待审核',
+			type: 'primary'
+		},
+		ACCEPT: {
+			text: '已接受',
+			type: 'primary'
+		},
+		REJECT: {
+			text: '已拒绝',
+			type: 'warn'
+		}
 	}
 	const getConfirmation = async () => {
 		const res = await fecthMyConfirmation()
@@ -94,8 +106,8 @@
 	const branchChange = (val) => {
 		console.log(val);
 		branchList.value.forEach(ele => {
-			if (ele.id === val) {
-				formDate.value.branchName = ele.orgName
+			if (ele.value === val) {
+				formDate.value.branchName = ele.text
 			}
 		})
 	}

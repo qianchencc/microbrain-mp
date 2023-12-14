@@ -31,11 +31,11 @@ export const SCHEME = TO_TEST ? 'http://' : 'https://'
 
 // #ifdef MP-WEIXIN
 // 生产环境主域名
-export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.10' : 'fcsq.longwan.gov.cn'
+export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.32:28087' : 'fcsq.longwan.gov.cn'
 // #endif
 // #ifdef H5
 // 生产环境主域名
-export const COOKIE_DOMAIN = MENU_MOCK ? (TO_TEST ? '172.16.255.10' : 'fcsq.longwan.gov.cn') : location.origin
+export const COOKIE_DOMAIN = MENU_MOCK ? (TO_TEST ? '172.16.255.32:28087' : 'fcsq.longwan.gov.cn') : '172.16.255.32:28087'
 // #endif
 
 export const ImageUrl = TO_TEST ? 'https://filecommunity.wzscr.cn/future-community/' : 'https://fcsq.longwan.gov.cn/s3oss/t720y28035/'

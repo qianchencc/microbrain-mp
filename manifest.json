@@ -81,6 +81,10 @@
                     "target" : "http://172.16.255.32:28087"
                 }
             }
+        },
+        "router" : {
+            "mode" : "hash",
+            "base" : "/portal/"
         }
     }
 }
