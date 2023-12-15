@@ -9,6 +9,12 @@
 			}
 		},
 		{
+			"path": "pages/index/all",
+			"style": {
+				"navigationBarTitleText": "全部应用"
+			}
+		},
+		{
 			"path": "pages/index/indexlist",
 			"style": {
 				"navigationBarTitleText": "小区列表"

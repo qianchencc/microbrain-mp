@@ -53,7 +53,8 @@ export const usePermissionStore = defineStore({
 	id: 'ehe-permission',
 	state: () => ({
 		accessBtns: [],
-		menuList: []
+		menuList: [],
+		homeMenuIndex: storageGet('homeMenuIndex') || defaultIndex
 	}),
 	getters: {
 		getAccessBtns() {
@@ -61,6 +62,9 @@ export const usePermissionStore = defineStore({
 		},
 		getMenuList() {
 			return this.menuList || []
+		},
+		getHomeMenuIndex() {
+			return this.homeMenuIndex || storageGet('homeMenuIndex')
 		},
 		getHomeMenu() {
 			// 合并子模块菜单，整理出全部菜单
@@ -74,6 +78,10 @@ export const usePermissionStore = defineStore({
 		}
 	},
 	actions: {
+		setHomeMenuIndex(homeMenuIndex) {
+			this.homeMenuIndex = homeMenuIndex
+			storageSet('homeMenuIndex', homeMenuIndex)
+		},
 		async setAuthority() {
 			/* 注册路由 */
 			let data = []

@@ -37,7 +37,8 @@
 		"branchName": "",
 		"mobileNumber": "",
 		"remarks": "",
-		"validateCode": ""
+		"validateCode": "",
+		"status": 'TO_BE'
 	})
 
 	// 校验规则
