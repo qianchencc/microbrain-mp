@@ -1,6 +1,6 @@
 <template>
 	<view class="page">
-		<view style="background-color: #fff;margin-bottom: 20rpx;">
+		<view style="background-color: #fff;margin-bottom: 20rpx">
 			<view class="header-back"></view>
 			<view class="header-bar">
 				<view class="address" @click="open">
@@ -153,6 +153,9 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 25upx;
+		/* #ifdef APP-PLUS */
+		padding-top: 40px;
+		/* #endif */
 
 		.input-view {
 			display: flex;

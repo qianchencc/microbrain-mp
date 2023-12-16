@@ -33,6 +33,9 @@ export const SCHEME = TO_TEST ? 'http://' : 'https://'
 // 生产环境主域名
 export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.32:28087' : 'fcsq.longwan.gov.cn'
 // #endif
+// #ifdef APP-PLUS
+export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.32:28087' : 'fcsq.longwan.gov.cn'
+// #endif
 // #ifdef H5
 // 生产环境主域名
 export const COOKIE_DOMAIN = MENU_MOCK ? (TO_TEST ? '172.16.255.32:28087' : 'fcsq.longwan.gov.cn') : '172.16.255.32:28087'

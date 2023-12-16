@@ -77,9 +77,16 @@ export const useUserStore = defineStore({
 		},
 		async thirdLogin(code) {
 			if (!code) return
+			// #ifdef MP-WEIXIN
 			const { content } = await getWxOpenId(code)
 			const openid = content.openid
 			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@WX_MP'))
+			// #endif
+			// #ifdef APP-PLUS
+			const openid = code
+			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@APP'))
+			// #endif
+			console.log(openid);
 			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=thirdParty&openid=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			uni.request({
 				url: url,
@@ -94,7 +101,11 @@ export const useUserStore = defineStore({
 						setToken(res.data)
 						usePermissionStoreHook().setAuthority()
 					}
+				},
+				fail(e) {
+					console.log(e);
 				}
+
 			})
 		},
 		async setDict() {

@@ -38,7 +38,8 @@
 		"mobileNumber": "",
 		"remarks": "",
 		"validateCode": "",
-		"status": 'TO_BE'
+		"status": 'TO_BE',
+		"socialsService": "WECHATOPEN"
 	})
 
 	// 校验规则
@@ -105,7 +106,6 @@
 	}
 
 	const branchChange = (val) => {
-		console.log(val);
 		branchList.value.forEach(ele => {
 			if (ele.value === val) {
 				formDate.value.branchName = ele.text
@@ -113,25 +113,15 @@
 		})
 	}
 
-	// 上传成功
-	const uploadEnd = (item) => {
-		if (item['responseText']) {
-			const res = JSON.parse(item.responseText)
-			if (res.code === 200) {
-				formDate.value.faceUrl = res.content
-			} else {
-				formDate.value.faceUrl = ''
-				uni.showToast({
-					title: '上传失败',
-					icon: 'none'
-				})
-			}
-		}
-	}
-
 	const submit = async (ref) => {
 		if (disabled.value) return
 		valiForm.value.validate().then(async data => {
+			// #ifdef APP
+			formDate.value.socialsService = "APP"
+			// #endif
+			// #ifdef MP-WEIXIN
+			formDate.value.socialsService = "WECHATOPEN"
+			// #endif
 			const res = await createConfirmation(formDate.value)
 			console.info(res)
 			if (res.code !== 201) return

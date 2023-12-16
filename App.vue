@@ -25,9 +25,18 @@
 						}
 					})
 					// #endif
-					// #ifndef MP-WEIXIN
+					// #ifdef H5
 					uni.navigateTo({
 						url: '/pages/login/index'
+					})
+					// #endif
+					// #ifdef APP-PLUS
+					uni.getPushClientId({
+						success(res) {
+							console.log(res);
+							let push_clientid = res.cid
+							useUserStoreHook().thirdLogin(res.cid)
+						}
 					})
 					// #endif
 				}
