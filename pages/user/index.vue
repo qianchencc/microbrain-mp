@@ -160,6 +160,26 @@
 			url: val
 		})
 	}
+	const pushTest = () => {
+		uni.request({
+			method: 'POST',
+			url: 'https://fc-mp-5f22d5b4-17e7-4822-ac80-68d07c2a2201.next.bspapp.com/push',
+			data: {
+				a: 1,
+				b: 2
+			},
+			success(res) {
+				console.log(res);
+			}
+		})
+		uniCloud.callFunction({
+			name: 'uni-push',
+			data: { a: '李卫国', b: 2 },
+			success(res) {
+				console.log(res);
+			},
+		})
+	}
 </script>
 
 <style lang="scss" scoped>

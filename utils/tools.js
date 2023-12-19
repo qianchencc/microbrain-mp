@@ -109,6 +109,15 @@ export const jumpUrl = async menu => {
 			'&tenantCode=' + useUserStoreHook().getDistrict.id
 	}
 	// #endif
+	// #ifdef APP-PLUS
+	if (menuFuc[menu.name]) {
+		menuFuc[menu.name](menu)
+	} else {
+		uni.navigateTo({
+			url: '/pages/webView/index?path=' + menu.uri
+		})
+	}
+	// #endif
 }
 
 // str:变量；frontNum:前面显示位数；afterNum:后面显示位数

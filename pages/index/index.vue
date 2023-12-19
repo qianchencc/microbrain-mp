@@ -100,7 +100,7 @@
 					}
 				} catch (e) {
 					//TODO handle the exception
-					console.log(e);
+					console.log(e)
 				}
 			}
 
@@ -112,7 +112,6 @@
 				console.log(res);
 			}
 		})
-		// location.href = 'http://172.16.255.232:9877/visitors/sign?id=f3e60f4c32a7ae40d338297ff41281dd'
 		// #endif
 	}
 	const change = (e) => {

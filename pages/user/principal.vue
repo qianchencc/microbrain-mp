@@ -39,7 +39,7 @@
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { chooseImg } from '@/utils/tools.js'
 	import { updatePrincipalInfo } from '@/apis/user/principal.js'
-	import { goLogin } from '/utils/auth.js'
+	import { checkToken } from '/utils/auth.js'
 
 	const faceAuthStatus = {
 		'TO_BE_AUTH': {
@@ -86,7 +86,7 @@
 			complete: () => {}
 		})
 	}
-	onMounted(goLogin)
+	onMounted(checkToken)
 </script>
 
 <style lang="scss">

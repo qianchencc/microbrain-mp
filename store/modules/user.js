@@ -58,7 +58,6 @@ export const useUserStore = defineStore({
 				client_secret: 'smaEMjAyMzAzMTExNTI5MzgGQd'
 			}
 			login(data).then(async res => {
-					console.log(res)
 					if (res) {
 						const { token_type, access_token, expires_in } = res.content
 						const token = `${token_type} ${access_token}`
@@ -86,7 +85,6 @@ export const useUserStore = defineStore({
 			const openid = code
 			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@APP'))
 			// #endif
-			console.log(openid);
 			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=thirdParty&openid=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			uni.request({
 				url: url,
@@ -137,20 +135,28 @@ export const useUserStore = defineStore({
 		},
 		// 登出 清空缓存
 		logOut() {
-			// #ifdef MP-WEIXIN
-			// console.log('logOUt --------', token)
-			// uni.redirectTo({
-			// 	url: '/pages/login/index'
-			// })
-			// #endif
 			removeToken()
 			uni.clearStorageSync();
-			// const data = {
-			// 	username: '11111112222',
-			// 	word: aesEncrypt('bff3b97e0e57a9e130c9e71128e41f26'),
-			// 	type: 'third_party'
-			// }
-			useUserStoreHook().thirdLogin(data)
+			// #ifdef MP-WEIXIN
+			uni.login({
+				provider: 'weixin', //使用微信登录
+				success: function(loginRes) {
+					this.thirdLogin(loginRes.code)
+				}
+			})
+			// #endif
+			// #ifdef APP-PLUS
+			uni.getPushClientId({
+				success: (res) => {
+					this.thirdLogin(res.cid)
+				}
+			})
+			// #endif
+			// #ifdef H5
+			uni.navigateTo({
+				url: '/pages/login/index'
+			})
+			// #endif
 		}
 		// 刷新token
 		// async refreshToken(data) {

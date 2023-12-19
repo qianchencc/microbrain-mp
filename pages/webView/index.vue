@@ -7,7 +7,7 @@
 <script>
 	import { getToken } from '@/utils/auth'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { goLogin } from '/utils/auth.js'
+	import { checkToken } from '/utils/auth.js'
 	import { joinGroup } from '@/apis/group/index.js'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 
@@ -28,8 +28,8 @@
 				eventChannel: null
 			}
 		},
-		onLoad: function(option) {
-			goLogin()
+		onLoad: async function(option) {
+			await checkToken()
 			if (!option.noToken) {
 				option.token = getToken()
 				option.tenantCode = useUserStoreHook().getDistrict.id

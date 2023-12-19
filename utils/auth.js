@@ -1,17 +1,7 @@
-import {
-	useUserStoreHook
-} from '@/store/modules/user'
-import {
-	MENU_MOCK,
-	COOKIE_DOMAIN
-} from '@/config/settings'
-import {
-	storageGet,
-	storageSet,
-	storageRemove
-} from '@/utils/storage'
+import { useUserStoreHook } from '@/store/modules/user'
+import { MENU_MOCK, COOKIE_DOMAIN } from '@/config/settings'
+import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 const TokenKey = 'authorized-token'
-
 // 获取token
 export function getToken() {
 	return uni.getStorageSync(TokenKey)
@@ -37,8 +27,11 @@ export function setDistrict(district) {
 
 // 删除token
 export function removeToken() {
-
 	storageRemove(TokenKey)
+}
+
+export function checkToken() {
+	useUserStoreHook().setUserInfo()
 }
 
 // 跳转登录页面

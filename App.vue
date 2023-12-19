@@ -2,6 +2,7 @@
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	import { getToken } from '@/utils/auth'
+	import { wxLogin } from '@/utils/wxLogin.js'
 	export default {
 		onLaunch: function() {
 			this.authLogin()
@@ -18,6 +19,7 @@
 					usePermissionStoreHook().setAuthority()
 				} else {
 					// #ifdef MP-WEIXIN
+					wxLogin()
 					uni.login({
 						provider: 'weixin', //使用微信登录
 						success: function(loginRes) {
@@ -34,9 +36,20 @@
 					uni.getPushClientId({
 						success(res) {
 							console.log(res);
+							uni.showModal({
+								title: '',
+								content: res.cid
+							});
 							let push_clientid = res.cid
 							useUserStoreHook().thirdLogin(res.cid)
 						}
+					})
+
+					uni.onPushMessage((res) => {
+						uni.showModal({
+							title: res.data.title,
+							content: res.data.content
+						});
 					})
 					// #endif
 				}
