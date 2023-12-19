@@ -50,13 +50,12 @@
 	}
 
 	const queryList = async (pageNo, pageSize) => {
-		// const res = await getMyMessage()
-		// if (res.content) {
-		// 	paging.value.complete(res.content)
-		// } else {
-		// 	paging.value.complete(false)
-		// }
-		paging.value.complete(false)
+		const res = await getMyMessage()
+		if (res.content) {
+			paging.value.complete(res.content)
+		} else {
+			paging.value.complete(false)
+		}
 	}
 
 	const clicked = (item) => {
@@ -65,7 +64,7 @@
 		})
 	}
 
-	// onLoad(getUnreadNotifyCount)
+	onLoad(getUnreadNotifyCount)
 </script>
 
 <style lang="scss" scoped>

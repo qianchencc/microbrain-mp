@@ -1,0 +1,7 @@
+{
+  "name": "univerify-login",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

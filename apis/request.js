@@ -7,48 +7,28 @@ import { useUserStoreHook } from '@/store/modules/user'
 const request = {}
 const headers = {}
 
-// 第三方请求成功code
-const successCode = [0]
-
-request.globalRequest = (url, method, data, isForm) => {
+request.globalRequest = (url, method, data, isMicro) => {
 	const token = getToken()
 	const district = useUserStoreHook().getDistrict.id
 	headers['Authorization'] = token
 	headers['tenantCode'] = district
-	delete headers['content-type']
-	if (isForm) headers['content-type'] = 'application/x-www-form-urlencoded'
 	return uni.request({
-		url: url.startsWith('http') ? url : globalConfig.ssoUrl + url,
+		url: isMicro ? globalConfig.baseUrl + url : globalConfig.ssoUrl + url,
 		method,
 		data: data,
 		dataType: 'json',
 		header: headers
 	}).then(res => {
-		if (url.startsWith('http')) {
-			// 这是第三方请求
-			let { code, data, content } = res.data
-			console.log(res.data, data, content)
-			if (successCode.indexOf(code) > -1) {
-				return Promise.resolve(data ? data : content)
-			} else {
-				uni.showToast({
-					title: res.data.msg,
-					icon: 'none'
-				})
-				return Promise.resolve(null)
-			}
+		if (res.data.code) {
+			const {
+				code,
+				content
+			} = res.data
+			return code && code >= 0 ? SERVER_CODE.get(code)(res.data, data) : Promise.resolve(null)
+		} else if (res.statusCode === 401) {
+			SERVER_CODE.get(res.statusCode)(res)
 		} else {
-			if (res.data.code) {
-				const {
-					code,
-					content
-				} = res.data
-				return code && code >= 0 ? SERVER_CODE.get(code)(res.data, data) : Promise.resolve(null)
-			} else if (res.statusCode === 401) {
-				SERVER_CODE.get(res.statusCode)(res)
-			} else {
-				throw res.data
-			}
+			throw res.data
 		}
 	}).catch(parmas => {
 		try {

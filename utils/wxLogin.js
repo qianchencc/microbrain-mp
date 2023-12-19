@@ -1,6 +1,4 @@
-import {
-	useUserStoreHook
-} from '@/store/modules/user.js'
+import { useUserStoreHook } from '@/store/modules/user.js'
 
 function getCode() {
 	return new Promise((resolve, reject) => {
@@ -49,20 +47,12 @@ async function wxLogin() {
 		uni.setStorageSync('uni_id_token_expired', tokenExpired)
 		uni.setStorageSync('openid', openid)
 		uni.setStorageSync('token', token)
-		// uni.showModal({
-		// 	title: "温馨提示",
-		// 	content: "亲，授权微信登录后才能正常使用小程序功能",
-		// 	success: (e) => {
-		// 		if (e.confirm) {
-		// 			getUserProfile().then(e => {
-		// 				useUserStoreHook().SET_USER_INFO(e.userInfo)
-		// 				uni.setStorageSync('uni_id_token_expired', tokenExpired)
-		// 				useUserStoreHook().SET_OPENID(openid)
-		// 				useUserStoreHook().SET_TOKEN(token)
-		// 			})
-		// 		}
-		// 	}
-		// })
+		uni.login({
+			provider: 'weixin', //使用微信登录
+			success: function(loginRes) {
+				useUserStoreHook().thirdLogin(loginRes.code)
+			}
+		})
 	}).catch(err => console.log(err))
 
 }

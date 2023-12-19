@@ -39,7 +39,7 @@
 		"remarks": "",
 		"validateCode": "",
 		"status": 'TO_BE',
-		"socialsService": "WECHATOPEN"
+		"socialsService": ""
 	})
 
 	// 校验规则
@@ -117,7 +117,7 @@
 		if (disabled.value) return
 		valiForm.value.validate().then(async data => {
 			// #ifdef APP
-			formDate.value.socialsService = "APP"
+			formDate.value.socialsService = ""
 			// #endif
 			// #ifdef MP-WEIXIN
 			formDate.value.socialsService = "WECHATOPEN"

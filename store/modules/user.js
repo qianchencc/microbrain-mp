@@ -7,6 +7,7 @@ import { usePermissionStoreHook } from './permission'
 import { setToken, setDistrict, removeToken } from '@/utils/auth'
 import { aesEncrypt } from '@/utils/cryptojs'
 import globalConfig from '@/config'
+import { authLogin } from '@/utils/authLogin.js'
 const token = storageGet('authorized-token')
 
 export const useUserStore = defineStore({
@@ -80,24 +81,28 @@ export const useUserStore = defineStore({
 			const { content } = await getWxOpenId(code)
 			const openid = content.openid
 			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@WX_MP'))
+			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=thirdParty&openid=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			// #endif
 			// #ifdef APP-PLUS
-			const openid = code
-			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@APP'))
+			const openid = '13382179380' // code
+			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime()))
+			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=sms&mobile=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			// #endif
-			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=thirdParty&openid=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			uni.request({
 				url: url,
 				method: 'POST',
 				success(res) {
+					console.log(22222, res);
 					if (res.statusCode === 200) {
 						const {
 							access_token,
 							token_type,
 							expires_in
 						} = res.data
+						console.log(33333, res.data);
 						setToken(res.data)
 						usePermissionStoreHook().setAuthority()
+						uni.closeAuthView()
 					}
 				},
 				fail(e) {
@@ -137,26 +142,7 @@ export const useUserStore = defineStore({
 		logOut() {
 			removeToken()
 			uni.clearStorageSync();
-			// #ifdef MP-WEIXIN
-			uni.login({
-				provider: 'weixin', //使用微信登录
-				success: function(loginRes) {
-					this.thirdLogin(loginRes.code)
-				}
-			})
-			// #endif
-			// #ifdef APP-PLUS
-			uni.getPushClientId({
-				success: (res) => {
-					this.thirdLogin(res.cid)
-				}
-			})
-			// #endif
-			// #ifdef H5
-			uni.navigateTo({
-				url: '/pages/login/index'
-			})
-			// #endif
+			authLogin()
 		}
 		// 刷新token
 		// async refreshToken(data) {

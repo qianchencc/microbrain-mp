@@ -43,3 +43,6 @@ export const userUpdateOpenId = openId => request.globalRequest(`/identity/princ
 
 // 应用下发code获取
 export const getApplyOnAuthCode = data => request.globalRequest(`${applyAddress}/thirdparty/app/service/info/apply/code`, 'POST', data)
+
+// 更新clientID
+export const changeClientId = clientId => request.globalRequest(`/account/socials/to/${clientId}`, 'GET')

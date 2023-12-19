@@ -1,61 +1,64 @@
 <script>
-	import { useUserStoreHook } from '@/store/modules/user'
-	import { usePermissionStoreHook } from '@/store/modules/permission'
+	import { authLogin } from '@/utils/authLogin.js'
+	import { useUserStoreHook } from '@/store/modules/user.js'
 	import { getToken } from '@/utils/auth'
-	import { wxLogin } from '@/utils/wxLogin.js'
+	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
 		onLaunch: function() {
-			this.authLogin()
+			authLogin()
 		},
 		onShow: function() {
-			console.log('App Show')
+			console.log('App Show', getToken())
+			if (getToken()) {
+				usePermissionStoreHook().setAuthority()
+			} else {
+				// #ifdef MP-WEIXIN
+				wxLogin()
+				// #endif
+				// #ifdef H5
+				uni.navigateTo({
+					url: '/pages/login/index'
+				})
+				// #endif
+				// #ifdef APP-PLUS
+				uni.getProvider({
+					service: 'oauth',
+					success: function(data) {
+						if (data.provider.includes('univerify')) {
+							uni.login({
+								provider: 'univerify',
+								univerifyStyle: {},
+								success(res) { // 登录成功
+									console.log(res.authResult); // {openid:'登录授权唯一标识',access_token:'接口返回的 token'}
+									// 在得到access_token后，通过callfunction调用云函数
+									uniCloud.callFunction({
+										name: 'univerify-login', // 你的云函数名称
+										data: res.authResult
+									}).then(loginData => {
+										console.log(loginData.result.data);
+										useUserStoreHook().thirdLogin(loginData.result.data)
+										// uni.closeAuthView()
+									}).catch(err => {
+										// 处理错误
+									})
+								},
+								fail(res) { // 登录失败
+									console.log(res)
+									console.log(res.errMsg)
+									// uni.closeAuthView()
+								}
+							})
+						}
+					}
+				});
+				// #endif
+			}
+
 		},
 		onHide: function() {
 			console.log('App Hide')
-		},
-		methods: {
-			authLogin() {
-				if (getToken()) {
-					usePermissionStoreHook().setAuthority()
-				} else {
-					// #ifdef MP-WEIXIN
-					wxLogin()
-					uni.login({
-						provider: 'weixin', //使用微信登录
-						success: function(loginRes) {
-							useUserStoreHook().thirdLogin(loginRes.code)
-						}
-					})
-					// #endif
-					// #ifdef H5
-					uni.navigateTo({
-						url: '/pages/login/index'
-					})
-					// #endif
-					// #ifdef APP-PLUS
-					uni.getPushClientId({
-						success(res) {
-							console.log(res);
-							uni.showModal({
-								title: '',
-								content: res.cid
-							});
-							let push_clientid = res.cid
-							useUserStoreHook().thirdLogin(res.cid)
-						}
-					})
-
-					uni.onPushMessage((res) => {
-						uni.showModal({
-							title: res.data.title,
-							content: res.data.content
-						});
-					})
-					// #endif
-				}
-
-			}
 		}
+
 	}
 </script>
 
