@@ -2,10 +2,11 @@
 	import { authLogin } from '@/utils/authLogin.js'
 	import { useUserStoreHook } from '@/store/modules/user.js'
 	import { getToken } from '@/utils/auth'
+	import { wxLogin } from '@/utils/wxLogin.js'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
 		onLaunch: function() {
-			authLogin()
+			// authLogin()
 		},
 		onShow: function() {
 			console.log('App Show', getToken())
@@ -35,8 +36,10 @@
 										name: 'univerify-login', // 你的云函数名称
 										data: res.authResult
 									}).then(loginData => {
-										console.log(loginData.result.data);
-										useUserStoreHook().thirdLogin(loginData.result.data)
+										console.log(loginData.result);
+										if (loginData.result.success) {
+											useUserStoreHook().thirdLogin(loginData.result.phoneNumber)
+										}
 										// uni.closeAuthView()
 									}).catch(err => {
 										// 处理错误

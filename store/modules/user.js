@@ -84,7 +84,7 @@ export const useUserStore = defineStore({
 			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=thirdParty&openid=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			// #endif
 			// #ifdef APP-PLUS
-			const openid = '13382179380' // code
+			const openid = code
 			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime()))
 			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=sms&mobile=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			// #endif
