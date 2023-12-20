@@ -2,7 +2,7 @@
 	<view class="container">
 		<uni-section title="基本信息" type="line">
 			<view class="example">
-				<uni-forms ref="valiForm" :modelValue="formDate" :rules="rules" label-position="top" label-width="90">
+				<uni-forms ref="valiForm" :modelValue="formDate" validateTrigger="blur" :rules="rules" label-position="top" label-width="90">
 					<uni-forms-item label="所属单位" required name="branchId">
 						<uni-data-select :clear="false" v-model="formDate.branchId" :localdata="branchList" @change="branchChange"></uni-data-select>
 					</uni-forms-item>
@@ -11,6 +11,12 @@
 					</uni-forms-item>
 					<uni-forms-item label="联系方式" required name="mobileNumber">
 						<uni-easyinput :clearable="false" v-model="formDate.mobileNumber" placeholder="请输入联系方式" />
+						<view class="suffix" @click="suffixClicked(formDate.mobileNumber,fetchValidateCode)">
+							{{text}}
+						</view>
+					</uni-forms-item>
+					<uni-forms-item label="验证码" required name="validateCode">
+						<uni-easyinput :clearable="false" type="number" v-model="formDate.validateCode" maxlength="6" placeholder="请输入验证码" />
 					</uni-forms-item>
 					<uni-forms-item label="备注" name="remarks">
 						<uni-easyinput :clearable="false" type="textarea" v-model="formDate.remarks" placeholder="请输入备注" />
@@ -19,7 +25,7 @@
 						<uni-easyinput :clearable="false" type="textarea" v-model="formDate.checkRemarks" />
 					</uni-forms-item>
 				</uni-forms>
-				<button v-if="formDate.status!=='ACCEPT'" type="primary" @click="submit">提交</button>
+				<button v-if="formDate.status!=='ACCEPT'" :loading="loading" type="primary" @click="submit">提交</button>
 			</view>
 		</uni-section>
 	</view>
@@ -29,8 +35,11 @@
 	import { ref, computed, onMounted } from 'vue'
 	import globalConfig from '@/config'
 	import { fecthAllBranch } from '@/apis/user/org'
-	import { createConfirmation, fecthMyConfirmation } from '@/apis/user/confirmation'
+	import { createConfirmation, fecthMyConfirmation, fetchValidateCode } from '@/apis/user/confirmation'
+	import { useVerifyCode } from '@/utils/verifyCode.js'
 	const valiForm = ref(null)
+	const loading = ref(false)
+	const suffixText = ref('验证码')
 	const formDate = ref({
 		"personalName": "",
 		"branchId": "",
@@ -86,6 +95,13 @@
 			formDate.value = res.content
 		}
 	}
+	const { text, isDisabled } = useVerifyCode()
+	async function suffixClicked(phone, fetchCode) {
+		const isPhone = /^[1][23456789][0-9]{9}$/.test(phone)
+		console.log(/^[1][23456789][0-9]{9}$/.test(phone));
+		if (!isPhone) return
+		useVerifyCode().start(phone, fetchCode)
+	}
 
 	const branchList = ref([])
 
@@ -111,13 +127,12 @@
 
 	const submit = async (ref) => {
 		valiForm.value.validate().then(async data => {
-			// #ifdef APP
-			formDate.value.socialsService = ""
-			// #endif
+			loading.value = true
 			// #ifdef MP-WEIXIN
 			formDate.value.socialsService = "WECHATOPEN"
 			// #endif
 			const res = await createConfirmation(formDate.value)
+			loading.value = false
 			if (res.code !== 201) return
 			uni.navigateBack()
 		}).catch(err => {
@@ -133,40 +148,15 @@
 
 
 <style lang="scss" scoped>
-	.avatar {
-		width: 120rpx;
-		height: 120rpx;
-		border: 1px solid lightgray;
-		border-radius: 60rpx;
-		margin: 10rpx;
-		text-align: center;
-		line-height: 120rpx;
-	}
-
 	.example {
 		padding: 15px;
 		background-color: #fff;
 	}
 
-	.segmented-control {
-		margin-bottom: 15px;
-	}
-
-	.button-group {
-		margin-top: 15px;
-		display: flex;
-		justify-content: space-around;
-	}
-
-	.form-item {
-		display: flex;
-		align-items: center;
-	}
-
-	.button {
-		display: flex;
-		align-items: center;
-		height: 35px;
-		margin-left: 10px;
+	.suffix {
+		position: absolute;
+		top: 20%;
+		right: 10px;
+		color: #2979ff;
 	}
 </style>

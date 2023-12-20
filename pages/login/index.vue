@@ -4,13 +4,18 @@
 			<image class="cu-imgs" src="/static/logo.png"></image>
 			<view class="cu-title">{{'智慧园区微脑控制系统'}}</view>
 		</view>
-		<!-- <button class="m-button" type="warn" open-type="getPhoneNumber" @getphonenumber="getPhoneNumber">
+		<!-- <button class="m-button" type="warn" open-type="getPhoneNumber" @click="wxLogin">
 			微信一键登录
 		</button> -->
+		<!-- #ifdef APP-PLUS -->
 		<button class="m-button" type="primary" :disabled="univerify" @click="getPhoneNumber">
 			手机号快捷登录
 		</button>
+		<!-- #endif -->
 		<button class="m-button" type="default" @click="popupRef.open()">
+			手机验证码登录
+		</button>
+		<button class="m-button" type="primary" @click="popupRef.open()">
 			账号密码登录
 		</button>
 		<uni-popup ref="popupRef" type="bottom">
@@ -23,6 +28,7 @@
 	import { useUserStoreHook } from '@/store/modules/user.js'
 	import { ref } from 'vue';
 	import usernameLogin from './usernameLogin.vue'
+	import { wxLogin } from '@/utils/wxLogin.js'
 	const univerify = ref(true)
 	const popupRef = ref(null)
 
@@ -40,13 +46,12 @@
 				console.log(res.errCode)
 				console.log(res.errMsg)
 				univerify.value = true
-				// uni.navigateTo({
-				// 	url: '/pages/login/index'
-				// })
 			}
 		})
 	}
+	// #ifdef APP-PLUS
 	init()
+	// #endif
 
 	function getPhoneNumber(e) {
 		uni.getProvider({
@@ -79,10 +84,6 @@
 			}
 		});
 	}
-
-	function handledUsernameLogin() {
-
-	}
 </script>
 <style lang="scss" scoped>
 	.con {
@@ -104,7 +105,7 @@
 
 			.cu-imgs {
 				width: 184rpx;
-				height: 184rpx;
+				height: 224rpx;
 			}
 
 			.cu-title {
@@ -125,6 +126,7 @@
 	.m-button {
 		width: 70%;
 		height: 88rpx;
+		line-height: 88rpx;
 		margin-top: 20rpx;
 		border-radius: 44rpx;
 		border: 1px solid #B6B7BA;

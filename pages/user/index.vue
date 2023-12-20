@@ -167,24 +167,27 @@
 		})
 	}
 	const pushTest = () => {
+		const data = { "push_clientid": "a8a9bad564747be64d026a6aa0c4e553", "title": "消息提醒", "content": "工作提醒：您对苏州新捷正科技有限公司吴昌英发出的邀约已被接受", "payload": "877" }
+		const json = JSON.stringify(data)
+		console.log(json);
 		uni.request({
 			method: 'POST',
-			url: 'https://fc-mp-5f22d5b4-17e7-4822-ac80-68d07c2a2201.next.bspapp.com/push',
-			data: {
-				a: 1,
-				b: 2
+			header: {
+				"content-type": 'application/json'
 			},
+			url: 'https://fc-mp-5f22d5b4-17e7-4822-ac80-68d07c2a2201.next.bspapp.com/push',
+			data,
 			success(res) {
 				console.log(res);
 			}
 		})
-		uniCloud.callFunction({
-			name: 'uni-push',
-			data: { a: '李卫国', b: 2 },
-			success(res) {
-				console.log(res);
-			},
-		})
+		// uniCloud.callFunction({
+		// 	name: 'uni-push',
+		// 	data,
+		// 	success(res) {
+		// 		console.log(res);
+		// 	},
+		// })
 	}
 </script>
 
@@ -250,7 +253,7 @@
 			width: 100%;
 			display: flex;
 			align-items: center;
-			padding: 10rpx;
+			padding: 10rpx 0;
 			color: #fff;
 			margin-bottom: 10rpx;
 
