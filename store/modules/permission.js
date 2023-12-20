@@ -6,7 +6,7 @@ import { getAllDictMap } from '@/apis/user/dict'
 import { getResourceTree } from '@/apis/user/menu'
 import { storageSet, storageGet } from '@/utils/storage'
 import { useUserStoreHook } from '@/store/modules/user'
-
+import { appPush } from '@/utils/appPush.js'
 // generate access btns
 const generateBtns = (routes) => {
 	const permissionBtns = []
@@ -111,6 +111,7 @@ export const usePermissionStore = defineStore({
 			this.accessBtns = generateBtns(data)
 			useUserStoreHook().setGeospatialInfo()
 			useUserStoreHook().setUserInfo()
+			appPush()
 		}
 	}
 })

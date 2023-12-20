@@ -7,7 +7,6 @@
 	export default {
 		onLaunch: function() {},
 		onShow: function() {
-			console.log('App Show', getToken())
 			if (getToken()) {
 				usePermissionStoreHook().setAuthority()
 			} else {
@@ -20,39 +19,23 @@
 				})
 				// #endif
 				// #ifdef APP-PLUS
-				appPush()
-				uni.getProvider({
-					service: 'oauth',
-					success: function(data) {
-						if (data.provider.includes('univerify')) {
-							uni.login({
-								provider: 'univerify',
-								univerifyStyle: {},
-								success(res) { // 登录成功
-									uniCloud.callFunction({
-										name: 'univerify-login', // 你的云函数名称
-										data: res.authResult
-									}).then(loginData => {
-										if (loginData.result.success) {
-											useUserStoreHook().thirdLogin(loginData.result.phoneNumber)
-										}
-									}).catch(err => {
-										// 处理错误
-									})
-								},
-								fail(res) { // 登录失败
-									console.log(res)
-									console.log(res.errMsg)
-								}
-							})
-						}
-					}
-				});
+				uni.navigateTo({
+					url: '/pages/login/index'
+				})
+
 				// #endif
 			}
 		},
 		onHide: function() {
 			console.log('App Hide')
+		},
+		methods: {
+			univerifyLogin() {
+				console.log(useUserStoreHook().univerify);
+				if (useUserStoreHook().univerify) {
+
+				}
+			}
 		}
 
 	}

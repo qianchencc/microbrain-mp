@@ -7,6 +7,7 @@ import { usePermissionStoreHook } from './permission'
 import { setToken, setDistrict, removeToken } from '@/utils/auth'
 import { aesEncrypt } from '@/utils/cryptojs'
 import globalConfig from '@/config'
+
 const token = storageGet('authorized-token')
 
 export const useUserStore = defineStore({
@@ -20,8 +21,6 @@ export const useUserStore = defineStore({
 		geospatialInfo: storageGet('geospatialInfo'),
 		// 登录用户组织code
 		district: storageGet('district'),
-		// 小程序场景值
-		scene: 1001
 	}),
 	getters: {
 		getDistrict() {
@@ -45,9 +44,6 @@ export const useUserStore = defineStore({
 			this.district = district
 			setDistrict(district.id)
 			storageSet('district', district)
-		},
-		SET_SCENE(value) {
-			this.scene = value
 		},
 		async loginByUsername(model) {
 			const password = aesEncrypt(model.password)
@@ -91,17 +87,18 @@ export const useUserStore = defineStore({
 				url: url,
 				method: 'POST',
 				success(res) {
-					console.log(22222, res);
 					if (res.statusCode === 200) {
 						const {
 							access_token,
 							token_type,
 							expires_in
 						} = res.data
-						console.log(33333, res.data);
 						setToken(res.data)
 						usePermissionStoreHook().setAuthority()
 						uni.closeAuthView()
+						uni.reLaunch({
+							url: '/pages/index/index'
+						})
 					}
 				},
 				fail(e) {

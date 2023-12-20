@@ -1,6 +1,4 @@
-import {
-	useUserStoreHook
-} from '@/store/modules/user'
+import { useUserStoreHook } from '@/store/modules/user'
 export const SERVER_CODE = new Map([
 	[
 		200,

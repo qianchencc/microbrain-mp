@@ -16,11 +16,15 @@
 					<uni-list-item title="隐私政策" link to="/pages/user/policy"></uni-list-item> -->
 				</uni-list>
 			</view>
+			<!-- #ifdef APP-PLUS -->
+			<button class="m-button" @tap="handledLogin">退出登录</button>
+			<!-- #endif -->
 		</scroll-view>
 	</view>
 </template>
 
 <script>
+	import { useUserStoreHook } from '@/store/modules/user'
 	export default {
 		data() {
 			return {
@@ -31,10 +35,6 @@
 			}
 		},
 		onLoad() {
-			const accountInfo_uni = uni.getAccountInfoSync();
-			console.log('uni.getAccountInfoSync', accountInfo_uni); // 小程序 appId
-			const accountInfo_wx = wx.getAccountInfoSync();
-			console.log('wx.getAccountInfoSync', accountInfo_wx); // 小程序 appId
 			// #ifdef APP-PLUS
 			plus.runtime.getProperty(plus.runtime.appid, (wgtinfo) => {
 				this.appInfo.version = wgtinfo.version
@@ -47,7 +47,25 @@
 			// #endif
 		},
 		methods: {
-
+			handledLogin() {
+				uni.showModal({
+					title: '提示',
+					content: '确认退出吗？',
+					success: res => {
+						if (res.confirm) {
+							useUserStoreHook().logOut()
+							switch (uni.getSystemInfoSync().platform) {
+								case 'android':
+									plus.runtime.quit();
+									break;
+								case 'ios':
+									plus.ios.import('UIApplication').sharedApplication().performSelector('exit');
+									break;
+							}
+						}
+					}
+				});
+			}
 		}
 	}
 </script>
