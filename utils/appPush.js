@@ -1,6 +1,6 @@
 import { useUserStoreHook } from '@/store/modules/user.js'
 import { changeClientId } from '@/apis/user/principal.js'
-export const appLogin = () => {
+export const appPush = () => {
 	uni.getPushClientId({
 		success(res) {
 			let push_clientid = res.cid

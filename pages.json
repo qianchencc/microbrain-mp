@@ -41,7 +41,7 @@
 		{
 			"path": "pages/user/owner",
 			"style": {
-				"navigationBarTitleText": "组织绑定"
+				"navigationBarTitleText": "组织确权"
 			}
 		},
 		{
@@ -55,14 +55,18 @@
 			"style": {
 				"navigationBarTitleText": "更改名字"
 			}
-
 		},
 		{
 			"path": "pages/user/info/mobile",
 			"style": {
 				"navigationBarTitleText": "手机号"
 			}
-
+		},
+		{
+			"path": "pages/user/about",
+			"style": {
+				"navigationBarTitleText": "关于我们"
+			}
 		},
 		{
 			"path": "pages/webView/index",

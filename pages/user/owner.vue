@@ -19,7 +19,7 @@
 						<uni-easyinput :clearable="false" type="textarea" v-model="formDate.checkRemarks" />
 					</uni-forms-item>
 				</uni-forms>
-				<button :type="status[formDate.status].type" @click="submit">{{disabled?status[formDate.status].text:'提交'}}</button>
+				<button v-if="formDate.status!=='ACCEPT'" type="primary" @click="submit">提交</button>
 			</view>
 		</uni-section>
 	</view>
@@ -66,7 +66,6 @@
 			}]
 		}
 	}
-	const disabled = ref(false)
 	const status = {
 		TO_BE: {
 			text: '待审核',
@@ -85,9 +84,6 @@
 		const res = await fecthMyConfirmation()
 		if (res.content) {
 			formDate.value = res.content
-			disabled.value = true
-		} else {
-			getBranchList()
 		}
 	}
 
@@ -114,7 +110,6 @@
 	}
 
 	const submit = async (ref) => {
-		if (disabled.value) return
 		valiForm.value.validate().then(async data => {
 			// #ifdef APP
 			formDate.value.socialsService = ""
@@ -123,7 +118,6 @@
 			formDate.value.socialsService = "WECHATOPEN"
 			// #endif
 			const res = await createConfirmation(formDate.value)
-			console.info(res)
 			if (res.code !== 201) return
 			uni.navigateBack()
 		}).catch(err => {

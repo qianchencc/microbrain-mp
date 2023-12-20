@@ -44,9 +44,13 @@
 		</view> -->
 		<view class="list">
 			<uni-list :border="false">
-				<!--<uni-list-item :border="false" title="我是达人" showArrow clickable @click="toWebView('master')" />-->
-				<uni-list-item :border="false" title="组织绑定" showArrow link="navigateTo" to="./owner" />
-				<uni-list-item :border="false" title="我是租户" showArrow link="navigateTo" to="./tenant" />
+				<uni-list-item :border="false" title="组织确权" rightText="右侧文字" showArrow link="navigateTo" to="./owner">
+					<template v-slot:footer>
+						<view class="tag-view">
+							<uni-tag :circle="true" :text="faceAuthStatus[userInfo.confirmationStatus].text" :type="faceAuthStatus[userInfo.confirmationStatus].type" />
+						</view>
+					</template>
+				</uni-list-item>
 			</uni-list>
 		</view>
 		<view class="list">
@@ -59,6 +63,8 @@
 				<uni-list-item :border="false" title="关于我们" showArrow link="navigateTo" to="./about" />
 			</uni-list>
 		</view>
+
+		<!-- <button type="primary">退出登录</button> -->
 
 	</view>
 </template>
@@ -75,20 +81,20 @@
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 
 	const faceAuthStatus = {
-		'TO_BE_AUTH': {
-			text: '待认证',
+		'TO_BE_SUBMIT': {
+			text: '待确权',
 			type: 'warning'
 		},
 		'TO_BE_CHECK': {
 			text: '待审核',
 			type: 'warning'
 		},
-		'CHECK_REJECT': {
-			text: '审核失败',
+		'REJECT': {
+			text: '已拒绝',
 			type: 'error'
 		},
-		'CHECK_SUCCESS': {
-			text: '已认证',
+		'ACCEPT': {
+			text: '已确权',
 			type: 'success'
 		}
 	}

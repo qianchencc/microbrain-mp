@@ -1,13 +1,11 @@
 <script>
-	import { authLogin } from '@/utils/authLogin.js'
 	import { useUserStoreHook } from '@/store/modules/user.js'
 	import { getToken } from '@/utils/auth'
 	import { wxLogin } from '@/utils/wxLogin.js'
+	import { appPush } from '@/utils/appPush.js'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
-		onLaunch: function() {
-			// authLogin()
-		},
+		onLaunch: function() {},
 		onShow: function() {
 			console.log('App Show', getToken())
 			if (getToken()) {
@@ -22,6 +20,7 @@
 				})
 				// #endif
 				// #ifdef APP-PLUS
+				appPush()
 				uni.getProvider({
 					service: 'oauth',
 					success: function(data) {
@@ -30,17 +29,13 @@
 								provider: 'univerify',
 								univerifyStyle: {},
 								success(res) { // 登录成功
-									console.log(res.authResult); // {openid:'登录授权唯一标识',access_token:'接口返回的 token'}
-									// 在得到access_token后，通过callfunction调用云函数
 									uniCloud.callFunction({
 										name: 'univerify-login', // 你的云函数名称
 										data: res.authResult
 									}).then(loginData => {
-										console.log(loginData.result);
 										if (loginData.result.success) {
 											useUserStoreHook().thirdLogin(loginData.result.phoneNumber)
 										}
-										// uni.closeAuthView()
 									}).catch(err => {
 										// 处理错误
 									})
@@ -48,7 +43,6 @@
 								fail(res) { // 登录失败
 									console.log(res)
 									console.log(res.errMsg)
-									// uni.closeAuthView()
 								}
 							})
 						}
@@ -56,7 +50,6 @@
 				});
 				// #endif
 			}
-
 		},
 		onHide: function() {
 			console.log('App Hide')

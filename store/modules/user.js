@@ -7,7 +7,6 @@ import { usePermissionStoreHook } from './permission'
 import { setToken, setDistrict, removeToken } from '@/utils/auth'
 import { aesEncrypt } from '@/utils/cryptojs'
 import globalConfig from '@/config'
-import { authLogin } from '@/utils/authLogin.js'
 const token = storageGet('authorized-token')
 
 export const useUserStore = defineStore({
@@ -142,7 +141,6 @@ export const useUserStore = defineStore({
 		logOut() {
 			removeToken()
 			uni.clearStorageSync();
-			authLogin()
 		}
 		// 刷新token
 		// async refreshToken(data) {
