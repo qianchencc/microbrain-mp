@@ -6,19 +6,16 @@
 					<span v-if="item.count" class="img-badge">
 						<text class="count">{{item.count}}</text>
 					</span>
-					<image class="info-img" :src="messagesType[item.targetType].src" mode="aspectFit"></image>
+					<image class="info-img" :src="messagesType[item.notifyType].src" mode="aspectFit"></image>
 				</view>
 				<view class="notify-info">
 					<view class="info-con">
 						<view class="info-title">
-							【{{messagesType[item.targetType] && messagesType[item.targetType].name || '其他消息'}}】
+							<text>【{{messagesType[item.notifyType] && messagesType[item.notifyType].name || '其他消息'}}】</text>
+							<uni-dateformat style="font-size: 14px;color: #999;" :date="item.createdAt" format="MM-dd hh:mm" :threshold="[60000, 201600000]"></uni-dateformat>
 						</view>
 						<view class="info-note">
-							{{item.notifyContent}}
-						</view>
-						<view class="info-time">
-							<image class="time-img" src="../../static/images/messages/time.png" mode=""></image>
-							<uni-dateformat style="font-size: 14px;color: #999;" :date="item.createdAt" format="MM-dd hh:mm" :threshold="[60000, 201600000]"></uni-dateformat>
+							{{item.messageSubject}}
 						</view>
 					</view>
 				</view>
@@ -60,7 +57,7 @@
 
 	const clicked = (item) => {
 		uni.navigateTo({
-			url: './detail?targetType=' + item.targetType
+			url: './detail?targetType=' + item.id
 		})
 	}
 
@@ -76,7 +73,7 @@
 		background-color: #fff;
 		display: flex;
 		flex-direction: row;
-		justify-content: flex-start;
+		align-items: center;
 
 		.img-con {
 			width: 80rpx;
@@ -123,6 +120,9 @@
 				font-size: 32rpx;
 				font-weight: 400;
 				color: #262626;
+
+				display: flex;
+				justify-content: space-between;
 			}
 
 			.info-note {

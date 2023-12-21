@@ -1,7 +1,7 @@
 import request from '../request'
 
 // 用户消息分页查询
-export const fetchNotifyPage = (params) => request.globalRequest('/message/recipient/notify/page', 'GET', params)
+export const fetchNotifyPage = (params) => request.globalRequest('/api/message/recipient/notify/page', 'GET', params, true)
 
 // 统计未读
 export const fetchUnreadNotifyCount = () => request.globalRequest('/api/message/recipient/notify/count/unread', 'GET', null, true)

@@ -6,6 +6,6 @@ exports.main = async (event, context) => {
 	let data = event
 	if (source === 'http') {
 		data = JSON.parse(event.body)
-	}
+	} //force_notification
 	return await uniPush.sendMessage(data)
 };

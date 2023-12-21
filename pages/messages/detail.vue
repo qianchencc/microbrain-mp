@@ -1,161 +1,116 @@
 <template>
 	<view class="content">
 		<z-paging ref="paging" v-model="dataList" default-page-no="0" @query="queryList">
-			<template v-for="item in dataList" :key="item.id">
-				<view class="notify">
-					<view class="notify-time">
-						<uni-dateformat style="font-size: 14px;color: #999;" :date="item.createdAt" format="MM-dd hh:mm"
-							:threshold="[60000, 201600]"></uni-dateformat>
-					</view>
-					<view class="notify-con">
-						<view class="img-back">
-							<view class="img-con">
-								<span v-if="!item.hits" class="img-badge"></span>
-								<image class="info-img" :src="messagesType[item.targetType].src" mode=""></image>
-							</view>
+			<view class="notify-con" v-for="item in dataList" :key="item.id">
+				<view class="img-con">
+					<span v-if="item.count" class="img-badge">
+						<text class="count">{{item.count}}</text>
+					</span>
+					<image class="info-img" :src="messagesType[item.notifyType].src" mode="aspectFit"></image>
+				</view>
+				<view class="notify-info">
+					<view class="info-con">
+						<view class="info-title">
+							<text> 邀约接受 </text>
+							<uni-dateformat style="font-size: 14px;color: #999;" :date="item.createdAt" format="MM-dd hh:mm" :threshold="[60000, 201600000]"></uni-dateformat>
 						</view>
-
-						<view class="notify-info">
-							<view class="info-con">
-								<view class="info-title">
-									{{item.notifyContent.split(':')[0]}}
-								</view>
-								<view class="info-note">
-									{{item.notifyContent.slice(item.notifyContent.indexOf(':')+1)}}
-								</view>
-								<view v-if="messagesType[item.targetType].target" class="info-target" @tap="clicked(item)">
-									点击查看 >
-								</view>
-							</view>
+						<view class="info-note">
+							{{item.notifyContent}}
 						</view>
 					</view>
 				</view>
-			</template>
-
+			</view>
 		</z-paging>
 	</view>
 </template>
 
 <script setup>
-import {
-    ref,
-    computed
-} from 'vue'
-import {
-    onLoad,
-    onReady
-} from '@dcloudio/uni-app'
-import {
-    useUserStoreHook
-} from '@/store/modules/user'
-import {
-    fetchNotifyPage,
-    changeMesState
-} from '@/apis/messages/index.js'
-import {
-    messagesType
-} from './enums'
-import {
-    COOKIE_DOMAIN,
-    SCHEME
-} from '@/config/settings'
-import {
-    getToken
-} from '@/utils/auth'
-const targetType = ref('')
-const paging = ref(null)
-const dataList = ref([])
-const userInfo = computed(() => useUserStoreHook().getUserInfo)
+	import { ref, computed } from 'vue'
+	import { onLoad, onReady } from '@dcloudio/uni-app'
+	import { useUserStoreHook } from '@/store/modules/user'
+	import { fetchNotifyPage, changeMesState } from '@/apis/messages/index.js'
+	import { messagesType } from './enums'
+	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+	import { getToken } from '@/utils/auth'
+	const notifyId = ref('')
+	const paging = ref(null)
+	const dataList = ref([])
+	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 
-const queryList = async(pageNo, pageSize) => {
-    const params = {
-        page: pageNo,
-        size: pageSize,
-        recipientId: userInfo.value.id,
-        targetType: targetType.value,
-        sort: 'createdAt,desc'
-    }
-    const res = await fetchNotifyPage(params)
-    if (res.content.content) {
-        paging.value.complete(res.content.content)
-    } else {
-        paging.value.complete(false)
-    }
-}
-
-const clicked = (item) => {
-    const msgType = messagesType[targetType.value]
-    const options = msgType.options || []
-    const navigatePage = msgType.page ? msgType.target : '/pages/webView/index?'
-
-    const path = SCHEME + COOKIE_DOMAIN + `/${msgType.key.toLocaleLowerCase()}` + '/#' + msgType.target
-    options.push(`id=${item.targetId}`) // 信息详情记录ID
-    // #ifdef MP-WEIXIN
-    options.push(`path=${path}`)
-    uni.navigateTo({
-        url: navigatePage + arr2String(msgType.options),
-        success: () => {
-            // 修改已读未读状态
-            changeMesState(item.recipientId, item.targetType)
-        }
-
-    })
-    // #endif
-    // #ifdef H5
-    if (msgType.page) { // 内部页面跳转
-        uni.navigateTo({
-            url: msgType.target,
-            success: () => {
-                // 修改已读未读状态
-                changeMesState(item.recipientId, item.targetType)
-            }
-
-        })
-    } else {
-        options.push(`token=${getToken()}`)
-        options.push(`district=${useUserStoreHook().getDistrict.id}`)
-        location.href = path + '?' + arr2String(msgType.options)
-    }
-    // #endif
-}
-
-function arr2String(arr) {
-    return arr && arr.length ? arr.join('&') : ''
-}
-
-onReady(() => {
-
-})
-
-onLoad((option) => {
-    targetType.value = option.targetType
-    uni.setNavigationBarTitle({
-        title: messagesType[targetType.value].name || '其他消息'
-    })
-})
-</script>
-
-<style lang="scss" scoped>
-	.notify {
-		margin: 50rpx 25rpx;
-
-		.notify-time {
-			text-align: center;
-			width: 700rpx;
+	const queryList = async (pageNo, pageSize) => {
+		const params = {
+			page: pageNo,
+			size: pageSize,
+			recipientId: userInfo.value.id,
+			notifyId: notifyId.value,
+			sort: 'createdAt,desc'
+		}
+		const res = await fetchNotifyPage(params)
+		if (res.content.content) {
+			paging.value.complete(res.content.content)
+		} else {
+			paging.value.complete(false)
 		}
 	}
 
+	const clicked = (item) => {
+		const msgType = messagesType[notifyId.value]
+		const options = msgType.options || []
+		const navigatePage = msgType.page ? msgType.target : '/pages/webView/index?'
+
+		const path = SCHEME + COOKIE_DOMAIN + `/${msgType.key.toLocaleLowerCase()}` + '/#' + msgType.target
+		options.push(`id=${item.targetId}`) // 信息详情记录ID
+		// #ifdef MP-WEIXIN
+		options.push(`path=${path}`)
+		uni.navigateTo({
+			url: navigatePage + arr2String(msgType.options),
+			success: () => {
+				// 修改已读未读状态
+				changeMesState(item.recipientId, item.notifyId)
+			}
+
+		})
+		// #endif
+		// #ifdef H5
+		if (msgType.page) { // 内部页面跳转
+			uni.navigateTo({
+				url: msgType.target,
+				success: () => {
+					// 修改已读未读状态
+					changeMesState(item.recipientId, item.notifyId)
+				}
+
+			})
+		} else {
+			options.push(`token=${getToken()}`)
+			options.push(`district=${useUserStoreHook().getDistrict.id}`)
+			location.href = path + '?' + arr2String(msgType.options)
+		}
+		// #endif
+	}
+
+	function arr2String(arr) {
+		return arr && arr.length ? arr.join('&') : ''
+	}
+
+	onLoad((option) => {
+		notifyId.value = option.notifyId
+		uni.setNavigationBarTitle({
+			title: messagesType[notifyId.value].name || '其他消息'
+		})
+	})
+</script>
+
+<style lang="scss" scoped>
 	.notify-con {
+		// width: 600rpx;
+		border-radius: 15rpx;
+		padding: 30rpx;
+		margin: 20rpx 25rpx;
+		background-color: #fff;
 		display: flex;
 		flex-direction: row;
-		justify-content: flex-start;
-
-		.img-back {
-			background-color: #fff;
-			padding: 10rpx;
-			height: 80rpx;
-			border-radius: 50% 0 0 50%;
-		}
+		// align-items: center;
 
 		.img-con {
 			width: 80rpx;
@@ -171,10 +126,18 @@ onLoad((option) => {
 				position: absolute;
 				bottom: 30px;
 				left: 30px;
-				height: 10px;
-				width: 10px;
+				height: 15px;
+				width: 15px;
 				border-radius: 50%;
 				background-color: #EF9035;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+
+				.count {
+					color: white;
+					font-size: 10px;
+				}
 			}
 
 			.info-img {
@@ -188,15 +151,16 @@ onLoad((option) => {
 		}
 
 		.notify-info {
-			width: 510rpx;
-			background-color: #fff;
-			border-radius: 0 15rpx 15rpx 15rpx;
-			padding: 30rpx;
+			width: 560rpx;
 
 			.info-title {
+				margin-left: 15rpx;
 				font-size: 32rpx;
 				font-weight: 400;
 				color: #262626;
+
+				display: flex;
+				justify-content: space-between;
 			}
 
 			.info-note {
@@ -205,14 +169,21 @@ onLoad((option) => {
 				font-weight: 400;
 				color: #8F969F;
 				border-bottom: 2px #F4F4F4 solid;
+				overflow: hidden;
 			}
 
-			.info-target {
-				margin-top: 10rpx;
-				font-size: 24rpx;
-				font-weight: 400;
-				color: #1F77FF;
-				text-align: right;
+			.info-time {
+				display: flex;
+				align-items: center;
+				margin-top: 16rpx;
+
+				.time-img {
+					margin: 8rpx;
+					width: 32rpx;
+					height: 32rpx;
+				}
+
+				margin-left: 15rpx;
 			}
 		}
 
