@@ -95,7 +95,7 @@ export const useUserStore = defineStore({
 						} = res.data
 						setToken(res.data)
 						usePermissionStoreHook().setAuthority()
-						uni.closeAuthView()
+						// uni.closeAuthView()
 						uni.reLaunch({
 							url: '/pages/index/index'
 						})

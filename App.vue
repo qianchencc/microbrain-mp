@@ -5,8 +5,11 @@
 	import { appPush } from '@/utils/appPush.js'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
-		onLaunch: function() {},
+		onLaunch: function() {
+
+		},
 		onShow: function() {
+
 			if (getToken()) {
 				usePermissionStoreHook().setAuthority()
 			} else {

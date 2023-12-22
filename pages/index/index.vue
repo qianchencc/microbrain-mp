@@ -130,6 +130,29 @@
 				url: './all'
 			})
 		} else {
+			// #ifdef MP-WEIXIN
+			uni.getSetting({
+				withSubscriptions: true,
+				success(res) {
+					console.log(22222222222, res)
+					if (res.subscriptionsSetting['w_uQuByW3kkgiCxminzynXIO1NOYtixfR1JTe0BTEis'] !== 'accept') {
+						uni.requestSubscribeMessage({
+							tmplIds: ["w_uQuByW3kkgiCxminzynXIO1NOYtixfR1JTe0BTEis"], // 小程序订阅消息模板id
+							success: () => {
+								uni.showToast({
+									title: "订阅成功",
+									icon: "none"
+								})
+							},
+							fail: (e) => {
+								console.log(222222, e);
+							}
+						});
+					}
+				}
+			});
+
+			// #endif
 			jumpUrl(menu)
 		}
 	}

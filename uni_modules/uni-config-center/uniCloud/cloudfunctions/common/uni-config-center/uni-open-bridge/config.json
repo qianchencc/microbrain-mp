@@ -1,0 +1,16 @@
+{
+	"schedule": {
+		"__UNI__BDDC19C": {
+			"enable": true,
+			"weixin-mp": {
+				"enable": true,
+				"tasks": ["accessToken"]
+			},
+			"weixin-h5": {
+				"enable": false,
+				"tasks": ["ticket"]
+			}
+		}
+	},
+	"ipWhiteList": ["0.0.0.0"]
+}

@@ -64,6 +64,12 @@
 			</uni-list>
 		</view>
 
+		<view class="list">
+			<uni-list :border="false">
+				<uni-list-item :border="false" title="推送测试" showArrow clickable @click="pushTest" />
+			</uni-list>
+		</view>
+
 		<!-- <button type="primary">退出登录</button> -->
 
 	</view>
@@ -167,22 +173,54 @@
 		})
 	}
 	const pushTest = () => {
-		const data = { "push_clientid": "a8a9bad564747be64d026a6aa0c4e553", "title": "消息提醒", "content": "工作提醒：您对苏州新捷正科技有限公司吴昌英发出的邀约已被接受", "payload": "877" }
-		const json = JSON.stringify(data)
-		console.log(json);
+		// const data = { "push_clientid": "a8a9bad564747be64d026a6aa0c4e553", "title": "消息提醒", "content": "工作提醒：您对苏州新捷正科技有限公司吴昌英发出的邀约已被接受", "payload": "877" }
+		// const json = JSON.stringify(data)
+		// console.log(json);
+		// uni.request({
+		// 	method: 'POST',
+		// 	header: {
+		// 		"content-type": 'application/json'
+		// 	},
+		// 	url: 'https://fc-mp-5f22d5b4-17e7-4822-ac80-68d07c2a2201.next.bspapp.com/push',
+		// 	data,
+		// 	success(res) {
+		// 		console.log(res);
+		// 	}
+		// })
+		// #ifdef MP-WEIXIN
+
+		// #endif
+		const data = {
+			touser: "oiSqO602XfqfqhclCy_aIqLNF7wQ",
+			template_id: "w_uQuByW3kkgiCxminzynXIO1NOYtixfR1JTe0BTEis",
+			page: "pages/messages/index", // 小程序页面地址
+			miniprogram_state: "developer", // 跳转小程序类型：developer为开发版；trial为体验版；formal为正式版；默认为正式版
+			lang: "zh_CN",
+			data: {
+				name5: {
+					value: "张三"
+				},
+				phone_number19: {
+					value: "15695128837"
+				},
+				date7: {
+					value: "2015年01月05日"
+				},
+				thing1: {
+					value: '来看你了'
+				}
+			}
+		}
 		uni.request({
 			method: 'POST',
-			header: {
-				"content-type": 'application/json'
-			},
-			url: 'https://fc-mp-5f22d5b4-17e7-4822-ac80-68d07c2a2201.next.bspapp.com/push',
+			url: 'https://fc-mp-5f22d5b4-17e7-4822-ac80-68d07c2a2201.next.bspapp.com/weixinMpPush',
 			data,
 			success(res) {
 				console.log(res);
 			}
 		})
 		// uniCloud.callFunction({
-		// 	name: 'uni-push',
+		// 	name: 'weixin-mp-push',
 		// 	data,
 		// 	success(res) {
 		// 		console.log(res);

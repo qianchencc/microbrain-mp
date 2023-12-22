@@ -20,5 +20,13 @@
 				"appsecret": "25586b599a20b38ac8bad4985a6f070a"
 			}
 		}
+	},
+	"web": {
+		"oauth": {
+			"weixin-h5": {
+				"appid": "wx5a0daf2ce48d52d0",
+				"appsecret": "7becf28c5ed598ff5b60fcfefeff520b"
+			}
+		}
 	}
 }
