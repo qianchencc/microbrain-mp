@@ -81,8 +81,6 @@
 	import globalConfig from '@/config'
 	import { COOKIE_DOMAIN, SCHEME, zztServer } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { fetchIntegralAccount } from '@/apis/news_info/index'
-	import { fetchOwnerAllInfo, fetchOwnerCheck } from "@/apis/village/owner.js"
 
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 
@@ -219,6 +217,18 @@
 				console.log(res);
 			}
 		})
+		// uni.request({
+		// 	url: 'https://api.weixin.qq.com/cgi-bin/user/tag/get?access_token=75_WN7228Vo62CFHXNzbUvq6w1trKsnPnA3UkE0Oqurf8ySmCcp65gJIH_nSe27Kmm8pEK-Kb6v7Dj_nne7Hrro1vKMlkTGkgtqZ6nscd5HQ7Jbj-O0mqoI9Gap8RMFRDiAEASEQ',
+		// 	method: 'POST',
+		// 	data: {
+		// 		tagid: 102,
+		// 		next_openid: ''
+		// 	},
+		// 	success(res) {
+		// 		console.log(res);
+		// 	}
+
+		// })
 		// uniCloud.callFunction({
 		// 	name: 'weixin-mp-push',
 		// 	data,

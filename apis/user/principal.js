@@ -1,7 +1,6 @@
-import request from '../request'
+import request from './api.js'
 import globalConfig from '@/config'
 import { applyAddress } from '../../config/settings'
-
 // 登录
 export const login = (data) => request.globalRequest(`/login/word/v2`, 'POST', data)
 

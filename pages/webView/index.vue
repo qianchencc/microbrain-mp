@@ -8,7 +8,7 @@
 	import { getToken } from '@/utils/auth'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { checkToken } from '/utils/auth.js'
-	import { joinGroup } from '@/apis/group/index.js'
+	// import { joinGroup } from '@/apis/group/index.js'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 
 	function obj2Query(obj) {

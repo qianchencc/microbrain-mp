@@ -11,11 +11,11 @@
 				<view class="notify-info">
 					<view class="info-con">
 						<view class="info-title">
-							<text>【{{messagesType[item.notifyType] && messagesType[item.notifyType].name || '其他消息'}}】</text>
+							<text>{{item.appName || '其他消息'}}</text>
 							<uni-dateformat style="font-size: 14px;color: #999;" :date="item.createdAt" format="MM-dd hh:mm" :threshold="[60000, 201600000]"></uni-dateformat>
 						</view>
-						<view class="info-note">
-							{{item.messageSubject}}
+						<view class="info-note uni-ellipsis">
+							{{item.messageSubject+'：'+item.notifyContent}}
 						</view>
 					</view>
 				</view>
@@ -27,7 +27,7 @@
 <script setup>
 	import { ref } from 'vue'
 	import { onLoad } from '@dcloudio/uni-app'
-	import { getMyMessage, fetchUnreadNotifyCount } from '@/apis/messages/index.js'
+	import { getMyMessage, fetchUnreadNotifyCount } from '@/apis/messages/recipient'
 	import { messagesType } from './enums'
 	const paging = ref(null)
 	const dataList = ref([])
@@ -114,9 +114,11 @@
 		}
 
 		.notify-info {
-			width: 580rpx;
+			width: 550rpx;
+			margin-left: 10rpx;
 
 			.info-title {
+				margin-left: 15rpx;
 				font-size: 32rpx;
 				font-weight: 400;
 				color: #262626;

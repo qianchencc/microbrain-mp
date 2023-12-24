@@ -12,7 +12,7 @@ export const MENU_ACCORDION = true
 
 // 是否生产发布
 // #ifdef MP-WEIXIN
-export const TO_TEST = __wxConfig.envVersion !== 'release'
+export const TO_TEST = false // __wxConfig.envVersion !== 'release'
 // #endif
 // #ifndef MP-WEIXIN
 export const TO_TEST = true
@@ -27,18 +27,18 @@ export const MENU_MOCK = process.env.NODE_ENV === 'development'
 // #endif
 
 // https
-export const SCHEME = TO_TEST ? 'http://' : 'https://'
+export const SCHEME = TO_TEST ? 'http://' : 'http://'
 
 // #ifdef MP-WEIXIN
 // 生产环境主域名
-export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.32:28087' : 'fcsq.longwan.gov.cn'
+export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.32:28087' : 'services.ehetech.net:32087'
 // #endif
 // #ifdef APP-PLUS
-export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.32:28087' : 'fcsq.longwan.gov.cn'
+export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.32:28087' : 'services.ehetech.net:32087'
 // #endif
 // #ifdef H5
 // 生产环境主域名
-export const COOKIE_DOMAIN = MENU_MOCK ? (TO_TEST ? '172.16.255.32:28087' : 'fcsq.longwan.gov.cn') : '172.16.255.32:28087'
+export const COOKIE_DOMAIN = MENU_MOCK ? (TO_TEST ? '172.16.255.32:28087' : 'services.ehetech.net:32087') : '172.16.255.32:28087'
 // #endif
 
 export const ImageUrl = TO_TEST ? 'https://filecommunity.wzscr.cn/future-community/' : 'https://fcsq.longwan.gov.cn/s3oss/t720y28035/'

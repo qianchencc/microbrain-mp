@@ -130,17 +130,15 @@
             "https" : false,
             "proxy" : {
                 "/sso-api" : {
-                    "target" : "http://172.16.255.32:28087" // 内网
+                    // "target" : "http://172.16.255.32:28087" ,// 内网
+                    "target" : "http://services.ehetech.net:32087" // 外网
                 },
-                // "target": "http://services.ehetech.net:32087" // 外网
-                // "target": "http://services.ehetech.net:32087" // 外网
                 "/micro-api" : {
-                    "target" : "http://172.16.255.32:28087" // 内网
+                    "target" : "http://services.ehetech.net:32087" // 外网
                 }
             }
         },
-        // "target": "http://services.ehetech.net:32087" // 外网
-        // "target": "http://services.ehetech.net:32087" // 外网
+        // "target" : "http://172.16.255.32:28087" // 内网
         "router" : {
             "mode" : "hash",
             "base" : "/portal/"
@@ -150,7 +148,3 @@
         }
     }
 }
-// "target": "http://services.ehetech.net:32087" // 外网
-// 内网
-// "target": "http://services.ehetech.net:32087" // 外网
-

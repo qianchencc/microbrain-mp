@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { store } from '@/store'
 import { MENU_MOCK, BASE_NAME, SCHEME, COOKIE_DOMAIN } from '@/config/settings'
 import resource from '@/config/menu.json'
-import { getAllDictMap } from '@/apis/user/dict'
 import { getResourceTree } from '@/apis/user/menu'
 import { storageSet, storageGet } from '@/utils/storage'
 import { useUserStoreHook } from '@/store/modules/user'
@@ -111,7 +110,9 @@ export const usePermissionStore = defineStore({
 			this.accessBtns = generateBtns(data)
 			useUserStoreHook().setGeospatialInfo()
 			useUserStoreHook().setUserInfo()
+			// #ifdef APP-PLUS
 			appPush()
+			// #endif
 		}
 	}
 })

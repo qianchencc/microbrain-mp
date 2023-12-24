@@ -1,4 +1,4 @@
-import request from '../request'
+import request from './api.js'
 
 // 新增确权
 export const createConfirmation = (data) => request.globalRequest('/confirmation/account/', 'POST', data)

@@ -56,6 +56,8 @@
 	import { computed, reactive, ref, watch } from 'vue'
 	import { jumpUrl } from '@/utils/tools'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+	import { useBannerHook } from './utils/banner.js'
+	// useBannerHook()
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const topMenu = [{

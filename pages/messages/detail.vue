@@ -28,7 +28,7 @@
 	import { ref, computed } from 'vue'
 	import { onLoad, onReady } from '@dcloudio/uni-app'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { fetchNotifyPage, changeMesState } from '@/apis/messages/index.js'
+	import { fetchNotifyPage, changeMesState } from '@/apis/messages/recipient'
 	import { messagesType } from './enums'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { getToken } from '@/utils/auth'

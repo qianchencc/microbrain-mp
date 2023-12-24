@@ -1,4 +1,4 @@
-import request from '../request'
+import request from './api.js'
 
 // 获取全部资源树
 export const getMenuTree = () => request.globalRequest('menu/tree', 'GET')

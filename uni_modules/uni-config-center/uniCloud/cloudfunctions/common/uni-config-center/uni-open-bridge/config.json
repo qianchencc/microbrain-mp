@@ -7,7 +7,7 @@
 				"tasks": ["accessToken"]
 			},
 			"weixin-h5": {
-				"enable": false,
+				"enable": true,
 				"tasks": ["ticket"]
 			}
 		}

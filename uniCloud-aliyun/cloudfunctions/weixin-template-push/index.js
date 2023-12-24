@@ -7,15 +7,14 @@ let uniSubscribemsg = new UniSubscribemsg({
 	provider: "weixin-h5", // 注意，这里是weixin-h5
 });
 exports.main = async (event, context) => {
-
 	// 发送模板消息
 	return await uniSubscribemsg.sendTemplateMessage({
-		touser: "oiSqO602XfqfqhclCy_aIqLNF7wQ",
+		touser: "oORXC5k6013x4lvM-h1aDF0EsRlg", // "oORXC5k6013x4lvM-h1aDF0EsRlg",oORXC5hzGHTU9gQuJhYjk69TkJEk
 		template_id: "oOzSnRKefl2FRD9B0wGbyPzZw4N7n5M385GBBRBBD6Q",
 		// url: "https://uniapp.dcloud.net.cn", // 用户点击消息后跳转的链接地址
 		"miniprogram": {
 			"appid": "wxef48157d70d2b50c",
-			"pagepath": "pages/messages/index"
+			"page": "/messages/index"
 		},
 		data: {
 			leadername: {

@@ -129,7 +129,7 @@
 		valiForm.value.validate().then(async data => {
 			loading.value = true
 			// #ifdef MP-WEIXIN
-			formDate.value.socialsService = "WECHATOPEN"
+			formDate.value.socialsService = "WX_MP"
 			// #endif
 			const res = await createConfirmation(formDate.value)
 			loading.value = false
