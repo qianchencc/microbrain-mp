@@ -21,6 +21,18 @@
 			}
 		},
 		{
+			"path": "pages/index/news/newList",
+			"style": {
+				"navigationBarTitleText": "新闻列表"
+			}
+		},
+		{
+			"path": "pages/index/news/detail",
+			"style": {
+				"navigationBarTitleText": "新闻详情"
+			}
+		},
+		{
 			"path": "pages/messages/index",
 			"style": {
 				"navigationBarTitleText": "消息"

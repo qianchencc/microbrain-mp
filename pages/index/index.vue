@@ -46,6 +46,7 @@
 					</template>
 				</uni-grid>
 			</view>
+			<news />
 		</view>
 	</view>
 </template>
@@ -58,7 +59,8 @@
 	import { jumpUrl } from '@/utils/tools'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { useBannerHook } from './utils/banner.js'
-	// useBannerHook()
+	import news from './news.vue'
+	useBannerHook()
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const topMenu = [{

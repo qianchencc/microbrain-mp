@@ -1,4 +1,4 @@
-import { fetchBanner } from "@/apis/messages/home"
+import { fetchBanner } from "@/apis/home"
 import { ref } from 'vue'
 export const useBannerHook = () => {
 	const bannerList = ref()
@@ -7,4 +7,8 @@ export const useBannerHook = () => {
 		bannerList.value = res.content
 	}
 	getBannerList()
+
+	return {
+		bannerList
+	}
 }
