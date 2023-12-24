@@ -54,6 +54,7 @@
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { computed, reactive, ref, watch } from 'vue'
+	import { wxLogin } from '@/utils/wxLogin.js'
 	import { jumpUrl } from '@/utils/tools'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { useBannerHook } from './utils/banner.js'
@@ -118,6 +119,7 @@
 	}
 	const change = (e) => {
 		console.log(e)
+
 		const {
 			index
 		} = e.detail
@@ -133,6 +135,9 @@
 			})
 		} else {
 			// #ifdef MP-WEIXIN
+			// 重新登录，更新token
+			wxLogin()
+			// 判断订阅消息状态
 			uni.getSetting({
 				withSubscriptions: true,
 				success(res) {
