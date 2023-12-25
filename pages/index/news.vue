@@ -15,35 +15,38 @@
 				</text>
 			</view>
 		</view>
-		<template v-if="messageList.length > 0">
-			<view class="message-item" v-for="(item,index) in messageList" :key="index" @click="handleRouteNewsDetail(item.id)">
-				<image class="message-item_image" :src="`${SCHEME}${COOKIE_DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
-				</image>
-				<view class="message-item_detail">
-					<view class="detail_title uni-ellipsis">
-						{{item.infoSubject}}
-					</view>
-					<view class="detail_footer">
-						<view class="detail_footer_label">
-							{{item.createdAt}}
-						</view>
-						<view class="detail_footer_label">
-							<uni-icons type="eye" :size="null" :color="null"></uni-icons>
+		<view style="height: 500rpx;overflow: scroll;">
+			<TransitionGroup name="list" tag="ul" v-if="messageList.length > 0">
+				<view class="message-item" v-for="(item,index) in messageList" :key="index" @click="handleRouteNewsDetail(item.id)">
+					<image class="message-item_image" :src="`${SCHEME}${COOKIE_DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
+					</image>
+					<view class="message-item_detail">
+						<view class="detail_title uni-ellipsis">
 							{{item.infoSubject}}
 						</view>
-						<view class="detail_footer_label">
-							<uni-icons type="hand-up" :size="null" :color="null"></uni-icons>
-							{{item.likesCount}}
+						<view class="detail_footer">
+							<view class="detail_footer_label">
+								{{item.createdAt}}
+							</view>
+							<view class="detail_footer_label">
+								<uni-icons type="eye" :size="null" :color="null"></uni-icons>
+								{{item.infoSubject}}
+							</view>
+							<view class="detail_footer_label">
+								<uni-icons type="hand-up" :size="null" :color="null"></uni-icons>
+								{{item.likesCount}}
+							</view>
 						</view>
 					</view>
 				</view>
-			</view>
-		</template>
-		<template v-else>
-			<view class="not-main">
-				暂无内容
-			</view>
-		</template>
+			</TransitionGroup>
+			<template v-else>
+				<view class="not-main">
+					暂无内容
+				</view>
+			</template>
+		</view>
+
 	</view>
 </template>
 

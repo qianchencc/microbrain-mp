@@ -4,7 +4,7 @@
 
 import { TO_TEST } from './settings'
 
-const ipAddress = TO_TEST ? 'http://172.16.255.32:28087' : 'http://services.ehetech.net:32087'
+const ipAddress = TO_TEST ? 'http://118.89.77.114:8080' : 'http://services.ehetech.net:32087'
 
 // 文件访问地址
 const fileAddress = '/file/'

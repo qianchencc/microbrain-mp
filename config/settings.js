@@ -19,7 +19,7 @@ export const MENU_MOCK = TO_TEST
 export const SCHEME = TO_TEST ? 'http://' : 'http://'
 
 // 生产环境主域名
-export const COOKIE_DOMAIN = TO_TEST ? '172.16.255.32:28087' : 'services.ehetech.net:32087'
+export const COOKIE_DOMAIN = TO_TEST ? '118.89.77.114:8080' : 'services.ehetech.net:32087'
 
 export const ImageUrl = TO_TEST ? 'https://filecommunity.wzscr.cn/future-community/' : 'https://fcsq.longwan.gov.cn/s3oss/t720y28035/'
 
