@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { store } from '@/store'
+import { wxLogin } from '@/utils/wxLogin.js'
 import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 import { login, getPrincipalAllInfo, getGeospatialList, getWxOpenId, userUpdateOpenId } from '@/apis/user/principal'
 import { COOKIE_DOMAIN } from '@/config/settings'
@@ -138,6 +139,14 @@ export const useUserStore = defineStore({
 		logOut() {
 			removeToken()
 			uni.clearStorageSync();
+			// #ifdef MP-WEIXIN
+			wxLogin()
+			// #endif
+			// #ifdef APP-PLUS
+			uni.reLaunch({
+				url: '/pages/index/index'
+			})
+			// #endif
 		}
 		// 刷新token
 		// async refreshToken(data) {

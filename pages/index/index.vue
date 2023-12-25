@@ -59,8 +59,9 @@
 	import { jumpUrl } from '@/utils/tools'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { useBannerHook } from './utils/banner.js'
+	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'
 	import news from './news.vue'
-	useBannerHook()
+	// useBannerHook()
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const topMenu = [{
@@ -76,7 +77,7 @@
 			icon: '/static/images/index/shop.png'
 		}
 	]
-	const bannerList = [{ pic: '/static/images/index/map.png' }]
+	const bannerList = [{ pic: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.png' }]
 
 	const open = () => {
 		uni.navigateTo({
@@ -119,7 +120,7 @@
 		})
 		// #endif
 	}
-	const change = (e) => {
+	const change = async (e) => {
 		console.log(e)
 
 		const {
@@ -137,30 +138,8 @@
 			})
 		} else {
 			// #ifdef MP-WEIXIN
-			// 重新登录，更新token
-			wxLogin()
-			// 判断订阅消息状态
-			uni.getSetting({
-				withSubscriptions: true,
-				success(res) {
-					console.log(22222222222, res)
-					if (res.subscriptionsSetting['w_uQuByW3kkgiCxminzynXIO1NOYtixfR1JTe0BTEis'] !== 'accept') {
-						uni.requestSubscribeMessage({
-							tmplIds: ["w_uQuByW3kkgiCxminzynXIO1NOYtixfR1JTe0BTEis"], // 小程序订阅消息模板id
-							success: () => {
-								uni.showToast({
-									title: "订阅成功",
-									icon: "none"
-								})
-							},
-							fail: (e) => {
-								console.log(222222, e);
-							}
-						});
-					}
-				}
-			});
-
+			// 订阅消息
+			setSubscribeMessages(menu.name, 'home')
 			// #endif
 			jumpUrl(menu)
 		}

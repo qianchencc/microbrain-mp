@@ -227,3 +227,10 @@ text {
 	lines: 2;
 	/* #endif */
 }
+
+.not-main {
+	text-align: center;
+	font-size: 36upx;
+	color: #8F969F;
+	font-weight: bold;
+}

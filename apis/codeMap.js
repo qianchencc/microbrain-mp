@@ -102,10 +102,6 @@ export const SERVER_CODE = new Map([
 	[
 		401,
 		() => {
-			// uni.showToast({
-			// 	title: '授权失败，请重新登录!',
-			// 	icon: 'none'
-			// })
 			useUserStoreHook().logOut()
 		}
 	],
@@ -162,10 +158,6 @@ export const HTTP_CODE = new Map([
 	[
 		401,
 		() => {
-			uni.showToast({
-				title: '授权失败，请重新登录!',
-				icon: 'none'
-			})
 			useUserStoreHook().logOut()
 		}
 	],

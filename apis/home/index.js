@@ -8,3 +8,6 @@ export const fetchNewsPage = (data) => request.globalRequest('/api/publish/histo
 
 // 新闻详情
 export const fetchNewsById = (id) => request.globalRequest(`/api/publish/history/${id}`, 'GET')
+
+// 消息提醒
+export const fetchRemindPage = (type, data) => request.globalRequest(`/api/${type}/remind/setting/page`, 'GET', data)

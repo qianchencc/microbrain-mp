@@ -17,7 +17,7 @@
 		</view>
 		<template v-if="messageList.length > 0">
 			<view class="message-item" v-for="(item,index) in messageList" :key="index" @click="handleRouteNewsDetail(item.id)">
-				<image class="message-item_image" :src="'http://services.ehetech.net:32087/file/'+item.coverPicUrl" mode="aspectFill">
+				<image class="message-item_image" :src="`${SCHEME}${COOKIE_DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
 				</image>
 				<view class="message-item_detail">
 					<view class="detail_title uni-ellipsis">
@@ -48,28 +48,54 @@
 </template>
 
 <script setup>
-	import { onMounted, ref } from 'vue'
+	import { onMounted, ref, watch } from 'vue'
 	import { fetchNewsPage } from "@/apis/home"
 	import globalConfig from '@/config'
+	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	const newTagList = ref([])
 	const newTagValue = ref('')
 	const messageList = ref([])
 	// 获取新闻列表
 	const gainCategoryList = async () => {
 		newTagList.value = [{
-			name: '热点',
-			id: ''
-		}]
+				name: '热点',
+				id: ''
+			},
+			{
+				name: '党建活动',
+				id: 'PARTY_BUILDING'
+			},
+			{
+				name: '公告信息',
+				id: 'ANNOUNCEMENT'
+			},
+			{
+				name: '企业活动',
+				id: 'BUSINESS_ACTIVITIES'
+			},
+			{
+				name: '公共资讯',
+				id: 'COMMON_NEWS'
+			}
+		]
 		// const res = await fetchNewsInfoCategoryList()
 		// if (!res) return
 		// newTagList.value = newTagList.value.concat(res.content)
 		gainNewsInfoPage()
 	}
 
+	watch(
+		() => newTagValue.value,
+		() => {
+			gainNewsInfoPage()
+		}
+	)
+
 	const gainNewsInfoPage = async () => {
 		var data = {
 			size: 5,
 			page: 0,
+			contentType: newTagValue.value,
 			historyType: 'WEB',
 			sort: 'createdAt,desc'
 		}
