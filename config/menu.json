@@ -1,21 +1,21 @@
 [{
-	"id": "cgtdhbxhnogkjzaq6qizs2w7pb0tghmg",
-	"resourceType": "MODULE",
+	"id": "86074c7e810198296f5441a2da023cd9",
+	"type": "MODULE",
 	"uri": "",
-	"name": "app",
-	"title": "业主管理APP",
+	"name": "mirco-mp",
+	"title": "微脑管理APP",
 	"children": [{
 			"id": "sfskhxjgw3cbz8snpnvhriaaqhb5bm43",
 			"title": "微脑·邻里",
 			"name": "neighbourhood",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 					"id": "ufticxenzope8pqoorf5y8liwvaa6p0z",
 					"title": "邻里风采",
 					"name": "userStyle",
 					"icon": "icon_jmfc.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "tptinhmrfh4qqdj68e7lo2lfj61aenpp",
@@ -23,7 +23,7 @@
 					"name": "seekHelp",
 					"icon": "icon_wyqz.png",
 					"uri": "/",
-					"resourceType": "MENU",
+					"type": "MENU",
 					"resourceTag": "REALNAME"
 				},
 				{
@@ -32,7 +32,7 @@
 					"name": "fcircle",
 					"icon": "icon_sq.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/fcircle/#/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "25mxmipfhipzn8ib6h8rgj3jcjwplouv",
@@ -40,7 +40,7 @@
 					"name": "group",
 					"icon": "icon_llst.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "stmskymriwljg2yq3xkj6xl0fsvug0ko",
@@ -48,7 +48,7 @@
 					"name": "activity",
 					"uri": "/",
 					"icon": "icon_hdzx.png",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "zvccoehe3g69zbwqt0yipgwae5d312k2",
@@ -56,7 +56,7 @@
 					"name": "visitor",
 					"icon": "icon_zhfk.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 
 				{
@@ -65,7 +65,7 @@
 					"name": "guide",
 					"icon": "icon_wsdl.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "tloe9ckoca8ctdcwxhvept4ry3kyyis2",
@@ -73,7 +73,7 @@
 					"name": "decoration",
 					"icon": "icon_zxgl.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "ik3mp1vh2gvxrmnaoztr2omtlpgbhrri",
@@ -81,7 +81,7 @@
 					"name": "game",
 					"icon": "icon_xyx.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "yvtw53zzy2qtjm7y0pewqrk4xp4cdod3",
@@ -89,7 +89,7 @@
 					"name": "knowledgeQA",
 					"icon": "icon_zst.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "ackjlekm3dx1l9u7zczatliccrjzmulc",
@@ -97,7 +97,7 @@
 					"name": "questionnaire",
 					"icon": "icon_dcwj.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "xgi3mjffr0fv6bmfeiancecpswxv2h9u",
@@ -105,7 +105,7 @@
 					"name": "questionnaire",
 					"icon": "icon_dcwj.png",
 					"uri": "https://why.zjwhhly.com/cultureCloudMobile/#/home",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "weeosma6mz64ncewykeksa4srdthve1b",
@@ -113,7 +113,7 @@
 					"name": "homeNews",
 					"icon": "icon_jtt.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "37c5f07ea8d64eadae9f52a8f3a7a44d",
@@ -121,7 +121,7 @@
 					"name": "findex",
 					"icon": "icon_lljw.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/findex/#/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "191868c59547457998341dd26a5fe45b",
@@ -129,7 +129,7 @@
 					"name": "memberShow",
 					"icon": "icon_dyfc.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/sqgzc/provincepartybuilding-h5/#/pages/memberShow/index",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "88455e6e3f574cc2a7b73763de20d348",
@@ -137,7 +137,7 @@
 					"name": "fsquare",
 					"icon": "icon_jmdt.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/fsquare/#/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "a8893420b199443590d58ee9a7cfcd28",
@@ -145,7 +145,7 @@
 					"name": "myCommunity",
 					"icon": "icon_wdsq.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/sqgzc/grid-h5/#/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				}
 			]
 		},
@@ -153,14 +153,14 @@
 			"id": "qbkipysvgizvrjnqa5jsxsqacgtvupc3",
 			"title": "微脑·服务",
 			"name": "service",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 					"id": "bvyg3uukklvzztp8qmlnpyzw3uwyur89",
 					"title": "微脑周边",
 					"name": "wszb",
 					"icon": "icon_wszb.png",
 					"uri": "miniAppId=wx7bbef2f2ec2ff841",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "xf0jjulbifuwreacps3spurpe0t1yhdw",
@@ -168,7 +168,7 @@
 					"name": "voting",
 					"icon": "icon_tpzx.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "wmuoai7vbwbacarz0wragti8vljzgyfd",
@@ -176,7 +176,7 @@
 					"name": "loveMend",
 					"icon": "icon_axfbf.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "88s83zofzhp9s540ed0w2lugoupjy37k",
@@ -184,7 +184,7 @@
 					"name": "incomplete",
 					"icon": "icon_znyy.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "bkqaixcbtotgagc44zuyqa6ai5sc4y03",
@@ -192,7 +192,7 @@
 					"name": "integralStop",
 					"uri": "/",
 					"icon": "icon_jfsc.png",
-					"resourceType": "MENU",
+					"type": "MENU",
 					"resourceTag": "OWNER"
 				},
 				{
@@ -201,7 +201,7 @@
 					"name": "ranking",
 					"icon": "icon_jfpm.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "mdeeggfbwdvp0vjfeikes1pvwb22gumd",
@@ -209,7 +209,7 @@
 					"name": "hotline",
 					"icon": "icon_bmrx.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "ouxqcp9lwbopyk7r4ks4tgynv6koss2q",
@@ -217,7 +217,7 @@
 					"name": "serve",
 					"icon": "icon_fwqd.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "59elkx4d3asjco9edo0nbnbfb7ceygpm",
@@ -225,7 +225,7 @@
 					"name": "governmentAffairs",
 					"icon": "icon_zwt.png",
 					"uri": "miniAppId=wx8e8690a45d6ff120",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "d9mppyru6uskaz49xpu3kul3vxecqbsm",
@@ -233,7 +233,7 @@
 					"name": "wzEatHappyGood",
 					"icon": "icon_wzcwq.png",
 					"uri": "miniAppId=wx8dffd911ab68ab11",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "bbhllc3w8dksjgmyelxhkmgph52rofla",
@@ -241,7 +241,7 @@
 					"name": "wzGoodAt",
 					"icon": "icon_wzyx.png",
 					"uri": "miniAppId=wx16c6c0eef6a62ed4",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "kfglgvegfau6ealzshn5icp4odoor8fc",
@@ -249,7 +249,7 @@
 					"name": "eTravelWz",
 					"icon": "icon_tarvalWz.png",
 					"uri": "miniAppId=wx4a6b3a87cbdb6d40",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "97dxb68smbh1zibm16ovz6xmxs5t4hur",
@@ -257,7 +257,7 @@
 					"name": "universityStudentPosthouse",
 					"icon": "icon_dxsyz.png",
 					"uri": "miniAppId=wx25f2f75aa658fede",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "aqxxpaaenepxm7ogojv8hqf5jyiewquk",
@@ -265,7 +265,7 @@
 					"name": "wzWeather",
 					"icon": "icon_tqxgj.png",
 					"uri": "miniAppId=wx72bfbc39508a7398",
-					"resourceType": "MENU"
+					"type": "MENU"
 				}
 			]
 		},
@@ -273,14 +273,14 @@
 			"id": "ndjjzhcpnccdnqp9ybcpommce1vjkygv",
 			"title": "微脑·治理",
 			"name": "government",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 					"id": "cb3hi2hwunjiel6hu3qeu5gnidic580l",
 					"title": "党建引领",
 					"name": "incomplete",
 					"icon": "icon_djyl.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "ebiu0rbag72oysevwitsjvuv8pjfqka4",
@@ -288,7 +288,7 @@
 					"name": "incomplete",
 					"icon": "icon_djhd.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "pfi0bimwq4cwlwb30fpmkcuaokcloeer",
@@ -296,7 +296,7 @@
 					"name": "incomplete",
 					"icon": "icon_zhtc.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "braam9wwxsy9vphu2omy7aevrfegvt3y",
@@ -304,7 +304,7 @@
 					"name": "incomplete",
 					"icon": "icon_zhxg.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "yj7syptaz0vkpdfk3duqptti6nzzvd7l",
@@ -312,7 +312,7 @@
 					"name": "incomplete",
 					"icon": "icon_zhxg.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "vhfvtycebjqorpijhcj7u8gqwpaeamj7",
@@ -320,7 +320,7 @@
 					"name": "visitors",
 					"icon": "icon_fkgl.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "pxstjr5bjr7eh3mf5ui4rofdbpfzf3je",
@@ -328,7 +328,7 @@
 					"name": "incomplete",
 					"icon": "icon_kjyy.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "qb9vtuad3ruonmsmdi2rm9rqrsoej8b9",
@@ -336,7 +336,7 @@
 					"name": "incomplete",
 					"icon": "icon_nhdj.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "y0z8vu9wigh52gfehulmmdcfo7yn3xu5",
@@ -344,7 +344,7 @@
 					"name": "incomplete",
 					"icon": "icon_fydj.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "vea3ye47dvzzpakbxerf2lirnyawrqou",
@@ -352,7 +352,7 @@
 					"name": "incomplete",
 					"icon": "icon_yqwz.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "szj6cxetp5qr3t8isbglwizrjxr9nbos",
@@ -360,7 +360,7 @@
 					"name": "incomplete",
 					"uri": "/",
 					"icon": "icon_ykt.png",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "ubvqwwuzwlxxnr0segmn9jfjbfho8tbc",
@@ -368,7 +368,7 @@
 					"name": "workorder",
 					"icon": "icon_bxdj.png",
 					"uri": "/pages/repair/register",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "0kr9zk9l3ruuebco1kj2fizjnlxhi5cs",
@@ -376,7 +376,7 @@
 					"name": "workorder",
 					"icon": "icon_qxsb.png",
 					"uri": "/pages/defect/register",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "9340933b9769439da1368098812fbecd",
@@ -384,7 +384,7 @@
 					"name": "workorder",
 					"uri": "/pages/contradiction/register",
 					"icon": "icon_mtsb.png",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "ywmwrzb8ajglrgszz27pbjhivsott3l4",
@@ -392,7 +392,7 @@
 					"name": "workorder",
 					"icon": "icon_fwdt.png",
 					"uri": "/pages/servicehall/index",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "6xlecbddpnbzp6hyipxifdmk3svk3zpm",
@@ -400,7 +400,7 @@
 					"name": "legalaid",
 					"icon": "icon_flyz.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "lx2elfcfintblh9gkycuoggpfpuhlh8k",
@@ -408,7 +408,7 @@
 					"name": "workorder",
 					"uri": "/pages/complain/register",
 					"icon": "icon_tszx.png",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "fecxcinhfzvmwoyfwkgcbykq8cx027d5",
@@ -416,7 +416,7 @@
 					"name": "neighbor",
 					"icon": "icon_mlzx.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 
 				{
@@ -425,7 +425,7 @@
 					"name": "convention",
 					"icon": "icon_jmgy.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "weislxy7h4nsomxbqcwzyloismosihuf",
@@ -433,7 +433,7 @@
 					"name": "suggestion",
 					"icon": "icon_yjx.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "bmuknzrf9co8soqutpvv8igj8usmwf5a",
@@ -441,7 +441,7 @@
 					"name": "epidemicSituation",
 					"icon": "icon_yk.png",
 					"uri": "miniAppId=wxc888b51893c07e7c",
-					"resourceType": "MENU"
+					"type": "MENU"
 				}
 			]
 		},
@@ -449,14 +449,14 @@
 			"id": "zzvzvjc0tx23fycknjwt0adteu4utwj8",
 			"title": "微脑·教育",
 			"name": "education",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 					"id": "mnehxitknpynyf7ymvbqrvepxxuv19gz",
 					"title": "幸福学堂",
 					"name": "happyschool",
 					"icon": "icon_xfxt.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "x4lwakfubxyvijzr6jsukb3ed78c0zcv",
@@ -464,7 +464,7 @@
 					"name": "zxt",
 					"icon": "icon_zxt.png",
 					"uri": "miniAppId=wxe5836065d4c39bbf",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "293576ae2f7a470aaf6fb53233927204",
@@ -472,7 +472,7 @@
 					"name": "birthRegister",
 					"icon": "icon_sydj.png",
 					"uri": "wxProgram://浙里办/7bgApBkEGhZLOGa",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "bc2884a4953b465996ce23decc9ee73b",
@@ -480,7 +480,7 @@
 					"name": "birthMoneyGet",
 					"icon": "icon_syjt.png",
 					"uri": "wxProgram://浙里办/A5vLHAP1gtc3y7E",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "3b15ae8cfc324fefb3391235863ea1a3",
@@ -488,7 +488,7 @@
 					"name": "childInSchool",
 					"icon": "icon_rxzzd.png",
 					"uri": "wxProgram://浙里办/Qa9iXDJili4lA0C",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "e21434ee60c842eea87e0698c565f280",
@@ -496,7 +496,7 @@
 					"name": "wzMerry",
 					"icon": "icon_zyyy.png",
 					"uri": "wxProgram://浙里办/sEaYxvq6sGIjVtu",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "s9myu6trp0yr4pztrevvkelnh79bunpu",
@@ -504,7 +504,7 @@
 					"name": "incomplete",
 					"icon": "icon_jyjy.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "sah7qlwpddtmebwchphx9bdqirx1nmlf",
@@ -512,7 +512,7 @@
 					"name": "incomplete",
 					"icon": "icon_zjh.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "9vuyxxczq0ohjmnbpckcpktdhu0aj3vx",
@@ -520,7 +520,7 @@
 					"name": "wisdomCase ",
 					"icon": "icon_zhsg.jpg",
 					"uri": "miniAppId=wx4bca206c64bbc580",
-					"resourceType": "MENU"
+					"type": "MENU"
 				}
 			]
 		},
@@ -528,14 +528,14 @@
 			"id": "oxvydk0inrcymaodvbgqnrmss10iu3jp",
 			"title": "微脑·健康",
 			"name": "healthy",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 					"id": "io4zjprouxxwqjotvos3o0rfiak7rgzz",
 					"title": "健康档案",
 					"name": "incomplete",
 					"icon": "icon_jkda.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "v9i7edxwzxzd1arbqk5z5zifiaxuvmog",
@@ -543,7 +543,7 @@
 					"name": "incomplete",
 					"icon": "icon_hzk.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "l4azukh8qlrrjzmwzvpvak6rhyw6oxjo",
@@ -551,7 +551,7 @@
 					"name": "incomplete",
 					"icon": "icon_wlkyzc.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "jlklug3az9gesezta5mwupgobmdw10qo",
@@ -559,7 +559,7 @@
 					"name": "incomplete",
 					"icon": "icon_jkyz.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "c6kh1pf2frjzrbi43yzkgth2eayja8sd",
@@ -567,7 +567,7 @@
 					"name": "counseling",
 					"uri": "/",
 					"icon": "icon_xlzx.png",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "b95ba9983fe84980bb00cdc948af18a1",
@@ -575,7 +575,7 @@
 					"name": "orderDoctor",
 					"icon": "icon_yygh.png",
 					"uri": "wxProgram://浙里办/jXkNoDd2FzP9qHh",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "9b890ddc591f4e8a9448cc5aafc8a9e4",
@@ -583,7 +583,7 @@
 					"name": "elderSchool",
 					"icon": "icon_lndx.png",
 					"uri": "wxProgram://浙里办/m60Wlj48Vrk0xDt",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "b81de7cb62524e1f8077c6e952d5c9fd",
@@ -591,7 +591,7 @@
 					"name": "medicalAdd",
 					"icon": "icon_yjpt.png",
 					"uri": "wxProgram://浙里办/Tz36AAXBDoUV2gg",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "b56908c5515443d0b1fe94062a436a7c",
@@ -599,7 +599,7 @@
 					"name": "socialSecurityQuery",
 					"icon": "icon_sbcx.png",
 					"uri": "wxProgram://浙里办/SnGL2o1n0fclIdc",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "48e1d2a7d7d644a690b54a15d2806f4c",
@@ -607,7 +607,7 @@
 					"name": "medicalInsurance",
 					"icon": "icon_zlyb.png",
 					"uri": "wxProgram://浙里办/fNWOAjRD8i70UAe",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "e0a6d70250be4c71a4cbb10e4c9beb92",
@@ -615,7 +615,7 @@
 					"name": "zlHelp",
 					"icon": "icon_zlj.png",
 					"uri": "wxProgram://浙里办/0GtRu0XjctuO0Nb",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "elr0g8nab9edi1ccird2o7f6s2uqzirv",
@@ -623,7 +623,7 @@
 					"name": "AIHealth",
 					"icon": "icon_AIjk.png",
 					"uri": "miniAppId=wx46919926569a6f52",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "m9xzbrsmyxntxdddslzggreendxhwpyd",
@@ -631,7 +631,7 @@
 					"name": "cloudHelp",
 					"icon": "icon_yhh.png",
 					"uri": "miniAppId=wx46dc5071b1340d0e",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "hfea0aiqnprpimvf4wo0uqzpjqiglmxt",
@@ -639,7 +639,7 @@
 					"name": "runway",
 					"icon": "icon_runway.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "3cyy8p3znoumw4dwrniliymwmcwddsfu",
@@ -647,7 +647,7 @@
 					"name": "basketball",
 					"icon": "icon_zhlqc.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				}
 			]
 		},
@@ -655,14 +655,14 @@
 			"id": "nnojtlel0ccvfvo0sgx1cgvztybyo0m3",
 			"title": "微脑·创业",
 			"name": "startBusiness",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 					"id": "hzcditr3uoz1tfcufrvgv0wd770m2v8c",
 					"title": "机构入驻",
 					"name": "organJoin",
 					"icon": "icon_jgrz.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "m98mx5e6f1vbsevqfzoyw0ijwcuicmrm",
@@ -670,7 +670,7 @@
 					"name": "incomplete",
 					"icon": "icon_zjy.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				}
 			]
 		},
@@ -678,14 +678,14 @@
 			"id": "pkyuowd2mhnfesdlx2ykxpmboesihmiz",
 			"title": "微脑·交通",
 			"name": "traffic",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 					"id": "sazbdf8chxg80n1zlzpnley6tokixlxn",
 					"title": "公交站点",
 					"name": "incomplete",
 					"icon": "icon_gjzd.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "ndknqeuedgfuweec5i7jptl5lgvbmng3",
@@ -693,7 +693,7 @@
 					"name": "incomplete",
 					"icon": "icon_jtwfjf.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "xxs6pnuqfibwebjdpbr9l01zdw9lxgv2",
@@ -701,7 +701,7 @@
 					"name": "incomplete",
 					"icon": "icon_cjyy.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "mdpevyfgnx5gc8cegrf3hj8ggd59brrg",
@@ -709,7 +709,7 @@
 					"name": "zzt",
 					"icon": "icon_zzt.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "vcck1jnkd53ipammtbdnmwt89mqgmjsc",
@@ -717,7 +717,7 @@
 					"name": "lightRailTime",
 					"icon": "icon_gdsk.png",
 					"uri": "miniAppId=wxe84a485904c12a87",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "bussy5qzzb8oarsrt7p534trilfoy4dj",
@@ -725,7 +725,7 @@
 					"name": "wzTransportation",
 					"icon": "icon_wzjy.png",
 					"uri": "miniAppId=wx2859a8d53cd0cd7c",
-					"resourceType": "MENU"
+					"type": "MENU"
 				}
 			]
 		},
@@ -733,14 +733,14 @@
 			"id": "ayh4rbktmcev7hmoiycww8nvsfw2vdgi",
 			"title": "微脑·低碳",
 			"name": "lowCarbon",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 					"id": "rhxsblfjlhtlatvr6yuwtqxx01ahctvo",
 					"title": "跳蚤市场",
 					"name": "fleaMarket",
 					"icon": "icon_tzsc.png",
 					"uri": "/",
-					"resourceType": "MENU"
+					"type": "MENU"
 				},
 				{
 					"id": "s0nll8wvlytgkzx8xtgrorc2ltsgmwng",
@@ -748,7 +748,7 @@
 					"name": "smartWaste",
 					"icon": "icon_zhljt.jpg",
 					"uri": "miniAppId=wx3e84ec47f31ee3bf",
-					"resourceType": "MENU"
+					"type": "MENU"
 				}
 			]
 		},
@@ -756,14 +756,14 @@
 			"id": "rhiprpn5pvpktun7v3ywpaxtzy8yqoyn",
 			"title": "微脑·建筑",
 			"name": "startBusiness",
-			"resourceType": "MODULE",
+			"type": "MODULE",
 			"children": [{
 				"id": "xgdsqdueyg65aqhbro5updq2erzg4jov",
 				"title": "一张图",
 				"name": "map",
 				"icon": "icon_yzt.png",
 				"uri": "/",
-				"resourceType": "MENU"
+				"type": "MENU"
 			}]
 		}
 	]

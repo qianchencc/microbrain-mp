@@ -3,6 +3,7 @@ import globalConfig from '@/config'
 import { useUserStoreHook } from "../store/modules/user";
 import { menuFuc } from "./application";
 import { ImageUrl } from '../config/settings';
+import { usePermissionStore } from '../store/modules/permission';
 
 export const getStaticFile = url => {
 	return new URL(`../static/images/${url}`, import.meta.url).href
@@ -68,6 +69,25 @@ export const gainTencentVideo = (vid) => {
 
 // 菜单跳转
 export const jumpUrl = async menu => {
+	const userInfo = useUserStoreHook().getUserInfo
+	if (userInfo.confirmationStatus !== 'ACCEPT') {
+		uni.showModal({
+			title: '提示',
+			content: '请确权后，重新尝试',
+			showCancel: false
+		});
+		return
+	}
+	// 判断用户权限
+	const permissionIds = usePermissionStore().permissionIds
+	if (!permissionIds.includes(menu.id)) {
+		uni.showModal({
+			title: '提示',
+			content: '没有权限，请联系管理员',
+			showCancel: false
+		});
+		return
+	}
 	// #ifdef MP-WEIXIN
 	console.log('jumpUrl menu ===>', menu)
 	// if (menu.code) {

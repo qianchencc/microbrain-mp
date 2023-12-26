@@ -24,7 +24,7 @@ export const COOKIE_DOMAIN = TO_TEST ? '118.89.77.114:8080' : 'services.ehetech.
 export const ImageUrl = TO_TEST ? 'https://filecommunity.wzscr.cn/future-community/' : 'https://fcsq.longwan.gov.cn/s3oss/t720y28035/'
 
 // 项目基础名称
-export const BASE_NAME = 'app'
+export const BASE_NAME = 'mirco-mp'
 
 // 浙住通服务
 export const zztServer = TO_TEST ? 'http://223.4.78.245:8087/zztTest' : 'https://wlsq.zje.com/zzt'

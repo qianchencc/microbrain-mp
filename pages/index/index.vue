@@ -123,9 +123,7 @@
 	const change = async (e) => {
 		console.log(e)
 
-		const {
-			index
-		} = e.detail
+		const { index } = e.detail
 		const menu = menuList.value[index]
 		if (menu.name.includes('incomplete')) {
 			uni.showToast({

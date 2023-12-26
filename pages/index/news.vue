@@ -16,7 +16,7 @@
 			</view>
 		</view>
 		<view style="height: 500rpx;overflow: scroll;">
-			<TransitionGroup name="list" tag="ul" v-if="messageList.length > 0">
+			<view v-if="messageList.length > 0">
 				<view class="message-item" v-for="(item,index) in messageList" :key="index" @click="handleRouteNewsDetail(item.id)">
 					<image class="message-item_image" :src="`${SCHEME}${COOKIE_DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
 					</image>
@@ -39,7 +39,7 @@
 						</view>
 					</view>
 				</view>
-			</TransitionGroup>
+			</view>
 			<template v-else>
 				<view class="not-main">
 					暂无内容

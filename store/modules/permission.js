@@ -9,6 +9,28 @@ import { appPush } from '@/utils/appPush.js'
 // generate access btns
 const generateBtns = (routes) => {
 	const permissionBtns = []
+	const permissionIds = []
+	const c = (routes, cname = '') => {
+		routes.forEach(route => {
+			const {
+				type,
+				name,
+				children
+			} = route
+			permissionIds.push(route.id)
+			if (type === 'BUTTON') permissionBtns.push((cname + '-' + name).slice(1))
+			if (children && children.length) c(children, cname + '-' + route.name)
+		})
+	}
+	c(routes)
+	return {
+		permissionBtns,
+		permissionIds
+	}
+}
+
+const filterPermissionIds = (data) => {
+	const permissionBtns = []
 	const c = (routes, cname = '') => {
 		routes.forEach(route => {
 			const {
@@ -53,7 +75,8 @@ export const usePermissionStore = defineStore({
 	state: () => ({
 		accessBtns: [],
 		menuList: [],
-		homeMenuIndex: storageGet('homeMenuIndex') || defaultIndex
+		homeMenuIndex: storageGet('homeMenuIndex') || defaultIndex,
+		permissionIds: []
 	}),
 	getters: {
 		getAccessBtns() {
@@ -74,6 +97,9 @@ export const usePermissionStore = defineStore({
 			const homeMenu = allHomeMenu.sort((a, b) => defaultIndex.indexOf(a.id) - defaultIndex.indexOf(b.id))
 			homeMenu.push(all)
 			return homeMenu
+		},
+		getPermissionIds() {
+			return this.menuList
 		}
 	},
 	actions: {
@@ -82,20 +108,8 @@ export const usePermissionStore = defineStore({
 			storageSet('homeMenuIndex', homeMenuIndex)
 		},
 		async setAuthority() {
-			/* 注册路由 */
-			let data = []
-			if (true || MENU_MOCK) {
-
-				data = resource.find((v) => v.name === BASE_NAME).children
-			} else {
-				const {
-					content: resourceData
-				} = await getResourceTree({
-					resourceCode: BASE_NAME
-				})
-				data = resourceData[0].children
-			}
-			data.forEach(ele => {
+			const menuList = resource.find((v) => v.name === BASE_NAME).children
+			menuList.forEach(ele => {
 				ele.children.forEach(val => {
 					// 根据uri值，配置不同的跳转方式
 					// 1.uri包含http,属于外部跳转
@@ -106,8 +120,20 @@ export const usePermissionStore = defineStore({
 					}
 				})
 			})
-			this.menuList = data
-			this.accessBtns = generateBtns(data)
+			this.menuList = menuList
+			/* 注册路由 */
+			let data = []
+			if (MENU_MOCK) {
+				data = resource.find((v) => v.name === BASE_NAME).children
+			} else {
+				const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })
+				if (!resourceData) return
+				data = resourceData.children
+			}
+
+			const { permissionBtns, permissionIds } = generateBtns(data)
+			this.accessBtns = permissionBtns
+			this.permissionIds = permissionIds
 			useUserStoreHook().setGeospatialInfo()
 			useUserStoreHook().setUserInfo()
 			// #ifdef APP-PLUS
