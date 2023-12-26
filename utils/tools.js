@@ -70,14 +70,14 @@ export const gainTencentVideo = (vid) => {
 // 菜单跳转
 export const jumpUrl = async menu => {
 	const userInfo = useUserStoreHook().getUserInfo
-	if (userInfo.confirmationStatus !== 'ACCEPT') {
-		uni.showModal({
-			title: '提示',
-			content: '请确权后，重新尝试',
-			showCancel: false
-		});
-		return
-	}
+	// if (userInfo.confirmationStatus !== 'ACCEPT') {
+	// 	uni.showModal({
+	// 		title: '提示',
+	// 		content: '请确权后，重新尝试',
+	// 		showCancel: false
+	// 	});
+	// 	return
+	// }
 	// 判断用户权限
 	const permissionIds = usePermissionStore().permissionIds
 	if (!permissionIds.includes(menu.id)) {

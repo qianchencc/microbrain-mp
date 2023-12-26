@@ -6,14 +6,13 @@
 				<button type="primary" plain="true" size="mini" @click="isEdit = !isEdit">{{isEdit?'完成':'编辑'}}</button>
 			</view>
 			<uni-grid style="background-color: #fff;padding: 20rpx 0;border-radius: 10rpx;" :column="4" :square="false" :showBorder="false">
-				<template v-for="(item, index) in homeMenuList">
-					<uni-grid-item v-if="!item.uri.includes('incomplete')" :index="index" :key="item.id" @tap="change(item)">
+				<template v-for="(item, index) in homeMenuList" :key="item.id">
+					<uni-grid-item @tap="change(item)">
 						<view class="grid-item-box">
 							<img v-if="isEdit" class="icon-add" src="/static/images/home/icon_delete.png" @click="editMenu(item.id)">
-							<view class="box-img_back" v-if="!item.uri.includes('incomplete')">
+							<view class="box-img_back">
 								<image class="box-img" :src="item.icon.startsWith('http') ? item.icon : `/static/images/home/${item.icon}`" alt="" />
 							</view>
-							<uni-icons class="icon" v-else type="star" :size="30" :color="'#777'" />
 							<text class="text">{{item.title}}</text>
 						</view>
 					</uni-grid-item>
@@ -27,10 +26,11 @@
 				</view>
 				<uni-grid :column="4" :square="false" :showBorder="false">
 					<template v-for="(item) in menu.children" :key="item.id">
-						<uni-grid-item v-if="!item.uri.includes('incomplete') && item.enable !== 0" style="width: 25%;" @tap="change(item)">
+						<uni-grid-item v-if="item.enable !== 0" style="width: 25%;" @tap="change(item)">
 							<view class="grid-item-box">
 								<img v-if="isEdit&&!homeMenuIndex.includes(item.id)" class="icon-add" src="/static/images/home/icon_add.png" @tap="editMenu(item.id,'add')">
-								<view class="box-img_back" v-if="!item.uri.includes('incomplete')">
+								<!-- <view class="box-img_back" v-if="!item.uri.includes('incomplete')"> -->
+								<view class="box-img_back">
 									<template v-if="item.externalResource === 1">
 										<image class="box-img" :src="showNewsImage(item.icon)" alt="" />
 									</template>
@@ -38,7 +38,7 @@
 										<image class="box-img" :src="item.icon.startsWith('http') ? item.icon : `/static/images/home/${item.icon}`" alt="" />
 									</template>
 								</view>
-								<uni-icons class="icon" v-else type="star" :size="30" :color="'#777'" />
+								<!-- <uni-icons class="icon" v-else type="star" :size="30" :color="'#777'" /> -->
 								<text class="text">{{item.title}}</text>
 							</view>
 						</uni-grid-item>
@@ -80,7 +80,7 @@
 	const homeMenuIndex = computed(() => usePermissionStoreHook().getHomeMenuIndex)
 
 	const homeMenuList = computed(() => {
-		const data = usePermissionStoreHook().getHomeMenu
+		const data = [...usePermissionStoreHook().getHomeMenu]
 		data.pop()
 		return data
 	})

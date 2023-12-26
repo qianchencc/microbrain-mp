@@ -12,7 +12,7 @@
 			"children": [{
 					"id": "ufticxenzope8pqoorf5y8liwvaa6p0z",
 					"title": "邻里风采",
-					"name": "userStyle",
+					"name": "incomplete",
 					"icon": "icon_jmfc.png",
 					"uri": "/",
 					"type": "MENU"
@@ -20,7 +20,7 @@
 				{
 					"id": "tptinhmrfh4qqdj68e7lo2lfj61aenpp",
 					"title": "邻里达人",
-					"name": "seekHelp",
+					"name": "incomplete",
 					"icon": "icon_wyqz.png",
 					"uri": "/",
 					"type": "MENU",
@@ -29,7 +29,7 @@
 				{
 					"id": "a9379b8c6e5a461a97f43dc8454af0f4",
 					"title": "社群圈子",
-					"name": "fcircle",
+					"name": "incomplete",
 					"icon": "icon_sq.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/fcircle/#/",
 					"type": "MENU"
@@ -37,7 +37,7 @@
 				{
 					"id": "25mxmipfhipzn8ib6h8rgj3jcjwplouv",
 					"title": "邻里社团",
-					"name": "group",
+					"name": "incomplete",
 					"icon": "icon_llst.png",
 					"uri": "/",
 					"type": "MENU"
@@ -45,7 +45,7 @@
 				{
 					"id": "stmskymriwljg2yq3xkj6xl0fsvug0ko",
 					"title": "活动中心",
-					"name": "activity",
+					"name": "incomplete",
 					"uri": "/",
 					"icon": "icon_hdzx.png",
 					"type": "MENU"
@@ -53,7 +53,7 @@
 				{
 					"id": "zvccoehe3g69zbwqt0yipgwae5d312k2",
 					"title": "邻里访",
-					"name": "visitor",
+					"name": "incomplete",
 					"icon": "icon_zhfk.png",
 					"uri": "/",
 					"type": "MENU"
@@ -62,7 +62,7 @@
 				{
 					"id": "yceqdj1aplddngivk1bwvxt6shoaufx2",
 					"title": "微脑导览",
-					"name": "guide",
+					"name": "incomplete",
 					"icon": "icon_wsdl.png",
 					"uri": "/",
 					"type": "MENU"
@@ -70,7 +70,7 @@
 				{
 					"id": "tloe9ckoca8ctdcwxhvept4ry3kyyis2",
 					"title": "装修管理",
-					"name": "decoration",
+					"name": "incomplete",
 					"icon": "icon_zxgl.png",
 					"uri": "/",
 					"type": "MENU"
@@ -78,7 +78,7 @@
 				{
 					"id": "ik3mp1vh2gvxrmnaoztr2omtlpgbhrri",
 					"title": "幸运转盘",
-					"name": "game",
+					"name": "incomplete",
 					"icon": "icon_xyx.png",
 					"uri": "/",
 					"type": "MENU"
@@ -86,7 +86,7 @@
 				{
 					"id": "yvtw53zzy2qtjm7y0pewqrk4xp4cdod3",
 					"title": "知识题",
-					"name": "knowledgeQA",
+					"name": "incomplete",
 					"icon": "icon_zst.png",
 					"uri": "/",
 					"type": "MENU"
@@ -94,7 +94,7 @@
 				{
 					"id": "ackjlekm3dx1l9u7zczatliccrjzmulc",
 					"title": "调查问卷",
-					"name": "questionnaire",
+					"name": "incomplete",
 					"icon": "icon_dcwj.png",
 					"uri": "/",
 					"type": "MENU"
@@ -102,7 +102,7 @@
 				{
 					"id": "xgi3mjffr0fv6bmfeiancecpswxv2h9u",
 					"title": "文e家",
-					"name": "questionnaire",
+					"name": "incomplete",
 					"icon": "icon_dcwj.png",
 					"uri": "https://why.zjwhhly.com/cultureCloudMobile/#/home",
 					"type": "MENU"
@@ -110,7 +110,7 @@
 				{
 					"id": "weeosma6mz64ncewykeksa4srdthve1b",
 					"title": "家头条",
-					"name": "homeNews",
+					"name": "incomplete",
 					"icon": "icon_jtt.png",
 					"uri": "/",
 					"type": "MENU"
@@ -118,7 +118,7 @@
 				{
 					"id": "37c5f07ea8d64eadae9f52a8f3a7a44d",
 					"title": "邻里交往",
-					"name": "findex",
+					"name": "incomplete",
 					"icon": "icon_lljw.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/findex/#/",
 					"type": "MENU"
@@ -126,7 +126,7 @@
 				{
 					"id": "191868c59547457998341dd26a5fe45b",
 					"title": "党员风采",
-					"name": "memberShow",
+					"name": "incomplete",
 					"icon": "icon_dyfc.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/sqgzc/provincepartybuilding-h5/#/pages/memberShow/index",
 					"type": "MENU"
@@ -134,7 +134,7 @@
 				{
 					"id": "88455e6e3f574cc2a7b73763de20d348",
 					"title": "居民动态",
-					"name": "fsquare",
+					"name": "incomplete",
 					"icon": "icon_jmdt.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/fsquare/#/",
 					"type": "MENU"
@@ -142,7 +142,7 @@
 				{
 					"id": "a8893420b199443590d58ee9a7cfcd28",
 					"title": "我的社区",
-					"name": "myCommunity",
+					"name": "incomplete",
 					"icon": "icon_wdsq.png",
 					"uri": "https://wlsq.jst.zj.gov.cn/sqgzc/grid-h5/#/",
 					"type": "MENU"
@@ -157,7 +157,7 @@
 			"children": [{
 					"id": "bvyg3uukklvzztp8qmlnpyzw3uwyur89",
 					"title": "微脑周边",
-					"name": "wszb",
+					"name": "incomplete",
 					"icon": "icon_wszb.png",
 					"uri": "miniAppId=wx7bbef2f2ec2ff841",
 					"type": "MENU"
@@ -165,7 +165,7 @@
 				{
 					"id": "xf0jjulbifuwreacps3spurpe0t1yhdw",
 					"title": "投票中心",
-					"name": "voting",
+					"name": "incomplete",
 					"icon": "icon_tpzx.png",
 					"uri": "/",
 					"type": "MENU"
@@ -173,7 +173,7 @@
 				{
 					"id": "wmuoai7vbwbacarz0wragti8vljzgyfd",
 					"title": "爱心缝补房",
-					"name": "loveMend",
+					"name": "incomplete",
 					"icon": "icon_axfbf.png",
 					"uri": "/",
 					"type": "MENU"
@@ -189,7 +189,7 @@
 				{
 					"id": "bkqaixcbtotgagc44zuyqa6ai5sc4y03",
 					"title": "积分商城",
-					"name": "integralStop",
+					"name": "incomplete",
 					"uri": "/",
 					"icon": "icon_jfsc.png",
 					"type": "MENU",
@@ -198,7 +198,7 @@
 				{
 					"id": "unnzcgakh54hqz8cq2vo4qlsdzefhk9f",
 					"title": "积分排名",
-					"name": "ranking",
+					"name": "incomplete",
 					"icon": "icon_jfpm.png",
 					"uri": "/",
 					"type": "MENU"
@@ -206,7 +206,7 @@
 				{
 					"id": "mdeeggfbwdvp0vjfeikes1pvwb22gumd",
 					"title": "便民热线",
-					"name": "hotline",
+					"name": "incomplete",
 					"icon": "icon_bmrx.png",
 					"uri": "/",
 					"type": "MENU"
@@ -214,7 +214,7 @@
 				{
 					"id": "ouxqcp9lwbopyk7r4ks4tgynv6koss2q",
 					"title": "服务清单",
-					"name": "serve",
+					"name": "incomplete",
 					"icon": "icon_fwqd.png",
 					"uri": "/",
 					"type": "MENU"
@@ -365,7 +365,7 @@
 				{
 					"id": "ubvqwwuzwlxxnr0segmn9jfjbfho8tbc",
 					"title": "报修登记",
-					"name": "workorder",
+					"name": "incomplete",
 					"icon": "icon_bxdj.png",
 					"uri": "/pages/repair/register",
 					"type": "MENU"
@@ -373,7 +373,7 @@
 				{
 					"id": "0kr9zk9l3ruuebco1kj2fizjnlxhi5cs",
 					"title": "缺陷上报",
-					"name": "workorder",
+					"name": "incomplete",
 					"icon": "icon_qxsb.png",
 					"uri": "/pages/defect/register",
 					"type": "MENU"
@@ -381,7 +381,7 @@
 				{
 					"id": "9340933b9769439da1368098812fbecd",
 					"title": "矛调上报",
-					"name": "workorder",
+					"name": "incomplete",
 					"uri": "/pages/contradiction/register",
 					"icon": "icon_mtsb.png",
 					"type": "MENU"
@@ -389,7 +389,7 @@
 				{
 					"id": "ywmwrzb8ajglrgszz27pbjhivsott3l4",
 					"title": "服务大厅",
-					"name": "workorder",
+					"name": "incomplete",
 					"icon": "icon_fwdt.png",
 					"uri": "/pages/servicehall/index",
 					"type": "MENU"
@@ -397,7 +397,7 @@
 				{
 					"id": "6xlecbddpnbzp6hyipxifdmk3svk3zpm",
 					"title": "法律援助",
-					"name": "legalaid",
+					"name": "incomplete",
 					"icon": "icon_flyz.png",
 					"uri": "/",
 					"type": "MENU"
@@ -405,7 +405,7 @@
 				{
 					"id": "lx2elfcfintblh9gkycuoggpfpuhlh8k",
 					"title": "投诉中心",
-					"name": "workorder",
+					"name": "incomplete",
 					"uri": "/pages/complain/register",
 					"icon": "icon_tszx.png",
 					"type": "MENU"
@@ -413,7 +413,7 @@
 				{
 					"id": "fecxcinhfzvmwoyfwkgcbykq8cx027d5",
 					"title": "睦邻在线",
-					"name": "neighbor",
+					"name": "incomplete",
 					"icon": "icon_mlzx.png",
 					"uri": "/",
 					"type": "MENU"
@@ -422,7 +422,7 @@
 				{
 					"id": "uwowbbjouzywzurxmthtiivlakfcqmxq",
 					"title": "邻里公约",
-					"name": "convention",
+					"name": "incomplete",
 					"icon": "icon_jmgy.png",
 					"uri": "/",
 					"type": "MENU"
@@ -430,7 +430,7 @@
 				{
 					"id": "weislxy7h4nsomxbqcwzyloismosihuf",
 					"title": "意见箱",
-					"name": "suggestion",
+					"name": "incomplete",
 					"icon": "icon_yjx.png",
 					"uri": "/",
 					"type": "MENU"
@@ -438,7 +438,7 @@
 				{
 					"id": "bmuknzrf9co8soqutpvv8igj8usmwf5a",
 					"title": "疫况",
-					"name": "epidemicSituation",
+					"name": "incomplete",
 					"icon": "icon_yk.png",
 					"uri": "miniAppId=wxc888b51893c07e7c",
 					"type": "MENU"
@@ -453,7 +453,7 @@
 			"children": [{
 					"id": "mnehxitknpynyf7ymvbqrvepxxuv19gz",
 					"title": "幸福学堂",
-					"name": "happyschool",
+					"name": "incomplete",
 					"icon": "icon_xfxt.png",
 					"uri": "/",
 					"type": "MENU"
@@ -461,7 +461,7 @@
 				{
 					"id": "x4lwakfubxyvijzr6jsukb3ed78c0zcv",
 					"title": "浙学通",
-					"name": "zxt",
+					"name": "incomplete",
 					"icon": "icon_zxt.png",
 					"uri": "miniAppId=wxe5836065d4c39bbf",
 					"type": "MENU"
@@ -469,7 +469,7 @@
 				{
 					"id": "293576ae2f7a470aaf6fb53233927204",
 					"title": "生育登记",
-					"name": "birthRegister",
+					"name": "incomplete",
 					"icon": "icon_sydj.png",
 					"uri": "wxProgram://浙里办/7bgApBkEGhZLOGa",
 					"type": "MENU"
@@ -477,7 +477,7 @@
 				{
 					"id": "bc2884a4953b465996ce23decc9ee73b",
 					"title": "生育津贴支付",
-					"name": "birthMoneyGet",
+					"name": "incomplete",
 					"icon": "icon_syjt.png",
 					"uri": "wxProgram://浙里办/A5vLHAP1gtc3y7E",
 					"type": "MENU"
@@ -485,7 +485,7 @@
 				{
 					"id": "3b15ae8cfc324fefb3391235863ea1a3",
 					"title": "入学早知道",
-					"name": "childInSchool",
+					"name": "incomplete",
 					"icon": "icon_rxzzd.png",
 					"uri": "wxProgram://浙里办/Qa9iXDJili4lA0C",
 					"type": "MENU"
@@ -493,7 +493,7 @@
 				{
 					"id": "e21434ee60c842eea87e0698c565f280",
 					"title": "浙有姻缘",
-					"name": "wzMerry",
+					"name": "incomplete",
 					"icon": "icon_zyyy.png",
 					"uri": "wxProgram://浙里办/sEaYxvq6sGIjVtu",
 					"type": "MENU"
@@ -517,7 +517,7 @@
 				{
 					"id": "9vuyxxczq0ohjmnbpckcpktdhu0aj3vx",
 					"title": "智慧书柜",
-					"name": "wisdomCase ",
+					"name": "incomplete ",
 					"icon": "icon_zhsg.jpg",
 					"uri": "miniAppId=wx4bca206c64bbc580",
 					"type": "MENU"
@@ -564,7 +564,7 @@
 				{
 					"id": "c6kh1pf2frjzrbi43yzkgth2eayja8sd",
 					"title": "心理咨询",
-					"name": "counseling",
+					"name": "incomplete",
 					"uri": "/",
 					"icon": "icon_xlzx.png",
 					"type": "MENU"
@@ -572,7 +572,7 @@
 				{
 					"id": "b95ba9983fe84980bb00cdc948af18a1",
 					"title": "预约挂号",
-					"name": "orderDoctor",
+					"name": "incomplete",
 					"icon": "icon_yygh.png",
 					"uri": "wxProgram://浙里办/jXkNoDd2FzP9qHh",
 					"type": "MENU"
@@ -580,7 +580,7 @@
 				{
 					"id": "9b890ddc591f4e8a9448cc5aafc8a9e4",
 					"title": "老年大学",
-					"name": "elderSchool",
+					"name": "incomplete",
 					"icon": "icon_lndx.png",
 					"uri": "wxProgram://浙里办/m60Wlj48Vrk0xDt",
 					"type": "MENU"
@@ -588,7 +588,7 @@
 				{
 					"id": "b81de7cb62524e1f8077c6e952d5c9fd",
 					"title": "药+平台",
-					"name": "medicalAdd",
+					"name": "incomplete",
 					"icon": "icon_yjpt.png",
 					"uri": "wxProgram://浙里办/Tz36AAXBDoUV2gg",
 					"type": "MENU"
@@ -596,7 +596,7 @@
 				{
 					"id": "b56908c5515443d0b1fe94062a436a7c",
 					"title": "社保查询",
-					"name": "socialSecurityQuery",
+					"name": "incomplete",
 					"icon": "icon_sbcx.png",
 					"uri": "wxProgram://浙里办/SnGL2o1n0fclIdc",
 					"type": "MENU"
@@ -604,7 +604,7 @@
 				{
 					"id": "48e1d2a7d7d644a690b54a15d2806f4c",
 					"title": "浙里医保",
-					"name": "medicalInsurance",
+					"name": "incomplete",
 					"icon": "icon_zlyb.png",
 					"uri": "wxProgram://浙里办/fNWOAjRD8i70UAe",
 					"type": "MENU"
@@ -612,7 +612,7 @@
 				{
 					"id": "e0a6d70250be4c71a4cbb10e4c9beb92",
 					"title": "浙里救",
-					"name": "zlHelp",
+					"name": "incomplete",
 					"icon": "icon_zlj.png",
 					"uri": "wxProgram://浙里办/0GtRu0XjctuO0Nb",
 					"type": "MENU"
@@ -620,7 +620,7 @@
 				{
 					"id": "elr0g8nab9edi1ccird2o7f6s2uqzirv",
 					"title": "AI健康",
-					"name": "AIHealth",
+					"name": "incomplete",
 					"icon": "icon_AIjk.png",
 					"uri": "miniAppId=wx46919926569a6f52",
 					"type": "MENU"
@@ -628,7 +628,7 @@
 				{
 					"id": "m9xzbrsmyxntxdddslzggreendxhwpyd",
 					"title": "云呵护",
-					"name": "cloudHelp",
+					"name": "incomplete",
 					"icon": "icon_yhh.png",
 					"uri": "miniAppId=wx46dc5071b1340d0e",
 					"type": "MENU"
@@ -636,7 +636,7 @@
 				{
 					"id": "hfea0aiqnprpimvf4wo0uqzpjqiglmxt",
 					"title": "智慧跑道",
-					"name": "runway",
+					"name": "incomplete",
 					"icon": "icon_runway.png",
 					"uri": "/",
 					"type": "MENU"
@@ -644,7 +644,7 @@
 				{
 					"id": "3cyy8p3znoumw4dwrniliymwmcwddsfu",
 					"title": "智慧篮球场",
-					"name": "basketball",
+					"name": "incomplete",
 					"icon": "icon_zhlqc.png",
 					"uri": "/",
 					"type": "MENU"
@@ -659,7 +659,7 @@
 			"children": [{
 					"id": "hzcditr3uoz1tfcufrvgv0wd770m2v8c",
 					"title": "机构入驻",
-					"name": "organJoin",
+					"name": "incomplete",
 					"icon": "icon_jgrz.png",
 					"uri": "/",
 					"type": "MENU"
@@ -706,7 +706,7 @@
 				{
 					"id": "mdpevyfgnx5gc8cegrf3hj8ggd59brrg",
 					"title": "浙住通",
-					"name": "zzt",
+					"name": "incomplete",
 					"icon": "icon_zzt.png",
 					"uri": "/",
 					"type": "MENU"
@@ -714,7 +714,7 @@
 				{
 					"id": "vcck1jnkd53ipammtbdnmwt89mqgmjsc",
 					"title": "轻轨时刻表",
-					"name": "lightRailTime",
+					"name": "incomplete",
 					"icon": "icon_gdsk.png",
 					"uri": "miniAppId=wxe84a485904c12a87",
 					"type": "MENU"
@@ -722,7 +722,7 @@
 				{
 					"id": "bussy5qzzb8oarsrt7p534trilfoy4dj",
 					"title": "温州交运",
-					"name": "wzTransportation",
+					"name": "incomplete",
 					"icon": "icon_wzjy.png",
 					"uri": "miniAppId=wx2859a8d53cd0cd7c",
 					"type": "MENU"
@@ -737,7 +737,7 @@
 			"children": [{
 					"id": "rhxsblfjlhtlatvr6yuwtqxx01ahctvo",
 					"title": "跳蚤市场",
-					"name": "fleaMarket",
+					"name": "incomplete",
 					"icon": "icon_tzsc.png",
 					"uri": "/",
 					"type": "MENU"
@@ -745,7 +745,7 @@
 				{
 					"id": "s0nll8wvlytgkzx8xtgrorc2ltsgmwng",
 					"title": "智慧垃圾桶",
-					"name": "smartWaste",
+					"name": "incomplete",
 					"icon": "icon_zhljt.jpg",
 					"uri": "miniAppId=wx3e84ec47f31ee3bf",
 					"type": "MENU"
@@ -760,7 +760,7 @@
 			"children": [{
 				"id": "xgdsqdueyg65aqhbro5updq2erzg4jov",
 				"title": "一张图",
-				"name": "map",
+				"name": "incomplete",
 				"icon": "icon_yzt.png",
 				"uri": "/",
 				"type": "MENU"
