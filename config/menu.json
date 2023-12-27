@@ -293,7 +293,7 @@
 				{
 					"id": "pfi0bimwq4cwlwb30fpmkcuaokcloeer",
 					"title": "智慧停车",
-					"name": "incomplete",
+					"name": "parking",
 					"icon": "icon_zhtc.png",
 					"uri": "/",
 					"type": "MENU"
@@ -309,7 +309,7 @@
 				{
 					"id": "yj7syptaz0vkpdfk3duqptti6nzzvd7l",
 					"title": "智慧巡更",
-					"name": "incomplete",
+					"name": "patrol",
 					"icon": "icon_zhxg.png",
 					"uri": "/",
 					"type": "MENU"

@@ -15,7 +15,7 @@
 				</text>
 			</view>
 		</view>
-		<view style="height: 500rpx;overflow: scroll;">
+		<view style="height: 550rpx;overflow: scroll;">
 			<view v-if="messageList.length > 0">
 				<view class="message-item" v-for="(item,index) in messageList" :key="index" @click="handleRouteNewsDetail(item.id)">
 					<image class="message-item_image" :src="`${SCHEME}${COOKIE_DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
@@ -96,7 +96,7 @@
 
 	const gainNewsInfoPage = async () => {
 		var data = {
-			size: 5,
+			size: 3,
 			page: 0,
 			contentType: newTagValue.value,
 			historyType: 'WEB',
