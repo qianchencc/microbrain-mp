@@ -8,7 +8,7 @@
 					</view>
 				</template>
 				<template v-slot:footer>
-					<image v-if="avatar" class="slot-image" :src="avatar"></image>
+					<img v-if="avatar" class="slot-image" :src="avatar">
 					<text v-else class="slot-image">无</text>
 				</template>
 			</uni-list-item>

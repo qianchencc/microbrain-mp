@@ -3,7 +3,7 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "智慧家",
+				"navigationBarTitleText": "首页",
 				"transparentTitle": "auto",
 				"titlePenetrate": "YES"
 			}
@@ -118,7 +118,7 @@
 	},
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
-		"navigationBarTitleText": "智慧家",
+		"navigationBarTitleText": "微脑3.0",
 		"navigationBarBackgroundColor": "#3974F6",
 		"backgroundColor": "#ffffff"
 	},
