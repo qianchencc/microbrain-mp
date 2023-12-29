@@ -53,11 +53,11 @@
 				</uni-list-item>
 			</uni-list>
 		</view>
-		<view class="list">
+		<!-- <view class="list">
 			<uni-list :border="false">
 				<uni-list-item v-for="item in workOrderMenu" :key="item.title" :border="false" :title="item.title" showArrow clickable @click="toWorkOrder(item)" />
 			</uni-list>
-		</view>
+		</view> -->
 		<view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="关于我们" showArrow link="navigateTo" to="./about" />
