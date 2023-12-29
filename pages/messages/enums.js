@@ -9,7 +9,7 @@ export const messagesType = {
 		src: '../../static/images/messages/notify.png',
 		name: '会议消息'
 	},
-	IN_SITE_MESSAGE: {
+	访客中心: {
 		key: 'visitor',
 		src: '../../static/images/messages/notify.png',
 		name: '访客消息'

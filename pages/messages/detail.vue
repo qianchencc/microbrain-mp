@@ -6,12 +6,12 @@
 					<span v-if="item.count" class="img-badge">
 						<text class="count">{{item.count}}</text>
 					</span>
-					<image class="info-img" :src="messagesType[item.notifyType].src" mode="aspectFit"></image>
+					<!-- <image class="info-img" :src="messagesType[item.notifyType].src" mode="aspectFit"></image> -->
 				</view>
 				<view class="notify-info">
 					<view class="info-con">
 						<view class="info-title">
-							<text> 邀约接受 </text>
+							<text> {{item.messageSubject}} </text>
 							<uni-dateformat style="font-size: 14px;color: #999;" :date="item.createdAt" format="MM-dd hh:mm" :threshold="[60000, 201600000]"></uni-dateformat>
 						</view>
 						<view class="info-note">

@@ -6,7 +6,7 @@
 					<span v-if="item.count" class="img-badge">
 						<text class="count">{{item.count}}</text>
 					</span>
-					<image class="info-img" :src="messagesType[item.notifyType].src" mode="aspectFit"></image>
+					<image class="info-img" :src="messagesType[item.appName].src" mode="aspectFit"></image>
 				</view>
 				<view class="notify-info">
 					<view class="info-con">
@@ -57,7 +57,7 @@
 
 	const clicked = (item) => {
 		uni.navigateTo({
-			url: './detail?targetType=' + item.id
+			url: './detail?notifyId=' + item.notifyId
 		})
 	}
 
