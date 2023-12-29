@@ -1,4 +1,4 @@
-import { getToken } from '@/utils/auth'
+import { getToken, getTokenId } from '@/utils/auth'
 import globalConfig from '@/config'
 import { useUserStoreHook } from "../store/modules/user";
 import { menuFuc } from "./application";
@@ -125,7 +125,7 @@ export const jumpUrl = async menu => {
 			icon: 'none'
 		})
 	} else {
-		location.href = menu.uri + (menu.uri.includes('?') ? '&token=' : '?token=') + getToken() +
+		location.href = menu.uri + (menu.uri.includes('?') ? '&token=' : '?token=') + getTokenId() +
 			'&tenantCode=' + useUserStoreHook().getDistrict.id
 	}
 	// #endif

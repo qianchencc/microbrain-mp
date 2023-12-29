@@ -5,7 +5,7 @@
 </template>
 
 <script>
-	import { getToken } from '@/utils/auth'
+	import { getTokenId, checkToken } from '@/utils/auth'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { checkToken } from '/utils/auth.js'
 	// import { joinGroup } from '@/apis/group/index.js'
@@ -31,7 +31,7 @@
 		onLoad: async function(option) {
 			await checkToken()
 			if (!option.noToken) {
-				option.token = getToken()
+				option.token = getTokenId()
 				option.tenantCode = useUserStoreHook().getDistrict.id
 				option.timestamp = new Date().getTime()
 			}

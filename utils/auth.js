@@ -21,8 +21,8 @@ export function setToken(data) {
 	uni.setStorageSync('authorized-token', dataString)
 }
 
-export function setDistrict(district) {
-
+export function getTokenId() {
+	return uni.getStorageSync(TokenKey).split(' ')[1]
 }
 
 // 删除token

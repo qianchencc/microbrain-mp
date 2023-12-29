@@ -6,7 +6,7 @@ import { login, getPrincipalAllInfo, getGeospatialList, getWxOpenId, userUpdateO
 import { fetchCardPrincipalInfo } from '@/apis/home'
 import { COOKIE_DOMAIN } from '@/config/settings'
 import { usePermissionStoreHook } from './permission'
-import { setToken, setDistrict, removeToken } from '@/utils/auth'
+import { setToken, removeToken } from '@/utils/auth'
 import { aesEncrypt } from '@/utils/cryptojs'
 import globalConfig from '@/config'
 
@@ -44,7 +44,6 @@ export const useUserStore = defineStore({
 		},
 		SET_DISTRICT(district) {
 			this.district = district
-			setDistrict(district.id)
 			storageSet('district', district)
 		},
 		async loginByUsername(model) {
