@@ -14,3 +14,6 @@ export const fetchRemindPage = (type, data) => request.globalRequest(`/api/${typ
 
 // 提交人脸
 export const uploadPrincipalFace = (id, data) => request.globalRequest(`/api/card/account/${id}/face`, 'PUT', data)
+
+// 一卡通个人账号查询
+export const fetchCardPrincipalInfo = (id) => request.globalRequest(`/api/card/account/${id}`)

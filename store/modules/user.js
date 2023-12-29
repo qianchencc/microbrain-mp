@@ -3,6 +3,7 @@ import { store } from '@/store'
 import { wxLogin } from '@/utils/wxLogin.js'
 import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 import { login, getPrincipalAllInfo, getGeospatialList, getWxOpenId, userUpdateOpenId } from '@/apis/user/principal'
+import { fetchCardPrincipalInfo } from '@/apis/home'
 import { COOKIE_DOMAIN } from '@/config/settings'
 import { usePermissionStoreHook } from './permission'
 import { setToken, setDistrict, removeToken } from '@/utils/auth'
@@ -115,8 +116,9 @@ export const useUserStore = defineStore({
 		},
 		async setUserInfo() {
 			const { content: userInfo } = await getPrincipalAllInfo()
-			this.userInfo = userInfo
-			storageSet('userInfo', userInfo)
+			const { content: cardInfo } = await fetchCardPrincipalInfo(userInfo.id)
+			this.userInfo = { ...userInfo, ...cardInfo }
+			storageSet('userInfo', this.userInfo)
 		},
 		async setGeospatialInfo() {
 			const { content: geospatialInfo } = await getGeospatialList({ type: 6 })

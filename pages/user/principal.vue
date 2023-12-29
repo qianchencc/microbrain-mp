@@ -23,8 +23,9 @@
 				</template>
 				<template v-slot:footer>
 					<image v-if="face" class="slot-image" :src="face"></image>
-					<img v-else class="slot-image"
-						src="https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fpic2.zhimg.com%2F50%2Fv2-95baf91ff4a81c3504eb61d4eaa64f68_hd.jpg&refer=http%3A%2F%2Fpic2.zhimg.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1663753670&t=43b26098480afb171efe4449c254a2bb">
+					<view v-else class="slot-image">
+						未认证
+					</view>
 				</template>
 			</uni-list-item>
 		</uni-list>
@@ -38,30 +39,13 @@
 	import { chooseImg } from '@/utils/tools.js'
 	import { updatePrincipalInfo } from '@/apis/user/principal.js'
 	import { checkToken } from '/utils/auth.js'
+	import { faceAuthStatus } from './utils/enums.js'
 
-	const faceAuthStatus = {
-		'TO_BE_AUTH': {
-			text: '待认证',
-			type: 'warning'
-		},
-		'TO_BE_CHECK': {
-			text: '待审核',
-			type: 'warning'
-		},
-		'CHECK_REJECT': {
-			text: '审核失败',
-			type: 'error'
-		},
-		'CHECK_SUCCESS': {
-			text: '已认证',
-			type: 'success'
-		}
-	}
-
+	const principalInfo = ref()
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 
 	const avatar = computed(() => userInfo.value.avatar ? globalConfig.ssoUrl + userInfo.value.avatar : null)
-	const face = computed(() => globalConfig.ssoUrl + userInfo.value.faceUrl)
+	const face = computed(() => userInfo.value.faceUrl ? globalConfig.fileAddr + userInfo.value.faceUrl : null)
 	const changeAvatar = () => {
 		chooseImg(1, async (uploadFileRes) => {
 			const res = JSON.parse(uploadFileRes.data)
@@ -78,16 +62,15 @@
 
 	function changeFace() {
 		// #ifdef MP-WEIXIN
-
-		// #endif
 		uni.navigateTo({
-			url: './face',
-			success: res => {},
-			fail: () => {},
-			complete: () => {}
+			url: './face'
 		})
+		// #endif
+
 	}
-	onMounted(checkToken)
+	onMounted(() => {
+		checkToken()
+	})
 </script>
 
 <style lang="scss">

@@ -12,7 +12,7 @@
 					<h3>
 						{{userInfo.nickname}}
 					</h3>
-					<view>{{userInfo.code}}</view>
+					<!-- <view>{{userInfo.code}}</view> -->
 					<uni-tag v-if="userInfo.faceAuthStatus" :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
 				</view>
 				<view class="edit-con" @click="changeAvatar">
@@ -47,7 +47,7 @@
 				<uni-list-item :border="false" title="组织确权" rightText="右侧文字" showArrow link="navigateTo" to="./owner">
 					<template v-slot:footer>
 						<view class="tag-view">
-							<uni-tag :circle="true" :text="faceAuthStatus[userInfo.confirmationStatus].text" :type="faceAuthStatus[userInfo.confirmationStatus].type" />
+							<uni-tag :circle="true" :text="confirmationStatus[userInfo.confirmationStatus].text" :type="confirmationStatus[userInfo.confirmationStatus].type" />
 						</view>
 					</template>
 				</uni-list-item>
@@ -64,13 +64,11 @@
 			</uni-list>
 		</view>
 
-		<view class="list">
+		<!-- <view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="推送测试" showArrow clickable @click="pushTest" />
 			</uni-list>
-		</view>
-
-		<!-- <button type="primary">退出登录</button> -->
+		</view> -->
 
 	</view>
 </template>
@@ -81,40 +79,13 @@
 	import globalConfig from '@/config'
 	import { COOKIE_DOMAIN, SCHEME, zztServer } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
-
+	import { faceAuthStatus, confirmationStatus } from './utils/enums.js'
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
-
-	const faceAuthStatus = {
-		'TO_BE_SUBMIT': {
-			text: '待确权',
-			type: 'warning'
-		},
-		'TO_BE_CHECK': {
-			text: '待审核',
-			type: 'warning'
-		},
-		'REJECT': {
-			text: '已拒绝',
-			type: 'error'
-		},
-		'ACCEPT': {
-			text: '已确权',
-			type: 'success'
-		}
-	}
 
 	const changeAvatar = () => {
 		uni.navigateTo({
 			url: './principal'
 		})
-	}
-
-	// 工单类型
-	const WorkOrderType = {
-		REPAIR: 'REPAIR',
-		DEFECT: 'DEFECT',
-		COMPLAIN: 'COMPLAIN',
-		CONTRADICTION: 'CONTRADICTION'
 	}
 
 	const workOrderMenu = [{
