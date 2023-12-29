@@ -23,9 +23,6 @@
 				</template>
 				<template v-slot:footer>
 					<image v-if="face" class="slot-image" :src="face"></image>
-					<view v-else class="slot-image">
-						未认证
-					</view>
 				</template>
 			</uni-list-item>
 		</uni-list>
@@ -61,6 +58,14 @@
 	}
 
 	function changeFace() {
+		if (userInfo.value.confirmationStatus !== 'ACCEPT') {
+			uni.showModal({
+				title: '提示',
+				content: '请组织确权后重试',
+				showCancel: false
+			});
+			return
+		}
 		// #ifdef MP-WEIXIN
 		uni.navigateTo({
 			url: './face'
