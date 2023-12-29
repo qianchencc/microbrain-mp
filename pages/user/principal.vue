@@ -14,13 +14,11 @@
 			</uni-list-item>
 			<uni-list-item :border="false" title="昵称" :rightText="userInfo.nickname" showArrow link="navigateTo" to="./info/name" />
 			<!-- <uni-list-item :border="false" title="电话" :rightText="userInfo.mobileNumber" showArrow link="navigateTo" to="./info/mobile" /> -->
-			<!-- <uni-list-item :border="false" link @click="changeFace()">
+			<uni-list-item :border="false" link @click="changeFace()">
 				<template v-slot:header>
 					<view class="slot-box">
 						人脸信息
-						<uni-tag v-if="userInfo.faceAuthStatus" :mark="true"
-							:text="faceAuthStatus[userInfo.faceAuthStatus].text"
-							:type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
+						<uni-tag v-if="userInfo.faceAuthStatus" :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
 					</view>
 				</template>
 				<template v-slot:footer>
@@ -28,7 +26,7 @@
 					<img v-else class="slot-image"
 						src="https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fpic2.zhimg.com%2F50%2Fv2-95baf91ff4a81c3504eb61d4eaa64f68_hd.jpg&refer=http%3A%2F%2Fpic2.zhimg.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1663753670&t=43b26098480afb171efe4449c254a2bb">
 				</template>
-			</uni-list-item> -->
+			</uni-list-item>
 		</uni-list>
 	</view>
 </template>
@@ -79,6 +77,9 @@
 	}
 
 	function changeFace() {
+		// #ifdef MP-WEIXIN
+
+		// #endif
 		uni.navigateTo({
 			url: './face',
 			success: res => {},

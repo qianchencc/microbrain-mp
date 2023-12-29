@@ -16,9 +16,6 @@ export const getGeospatialList = (params) => request.globalRequest('/geospatial/
 // 微信根据code换手机号
 export const getPhoneNumberByCode = (code, source) => request.globalRequest(`/setting/wx/miniProgram/codeToPhone/v2/wans/${code}/${source}`, 'GET')
 
-// 提交人脸
-export const uploadPrincipalFace = (data) => request.globalRequest('/identity/principal/face', 'PUT', data)
-
 // 提交头像
 export const uploadAvatar = (data) => request.globalRequest('/identity/principal/portrait', 'PUT', data)
 
