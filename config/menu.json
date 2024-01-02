@@ -331,6 +331,14 @@
 					"type": "MENU"
 				},
 				{
+					"id": "itbwa3gdc8j8ajkkjnpcp07sksz3f5nh",
+					"title": "会议管理",
+					"name": "meeting",
+					"icon": "icon_kjyy.png",
+					"uri": "/",
+					"type": "MENU"
+				},
+				{
 					"id": "qb9vtuad3ruonmsmdi2rm9rqrsoej8b9",
 					"title": "能耗管理",
 					"name": "incomplete",

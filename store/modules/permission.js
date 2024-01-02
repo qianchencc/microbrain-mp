@@ -59,6 +59,7 @@ const defaultIndex = [
 	'pxstjr5bjr7eh3mf5ui4rofdbpfzf3je', // 7 空间预约
 	'qb9vtuad3ruonmsmdi2rm9rqrsoej8b9', // 8 能耗管理
 	'y0z8vu9wigh52gfehulmmdcfo7yn3xu5', // 9 事件协同
+	'itbwa3gdc8j8ajkkjnpcp07sksz3f5nh', // 10 会议管理
 ];
 
 const all = {
