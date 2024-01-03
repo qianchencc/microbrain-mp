@@ -7,7 +7,7 @@ export const fetchNotifyPage = (params) => request.globalRequest('/api/message/r
 export const fetchUnreadNotifyCount = () => request.globalRequest('/api/message/recipient/notify/count/unread', 'GET', null)
 
 // 更新已读
-export const changeMesState = (recipientId, targetType) => request.globalRequest(`/message/recipient/notify/${recipientId}/read/${targetType}`, 'GET')
+export const changeMesState = (recipientId, appId) => request.globalRequest(`/api/message/recipient/notify/${recipientId}/read/${appId}`, 'GET')
 
 //查询系统消息
 export const getMyMessage = () => request.globalRequest(`/api/message/recipient/notify/my/all`, 'GET', null)

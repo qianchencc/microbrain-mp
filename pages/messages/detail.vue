@@ -1,12 +1,12 @@
 <template>
 	<view class="content">
 		<z-paging ref="paging" v-model="dataList" default-page-no="0" @query="queryList">
-			<view class="notify-con" v-for="item in dataList" :key="item.id">
+			<view class="notify-con" v-for="item in dataList" :key="item.id" @click="clicked(item)">
 				<view class="img-con">
 					<span v-if="item.count" class="img-badge">
 						<text class="count">{{item.count}}</text>
 					</span>
-					<!-- <image class="info-img" :src="messagesType[item.notifyType].src" mode="aspectFit"></image> -->
+					<image class="info-img" src="../../static/images/messages/notify.png" mode="aspectFit"></image>
 				</view>
 				<view class="notify-info">
 					<view class="info-con">
@@ -55,36 +55,38 @@
 
 	const clicked = (item) => {
 		const msgType = messagesType[notifyId.value]
-		const options = msgType.options || []
-		const navigatePage = msgType.page ? msgType.target : '/pages/webView/index?'
+		const options = []
+		const navigatePage = '/pages/webView/index?'
 
-		const path = SCHEME + COOKIE_DOMAIN + `/${msgType.key.toLocaleLowerCase()}` + '/#' + msgType.target
+		const path = `${SCHEME}${COOKIE_DOMAIN}/${item.forwardUrl}/`
 		options.push(`id=${item.targetId}`) // 信息详情记录ID
 		// #ifdef MP-WEIXIN
 		options.push(`path=${path}`)
 		uni.navigateTo({
-			url: navigatePage + arr2String(msgType.options),
+			url: navigatePage + arr2String(options),
 			success: () => {
 				// 修改已读未读状态
-				changeMesState(item.recipientId, item.notifyId)
+				changeMesState(item.recipientId, item.appId)
 			}
 
 		})
 		// #endif
 		// #ifdef H5
-		if (msgType.page) { // 内部页面跳转
+		if (false) { // 内部页面跳转
 			uni.navigateTo({
 				url: msgType.target,
 				success: () => {
 					// 修改已读未读状态
-					changeMesState(item.recipientId, item.notifyId)
+					changeMesState(item.recipientId, item.appId)
 				}
 
 			})
 		} else {
 			options.push(`token=${getTokenId()}`)
-			options.push(`district=${useUserStoreHook().getDistrict.id}`)
-			location.href = path + '?' + arr2String(msgType.options)
+			options.push(`tenantCode=${useUserStoreHook().getDistrict.id}`)
+			location.href = path + '?' + arr2String(options)
+			// 修改已读未读状态
+			changeMesState(item.recipientId, item.appId)
 		}
 		// #endif
 	}
@@ -96,7 +98,7 @@
 	onLoad((option) => {
 		notifyId.value = option.notifyId
 		uni.setNavigationBarTitle({
-			title: messagesType[notifyId.value].name || '其他消息'
+			title: option.appName || '其他消息'
 		})
 	})
 </script>
