@@ -10,10 +10,10 @@
 				</view>
 				<view>
 					<h3>
-						{{userInfo.nickname}}
+						{{userInfo.nickname||userInfo.code}}
 					</h3>
 					<!-- <view>{{userInfo.code}}</view> -->
-					<uni-tag v-if="userInfo.faceAuthStatus" :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
+					<uni-tag :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
 				</view>
 				<view class="edit-con" @click="changeAvatar">
 					<uni-icons type="compose" color="#3974F6" size="20"></uni-icons>
