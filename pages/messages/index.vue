@@ -6,7 +6,7 @@
 					<span v-if="item.count" class="img-badge">
 						<text class="count">{{item.count}}</text>
 					</span>
-					<image v-if="item.iconUrl" class="info-img" :src="item.iconUrl" mode="aspectFit"></image>
+					<img v-if="item.appIconUrl" class="info-img" :src="globalConfig.ssoUrl+ item.appIconUrl" mode="aspectFit">
 					<image v-else class="info-img" src="../../static/images/messages/notify.png" mode="aspectFit"></image>
 				</view>
 				<view class="notify-info">
@@ -27,6 +27,7 @@
 
 <script setup>
 	import { ref } from 'vue'
+	import globalConfig from '@/config'
 	import { onLoad } from '@dcloudio/uni-app'
 	import { getMyMessage, fetchUnreadNotifyCount } from '@/apis/messages/recipient'
 	import { messagesType } from './enums'
@@ -58,7 +59,7 @@
 
 	const clicked = (item) => {
 		uni.navigateTo({
-			url: `./detail?notifyId=${item.notifyId}&appName=${item.appName}`
+			url: `./detail?appId=${item.appId}&appName=${item.appName}`
 		})
 	}
 

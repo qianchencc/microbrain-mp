@@ -32,7 +32,7 @@
 	import { messagesType } from './enums'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { getTokenId } from '@/utils/auth'
-	const notifyId = ref('')
+	const appId = ref('')
 	const paging = ref(null)
 	const dataList = ref([])
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
@@ -42,7 +42,7 @@
 			page: pageNo,
 			size: pageSize,
 			recipientId: userInfo.value.id,
-			notifyId: notifyId.value,
+			appId: appId.value,
 			sort: 'createdAt,desc'
 		}
 		const res = await fetchNotifyPage(params)
@@ -54,7 +54,7 @@
 	}
 
 	const clicked = (item) => {
-		const msgType = messagesType[notifyId.value]
+		const msgType = messagesType[appId.value]
 		const options = []
 		const navigatePage = '/pages/webView/index?'
 
@@ -96,7 +96,7 @@
 	}
 
 	onLoad((option) => {
-		notifyId.value = option.notifyId
+		appId.value = option.appId
 		uni.setNavigationBarTitle({
 			title: option.appName || '其他消息'
 		})
