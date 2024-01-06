@@ -4,22 +4,28 @@
 			<view class="example">
 				<uni-forms ref="valiForm" :modelValue="formDate" validateTrigger="blur" :rules="rules" label-position="top" label-width="90">
 					<uni-forms-item label="所属单位" required name="branchId">
-						<uni-data-select :clear="false" v-model="formDate.branchId" :localdata="branchList" @change="branchChange"></uni-data-select>
+						<uni-data-select v-if="formDate.status!=='ACCEPT'" :clear="false" :disabled="formDate.status==='ACCEPT'" v-model="formDate.branchId" :localdata="branchList" @change="branchChange"></uni-data-select>
+						<text v-else>{{formDate.branchName}}</text>
 					</uni-forms-item>
 					<uni-forms-item label="姓名" required name="personalName">
-						<uni-easyinput :clearable="false" v-model="formDate.personalName" placeholder="请输入姓名" />
+						<uni-easyinput v-if="formDate.status!=='ACCEPT'" :clearable="false" v-model="formDate.personalName" placeholder="请输入姓名" />
+						<text v-else>{{formDate.personalName}}</text>
 					</uni-forms-item>
 					<uni-forms-item label="联系方式" required name="mobileNumber">
-						<uni-easyinput :clearable="false" v-model="formDate.mobileNumber" placeholder="请输入联系方式" />
-						<view class="suffix" @click="suffixClicked(formDate.mobileNumber,fetchValidateCode)">
-							{{text}}
-						</view>
+						<template v-if="formDate.status!=='ACCEPT'">
+							<uni-easyinput :clearable="false" v-model="formDate.mobileNumber" placeholder="请输入联系方式" />
+							<view class="suffix" @click="suffixClicked(formDate.mobileNumber,fetchValidateCode)">
+								{{text}}
+							</view>
+						</template>
+						<text v-else>{{formDate.mobileNumber}}</text>
 					</uni-forms-item>
-					<uni-forms-item label="验证码" required name="validateCode">
+					<uni-forms-item v-if="formDate.status!=='ACCEPT'" label="验证码" required name="validateCode">
 						<uni-easyinput :clearable="false" type="number" v-model="formDate.validateCode" maxlength="6" placeholder="请输入验证码" />
 					</uni-forms-item>
 					<uni-forms-item label="备注" name="remarks">
-						<uni-easyinput :clearable="false" type="textarea" v-model="formDate.remarks" placeholder="请输入备注" />
+						<uni-easyinput v-if="formDate.status!=='ACCEPT'" :clearable="false" type="textarea" v-model="formDate.remarks" placeholder="请输入备注" />
+						<text v-else>{{formDate.remarks}}</text>
 					</uni-forms-item>
 					<uni-forms-item v-if="formDate.checkRemarks" label="审核建议" name="checkRemarks">
 						<uni-easyinput :clearable="false" type="textarea" v-model="formDate.checkRemarks" />

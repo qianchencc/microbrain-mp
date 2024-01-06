@@ -19,7 +19,7 @@ export const faceAuthStatus = {
 
 export const confirmationStatus = {
 	'TO_BE_SUBMIT': {
-		text: '待确权',
+		text: '待确认',
 		type: 'warning'
 	},
 	'TO_BE_CHECK': {
@@ -31,7 +31,7 @@ export const confirmationStatus = {
 		type: 'error'
 	},
 	'ACCEPT': {
-		text: '已确权',
+		text: '已确认',
 		type: 'success'
 	}
 }

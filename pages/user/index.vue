@@ -13,7 +13,7 @@
 						{{userInfo.nickname||userInfo.code}}
 					</h3>
 					<!-- <view>{{userInfo.code}}</view> -->
-					<uni-tag :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
+					<!-- <uni-tag :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" /> -->
 				</view>
 				<view class="edit-con" @click="changeAvatar">
 					<uni-icons type="compose" color="#3974F6" size="20"></uni-icons>
@@ -44,7 +44,7 @@
 		</view> -->
 		<view class="list">
 			<uni-list :border="false">
-				<uni-list-item :border="false" title="组织确权" rightText="右侧文字" showArrow link="navigateTo" to="./owner">
+				<uni-list-item :border="false" title="组织确认" showArrow link="navigateTo" to="./owner">
 					<template v-slot:footer>
 						<view class="tag-view">
 							<uni-tag :circle="true" :text="confirmationStatus[userInfo.confirmationStatus].text" :type="confirmationStatus[userInfo.confirmationStatus].type" />
@@ -129,7 +129,7 @@
 			icon: '/static/images/user/icon_xyjf.png'
 		},
 		{
-			label: '富春积分',
+			label: '微脑积分',
 			value: 0,
 			icon: '/static/images/user/icon_wsjf.png',
 			url: 'pages/index/index'
