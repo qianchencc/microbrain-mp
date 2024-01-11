@@ -3,10 +3,14 @@
 	import { getToken } from '@/utils/auth'
 	import { wxLogin } from '@/utils/wxLogin.js'
 	import { appPush } from '@/utils/appPush.js'
+	import { initNfc } from '@/utils/NFC.js'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
 		onLaunch: function() {
+			// #ifdef MP-WEIXIN
+			initNfc()
 
+			// #endif
 		},
 		onShow: function() {
 
@@ -14,7 +18,16 @@
 				usePermissionStoreHook().setAuthority()
 			} else {
 				// #ifdef MP-WEIXIN
-				wxLogin()
+				// wxLogin()
+				uni.login({
+					provider: 'weixin',
+					success: res => {
+						console.log(res);
+						useUserStoreHook().thirdLogin(res.code)
+					},
+					fail: () => {},
+					complete: () => {}
+				});
 				// #endif
 				// #ifdef H5
 				uni.navigateTo({

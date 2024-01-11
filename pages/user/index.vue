@@ -66,7 +66,7 @@
 
 		<!-- <view class="list">
 			<uni-list :border="false">
-				<uni-list-item :border="false" title="推送测试" showArrow clickable @click="pushTest" />
+				<uni-list-item :border="false" title="NFC测试" showArrow clickable @click="NfcTest" />
 			</uni-list>
 		</view> -->
 
@@ -80,6 +80,7 @@
 	import { COOKIE_DOMAIN, SCHEME, zztServer } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { faceAuthStatus, confirmationStatus } from './utils/enums.js'
+	import { transceive } from '@/utils/NFC.js'
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 
 	const changeAvatar = () => {
@@ -140,6 +141,9 @@
 		uni.navigateTo({
 			url: val
 		})
+	}
+	const NfcTest = () => {
+		transceive('a001ffffffffffffffffffffffffffffffff')
 	}
 	const pushTest = () => {
 		// const data = { "push_clientid": "a8a9bad564747be64d026a6aa0c4e553", "title": "消息提醒", "content": "工作提醒：您对苏州新捷正科技有限公司吴昌英发出的邀约已被接受", "payload": "877" }
