@@ -126,7 +126,7 @@
 		"navigationBarTextStyle": "white",
 		"navigationBarTitleText": "微脑3.0",
 		"navigationBarBackgroundColor": "#3974F6",
-		"backgroundColor": "#ffffff"
+		"backgroundColor": "#F7F7F7"
 	},
 	"uniIdRouter": {}
 }

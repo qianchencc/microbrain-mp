@@ -37,14 +37,14 @@
 				</template>
 			</view>
 		</view>
-		<!-- <view class="list">
-			<uni-list :border="false">
-				<uni-list-item :border="false" title="我的物资" showArrow clickable @click="toWebView('epidemic')" />
-			</uni-list>
-		</view> -->
 		<view class="list">
 			<uni-list :border="false">
-				<uni-list-item :border="false" title="组织确认" showArrow link="navigateTo" to="./owner">
+				<uni-list-item :border="false" title="积分商城" showArrow clickable @click="toWebView('epidemic')" />
+			</uni-list>
+		</view>
+		<view class="list">
+			<uni-list :border="false">
+				<uni-list-item :border="false" title="组织确权" showArrow link="navigateTo" to="./owner">
 					<template v-slot:footer>
 						<view class="tag-view">
 							<uni-tag :circle="true" :text="confirmationStatus[userInfo.confirmationStatus].text" :type="confirmationStatus[userInfo.confirmationStatus].type" />
@@ -53,11 +53,11 @@
 				</uni-list-item>
 			</uni-list>
 		</view>
-		<!-- <view class="list">
+		<view class="list">
 			<uni-list :border="false">
 				<uni-list-item v-for="item in workOrderMenu" :key="item.title" :border="false" :title="item.title" showArrow clickable @click="toWorkOrder(item)" />
 			</uni-list>
-		</view> -->
+		</view>
 		<view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="关于我们" showArrow link="navigateTo" to="./about" />
@@ -94,29 +94,29 @@
 			url: '/pages/myTask/index?accept=true'
 		},
 		{
-			title: '投诉中心',
+			title: '我的投诉',
 			url: '/pages/complaint/index'
 		},
 		{
-			title: '报修中心',
+			title: '我的报修',
 			url: '/pages/repairs/index'
 		},
 		{
-			title: '矛调中心',
+			title: '我的矛调',
 			url: '/pages/contradict/index'
 		}
 	]
 
 	function toWorkOrder(item) {
-		// #ifdef MP-WEIXIN
-		uni.navigateTo({
-			url: '/pages/webView/index?path=' + SCHEME + COOKIE_DOMAIN + '/workorder' + '/#' + item.url
-		})
-		// #endif
-		// #ifdef H5
-		location.href = SCHEME + COOKIE_DOMAIN + '/workorder' + '/#' +
-			`/pages/user/workorder/list?title=${item.title}&detailTitle=${item.detailTitle}&type=${item.type}`
-		// #endif
+		// // #ifdef MP-WEIXIN
+		// uni.navigateTo({
+		// 	url: '/pages/webView/index?path=' + SCHEME + COOKIE_DOMAIN + '/workorder' + '/#' + item.url
+		// })
+		// // #endif
+		// // #ifdef H5
+		// location.href = SCHEME + COOKIE_DOMAIN + '/workorder' + '/#' +
+		// 	`/pages/user/workorder/list?title=${item.title}&detailTitle=${item.detailTitle}&type=${item.type}`
+		// // #endif
 	}
 
 	function toWebView(domain, url) {

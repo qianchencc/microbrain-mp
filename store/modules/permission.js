@@ -60,6 +60,11 @@ const defaultIndex = [
 	'qb9vtuad3ruonmsmdi2rm9rqrsoej8b9', // 8 能耗管理
 	'y0z8vu9wigh52gfehulmmdcfo7yn3xu5', // 9 事件协同
 	'itbwa3gdc8j8ajkkjnpcp07sksz3f5nh', // 10 会议管理
+	'6qtuwdg8yxxnefpmxnljmd4prmdqgapl', // 11 事件处理
+	'ds8ka4bzzxv1d9ol9pwzw5dealfewa5h', // 12 设备报修
+	'83rakyuslx9fyq5n4odlhzo8k7hk8ofe', // 13 物业报修
+	'tqbgc3nl1ldghiuklwldh5kxlobtss7b', // 14 缺陷上报
+	'jspmjdw8hhfim8eedacr8alq0bs1kdya', // 15 随手拍
 ];
 
 const all = {

@@ -346,12 +346,60 @@
 					"uri": "/",
 					"type": "MENU"
 				},
+				// {
+				// 	"id": "y0z8vu9wigh52gfehulmmdcfo7yn3xu5",
+				// 	"title": "事件协同",
+				// 	"name": "event",
+				// 	"icon": "icon_fydj.png",
+				// 	"uri": "/",
+				// 	"type": "MENU"
+				// },
 				{
 					"id": "y0z8vu9wigh52gfehulmmdcfo7yn3xu5",
-					"title": "事件协同",
-					"name": "event",
+					"title": "事件中心",
+					"name": "event/events",
 					"icon": "icon_fydj.png",
 					"uri": "/",
+					"type": "MENU"
+				},
+				{
+					"id": "6qtuwdg8yxxnefpmxnljmd4prmdqgapl",
+					"title": "事件处理",
+					"name": "event/eventHandlers",
+					"icon": "icon_tzsc.png",
+					"uri": "/",
+					"type": "MENU"
+				},
+				{
+					"id": "ds8ka4bzzxv1d9ol9pwzw5dealfewa5h",
+					"title": "设备报修",
+					"name": "event",
+					"icon": "icon_bxdj.png",
+					"uri": "/eventReport?eventTypeId=3ead2f66dc106f3a778cde9f53c713fd",
+					"type": "MENU"
+				},
+				{
+					"id": "83rakyuslx9fyq5n4odlhzo8k7hk8ofe",
+					"title": "物业报修",
+					"name": "event",
+					"icon": "icon_tpzx.png",
+					"uri": "/eventReport?eventTypeId=0fb6ef848c8779370d4053029b5047f1",
+					"type": "MENU"
+				},
+				{
+					"id": "tqbgc3nl1ldghiuklwldh5kxlobtss7b",
+					"title": "缺陷上报",
+					"name": "event",
+					"icon": "icon_qxsb.png",
+					"uri": "/eventReport?eventTypeId=2c8b9157901c6150b9eca9e44af04a30",
+					"type": "MENU"
+				},
+				{
+					"id": "jspmjdw8hhfim8eedacr8alq0bs1kdya",
+					"title": "随手拍",
+					"name": "event",
+					"icon": "icon_fydj.png",
+					"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
 					"type": "MENU"
 				},
 				{
@@ -426,7 +474,6 @@
 					"uri": "/",
 					"type": "MENU"
 				},
-
 				{
 					"id": "uwowbbjouzywzurxmthtiivlakfcqmxq",
 					"title": "邻里公约",
