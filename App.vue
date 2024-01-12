@@ -61,4 +61,8 @@
 	/*每个页面公共css */
 	@import "common/css/uni.css";
 	@import "common/css/common.css";
+
+	uni-page-wrapper {
+		background-color: #F7F7F7;
+	}
 </style>

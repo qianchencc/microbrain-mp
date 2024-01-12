@@ -85,6 +85,7 @@ form {
 	width: 100%;
 	flex-grow: 1;
 	overflow-x: hidden;
+	background-color: #09BB07;
 }
 
 .uni-padding-wrap {
