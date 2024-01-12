@@ -403,6 +403,38 @@
 					"type": "MENU"
 				},
 				{
+					"id": "wzc817ffirnwnwc2upwdj6swu8echrtu",
+					"title": "法律咨询",
+					"name": "onestop",
+					"icon": "icon_flyz.png",
+					"uri": "/index?eventType=LEGAL_ADVICE",
+					"type": "MENU"
+				},
+				{
+					"id": "9mauw4iiaqhptiyw6clpubgth3knblrt",
+					"title": "心理咨询",
+					"name": "onestop",
+					"icon": "icon_mtsb.png",
+					"uri": "/index?eventType=PSYCHOLOGICAL_COUNSELING",
+					"type": "MENU"
+				},
+				{
+					"id": "ecwh2ogylqywk32qtdr8ty5cjmqvomy4",
+					"title": "矛调中心",
+					"name": "onestop",
+					"icon": "icon_mlzx.png",
+					"uri": "/index?eventType=CONTRADICTION_MEDIATION",
+					"type": "MENU"
+				},
+				{
+					"id": "jamglujwkfii0pjgbmc8tg1kbdhxppek",
+					"title": "投诉建议",
+					"name": "onestop",
+					"icon": "icon_wyhs.png",
+					"uri": "/index?eventType=COMPLAINT",
+					"type": "MENU"
+				},
+				{
 					"id": "vea3ye47dvzzpakbxerf2lirnyawrqou",
 					"title": "疫情物资",
 					"name": "incomplete",

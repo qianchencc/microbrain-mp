@@ -65,6 +65,10 @@ const defaultIndex = [
 	'83rakyuslx9fyq5n4odlhzo8k7hk8ofe', // 13 物业报修
 	'tqbgc3nl1ldghiuklwldh5kxlobtss7b', // 14 缺陷上报
 	'jspmjdw8hhfim8eedacr8alq0bs1kdya', // 15 随手拍
+	'wzc817ffirnwnwc2upwdj6swu8echrtu', // 16 法律咨询
+	'9mauw4iiaqhptiyw6clpubgth3knblrt', // 13 心理咨询
+	'ecwh2ogylqywk32qtdr8ty5cjmqvomy4', // 14 矛调中心
+	'jamglujwkfii0pjgbmc8tg1kbdhxppek', // 15 投诉建议
 ];
 
 const all = {
