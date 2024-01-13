@@ -325,7 +325,7 @@
 				{
 					"id": "pxstjr5bjr7eh3mf5ui4rofdbpfzf3je",
 					"title": "空间预约",
-					"name": "incomplete",
+					"name": "space",
 					"icon": "icon_kjyy.png",
 					"uri": "/",
 					"type": "MENU"
@@ -346,14 +346,6 @@
 					"uri": "/",
 					"type": "MENU"
 				},
-				// {
-				// 	"id": "y0z8vu9wigh52gfehulmmdcfo7yn3xu5",
-				// 	"title": "事件协同",
-				// 	"name": "event",
-				// 	"icon": "icon_fydj.png",
-				// 	"uri": "/",
-				// 	"type": "MENU"
-				// },
 				{
 					"id": "y0z8vu9wigh52gfehulmmdcfo7yn3xu5",
 					"title": "事件中心",
