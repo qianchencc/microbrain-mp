@@ -1,6 +1,6 @@
 <template>
 	<view style="text-align: center;">
-		<img :src="url" alt="" srcset="">
+		<img :src="url" style="width: 210rpx;padding-top: 80rpx;" alt="" srcset="">
 		<view>{{props.description}}</view>
 	</view>
 </template>

@@ -53,7 +53,6 @@
 	import globalConfig from '@/config'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
-	const geospatialInfo = computed(() => useUserStoreHook().getGeospatialInfo)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const newTagList = ref([])
 	const newTagValue = ref('')
