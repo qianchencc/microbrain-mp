@@ -21,7 +21,7 @@
 			<swiper class="page_swiper" autoplay indicator-dots="true" circular>
 				<template v-if="bannerList.length > 0">
 					<swiper-item v-for="(img,key) in bannerList" :key="key" @click="gainBannerManagement(img.id)">
-						<image class="swiper-image" :src="img.pic" mode="aspectFill" />
+						<image class="swiper-image" :src="img.url" mode="aspectFill" />
 					</swiper-item>
 				</template>
 			</swiper>
@@ -59,9 +59,10 @@
 	import { jumpUrl } from '@/utils/tools'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { useBannerHook } from './utils/banner.js'
+	import { handleScan } from './utils/scan.js'
 	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'
 	import news from './news.vue'
-	// useBannerHook()
+	const { bannerList } = useBannerHook()
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const topMenu = [{
@@ -77,49 +78,14 @@
 			icon: '/static/images/index/shop.png'
 		}
 	]
-	const bannerList = [{ pic: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.png' }]
+	// const bannerList = [{ pic: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.png' }]
 
 	const open = () => {
 		uni.navigateTo({
 			url: './indexlist'
 		})
 	}
-	const handleScan = () => {
-		// #ifdef MP
-		uni.scanCode({
-			success: function(res) {
-				try {
-					const data = JSON.parse(res.result) || ''
-					console.log(data);
-					if (data.type === 'visitor') {
-						if (false && new Date().getTime() - data.time > 60 * 1000) {
-							uni.showToast({
-								title: '刷新二维码重试',
-								icon: 'none'
-							});
-						} else {
-							uni.navigateTo({
-								url: `/pages/webView/index?path=${SCHEME}${COOKIE_DOMAIN}${data.path}&id=${data.id}`,
-								animationType: 'pop-in'
-							})
-						}
-					}
-				} catch (e) {
-					//TODO handle the exception
-					console.log(e)
-				}
-			}
 
-		})
-		// #endif
-		// #ifdef H5
-		uni.scanCode({
-			success(res) {
-				console.log(res);
-			}
-		})
-		// #endif
-	}
 	const change = async (e) => {
 		const { index } = e.detail
 		const menu = menuList.value[index]

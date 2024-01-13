@@ -40,21 +40,21 @@
 					</view>
 				</view>
 			</view>
-			<template v-else>
-				<view class="not-main">
-					暂无内容
-				</view>
-			</template>
+			<m-empty v-else></m-empty>
+
 		</view>
 
 	</view>
 </template>
 
 <script setup>
-	import { onMounted, ref, watch } from 'vue'
+	import { onMounted, ref, computed, watch } from 'vue'
 	import { fetchNewsPage } from "@/apis/home"
 	import globalConfig from '@/config'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+	import { useUserStoreHook } from '@/store/modules/user'
+	const geospatialInfo = computed(() => useUserStoreHook().getGeospatialInfo)
+	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const newTagList = ref([])
 	const newTagValue = ref('')
 	const messageList = ref([])
@@ -93,6 +93,10 @@
 			gainNewsInfoPage()
 		}
 	)
+
+	watch(() => geospatial.value, () => {
+		gainNewsInfoPage()
+	})
 
 	const gainNewsInfoPage = async () => {
 		var data = {

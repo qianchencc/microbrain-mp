@@ -62,7 +62,7 @@
 	@import "common/css/uni.css";
 	@import "common/css/common.css";
 
-	uni-page-wrapper {
+	page {
 		background-color: #F7F7F7;
 	}
 </style>

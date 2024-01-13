@@ -227,6 +227,7 @@
 			background-position: center;
 			background-repeat: no-repeat;
 			background-size: cover;
+			margin-bottom: 10rpx;
 		}
 
 		.integral_list {
@@ -238,6 +239,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
+			margin-bottom: -2rpx;
 
 			.integral_item {
 				flex: 1;
