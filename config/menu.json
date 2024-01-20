@@ -341,7 +341,7 @@
 				{
 					"id": "qb9vtuad3ruonmsmdi2rm9rqrsoej8b9",
 					"title": "能耗管理",
-					"name": "incomplete",
+					"name": "energy",
 					"icon": "icon_nhdj.png",
 					"uri": "/",
 					"type": "MENU"
