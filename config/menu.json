@@ -435,6 +435,14 @@
 					"type": "MENU"
 				},
 				{
+					"id": "09drtoozjudsurofnrwdfuf5axnp0bno",
+					"title": "活动管理",
+					"name": "activity",
+					"icon": "icon_ykt.png",
+					"uri": "/",
+					"type": "MENU"
+				},
+				{
 					"id": "szj6cxetp5qr3t8isbglwizrjxr9nbos",
 					"title": "一卡通",
 					"name": "incomplete",

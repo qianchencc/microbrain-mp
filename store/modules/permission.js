@@ -70,6 +70,7 @@ const defaultIndex = [
 	'ecwh2ogylqywk32qtdr8ty5cjmqvomy4', // 14 矛调中心
 	'jamglujwkfii0pjgbmc8tg1kbdhxppek', // 15 投诉建议
 	'vea3ye47dvzzpakbxerf2lirnyawrqou', // 16 智慧照明
+	'09drtoozjudsurofnrwdfuf5axnp0bno', // 17 活动管理
 ];
 
 const all = {
