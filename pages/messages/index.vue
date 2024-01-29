@@ -34,20 +34,6 @@
 	const paging = ref(null)
 	const dataList = ref([])
 
-	const getUnreadNotifyCount = async () => {
-		const res = await fetchUnreadNotifyCount()
-		if (res.content !== 0) {
-			uni.setTabBarBadge({
-				index: 1,
-				text: res.content + ''
-			})
-		} else {
-			uni.removeTabBarBadge({
-				index: 1
-			})
-		}
-	}
-
 	const queryList = async (pageNo, pageSize) => {
 		const res = await getMyMessage()
 		if (res.content) {
@@ -62,8 +48,6 @@
 			url: `./detail?appId=${item.appId}&appName=${item.appName}`
 		})
 	}
-
-	onLoad(getUnreadNotifyCount)
 </script>
 
 <style lang="scss" scoped>

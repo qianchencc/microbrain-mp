@@ -32,6 +32,7 @@
 	import { messagesType } from './enums'
 	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { getTokenId } from '@/utils/auth'
+	import { getUnreadNotifyCount } from '@/utils/message.js'
 	const appId = ref('')
 	const paging = ref(null)
 	const dataList = ref([])
@@ -67,6 +68,7 @@
 			success: () => {
 				// 修改已读未读状态
 				changeMesState(item.recipientId, item.appId)
+				getUnreadNotifyCount()
 			}
 
 		})
@@ -78,6 +80,7 @@
 				success: () => {
 					// 修改已读未读状态
 					changeMesState(item.recipientId, item.appId)
+					getUnreadNotifyCount()
 				}
 
 			})
@@ -87,6 +90,7 @@
 			location.href = path + '?' + arr2String(options)
 			// 修改已读未读状态
 			changeMesState(item.recipientId, item.appId)
+			getUnreadNotifyCount()
 		}
 		// #endif
 	}

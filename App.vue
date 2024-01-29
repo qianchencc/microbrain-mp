@@ -5,6 +5,7 @@
 	import { appPush } from '@/utils/appPush.js'
 	import { initNfc } from '@/utils/NFC.js'
 	import { openBle } from '@/utils/blue.js'
+	import { getUnreadNotifyCount } from '@/utils/message.js'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
 		onLaunch: function() {
@@ -14,6 +15,8 @@
 			// #endif
 		},
 		onShow: function() {
+			// 获取未读消息数量
+			getUnreadNotifyCount()
 			// #ifdef MP-WEIXIN
 			uni.openBluetoothAdapter({
 				success: e => {
