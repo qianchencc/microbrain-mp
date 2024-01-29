@@ -4,6 +4,7 @@
 	import { wxLogin } from '@/utils/wxLogin.js'
 	import { appPush } from '@/utils/appPush.js'
 	import { initNfc } from '@/utils/NFC.js'
+	import { openBle } from '@/utils/blue.js'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
 		onLaunch: function() {
@@ -13,12 +14,24 @@
 			// #endif
 		},
 		onShow: function() {
+			// #ifdef MP-WEIXIN
+			uni.openBluetoothAdapter({
+				success: e => {
+					console.log('初始化蓝牙成功:' + e.errMsg);
+					openBle();
+				},
+				fail: e => {
+					console.log('初始化蓝牙失败，错误码：' + (e.errCode || e.errMsg));
+				}
+			});
+			// #endif
 
 			if (getToken()) {
 				usePermissionStoreHook().setAuthority()
 			} else {
 				// #ifdef MP-WEIXIN
 				// wxLogin()
+
 				uni.login({
 					provider: 'weixin',
 					success: res => {

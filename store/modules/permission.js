@@ -69,6 +69,7 @@ const defaultIndex = [
 	'9mauw4iiaqhptiyw6clpubgth3knblrt', // 13 心理咨询
 	'ecwh2ogylqywk32qtdr8ty5cjmqvomy4', // 14 矛调中心
 	'jamglujwkfii0pjgbmc8tg1kbdhxppek', // 15 投诉建议
+	'vea3ye47dvzzpakbxerf2lirnyawrqou', // 16 智慧照明
 ];
 
 const all = {
