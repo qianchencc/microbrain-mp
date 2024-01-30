@@ -71,6 +71,7 @@ const defaultIndex = [
 	'jamglujwkfii0pjgbmc8tg1kbdhxppek', // 15 投诉建议
 	'vea3ye47dvzzpakbxerf2lirnyawrqou', // 16 智慧照明
 	'09drtoozjudsurofnrwdfuf5axnp0bno', // 17 活动管理
+	'ubvqwwuzwlxxnr0segmn9jfjbfho8tbc', // 17 投票管理
 ];
 
 const all = {

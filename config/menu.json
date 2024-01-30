@@ -452,10 +452,10 @@
 				},
 				{
 					"id": "ubvqwwuzwlxxnr0segmn9jfjbfho8tbc",
-					"title": "报修登记",
-					"name": "incomplete",
-					"icon": "icon_bxdj.png",
-					"uri": "/pages/repair/register",
+					"title": "投票管理",
+					"name": "vote",
+					"icon": "icon_tpzx.png",
+					"uri": "/",
 					"type": "MENU"
 				},
 				{
