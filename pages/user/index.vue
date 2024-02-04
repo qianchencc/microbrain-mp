@@ -92,9 +92,10 @@
 
 	function toPage(item) {
 		if (item.name === 'incomplete') return
-		item.uri = SCHEME + COOKIE_DOMAIN + `/${item.name.toLocaleLowerCase()}` + (item.uri || '/')
-		jumpUrl(item)
-
+		jumpUrl({
+			...item,
+			uri: SCHEME + COOKIE_DOMAIN + `/${item.name.toLocaleLowerCase()}` + (item.uri || '/')
+		})
 	}
 
 	function toWebView(domain, url) {
