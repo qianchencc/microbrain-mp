@@ -35,3 +35,37 @@ export const confirmationStatus = {
 		type: 'success'
 	}
 }
+
+export const pageMenu = [{
+		id: 'ubvqwwuzwlxxnr0segmn9jfjbfho8tbc',
+		title: '我的投票',
+		name: 'vote/my',
+		uri: '/'
+	},
+	{
+		id: '09drtoozjudsurofnrwdfuf5axnp0bno',
+		title: '我的活动',
+		name: 'activity/my',
+		uri: '/'
+	},
+	{
+		title: '我的任务',
+		name: 'incomplete',
+		uri: '/'
+	},
+	{
+		title: '我的投诉',
+		name: 'incomplete',
+		uri: '/'
+	},
+	{
+		title: '我的报修',
+		name: 'incomplete',
+		uri: '/'
+	},
+	{
+		title: '我的矛调',
+		name: 'incomplete',
+		uri: '/'
+	}
+]

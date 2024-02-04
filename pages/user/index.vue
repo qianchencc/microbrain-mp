@@ -55,7 +55,7 @@
 		</view>
 		<view class="list">
 			<uni-list :border="false">
-				<uni-list-item v-for="item in workOrderMenu" :key="item.title" :border="false" :title="item.title" showArrow clickable @click="toWorkOrder(item)" />
+				<uni-list-item v-for="item in pageMenu" :key="item.title" :border="false" :title="item.title" showArrow clickable @click="toPage(item)" />
 			</uni-list>
 		</view>
 		<view class="list">
@@ -79,8 +79,9 @@
 	import globalConfig from '@/config'
 	import { COOKIE_DOMAIN, SCHEME, zztServer } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { faceAuthStatus, confirmationStatus } from './utils/enums.js'
+	import { pageMenu, faceAuthStatus, confirmationStatus } from './utils/enums.js'
 	import { transceive } from '@/utils/NFC.js'
+	import { jumpUrl } from '@/utils/tools'
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 
 	const changeAvatar = () => {
@@ -89,34 +90,11 @@
 		})
 	}
 
-	const workOrderMenu = [{
-			title: '我的任务',
-			url: '/pages/myTask/index?accept=true'
-		},
-		{
-			title: '我的投诉',
-			url: '/pages/complaint/index'
-		},
-		{
-			title: '我的报修',
-			url: '/pages/repairs/index'
-		},
-		{
-			title: '我的矛调',
-			url: '/pages/contradict/index'
-		}
-	]
+	function toPage(item) {
+		if (item.name === 'incomplete') return
+		item.uri = SCHEME + COOKIE_DOMAIN + `/${item.name.toLocaleLowerCase()}` + (item.uri || '/')
+		jumpUrl(item)
 
-	function toWorkOrder(item) {
-		// // #ifdef MP-WEIXIN
-		// uni.navigateTo({
-		// 	url: '/pages/webView/index?path=' + SCHEME + COOKIE_DOMAIN + '/workorder' + '/#' + item.url
-		// })
-		// // #endif
-		// // #ifdef H5
-		// location.href = SCHEME + COOKIE_DOMAIN + '/workorder' + '/#' +
-		// 	`/pages/user/workorder/list?title=${item.title}&detailTitle=${item.detailTitle}&type=${item.type}`
-		// // #endif
 	}
 
 	function toWebView(domain, url) {

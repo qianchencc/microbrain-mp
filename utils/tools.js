@@ -112,7 +112,6 @@ export const jumpUrl = async menu => {
 		if (menuFuc[menu.name]) {
 			menuFuc[menu.name](menu)
 		} else {
-			console.log(222222, menu.uri);
 			uni.navigateTo({
 				url: '/pages/webView/index?path=' + menu.uri.replace('?', '&')
 			})
