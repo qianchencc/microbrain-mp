@@ -39,7 +39,7 @@ export const confirmationStatus = {
 export const pageMenu = [{
 		id: 'ubvqwwuzwlxxnr0segmn9jfjbfho8tbc',
 		title: '我的投票',
-		name: 'incomplete',
+		name: 'vote/my',
 		uri: '/'
 	},
 	{
