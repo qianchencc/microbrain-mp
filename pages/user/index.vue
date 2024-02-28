@@ -77,7 +77,7 @@
 	import { computed, reactive } from 'vue'
 	import { onShow } from '@dcloudio/uni-app'
 	import globalConfig from '@/config'
-	import { COOKIE_DOMAIN, SCHEME, zztServer } from '@/config/settings'
+	import { DOMAIN, zztServer } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { pageMenu, faceAuthStatus, confirmationStatus } from './utils/enums.js'
 	import { transceive } from '@/utils/NFC.js'
@@ -94,13 +94,13 @@
 		if (item.name === 'incomplete') return
 		jumpUrl({
 			...item,
-			uri: SCHEME + COOKIE_DOMAIN + `/${item.name.toLocaleLowerCase()}` + (item.uri || '/')
+			uri: DOMAIN + `/${item.name.toLocaleLowerCase()}` + (item.uri || '/')
 		})
 	}
 
 	function toWebView(domain, url) {
 		uni.navigateTo({
-			url: `/pages/webView/index?path=${SCHEME}${COOKIE_DOMAIN}/${domain}/#/${url || ''}`
+			url: `/pages/webView/index?path=${DOMAIN}/${domain}/#/${url || ''}`
 		})
 	}
 	const integralList = reactive([{

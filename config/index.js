@@ -2,9 +2,11 @@
  * ip地址或域名
  */
 
-import { TO_TEST } from './settings'
+import { DOMAIN } from './settings'
 
-const ipAddress = TO_TEST ? 'http://118.89.77.114:8080' : 'http://services.ehetech.net:32087'
+// #ifdef MP-WEIXIN
+const ipAddress = DOMAIN //'https://ncim.577119.com' //
+// #endif
 
 // 文件访问地址
 const fileAddress = '/file/'

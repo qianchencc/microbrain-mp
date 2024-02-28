@@ -2,7 +2,7 @@
 	<view class="content">
 		<z-paging ref="paging" v-model="dataList" default-page-no="0" @query="queryList">
 			<view class="message-item" v-for="(item,index) in dataList" :key="index" @click="handleRouteNewsDetail(item.id)">
-				<image class="message-item_image" :src="`${SCHEME}${COOKIE_DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
+				<image class="message-item_image" :src="`${DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
 				</image>
 				<view class="message-item_detail">
 					<view class="detail_title uni-ellipsis">
@@ -28,7 +28,7 @@
 	import { ref } from 'vue'
 	import { onLoad } from '@dcloudio/uni-app'
 	import { fetchNewsPage } from "@/apis/home"
-	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+	import { DOMAIN } from '@/config/settings'
 	const paging = ref(null)
 	const dataList = ref([])
 
@@ -43,10 +43,8 @@
 
 	const handleRouteNewsDetail = async (id) => {
 		if (!id) return
-		// const active = await createAppDailyActivity({ appCode: 'app-news' })
 		uni.navigateTo({
 			url: `/pages/index/news/detail?id=${id}`
-			// url: `/pages/webView/index?path=${SCHEME}${COOKIE_DOMAIN}/newsdetail/#/&otherQuery=${encodeURI(`&id=${id}`)}`
 		})
 	}
 </script>

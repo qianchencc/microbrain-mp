@@ -39,7 +39,7 @@
 
 <script>
 	import { fetchNewsById } from '@/apis/home'
-	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+	import { DOMAIN } from '@/config/settings'
 	export default {
 		data() {
 			return {
@@ -59,7 +59,7 @@
 			},
 			showNewsDetail() {
 				return val => {
-					return val && val.replace(/\<img/gi, '<img class="rich-img" ').replace('../..', `${SCHEME}${COOKIE_DOMAIN}`)
+					return val && val.replace(/\<img/gi, '<img class="rich-img" ').replace('../..', `${DOMAIN}`)
 				}
 			}
 		},

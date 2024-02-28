@@ -1,5 +1,4 @@
 import { useUserStoreHook } from '@/store/modules/user'
-import { MENU_MOCK, COOKIE_DOMAIN } from '@/config/settings'
 import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 const TokenKey = 'authorized-token'
 // 获取token

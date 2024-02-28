@@ -18,15 +18,15 @@
 			// 获取未读消息数量
 			getUnreadNotifyCount()
 			// #ifdef MP-WEIXIN
-			uni.openBluetoothAdapter({
-				success: e => {
-					console.log('初始化蓝牙成功:' + e.errMsg);
-					openBle();
-				},
-				fail: e => {
-					console.log('初始化蓝牙失败，错误码：' + (e.errCode || e.errMsg));
-				}
-			});
+			// uni.openBluetoothAdapter({
+			// 	success: e => {
+			// 		console.log('初始化蓝牙成功:' + e.errMsg);
+			// 		openBle();
+			// 	},
+			// 	fail: e => {
+			// 		console.log('初始化蓝牙失败，错误码：' + (e.errCode || e.errMsg));
+			// 	}
+			// });
 			// #endif
 
 			if (getToken()) {

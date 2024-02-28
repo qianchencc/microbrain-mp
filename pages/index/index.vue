@@ -57,7 +57,6 @@
 	import { computed, reactive, ref, watch } from 'vue'
 	import { wxLogin } from '@/utils/wxLogin.js'
 	import { jumpUrl } from '@/utils/tools'
-	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
 	import { useBannerHook } from './utils/banner.js'
 	import { handleScan } from './utils/scan.js'
 	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'

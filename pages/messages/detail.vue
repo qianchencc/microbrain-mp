@@ -30,7 +30,7 @@
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { fetchNotifyPage, changeMesState } from '@/apis/messages/recipient'
 	import { messagesType } from './enums'
-	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+	import { DOMAIN } from '@/config/settings'
 	import { getTokenId } from '@/utils/auth'
 	import { getUnreadNotifyCount } from '@/utils/message.js'
 	const appId = ref('')
@@ -59,7 +59,7 @@
 		const options = []
 		const navigatePage = '/pages/webView/index?'
 
-		const path = `${SCHEME}${COOKIE_DOMAIN}/${item.forwardUrl}/`
+		const path = `${DOMAIN}/${item.forwardUrl}/`
 		options.push(`id=${item.targetId}`) // 信息详情记录ID
 		// #ifdef MP-WEIXIN
 		options.push(`path=${path}`)

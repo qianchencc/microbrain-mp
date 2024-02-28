@@ -18,7 +18,7 @@
 		<view style="height: 550rpx;overflow: scroll;">
 			<view v-if="messageList.length > 0">
 				<view class="message-item" v-for="(item,index) in messageList" :key="index" @click="handleRouteNewsDetail(item.id)">
-					<image class="message-item_image" :src="`${SCHEME}${COOKIE_DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
+					<image class="message-item_image" :src="`${DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
 					</image>
 					<view class="message-item_detail">
 						<view class="detail_title uni-ellipsis">
@@ -51,7 +51,7 @@
 	import { onMounted, ref, computed, watch } from 'vue'
 	import { fetchNewsPage } from "@/apis/home"
 	import globalConfig from '@/config'
-	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+	import { DOMAIN } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const newTagList = ref([])
@@ -118,10 +118,8 @@
 
 	const handleRouteNewsDetail = async (id) => {
 		if (!id) return
-		// const active = await createAppDailyActivity({ appCode: 'app-news' })
 		uni.navigateTo({
 			url: `/pages/index/news/detail?id=${id}`
-			// url: `/pages/webView/index?path=${SCHEME}${COOKIE_DOMAIN}/newsdetail/#/&otherQuery=${encodeURI(`&id=${id}`)}`
 		})
 	}
 

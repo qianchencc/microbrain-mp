@@ -13,7 +13,7 @@ export const handleScan = () => {
 						});
 					} else {
 						uni.navigateTo({
-							url: `/pages/webView/index?path=${SCHEME}${COOKIE_DOMAIN}${data.path}&id=${data.id}`,
+							url: `/pages/webView/index?path=${DOMAIN}${data.path}&id=${data.id}`,
 							animationType: 'pop-in'
 						})
 					}

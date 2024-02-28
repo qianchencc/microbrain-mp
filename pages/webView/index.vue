@@ -8,7 +8,7 @@
 	import { getTokenId, checkToken } from '@/utils/auth'
 	import { useUserStoreHook } from '@/store/modules/user'
 	// import { joinGroup } from '@/apis/group/index.js'
-	import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+	import { DOMAIN } from '@/config/settings'
 
 	function obj2Query(obj) {
 		const keys = []
@@ -116,7 +116,7 @@
 					} else if (target.action === 'redirect') {
 						console.log('web view =====>', target)
 						uni.navigateTo({
-							url: `/pages/webView/index?path=${SCHEME}${COOKIE_DOMAIN}/${target.module}/#${target.path}`
+							url: `/pages/webView/index?path=${DOMAIN}/${target.module}/#${target.path}`
 						})
 					}
 				} else if (target.photo) {

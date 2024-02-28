@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { store } from '@/store'
-import { MENU_MOCK, BASE_NAME, SCHEME, COOKIE_DOMAIN } from '@/config/settings'
+import { TO_TEST, BASE_NAME, DOMAIN } from '@/config/settings'
 import resource from '@/config/menu.json'
 import { getResourceTree } from '@/apis/user/menu'
 import { storageSet, storageGet } from '@/utils/storage'
@@ -129,14 +129,14 @@ export const usePermissionStore = defineStore({
 					// 2.uri不包含http,输入内部跳转，指定子页面
 					// 3.uri包含miniAppId, 属于小程序跳转
 					if (noChangeUri.every(item => !val.uri.includes(item))) {
-						val.uri = SCHEME + COOKIE_DOMAIN + `/${val.name.toLocaleLowerCase()}` + (val.uri || '/')
+						val.uri = DOMAIN + `/${val.name.toLocaleLowerCase()}` + (val.uri || '/')
 					}
 				})
 			})
 			this.menuList = menuList
 			/* 注册路由 */
 			let data = []
-			if (MENU_MOCK) {
+			if (TO_TEST) {
 				data = resource.find((v) => v.name === BASE_NAME).children
 			} else {
 				const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })

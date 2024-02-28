@@ -1,7 +1,7 @@
 import { fetchBanner } from "@/apis/home"
 import { fecthFilePage } from '@/apis/common'
 import { ref, watch, computed } from 'vue'
-import { COOKIE_DOMAIN, SCHEME } from '@/config/settings'
+import { DOMAIN } from '@/config/settings'
 import { useUserStoreHook } from '@/store/modules/user'
 const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 export const useBannerHook = () => {
@@ -21,7 +21,7 @@ export const useBannerHook = () => {
 		if (!content.content) return
 		bannerList.value = content.content.map(val => {
 			return {
-				url: SCHEME + COOKIE_DOMAIN + '/file/' + val.uri
+				url: DOMAIN + '/file/' + val.uri
 			}
 		})
 	}
