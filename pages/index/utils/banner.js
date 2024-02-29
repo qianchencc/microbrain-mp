@@ -8,7 +8,7 @@ export const useBannerHook = () => {
 	const bannerList = ref([{ url: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.png' }])
 	const getBannerList = async () => {
 		const res = await fetchBanner()
-		if (!res.content) return
+		if (!res || !res.content) return
 		getFile(res.content.id)
 	}
 
@@ -17,9 +17,9 @@ export const useBannerHook = () => {
 		const data = {
 			businessId: id
 		}
-		const { content } = await fecthFilePage(data)
-		if (!content.content) return
-		bannerList.value = content.content.map(val => {
+		const res = await fecthFilePage(data)
+		if (!res) return
+		bannerList.value = res.content.content.map(val => {
 			return {
 				url: DOMAIN + '/file/' + val.uri
 			}

@@ -1,10 +1,10 @@
 {
 	"passwordSecret": [{
-		"value": "wxef48157d70d2b50c",
+		"value": "wxe60e1f697d115f96",
 		"version": 1
 	}],
 	"passwordStrength": "medium",
-	"tokenSecret": "wxef48157d70d2b50c",
+	"tokenSecret": "wxe60e1f697d115f96",
 	"tokenExpiresIn": 259200,
 	"tokenExpiresThreshold": 86400,
 	"passwordErrorLimit": 6,
@@ -16,8 +16,8 @@
 			"tokenExpiresIn": 259200,
 			"tokenExpiresThreshold": 86400,
 			"weixin": {
-				"appid": "wxef48157d70d2b50c",
-				"appsecret": "25586b599a20b38ac8bad4985a6f070a"
+				"appid": "wxe60e1f697d115f96",
+				"appsecret": "022f9bc47f0a3758bc822622e5f258fe"
 			}
 		}
 	},

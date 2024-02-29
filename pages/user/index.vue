@@ -20,7 +20,7 @@
 					<text style="font-size: 24rpx;">编辑</text>
 				</view>
 			</view>
-			<view class="integral_list">
+			<!-- <view class="integral_list">
 				<template v-for="(item,index) in integralList" :key="item.id">
 					<view class="integral_item" @click="toWebView('ranking', item.url)">
 						<image class="integral_icon" :src="item.icon" />
@@ -35,13 +35,13 @@
 					</view>
 					<view class="line" v-if="index < integralList.length - 1" />
 				</template>
-			</view>
+			</view> -->
 		</view>
-		<view class="list">
+		<!-- <view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="积分商城" showArrow clickable @click="toWebView('epidemic')" />
 			</uni-list>
-		</view>
+		</view> -->
 		<view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="组织确权" showArrow link="navigateTo" to="./owner">
@@ -55,7 +55,9 @@
 		</view>
 		<view class="list">
 			<uni-list :border="false">
-				<uni-list-item v-for="item in pageMenu" :key="item.title" :border="false" :title="item.title" showArrow clickable @click="toPage(item)" />
+				<template v-for="item in pageMenu" :key="item.title">
+					<uni-list-item v-if="item.name!=='incomplete'" :border="false" :title="item.title" showArrow clickable @click="toPage(item)" />
+				</template>
 			</uni-list>
 		</view>
 		<view class="list">

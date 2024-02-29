@@ -9,13 +9,13 @@
 				</view>
 				<view class="input-view">
 					<uni-icons class="input-uni-icon" type="search" :size="null" color="#999" />
-					<text class="input-uni-text">请输入关键字搜索</text>
+					<text class="input-uni-text" @click="open">请输入关键字搜索</text>
 					<uni-icons class="input-uni-icon" type="scan" :size="null" color="#999" @click="handleScan">
 					</uni-icons>
 				</view>
 				<view class="header-handle">
-					<image class="handle-image" src="../../static/images/icon-home_voice.png" mode=""></image>
-					<image class="handle-image" src="../../static/images/icon-home_cut.png" mode=""></image>
+					<!-- <image class="handle-image" src="../../static/images/icon-home_voice.png" mode=""></image>
+					<image class="handle-image" src="../../static/images/icon-home_cut.png" mode=""></image> -->
 				</view>
 			</view>
 			<swiper class="page_swiper" autoplay indicator-dots="true" circular>
@@ -26,12 +26,12 @@
 				</template>
 			</swiper>
 			<view class="menu-top-con">
-				<view class="top-menu">
+				<!-- <view class="top-menu">
 					<view class="menu-item" v-for="(item, index) in topMenu" :key="index" @tap="topJumpUrl(item)">
 						<view>{{ item.title }}</view>
 						<image :src="item.icon" mode="aspectFit"></image>
 					</view>
-				</view>
+				</view> -->
 				<uni-grid style="background-color: #fff;padding: 20rpx 0;border-radius: 10rpx;" :column="4" :square="false" :showBorder="false" @change="change">
 					<template v-for="(item, index) in menuList" :key="item.id">
 						<uni-grid-item :index="index">

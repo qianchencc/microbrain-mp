@@ -83,6 +83,10 @@ export const useUserStore = defineStore({
 			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime()))
 			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=sms&mobile=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			// #endif
+			uni.showLoading({
+				title: '加载中...',
+				mask: false
+			});
 			uni.request({
 				url: url,
 				method: 'POST',
@@ -140,7 +144,7 @@ export const useUserStore = defineStore({
 			removeToken()
 			uni.clearStorageSync();
 			// #ifdef MP-WEIXIN
-			wxLogin()
+			// wxLogin()
 			// #endif
 			// #ifdef APP-PLUS
 			uni.reLaunch({
