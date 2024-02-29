@@ -28,11 +28,16 @@
 <script setup>
 	import { ref } from 'vue'
 	import globalConfig from '@/config'
-	import { onLoad } from '@dcloudio/uni-app'
+	import { onShow } from '@dcloudio/uni-app'
 	import { getMyMessage, fetchUnreadNotifyCount } from '@/apis/messages/recipient'
 	import { messagesType } from './enums'
+	import { getUnreadNotifyCount } from '@/utils/message.js'
 	const paging = ref(null)
 	const dataList = ref([])
+
+	onShow(() => {
+		getUnreadNotifyCount()
+	})
 
 	const queryList = async (pageNo, pageSize) => {
 		const res = await getMyMessage()
