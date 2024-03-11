@@ -112,8 +112,11 @@
 		position: absolute;
 		left: 0;
 		background-color: #3974F6;
-		height: 450rpx;
+		border-bottom-left-radius:150rpx 50rpx;
+		border-bottom-right-radius:150rpx 50rpx;
+		height: 280rpx;
 		width: 750rpx;
+		
 		// 记得加背景图片
 	}
 
@@ -179,6 +182,7 @@
 	}
 
 	.menu-top-con {
+		margin-top: 20rpx;
 		width: 100%;
 		background-color: white;
 		position: relative;

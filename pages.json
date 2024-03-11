@@ -29,7 +29,7 @@
 		{
 			"path": "pages/index/news/detail",
 			"style": {
-				"navigationBarTitleText": "新闻详情"
+				"navigationBarTitleText": "要闻详情"
 			}
 		},
 		{

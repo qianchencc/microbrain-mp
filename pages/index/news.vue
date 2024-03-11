@@ -29,11 +29,11 @@
 								{{item.createdAt}}
 							</view>
 							<view class="detail_footer_label">
-								<uni-icons type="eye" :size="null" :color="null"></uni-icons>
+								<!-- <uni-icons type="eye" :size="null" :color="null"></uni-icons> -->
 								{{item.infoSubject}}
 							</view>
 							<view class="detail_footer_label">
-								<uni-icons type="hand-up" :size="null" :color="null"></uni-icons>
+								<!-- <uni-icons type="hand-up" :size="null" :color="null"></uni-icons> -->
 								{{item.likesCount}}
 							</view>
 						</view>
@@ -72,7 +72,7 @@
 				id: 'ANNOUNCEMENT'
 			},
 			{
-				name: '企业活动',
+				name: '集团要闻',
 				id: 'BUSINESS_ACTIVITIES'
 			},
 			{
@@ -119,7 +119,7 @@
 	const handleRouteNewsDetail = async (id) => {
 		if (!id) return
 		uni.navigateTo({
-			url: `/pages/index/news/detail?id=${id}`
+			url: `/pages/index/news/detail?id=${id}&type=${newTagValue.value}`
 		})
 	}
 

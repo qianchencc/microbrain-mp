@@ -50,6 +50,31 @@
 		onLoad(e) {
 			console.log('detail onLoad ----------', e)
 			this.gainNewsInfoDetail(e.id)
+			switch (e.type){
+				case 'PARTY_BUILDING':
+				uni.setNavigationBarTitle({
+				  title: '党建活动详情'
+				})
+				break;
+				case 'BUSINESS_ACTIVITIES':
+				uni.setNavigationBarTitle({
+				  title: '要闻详情'
+				})
+				break;
+				case 'ANNOUNCEMENT':
+				uni.setNavigationBarTitle({
+				  title: '公告详情'
+				})
+				break;
+				case 'ANNOUNCEMENT':
+				uni.setNavigationBarTitle({
+				  title: '资讯详情'
+				})
+				break;
+				default:
+					break;
+			}
+			
 		},
 		computed: {
 			showNewsTime() {
@@ -59,7 +84,7 @@
 			},
 			showNewsDetail() {
 				return val => {
-					return val && val.replace(/\<img/gi, '<img class="rich-img" ').replace('../..', `${DOMAIN}`)
+					return val && val.replace(/\<img/gi, '<img class="rich-img" ').replaceAll('../..', `${DOMAIN}`)
 				}
 			}
 		},

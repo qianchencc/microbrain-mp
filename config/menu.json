@@ -291,6 +291,14 @@
 					"type": "MENU"
 				},
 				{
+					"id": "fjuglukm5xmi1b9ijecdbkrolsfvtfj5",
+					"title": "我的办公室",
+					"name": "office",
+					"icon": "icon_wdbgs.png",
+					"uri": "/",
+					"type": "MENU"
+				},
+				{
 					"id": "pfi0bimwq4cwlwb30fpmkcuaokcloeer",
 					"title": "智慧停车",
 					"name": "parking",
