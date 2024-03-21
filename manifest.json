@@ -71,7 +71,8 @@
                         "appkey_ios" : "f1c7416f87025fc9060ffb5b6bfa48e5",
                         "appkey_android" : "eb43a6c4e2569154afc6916714c61173"
                     }
-                }
+                },
+                "geolocation" : {}
             },
             "icons" : {
                 "android" : {

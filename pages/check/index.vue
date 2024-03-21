@@ -50,15 +50,15 @@
 	</view>
 </template>
 
-<script>
+<script >
 import {
     signIn,
     fatchPointCheckItem,
     getPatrolInfoByCode
 } from '@/apis/check/index.js'
 import $weatherApi from '@/apis/weather.js'
+import QQMapwx from './detail/qqmap-wx-jssdk.min.js'
 
-import QQMapwx from '@/utils/qqmap-wx-jssdk.min.js'
 export default {
     filters: {
      //    formatDate(value) {

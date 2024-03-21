@@ -1119,4 +1119,4 @@ class QQMapWX {
   }
 };
 
-module.exports = QQMapWX;
+export default QQMapWX;
