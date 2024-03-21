@@ -17,3 +17,6 @@ export const uploadPrincipalFace = (id, data) => request.globalRequest(`/api/car
 
 // 一卡通个人账号查询
 export const fetchCardPrincipalInfo = (id) => request.globalRequest(`/api/card/account/${id}`)
+
+// 查询当前卡号
+export const fetchCurrentUsed = () => request.globalRequest('/api/card/account/card/current/used', 'GET')

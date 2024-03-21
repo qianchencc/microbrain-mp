@@ -161,6 +161,7 @@
 
 	.suffix {
 		position: absolute;
+		z-index: 9999;
 		top: 20%;
 		right: 10px;
 		color: #2979ff;

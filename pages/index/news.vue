@@ -21,21 +21,19 @@
 					<image class="message-item_image" :src="`${DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
 					</image>
 					<view class="message-item_detail">
-						<view class="detail_title uni-ellipsis">
+						<view class="detail_title text-wrap">
 							{{item.infoSubject}}
 						</view>
+						
+						
 						<view class="detail_footer">
-							<view class="detail_footer_label">
-								{{item.createdAt}}
+							<view class=" detail_footer_label">
+								{{item.createdAt.substring(0,11)}}
 							</view>
-							<view class="detail_footer_label">
-								<!-- <uni-icons type="eye" :size="null" :color="null"></uni-icons> -->
-								{{item.infoSubject}}
+							<view class=" detail_footer_label_2">
+								{{typeName}}
 							</view>
-							<view class="detail_footer_label">
-								<!-- <uni-icons type="hand-up" :size="null" :color="null"></uni-icons> -->
-								{{item.likesCount}}
-							</view>
+							
 						</view>
 					</view>
 				</view>
@@ -57,19 +55,16 @@
 	const newTagList = ref([])
 	const newTagValue = ref('')
 	const messageList = ref([])
+	const typeName=ref('新闻热点')
 	// 获取新闻列表
 	const gainCategoryList = async () => {
 		newTagList.value = [{
-				name: '热点',
+				name: '新闻热点',
 				id: ''
 			},
 			{
 				name: '党建活动',
 				id: 'PARTY_BUILDING'
-			},
-			{
-				name: '公告信息',
-				id: 'ANNOUNCEMENT'
 			},
 			{
 				name: '集团要闻',
@@ -90,19 +85,27 @@
 		() => newTagValue.value,
 		() => {
 			gainNewsInfoPage()
+			getType()
 		}
 	)
 
 	watch(() => geospatial.value, () => {
 		gainNewsInfoPage()
 	})
-
+	const getType=()=>{
+		newTagList.value.forEach(_=>{
+			if(_.id===newTagValue.value){
+				typeName.value= _.name
+			}
+		})
+	}
 	const gainNewsInfoPage = async () => {
 		var data = {
 			size: 3,
 			page: 0,
 			contentType: newTagValue.value,
 			historyType: 'WEB',
+			pageFlag:1,
 			sort: 'createdAt,desc'
 		}
 		const res = await fetchNewsPage(data)
@@ -146,12 +149,12 @@
 
 			.card-title_tag_item {
 				flex: 1;
-				text-align: center;
+				text-align: left;
 				line-height: 80upx;
 
 				.item_text {
 					position: relative;
-					font-size: 26upx;
+					font-size: 30upx;
 					color: #8F969F;
 
 					.new {
@@ -167,6 +170,7 @@
 					&::after {
 						display: block;
 						content: '';
+						
 						width: 40upx;
 						height: 4upx;
 						background-color: #1C77FF;
@@ -179,6 +183,7 @@
 					.item_text {
 						font-size: 30upx;
 						color: #000000;
+						font-weight: bold;
 					}
 				}
 			}
@@ -205,6 +210,7 @@
 				height: 140upx;
 				margin: 0;
 				margin-right: 27upx;
+				border-radius: 12upx;
 			}
 
 			.message-item_detail {
@@ -220,13 +226,18 @@
 					font-size: 30upx;
 					line-height: 1.5;
 				}
-
 				.detail_footer {
 					display: flex;
-					align-items: center;
-					justify-content: space-between;
+					flex-direction: row;
+					justify-content: flex-start;
 
 					.detail_footer_label {
+						line-height: 22upx;
+						font-size: 22upx;
+						color: #B6B7BA;
+					}
+					.detail_footer_label_2 {
+						margin-left: 20upx;
 						line-height: 22upx;
 						font-size: 22upx;
 						color: #B6B7BA;

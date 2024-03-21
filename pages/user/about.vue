@@ -11,7 +11,7 @@
 					<uni-list-item title="联系单位" rightText="新世纪智慧城市研究院"></uni-list-item>
 					<uni-list-item title="联系电话" rightText="0577-88928119"></uni-list-item>
 					<uni-list-item title="联系邮箱" rightText="admin@577119.com"></uni-list-item>
-					<uni-list-item title="地址" note="浙江省温州市上江路新世纪商务大厦B幢6F"></uni-list-item>
+					<uni-list-item title="地址" note="温州市上江路88号凯迪中心大楼F座26-27层(吾悦广场南侧）"></uni-list-item>
 					<!-- <uni-list-item title="服务协议" link to="/pages/user/treaty"></uni-list-item>
 					<uni-list-item title="隐私政策" link to="/pages/user/policy"></uni-list-item> -->
 				</uni-list>

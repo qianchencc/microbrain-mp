@@ -51,28 +51,19 @@ const noChangeUri = ['miniAppId', 'http', 'wxProgram'];
 
 const defaultIndex = [
 	'cb3hi2hwunjiel6hu3qeu5gnidic580l', // 1 党建引领
-	'ebiu0rbag72oysevwitsjvuv8pjfqka4', // 2 智慧门禁
-	'pfi0bimwq4cwlwb30fpmkcuaokcloeer', // 3 智慧停车
-	'braam9wwxsy9vphu2omy7aevrfegvt3y', // 4 视频监控
-	'yj7syptaz0vkpdfk3duqptti6nzzvd7l', // 5 智慧巡更
-	'vhfvtycebjqorpijhcj7u8gqwpaeamj7', // 6 访客管理
-	'pxstjr5bjr7eh3mf5ui4rofdbpfzf3je', // 7 空间预约
-	'qb9vtuad3ruonmsmdi2rm9rqrsoej8b9', // 8 能耗管理
-	'y0z8vu9wigh52gfehulmmdcfo7yn3xu5', // 9 事件协同
-	'itbwa3gdc8j8ajkkjnpcp07sksz3f5nh', // 10 会议管理
+	'fjuglukm5xmi1b9ijecdbkrolsfvtfj5',	// 2 我的办公室
+	'vhfvtycebjqorpijhcj7u8gqwpaeamj7', // 3 访客管理
+	'itbwa3gdc8j8ajkkjnpcp07sksz3f5nh', // 4 会议管理
+	'09drtoozjudsurofnrwdfuf5axnp0bno', // 5 活动管理
+	'ubvqwwuzwlxxnr0segmn9jfjbfho8tbc', // 6 投票管理
+	'jspmjdw8hhfim8eedacr8alq0bs1kdya', // 7 随手拍
+	'pxstjr5bjr7eh3mf5ui4rofdbpfzf3je', // 9 空间预约
+	'y0z8vu9wigh52gfehulmmdcfo7yn3xu5', // 10 事件协同	
 	'6qtuwdg8yxxnefpmxnljmd4prmdqgapl', // 11 事件处理
-	'ds8ka4bzzxv1d9ol9pwzw5dealfewa5h', // 12 设备报修
-	'83rakyuslx9fyq5n4odlhzo8k7hk8ofe', // 13 物业报修
-	'tqbgc3nl1ldghiuklwldh5kxlobtss7b', // 14 缺陷上报
-	'jspmjdw8hhfim8eedacr8alq0bs1kdya', // 15 随手拍
-	'wzc817ffirnwnwc2upwdj6swu8echrtu', // 16 法律咨询
-	'9mauw4iiaqhptiyw6clpubgth3knblrt', // 13 心理咨询
-	'ecwh2ogylqywk32qtdr8ty5cjmqvomy4', // 14 矛调中心
-	'jamglujwkfii0pjgbmc8tg1kbdhxppek', // 15 投诉建议
-	'vea3ye47dvzzpakbxerf2lirnyawrqou', // 16 智慧照明
-	'09drtoozjudsurofnrwdfuf5axnp0bno', // 17 活动管理
-	'ubvqwwuzwlxxnr0segmn9jfjbfho8tbc', // 18 投票管理
-	'fjuglukm5xmi1b9ijecdbkrolsfvtfj5',	// 19 我的办公室
+	'ebiu0rbag72oysevwitsjvuv8pjfqka4', // 12 智慧门禁
+	'braam9wwxsy9vphu2omy7aevrfegvt3y', // 13 视频监控
+	'vea3ye47dvzzpakbxerf2lirnyawrqou', // 14 智慧照明
+	'yj7syptaz0vkpdfk3duqptti6nzzvd7l' // 15 智慧巡更
 ];
 
 const all = {
@@ -135,6 +126,8 @@ export const usePermissionStore = defineStore({
 				})
 			})
 			this.menuList = menuList
+			useUserStoreHook().setGeospatialInfo()
+			useUserStoreHook().setUserInfo()
 			/* 注册路由 */
 			let data = []
 			if (TO_TEST) {
@@ -144,12 +137,10 @@ export const usePermissionStore = defineStore({
 				if (!resourceData) return
 				data = resourceData.children
 			}
-
 			const { permissionBtns, permissionIds } = generateBtns(data)
 			this.accessBtns = permissionBtns
 			this.permissionIds = permissionIds
-			useUserStoreHook().setGeospatialInfo()
-			useUserStoreHook().setUserInfo()
+			
 			// #ifdef APP-PLUS
 			appPush()
 			// #endif

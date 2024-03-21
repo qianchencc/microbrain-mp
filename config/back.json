@@ -458,7 +458,7 @@
 					"id": "b95ba9983fe84980bb00cdc948af18a1",
 					"title": "预约挂号",
 					"name": "orderDoctor",
-					"icon": "icon_yygh.png",
+					"icon": "icon_yjpt.png",
 					"uri": "wxProgram://浙里办/jXkNoDd2FzP9qHh",
 					"resourceType": "MENU"
 				},

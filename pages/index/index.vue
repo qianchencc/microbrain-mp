@@ -25,6 +25,7 @@
 					</swiper-item>
 				</template>
 			</swiper>
+			
 			<view class="menu-top-con">
 				<!-- <view class="top-menu">
 					<view class="menu-item" v-for="(item, index) in topMenu" :key="index" @tap="topJumpUrl(item)">
@@ -32,7 +33,7 @@
 						<image :src="item.icon" mode="aspectFit"></image>
 					</view>
 				</view> -->
-				<uni-grid style="background-color: #fff;padding: 20rpx 0;border-radius: 10rpx;" :column="4" :square="false" :showBorder="false" @change="change">
+				<uni-grid style="width:100%;background-color: #fff;padding: 20rpx 0rpx;border-radius: 10rpx;" :column="5" :square="false" :showBorder="false" @change="change">
 					<template v-for="(item, index) in menuList" :key="item.id">
 						<uni-grid-item :index="index">
 							<view class="grid-item-box">
@@ -46,6 +47,27 @@
 					</template>
 				</uni-grid>
 			</view>
+			<view class="notice_bg">
+				<view class="tag-view">
+					<span style="font-weight:bold;color:#ffffff;background-color:#1C77FF;padding-left:0.2rem;padding-right:0.25rem; border-radius: 5rem;">公告</span>
+				</view>
+				<!-- <uni-tag style="font-weight: bold;">公告</uni-tag> -->
+				<view class="line"></view>
+				<swiper autoplay="true" display-multiple-items="1" vertical="true" circular interval="2000"
+					class="bar-swiper">
+					<swiper-item v-for="(item, index) in noticeList" :key="index" class="swiper-item">
+						<view class="circle"></view>
+						<view class="item_box" @tap="click(item.id)">
+							{{ item.infoSubject }}
+						</view>
+					</swiper-item>
+				</swiper>
+				<view class="card-title_tag_more">
+					<text class="item_text" @click="handleRouteNoticeList()">
+						更多>
+					</text>
+				</view>
+			</view>
 			<news />
 		</view>
 	</view>
@@ -53,8 +75,13 @@
 
 <script setup>
 	import { usePermissionStoreHook } from '@/store/modules/permission'
+	import { fetchNewsPage } from "@/apis/home"
+	import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { computed, reactive, ref, watch } from 'vue'
+	import { onMounted,computed, reactive, ref, watch } from 'vue'
+	import { onShow } from '@dcloudio/uni-app'
+	import { fetchCurrentUsed } from '@/apis/home'
+	import { openBle } from '@/utils/blue.js'
 	import { wxLogin } from '@/utils/wxLogin.js'
 	import { jumpUrl } from '@/utils/tools'
 	import { useBannerHook } from './utils/banner.js'
@@ -62,6 +89,9 @@
 	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'
 	import news from './news.vue'
 	const { bannerList } = useBannerHook()
+	const noticeList=ref([])
+	const bluetooth=ref(false)
+	const ifChecked=ref(false)
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const topMenu = [{
@@ -78,13 +108,109 @@
 		}
 	]
 	// const bannerList = [{ pic: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.png' }]
-
+	onShow(()=>{
+		if(ifChecked.value===true&&bluetooth.value===true){
+			blueToothBroadCast()
+			
+			return
+		}
+	})
 	const open = () => {
 		uni.navigateTo({
 			url: './indexlist'
 		})
 	}
+	const handleRouteNoticeList = () => {
+		uni.navigateTo({
+			url: `/pages/index/news/noticeList`
+		})
+	}
+	const initBlueTooth=()=>{
+		if(!storageGet('bluetoothstatus')){
+			storageSet('bluetoothstatus',false)
+		}
+		bluetooth.value=storageGet('bluetoothstatus')
+	}
+	const getSwitch=()=>{
+		wx.openBluetoothAdapter({
+			success: (res) => {
+				console.info('Get Bluetooth ');
+				uni.getBluetoothAdapterState({
+				  success: function (res) {
+				    ifChecked.value=true
+					if(bluetooth.value===true){
+						blueToothBroadCast()
+					}
+				  },
+				  fail: function (res) {
+					  console.log(res)
+				    ifChecked.value=false
+				  }
+				})
+			},
+			fail: (res) => {
+				console.log('openBluetoothAdapter failed');
+				console.warn(res);
+			},
+			complete: (res) => {
+				console.debug('openBluetoothAdapter completed');
+			},
+		});
+	}
+	const blueToothBroadCast=async()=>{
+		const res=await fetchCurrentUsed()
+		if(!res.content)return
+		let card=parseInt(res.content.cardNumber).toString(16).padStart(8,'0')
+		console.log('cardNumber',card)
+		let list=[]
+		list.push(parseInt(card.substring(0,2),16))
+		list.push(parseInt(card.substring(2,4),16))
+		list.push(parseInt(card.substring(4,6),16))
+		list.push(parseInt(card.substring(6,8),16))
+		// for (var i = 0; i < 4; i++) {
+		
+		// 	list.push(Number(card.substring((2*i,2),16)))
+		// }
 
+		uni.openBluetoothAdapter({
+			success: e => {
+				console.log('初始化蓝牙成功:' + e.errMsg);
+				openBle(list);
+			},
+			fail: e => {
+				console.log('初始化蓝牙失败，错误码：' + (e.errCode || e.errMsg));
+			}
+		});
+
+	}
+	watch(() => geospatial.value, () => {
+		gainNewsInfoPage()
+	})
+	onMounted(() => {
+		gainNewsInfoPage()
+		initBlueTooth()
+		
+		getSwitch()
+		if(ifChecked.value===true&&bluetooth.value===true){
+			blueToothBroadCast()
+			
+			return
+		}
+		console.log('----->')
+	})
+	const gainNewsInfoPage = async () => {
+		var data = {
+			size: 3,
+			page: 0,
+			contentType: 'ANNOUNCEMENT',
+			historyType: 'WEB',
+			sort: 'createdAt,desc'
+		}
+		const res = await fetchNewsPage(data)
+		if (!res) return
+		noticeList.value = res.content ? res.content.content : []
+		
+	}
 	const change = async (e) => {
 		const { index } = e.detail
 		const menu = menuList.value[index]
@@ -183,7 +309,9 @@
 
 	.menu-top-con {
 		margin-top: 20rpx;
-		width: 100%;
+
+		width: 95%;
+		margin-left:33rpx;
 		background-color: white;
 		position: relative;
 
@@ -197,7 +325,7 @@
 				display: flex;
 				align-items: center;
 				justify-content: center;
-				width: 220rpx;
+				width: 180rpx;
 				height: 90rpx;
 				background-color: #4DABF2;
 				border-radius: 15rpx;
@@ -317,25 +445,28 @@
 	}
 
 	.notice_bg {
-		height: 90upx;
-		padding: 0 36upx;
+		height: 70upx;
+		margin: 20upx 35upx;
+		background: rgba(57,125,246,0.05);
+		border-radius: 15upx;
+		padding: 0 16upx;
 		display: flex;
 		align-items: center;
-
+	
 		.icon {
-			width: 44upx;
+			width: 94upx;
 			flex: none;
-			height: 46upx;
+			height: 30upx;
 		}
-
+	
 		.line {
 			width: 2upx;
 			flex: none;
 			height: 40upx;
-			margin: 0 24upx;
-			background-color: #E1E1E1;
+			margin: 0 20upx;
+			background-color: rgba(57, 125, 246, .1);
 		}
-
+	
 		.bar-swiper {
 			font-size: 24rpx;
 			font-family: PingFangSC-Regular, PingFang SC;
@@ -347,13 +478,13 @@
 			flex: 1;
 			margin-left: 12rpx;
 		}
-
+	
 		.swiper-item {
 			display: flex;
 			align-items: center;
 			overflow: hidden;
 		}
-
+	
 		.circle {
 			min-width: 10rpx;
 			width: 10rpx;
@@ -362,10 +493,8 @@
 			background-color: rgba(34, 34, 34, 0.5);
 			margin-right: 10rpx;
 		}
-
+	
 		.item_box {
-			font-size: 28rpx;
-			color: #303030;
 			word-break: break-all;
 			/* break-all(允许在单词内换行。) */
 			text-overflow: ellipsis;
@@ -377,11 +506,11 @@
 			-webkit-line-clamp: 1;
 			/** 显示的行数 **/
 		}
-
+	
 		.card-title_tag_more {
 			flex: none;
 			margin-left: 15upx;
-
+	
 			.item_text {
 				font-size: 24upx;
 				color: #B6B7BA;

@@ -1,5 +1,5 @@
 // 低功耗蓝牙广播测试
-export function openBle() {
+export function openBle(list) {
 	wx.openBluetoothAdapter({
 		success: (res) => {
 			console.info('Bluetooth adapter opened');
@@ -11,7 +11,8 @@ export function openBle() {
 					console.log(server);
 					let uuid1 = '0000af8e-0000-1000-8000-00805f9b34fb';
 					let uuid2 = '0000ae8f-0000-1000-8000-00805f9b34fb';
-					let buff = [0x84, 0xe8, 0xa3, 0x3d];
+					// let buff = [0x84, 0xe8, 0xa3, 0x3d];
+					let buff = list;
 
 					server.startAdvertising({
 						advertiseRequest: {
@@ -25,7 +26,9 @@ export function openBle() {
 								manufacturerId: 0x01AC,
 								manufacturerSpecificData: buff
 							}]
-						}
+						},
+						powerLevel:'low'
+						
 					}).then(
 						(res) => {
 							console.log('Adverstising.. ', res);

@@ -286,7 +286,7 @@
 					"id": "ebiu0rbag72oysevwitsjvuv8pjfqka4",
 					"title": "智慧门禁",
 					"name": "access",
-					"icon": "icon_djhd.png",
+					"icon": "icon.png",
 					"uri": "/",
 					"type": "MENU"
 				},
@@ -294,7 +294,7 @@
 					"id": "fjuglukm5xmi1b9ijecdbkrolsfvtfj5",
 					"title": "我的办公室",
 					"name": "office",
-					"icon": "icon_wdbgs.png",
+					"icon": "icon_jgrz.png",
 					"uri": "/",
 					"type": "MENU"
 				},
@@ -310,7 +310,7 @@
 					"id": "braam9wwxsy9vphu2omy7aevrfegvt3y",
 					"title": "智慧监控",
 					"name": "video",
-					"icon": "icon_zhxg.png",
+					"icon": "icon_zhjk.jpg",
 					"uri": "/",
 					"type": "MENU"
 				},
@@ -342,7 +342,7 @@
 					"id": "itbwa3gdc8j8ajkkjnpcp07sksz3f5nh",
 					"title": "会议管理",
 					"name": "meeting",
-					"icon": "icon_kjyy.png",
+					"icon": "icon_djhd.png",
 					"uri": "/",
 					"type": "MENU"
 				},
@@ -358,7 +358,7 @@
 					"id": "y0z8vu9wigh52gfehulmmdcfo7yn3xu5",
 					"title": "事件中心",
 					"name": "event/events",
-					"icon": "icon_fydj.png",
+					"icon": "icon_bmrx.png",
 					"uri": "/",
 					"type": "MENU"
 				},
@@ -398,7 +398,7 @@
 					"id": "jspmjdw8hhfim8eedacr8alq0bs1kdya",
 					"title": "随手拍",
 					"name": "event",
-					"icon": "icon_fydj.png",
+					"icon": "icon_ssp.jpg",
 					"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
 					"type": "MENU"
 				},
@@ -467,43 +467,11 @@
 					"type": "MENU"
 				},
 				{
-					"id": "0kr9zk9l3ruuebco1kj2fizjnlxhi5cs",
-					"title": "缺陷上报",
-					"name": "incomplete",
-					"icon": "icon_qxsb.png",
-					"uri": "/pages/defect/register",
-					"type": "MENU"
-				},
-				{
-					"id": "9340933b9769439da1368098812fbecd",
-					"title": "矛调上报",
-					"name": "incomplete",
-					"uri": "/pages/contradiction/register",
-					"icon": "icon_mtsb.png",
-					"type": "MENU"
-				},
-				{
 					"id": "ywmwrzb8ajglrgszz27pbjhivsott3l4",
 					"title": "服务大厅",
 					"name": "incomplete",
 					"icon": "icon_fwdt.png",
 					"uri": "/pages/servicehall/index",
-					"type": "MENU"
-				},
-				{
-					"id": "6xlecbddpnbzp6hyipxifdmk3svk3zpm",
-					"title": "法律援助",
-					"name": "incomplete",
-					"icon": "icon_flyz.png",
-					"uri": "/",
-					"type": "MENU"
-				},
-				{
-					"id": "lx2elfcfintblh9gkycuoggpfpuhlh8k",
-					"title": "投诉中心",
-					"name": "incomplete",
-					"uri": "/pages/complain/register",
-					"icon": "icon_tszx.png",
 					"type": "MENU"
 				},
 				{

@@ -19,7 +19,9 @@
         /* 模块配置 */
         "modules" : {
             "Push" : {},
-            "OAuth" : {}
+            "OAuth" : {},
+            "Maps" : {},
+            "Bluetooth" : {}
         },
         /* 应用发布信息 */
         "distribute" : {
@@ -62,6 +64,13 @@
                 "ad" : {},
                 "oauth" : {
                     "univerify" : {}
+                },
+                "maps" : {
+                    "amap" : {
+                        "name" : "amap_32t8rYLz5K",
+                        "appkey_ios" : "f1c7416f87025fc9060ffb5b6bfa48e5",
+                        "appkey_android" : "eb43a6c4e2569154afc6916714c61173"
+                    }
                 }
             },
             "icons" : {
@@ -109,6 +118,11 @@
         "usingComponents" : true,
         "unipush" : {
             "enable" : true
+        },
+        "permission" : {
+            "scope.userLocation" : {
+                "desc" : "您的位置用于进行巡更任务签到时获取签到时所在位置"
+            }
         }
     },
     "mp-alipay" : {

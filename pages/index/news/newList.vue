@@ -5,18 +5,14 @@
 				<image class="message-item_image" :src="`${DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
 				</image>
 				<view class="message-item_detail">
-					<view class="detail_title uni-ellipsis">
+					<view class="detail_title text-wrap">
 						{{item.infoSubject}}
 					</view>
 					<view class="detail_footer">
-						<view class="detail_footer_label">
-							{{item.createdAt}}
+						<view class=" detail_footer_label">
+							{{item.createdAt.substring(0,11)}}
 						</view>
-						<view class="detail_footer_label">
-							<uni-icons type="eye" :size="null" :color="null"></uni-icons>
-							{{item.infoSubject}}
-						</view>
-
+						
 					</view>
 				</view>
 			</view>
@@ -33,7 +29,7 @@
 	const dataList = ref([])
 
 	const queryList = async (pageNo, pageSize) => {
-		const res = await fetchNewsPage()
+		const res = await fetchNewsPage({pageFlag:1})
 		if (res.content) {
 			paging.value.complete(res.content.content)
 		} else {
@@ -65,6 +61,7 @@
 			height: 140upx;
 			margin: 0;
 			margin-right: 27upx;
+			border-radius: 12upx;
 		}
 
 		.message-item_detail {
@@ -80,7 +77,11 @@
 				font-size: 30upx;
 				line-height: 1.5;
 			}
-
+			.detail_footer_label {
+				line-height: 22upx;
+				font-size: 22upx;
+				color: #B6B7BA;
+			}
 			.detail_footer {
 				display: flex;
 				align-items: center;

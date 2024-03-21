@@ -27,6 +27,12 @@
 			}
 		},
 		{
+			"path": "pages/index/news/noticeList",
+			"style": {
+				"navigationBarTitleText": "公告列表"
+			}
+		},
+		{
 			"path": "pages/index/news/detail",
 			"style": {
 				"navigationBarTitleText": "要闻详情"
@@ -87,6 +93,23 @@
 			}
 		},
 		{
+			"path": "pages/check/index",
+			"style": {
+				"navigationBarTitleText": "巡更任务"
+			}
+		},
+		{
+			"path": "pages/check/detail/index",
+			"style": {
+				"navigationBarTitleText": "检查事项详情",
+				"app-plus":{
+					"titleNView":{
+						"titleAlign":"center"
+					}
+				}
+			}
+		},
+		{
 			"path": "pages/webView/index",
 			"style": {
 				"navigationBarTitleText": ""
@@ -101,24 +124,24 @@
 	],
 	"tabBar": {
 		"color": "#8a8a8a",
-		"selectedColor": "#09C888",
+		"selectedColor": "#1C77FF",
 		"backgroundColor": "#ffffff",
 		"list": [{
 				"pagePath": "pages/index/index",
 				"text": "首页",
-				"iconPath": "static/images/tabbar/icon_home_normal@3x.png",
-				"selectedIconPath": "static/images/tabbar/icon_home_active@3x.png"
+				"iconPath": "static/images/tabbar/icon_home_normal@3x.jpg",
+				"selectedIconPath": "static/images/tabbar/icon_home_active@3x.jpg"
 			}, {
 				"pagePath": "pages/messages/index",
 				"text": "消息",
-				"iconPath": "static/images/tabbar/icon_news_nomal@3x.png",
-				"selectedIconPath": "static/images/tabbar/icon_news_active@3x.png"
+				"iconPath": "static/images/tabbar/icon_news_nomal@3x.jpg",
+				"selectedIconPath": "static/images/tabbar/icon_news_active@3x.jpg"
 			},
 			{
 				"pagePath": "pages/user/index",
 				"text": "我的",
-				"iconPath": "static/images/tabbar/icon_user_normal@3x.png",
-				"selectedIconPath": "static/images/tabbar/icon_user_active@3x.png"
+				"iconPath": "static/images/tabbar/icon_user_normal@3x.jpg",
+				"selectedIconPath": "static/images/tabbar/icon_user_active@3x.jpg"
 			}
 		]
 	},

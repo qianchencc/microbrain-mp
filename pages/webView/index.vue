@@ -29,12 +29,12 @@
 		},
 		onLoad: async function(option) {
 			await checkToken()
-			if (!option.noToken) {
-				option.token = getTokenId()
-				option.tenantCode = useUserStoreHook().getDistrict.id
-				option.timestamp = new Date().getTime()
-			}
+			
+			option.token = getTokenId()
+			option.tenantCode = useUserStoreHook().getDistrict.id
+			option.timestamp = new Date().getTime()
 			// 额外参数, 请encodeURIComponent
+			console.log(option)
 			console.log(333333, option.path);
 			this.url = option.path + '?' + obj2Query(option) + (option.otherQuery ? decodeURIComponent(option.otherQuery) : '')
 			console.log(this.url)

@@ -20,9 +20,14 @@ export const initNfc = () => {
 		const cardId = res.id
 		const id = ab2hex(cardId)
 		console.log('cardId', id);
-		if (res.techs.includes('NFC-A')) {
-			initNfcA(NFCAdapter)
-		}
+		uni.navigateTo({
+		    url: '/pages/check/index?code=' + id,
+		    animationType: 'pop-in'
+		})
+		
+		// if (res.techs.includes('NFC-A')) {
+		// 	initNfcA(NFCAdapter)
+		// }
 	})
 }
 
