@@ -4,6 +4,7 @@
 			<view class="login-card">
 				<view class="login-head">{{pointName}}检查</view>
 				<view v-for="(item, index) in checkItemList" :key="item.id">
+					
 					<view class="cu-form-group" v-if="item.displayType==='1'">
 						<view>{{item.label}}检查:</view>
 						<evan-radio-group @change="onGroupChange" v-model="paramList[index].status" class="radio-group">
@@ -16,6 +17,22 @@
 						<view class="group-lable">{{item.label}}检查：</view>
 						<textarea class="group-input" name="item.remarks" v-model="paramList[index].remarks" placeholder='请输入检查说明'></textarea>
 					</view>
+				</view>
+				<view  class="form">
+				<uni-forms ref="valiForm" :modelValue="formDate" validateTrigger="blur" label-position="top" label-width="90">
+					<uni-forms-item label="上报事件"  name="eventEnable">
+						<switch style="transform:scale(0.7)" @change="switchOn"/>
+					</uni-forms-item>
+					<uni-forms-item v-if="reportEvent" label="事件类型"  name="eventTypeId">
+						<uni-data-select  :clear="false" v-model="eventTypeId" :localdata="eventTypeList" @change="typeChange"></uni-data-select>
+					</uni-forms-item>
+					<uni-forms-item v-if="eventTypeId&&reportEvent" label="事件级别"  name="eventTypeLevel">
+						<uni-data-select  :clear="false" v-model="eventTypeLevel" :localdata="levelList" ></uni-data-select>
+					</uni-forms-item>
+					<uni-forms-item v-if="reportEvent" label="描述" name="remark">
+						<uni-easyinput :clearable="false" type="textarea" v-model="remark" />
+					</uni-forms-item>
+				</uni-forms>
 				</view>
 				<view class="cu-bar bg-white" v-if="photoable">
 					<view class="action" style="margin-left: 20rpx;">
@@ -54,7 +71,7 @@ import globalConfig from '@/config'
 import evanRadio from '@/components/evan-radio/evan-radio.vue'
 import evanRadioGroup from '@/components/evan-radio-group/evan-radio-group.vue'
 // import uniIcons from "@/components/uni-icons/uni-icons.vue"
-import { uploadFile, postCheckResult, fatchPointCheckItem, fatchPointInfo } from '@/apis/check/index.js'
+import { uploadFile, postCheckResult, fatchPointCheckItem, fatchPointInfo ,fetchEventTypeList} from '@/apis/check/index.js'
 export default {
     components: {
         evanRadio,
@@ -76,6 +93,12 @@ export default {
     },
     data() {
         return {
+			eventTypeList:[],
+			reportEvent:false,
+			levelList:[],
+			eventTypeId:'',
+			eventTypeLevel:'',
+			remark:'',
             photoable: '', // 是否拍照
             pointName: '', // 巡更点名称
             patrolPointId: '',
@@ -114,6 +137,7 @@ export default {
         uni.getStorageSync('user')
         this.getPointCheckItem()
         this.getPointInfo()
+		this.getTypeList()
         // this.getPointName()
     },
     methods: {
@@ -138,12 +162,43 @@ export default {
             this.checkItemList = options
             console.log('巡更点中的checkItem', this.checkItemList)
         },
+		
+		
+		async getTypeList (){
+			const res = await fetchEventTypeList()
+			const option = []
+			res.content.forEach(element => {
+				option.push({
+					text: element.name,
+					value: element.id,
+					level:	element.level
+				})
+			})
+			this.eventTypeList = option
+			console.log(111,this.eventTypeList)
+		},
+		typeChange (id){
+			this.eventTypeList.forEach(item=>{
+				if(item.value===id){
+					let temp=[]
+					item.level.forEach(_=>{
+						temp.push({text:_,value:_})
+					})
+					this.levelList=temp
+				}
+			})
+			console.log(222,id)
+		},
         // 根据巡更点id查询巡更点详细信息=获取是否拍照photoable和巡更点名字
         async getPointInfo() {
             const res = await fatchPointInfo(this.patrolPointId)
             this.photoable = res.content.photoable
             this.pointName = res.content.name
         },
+		switchOn(val){
+			console.log('val',val)
+			this.reportEvent=val.target.value
+		},
         // 检查状态选择
         onGroupChange(e) {
             console.log('状态值', e)
@@ -154,14 +209,20 @@ export default {
             const data = {
                 checkItemRecordAddList: this.paramList,
                 patrolPointRecordId: this.patrolPointRecordId,
-                picUrlList: this.imgList
+                picUrlList: this.imgList,
+				reportEvent:this.reportEvent===true?1:0,
+				eventTypeId:this.eventTypeId,
+				eventTypeLevel:this.eventTypeLevel,
+				remark:this.remark
             }
-            const res = await postCheckResult(data)
-            this.loading = false
-            if(!res) return
-            uni.navigateBack({
-                delta: 1
-            })
+			console.log('data',data)
+   //          const res = await postCheckResult(data)
+			// console.log('log',res,data)
+   //          this.loading = false
+   //          if(!res) return
+   //          uni.navigateBack({
+   //              delta: 1
+   //          })
         },
         // 重置
         reset() {
@@ -258,6 +319,10 @@ export default {
 	}
 	.cu-form-group{
 		padding: 0 22rpx;
+	}
+	.form{
+		width:95%;
+		margin-left:15rpx;
 	}
 	.solids{
 		border-radius: 20rpx;

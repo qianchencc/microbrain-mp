@@ -59,3 +59,6 @@ export const fetchPatrolRecordPage = data =>request.globalRequest('/api/patrol/p
 
 // 巡更点照片记录列表查询
 export const fetchPatrolPointPicRecord = (patrolPointRecordId) => request.globalRequest(`/api/patrol/patrolPointPicRecord/list/${patrolPointRecordId}`)
+
+// 列表查询
+export const fetchEventTypeList = params => request.globalRequest(`/api/event/eventType/list`,'GET', params)

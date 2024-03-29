@@ -57,7 +57,7 @@ import {
     getPatrolInfoByCode
 } from '@/apis/check/index.js'
 import $weatherApi from '@/apis/weather.js'
-import QQMapwx from './detail/qqmap-wx-jssdk.min.js'
+import QQMapwx from './detail/qqmap-wx-jssdk.js'
 
 export default {
     filters: {
@@ -91,6 +91,7 @@ export default {
     },
     data() {
         return {
+			signEnable:false,
 			patrolPointCode:'',
             patrolPointId: '',
             patrolRecordId: '',
@@ -119,6 +120,7 @@ export default {
         async getPatrolInfo(code) {
             const res = await getPatrolInfoByCode(code)
             if (!res.content.patrolPathNodeDetailsVOList) {
+				this.signEnable=!res.content.patrolPathNodeDetailsVOList
                 uni.showToast({
                     title: '没有巡更任务',
                     icon: 'none'
@@ -139,31 +141,6 @@ export default {
             const res = await fatchPointCheckItem(this.patrolPointId)
             this.checkItems = res.content.checkItems
         },
-		//根据经纬度获取详细的地址
-		getLocationDetail () {
-			uni.request({
-				header: {
-					"Content-Type": "application/text"
-				},
-				url: 'https://apis.map.qq.com/ws/geocoder/v1/?location=' + this.latitude + ',' + this.longitude +
-								'&key=PNZBZ-ILCKZ-CUSX6-ZKKBF-QA3IH-6RFTO',
-				success:(re)=> {
-					//成功获取到经纬度
-					console.log(re)
-					if (re.statusCode == 200) {
-						this.address_info_recomd = re.data.result.formatted_addresses.recommend
-						this.address_info = re.data.result.address_reference.town.title + re.data.result.address_reference.street.title + re.data.result.address_reference.landmark_l2.title
-						this.address = re.data.result.address
-									
-					} else {
-						uni.showToast({
-							title: '获取地理位置失败，请重试',
-							icon: "none"
-						})
-					}
-				}
-			});
-		},
         getLocation() {
 		    const that = this
 		    uni.getLocation({
@@ -171,22 +148,35 @@ export default {
 		        type: 'wgs84',
 		        // #endif
 		        success: res => {
-					console.log(res)
+					console.log(1,res)
 					// 腾讯位置服务
 					const qqmapsdk = new QQMapwx({
 				    	key: 'PNZBZ-ILCKZ-CUSX6-ZKKBF-QA3IH-6RFTO'
 					});
-					qqmapsdk.reverseGeocoder({
-						// 通过纬度 经度来查询地址
-						location: {
-							latitude: res.latitude,
-							longitude: res.longitude
-						},
-						success: (re) => {
-							console.log(re)  // 城市信息
-							that.location = re.result.ad_info.city
-						}
-					})
+					console.log(2,qqmapsdk)
+					try{
+						qqmapsdk.reverseGeocoder({
+							// 通过纬度 经度来查询地址
+							location: {
+								latitude: res.latitude,
+								longitude: res.longitude
+							},
+							success: (re) => {
+								console.log(3,re)  // 城市信息
+								that.address = re.result.formatted_addresses.standard_address
+							},
+							fail: function(error) {
+								console.error(error);
+							  },
+							  complete: function(res) {
+								console.log(res);
+							  }
+						})
+					}catch(e){
+						console.log(3,e)
+						//TODO handle the exception
+					}
+					
 				},
 		        fail() {
 		            uni.showModal({
@@ -213,29 +203,37 @@ export default {
         },
         // 签到
         async sign() {
-			uni.navigateTo({
-			    url: '/pages/check/detail/index?patrolPointId=' + this.patrolPointId ,
-			    animationType: 'pop-in'
-			})
-        //     console.log('signadd', this.address)
-        //     const data = {
-        //         qrCode: this.patrolPointId,
-        //         patrolRecordId: this.patrolRecordId,
-        //         signLocation: this.address
-        //     }
-        //     const res = await signIn(data)
-        //     console.log('签到成功返回', res)
-        //     if (res) {
-        //         if (this.checkItems.length !== 0) {
-        //             const patrolPointRecordId = res.content.id
-        //             console.log('签到历史patrolPointRecordId', patrolPointRecordId)
-        //             uni.navigateTo({
-        //                 url: '/pages/check/detail/index?patrolPointId=' + this.patrolPointId +
-								// '&patrolPointRecordId=' + patrolPointRecordId,
-        //                 animationType: 'pop-in'
-        //             })
-        //         }
-        //     }
+			// uni.navigateTo({
+			//     url: '/pages/check/detail/index?patrolPointId=' + this.patrolPointId ,
+			//     animationType: 'pop-in'
+			// })
+			if(this.signEnable){
+				uni.showToast({
+				    title: '没有巡更任务',
+				    icon: 'none'
+				})
+			}else{
+				console.log('signadd', this.address)
+				const data = {
+				    qrCode: this.patrolPointId,
+				    patrolRecordId: this.patrolRecordId,
+				    signLocation: this.address
+				}
+				const res = await signIn(data)
+				console.log('签到成功返回', res)
+				if (res) {
+				    if (this.checkItems.length !== 0) {
+				        const patrolPointRecordId = res.content.id
+				        console.log('签到历史patrolPointRecordId', patrolPointRecordId)
+				        uni.navigateTo({
+				            url: '/pages/check/detail/index?patrolPointId=' + this.patrolPointId +
+									'&patrolPointRecordId=' + patrolPointRecordId,
+				            animationType: 'pop-in'
+				        })
+				    }
+				}
+			}
+            
         }
     }
 }

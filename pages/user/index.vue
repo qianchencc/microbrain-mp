@@ -76,11 +76,11 @@
 			</uni-list>
 		</view>
 
-		<view class="list">
+<!-- 		<view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="NFC测试" showArrow clickable @click="NfcTest()" />
 			</uni-list>
-		</view>
+		</view> -->
 		<uni-popup ref="alertDialog" type="dialog">
 			<uni-popup-dialog cancelText="关闭" confirmText="确认" title="手机蓝牙未打开!" content="使用蓝牙广播前请先打开手机蓝牙!" @confirm="dialogConfirm"
 				@close="dialogClose"></uni-popup-dialog>
@@ -126,6 +126,7 @@
 	}
 	function dialogConfirm() {
 		bluetooth.value=false
+
 	}
 	function dialogClose() {
 		bluetooth.value=false
@@ -152,90 +153,103 @@
 		initBlueTooth()
 	})
 	onShow(()=>{
-		if(ifChecked.value===true&&bluetooth.value===true){
-			blueToothBroadCast()
-			
-			return
-		}
+		console.log('show',ifChecked.value,bluetooth.value)
+		initBlueTooth()
 	})
 	const initBlueTooth=()=>{
 		if(!storageGet('bluetoothstatus')){
 			storageSet('bluetoothstatus',false)
 		}
-		bluetooth.value=storageGet('bluetoothstatus')
+		
 		getSwitch()
+		bluetooth.value=storageGet('bluetoothstatus')
 	}
 	const getSwitch=()=>{
-		wx.openBluetoothAdapter({
-			success: (res) => {
-				console.info('Get Bluetooth ');
-				uni.getBluetoothAdapterState({
-				  success: function (res) {
-				    ifChecked.value=true
-					if(bluetooth.value===true){
-						blueToothBroadCast()
+
+		wx.closeBluetoothAdapter({
+					complete() {
+						wx.openBluetoothAdapter({
+							success: (res) => {
+								console.info('Get Bluetooth ');
+								wx.getBluetoothAdapterState({
+								  success: function (res) {
+									ifChecked.value=true
+									if(bluetooth.value===true){
+										blueToothBroadCast()
+									}
+								  },
+								  fail: function (res) {
+									  console.log(res)
+									ifChecked.value=false
+									if (bluetooth.value===true){
+										alertDialog.value.open()
+									}
+								  }
+								})
+							},
+							fail: (res) => {
+								console.log('openBluetoothAdapter failed');
+								
+								console.warn(res);
+							},
+							complete: (res) => {
+								console.debug('openBluetoothAdapter completed');
+							},
+						});
 					}
-				  },
-				  fail: function (res) {
-					  console.log(res)
-				    ifChecked.value=false
-					if (bluetooth.value===true){
-						alertDialog.value.open()
-					}
-				  }
 				})
-			},
-			fail: (res) => {
-				console.log('openBluetoothAdapter failed');
-				console.warn(res);
-			},
-			complete: (res) => {
-				console.debug('openBluetoothAdapter completed');
-			},
-		});
 		
+
 	}
 	const blueToothBroadCast=async()=>{
 		const res=await fetchCurrentUsed()
-		if(!res.content)return
-		let card=parseInt(res.content.cardNumber).toString(16).padStart(8,'0')
-		console.log('cardNumber',card)
-		let list=[]
-		list.push(parseInt(card.substring(0,2),16))
-		list.push(parseInt(card.substring(2,4),16))
-		list.push(parseInt(card.substring(4,6),16))
-		list.push(parseInt(card.substring(6,8),16))
-		// for (var i = 0; i < 4; i++) {
-		
-		// 	list.push(Number(card.substring((2*i,2),16)))
-		// }
-		console.log('list',list)
-		if(bluetooth.value===true){
-			uni.openBluetoothAdapter({
-				success: e => {
-					console.log('初始化蓝牙成功:' + e.errMsg);
+		if(!res.content){
+			uni.showToast({
+			    title: '当前用户无卡号！请联系管理员下发卡号！',
+			    icon: 'none'
+			})
+		}else{
+			let card=parseInt(res.content.cardNumber).toString(16).padStart(8,'0')
+			console.log('cardNumber',card)
+			let list=[]
+			list.push(parseInt(card.substring(0,2),16))
+			list.push(parseInt(card.substring(2,4),16))
+			list.push(parseInt(card.substring(4,6),16))
+			list.push(parseInt(card.substring(6,8),16))
+			// for (var i = 0; i < 4; i++) {
+			
+			// 	list.push(Number(card.substring((2*i,2),16)))
+			// }
+			console.log('list',list)
+			if(bluetooth.value===true){
+
 					openBle(list);
-				},
-				fail: e => {
-					console.log('初始化蓝牙失败，错误码：' + (e.errCode || e.errMsg));
-				}
-			});
+				
+
+			}
+			else{
+				console.log('close')
+			}
 		}
-		else{
-			uni.closeBluetoothAdapter({})
-		}
+		
 	}
 	const switchOn =async (val) => {
 		bluetooth.value=val.target.value
-		if(ifChecked.value===false&&val.target.value===true){
-			alertDialog.value.open()
+		console.log('switch',bluetooth.value)
+		if(bluetooth.value===false){
+			wx.closeBluetoothAdapter({
+			  complete: function (res) {
+			    console.log('bluetooth close',res)
+			  }
+			})
 			
-			return
+			
+		}else{
+			getSwitch()
 		}
-		console.log('222')
+		
 		storageSet('bluetoothstatus',val.target.value)
-		blueToothBroadCast()
-		console.log('switch',val)
+		console.log('switch2',val)
 	}
 	const NfcTest = () => {
 		uni.navigateTo({

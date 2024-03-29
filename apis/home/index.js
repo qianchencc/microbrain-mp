@@ -12,7 +12,7 @@ export const fetchNewsById = (id) => request.globalRequest(`/api/publish/history
 // 消息提醒
 export const fetchRemindPage = (type, data) => request.globalRequest(`/api/${type}/remind/setting/page`, 'GET', data)
 
-// 提交人脸
+// 提交头像
 export const uploadPrincipalFace = (id, data) => request.globalRequest(`/api/card/account/${id}/face`, 'PUT', data)
 
 // 一卡通个人账号查询

@@ -154,34 +154,19 @@
 			"title": "微脑·服务",
 			"name": "service",
 			"type": "MODULE",
-			"children": [{
-					"id": "bvyg3uukklvzztp8qmlnpyzw3uwyur89",
-					"title": "微脑周边",
-					"name": "incomplete",
-					"icon": "icon_wszb.png",
-					"uri": "miniAppId=wx7bbef2f2ec2ff841",
-					"type": "MENU"
-				},
-				{
-					"id": "xf0jjulbifuwreacps3spurpe0t1yhdw",
-					"title": "投票中心",
-					"name": "incomplete",
-					"icon": "icon_tpzx.png",
-					"uri": "/",
-					"type": "MENU"
-				},
-				{
-					"id": "wmuoai7vbwbacarz0wragti8vljzgyfd",
-					"title": "爱心缝补房",
-					"name": "incomplete",
-					"icon": "icon_axfbf.png",
-					"uri": "/",
-					"type": "MENU"
-				},
+			"children": [
 				{
 					"id": "88s83zofzhp9s540ed0w2lugoupjy37k",
 					"title": "智能语音",
 					"name": "incomplete",
+					"icon": "icon_znyy.png",
+					"uri": "/",
+					"type": "MENU"
+				},
+				{
+					"id": "y4hmdgveajxdrsb2ywpczy05wttrsrde",
+					"title": "大屏控制",
+					"name": "screen",
 					"icon": "icon_znyy.png",
 					"uri": "/",
 					"type": "MENU"
@@ -200,22 +185,6 @@
 					"title": "积分排名",
 					"name": "incomplete",
 					"icon": "icon_jfpm.png",
-					"uri": "/",
-					"type": "MENU"
-				},
-				{
-					"id": "mdeeggfbwdvp0vjfeikes1pvwb22gumd",
-					"title": "便民热线",
-					"name": "incomplete",
-					"icon": "icon_bmrx.png",
-					"uri": "/",
-					"type": "MENU"
-				},
-				{
-					"id": "ouxqcp9lwbopyk7r4ks4tgynv6koss2q",
-					"title": "服务清单",
-					"name": "incomplete",
-					"icon": "icon_fwqd.png",
 					"uri": "/",
 					"type": "MENU"
 				},
@@ -464,46 +433,6 @@
 					"name": "vote",
 					"icon": "icon_tpzx.png",
 					"uri": "/",
-					"type": "MENU"
-				},
-				{
-					"id": "ywmwrzb8ajglrgszz27pbjhivsott3l4",
-					"title": "服务大厅",
-					"name": "incomplete",
-					"icon": "icon_fwdt.png",
-					"uri": "/pages/servicehall/index",
-					"type": "MENU"
-				},
-				{
-					"id": "fecxcinhfzvmwoyfwkgcbykq8cx027d5",
-					"title": "睦邻在线",
-					"name": "incomplete",
-					"icon": "icon_mlzx.png",
-					"uri": "/",
-					"type": "MENU"
-				},
-				{
-					"id": "uwowbbjouzywzurxmthtiivlakfcqmxq",
-					"title": "邻里公约",
-					"name": "incomplete",
-					"icon": "icon_jmgy.png",
-					"uri": "/",
-					"type": "MENU"
-				},
-				{
-					"id": "weislxy7h4nsomxbqcwzyloismosihuf",
-					"title": "意见箱",
-					"name": "incomplete",
-					"icon": "icon_yjx.png",
-					"uri": "/",
-					"type": "MENU"
-				},
-				{
-					"id": "bmuknzrf9co8soqutpvv8igj8usmwf5a",
-					"title": "疫况",
-					"name": "incomplete",
-					"icon": "icon_yk.png",
-					"uri": "miniAppId=wxc888b51893c07e7c",
 					"type": "MENU"
 				}
 			]

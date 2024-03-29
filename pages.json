@@ -59,7 +59,7 @@
 		{
 			"path": "pages/user/face",
 			"style": {
-				"navigationBarTitleText": "人脸录入"
+				"navigationBarTitleText": "头像录入"
 			}
 		},
 		{

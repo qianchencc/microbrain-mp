@@ -1,4 +1,12 @@
 <template>
+</template>
+
+<script>
+</script>
+
+<style>
+</style>
+<!-- <template>
 	<view class="view-con" style="text-align: center;">
 		<camera device-position="front" flash="off" @error="error" style="width: 100%; height: 500px;"></camera>
 		<cover-image class="controls-play img" @click="play" src="../../static//images/user/face/rllr_bg.png">
@@ -54,7 +62,7 @@
 					}
 				})
 			},
-			// 百度人脸检测
+			// 百度头像检测
 			faceDetect(faceBase64) {
 				wx.request({
 					url: 'https://aip.baidubce.com/rest/2.0/face/v3/detect?access_token=' +
@@ -151,4 +159,4 @@
 		bottom: 200px;
 		font-size: 18px;
 	}
-</style>
+</style> -->

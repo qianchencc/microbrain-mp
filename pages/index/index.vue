@@ -108,13 +108,6 @@
 		}
 	]
 	// const bannerList = [{ pic: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.png' }]
-	onShow(()=>{
-		if(ifChecked.value===true&&bluetooth.value===true){
-			blueToothBroadCast()
-			
-			return
-		}
-	})
 	const open = () => {
 		uni.navigateTo({
 			url: './indexlist'
@@ -130,32 +123,40 @@
 			storageSet('bluetoothstatus',false)
 		}
 		bluetooth.value=storageGet('bluetoothstatus')
+		getSwitch()
 	}
 	const getSwitch=()=>{
-		wx.openBluetoothAdapter({
-			success: (res) => {
-				console.info('Get Bluetooth ');
-				uni.getBluetoothAdapterState({
-				  success: function (res) {
-				    ifChecked.value=true
-					if(bluetooth.value===true){
-						blueToothBroadCast()
-					}
-				  },
-				  fail: function (res) {
-					  console.log(res)
-				    ifChecked.value=false
-				  }
-				})
-			},
-			fail: (res) => {
-				console.log('openBluetoothAdapter failed');
-				console.warn(res);
-			},
-			complete: (res) => {
-				console.debug('openBluetoothAdapter completed');
-			},
-		});
+		
+		wx.closeBluetoothAdapter({
+			complete() {
+				wx.openBluetoothAdapter({
+					success: (res) => {
+						console.info('Get Bluetooth ');
+						wx.getBluetoothAdapterState({
+						  success: function (res) {
+							ifChecked.value=true
+							if(bluetooth.value===true){
+								blueToothBroadCast()
+							}
+						  },
+						  fail: function (res) {
+							  console.log(res)
+							ifChecked.value=false
+						  }
+						})
+					},
+					fail: (res) => {
+						console.log('openBluetoothAdapter failed');
+						
+						console.warn(res);
+					},
+					complete: (res) => {
+						console.debug('openBluetoothAdapter completed');
+					},
+				});
+			}
+		})
+
 	}
 	const blueToothBroadCast=async()=>{
 		const res=await fetchCurrentUsed()
@@ -171,32 +172,26 @@
 		
 		// 	list.push(Number(card.substring((2*i,2),16)))
 		// }
+			openBle(list);
 
-		uni.openBluetoothAdapter({
-			success: e => {
-				console.log('初始化蓝牙成功:' + e.errMsg);
-				openBle(list);
-			},
-			fail: e => {
-				console.log('初始化蓝牙失败，错误码：' + (e.errCode || e.errMsg));
-			}
-		});
+
 
 	}
 	watch(() => geospatial.value, () => {
 		gainNewsInfoPage()
 	})
+	const init=()=>{
+		
+		
+	}
 	onMounted(() => {
 		gainNewsInfoPage()
 		initBlueTooth()
-		
-		getSwitch()
-		if(ifChecked.value===true&&bluetooth.value===true){
-			blueToothBroadCast()
-			
-			return
-		}
 		console.log('----->')
+	})
+	onShow(()=>{
+		initBlueTooth()
+		console.log('show',ifChecked.value,bluetooth.value)
 	})
 	const gainNewsInfoPage = async () => {
 		var data = {

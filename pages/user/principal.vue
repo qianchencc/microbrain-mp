@@ -14,17 +14,17 @@
 			</uni-list-item>
 			<uni-list-item :border="false" title="昵称" :rightText="userInfo.nickname" showArrow link="navigateTo" to="./info/name" />
 			<!-- <uni-list-item :border="false" title="电话" :rightText="userInfo.mobileNumber" showArrow link="navigateTo" to="./info/mobile" /> -->
-			<uni-list-item :border="false" link @click="changeFace()">
+			<!-- <uni-list-item :border="false" link @click="changeFace()">
 				<template v-slot:header>
 					<view class="slot-box">
-						人脸信息
+						头像信息
 						<uni-tag v-if="userInfo.faceAuthStatus" :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" />
 					</view>
 				</template>
 				<template v-slot:footer>
 					<image v-if="face" class="slot-image" :src="face"></image>
 				</template>
-			</uni-list-item>
+			</uni-list-item> -->
 		</uni-list>
 	</view>
 </template>
@@ -67,9 +67,9 @@
 			return
 		}
 		// #ifdef MP-WEIXIN
-		uni.navigateTo({
-			url: './face'
-		})
+		// uni.navigateTo({
+		// 	url: './face'
+		// })
 		// #endif
 
 	}
