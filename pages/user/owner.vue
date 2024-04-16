@@ -11,21 +11,12 @@
 						<uni-easyinput v-if="formDate.status!=='ACCEPT'" :clearable="false" v-model="formDate.personalName" placeholder="请输入姓名" />
 						<text v-else>{{formDate.personalName}}</text>
 					</uni-forms-item>
-					<uni-forms-item label="头像" name="personalName">
-						
-						<uni-file-picker 
-						file-mediatype="image"
-							mode="grid"
-							file-extname="png,jpg"
-							:limit="1"
-							v-model="imageValue" 
-							fileMediatype="image" 
-							@select="select" 
-							@progress="progress" 
-							@success="success" 
-							@fail="fail" 
-						/>
-					
+					<uni-forms-item label="人脸信息" name="personalName">
+						<img class="icon-con" v-if="formDate.status==='ACCEPT'" :src="avatar">
+						<view v-else class="icon-con" @click="changeAvatar()">
+							<img class="icon-con" v-if="formDate.faceUrl" :src="avatar">
+							<uni-icons v-else type="plusempty" size="30"></uni-icons>
+						</view>
 					</uni-forms-item>
 					<uni-forms-item label="联系方式" required name="mobileNumber">
 						<template v-if="formDate.status!=='ACCEPT'">
@@ -56,12 +47,13 @@
 <script setup>
 	import { ref, computed, onMounted } from 'vue'
 	import globalConfig from '@/config'
+	import { chooseImg } from '@/utils/tools.js'
 	import { fecthAllBranch } from '@/apis/user/org'
 	import { createConfirmation, fecthMyConfirmation, fetchValidateCode } from '@/apis/user/confirmation'
 	import { useVerifyCode } from '@/utils/verifyCode.js'
 	const valiForm = ref(null)
 	const loading = ref(false)
-	const imageValue=ref(null)
+	const imageValue = ref(null)
 	const suffixText = ref('验证码')
 	const formDate = ref({
 		"personalName": "",
@@ -71,7 +63,8 @@
 		"remarks": "",
 		"validateCode": "",
 		"status": 'TO_BE',
-		"socialsService": ""
+		"socialsService": "",
+		"faceUrl": ''
 	})
 
 	// 校验规则
@@ -112,6 +105,9 @@
 			type: 'warn'
 		}
 	}
+
+	const avatar = computed(() => formDate.value.faceUrl ? globalConfig.ssoUrl + formDate.value.faceUrl : null)
+
 	const getConfirmation = async () => {
 		const res = await fecthMyConfirmation()
 		if (res.content) {
@@ -127,18 +123,6 @@
 	}
 
 	const branchList = ref([])
-	const select=async(e)=>{
-		console.log('选择文件：',e)
-	}
-	const progress=async(e)=>{
-		console.log('选择文件：',e)
-	}
-	const success=async(e)=>{
-		console.log('选择文件：',e)
-	}
-	const fail=async(e)=>{
-		console.log('选择文件：',e)
-	}
 	const getBranchList = async () => {
 		const res = await fecthAllBranch()
 		const option = []
@@ -156,6 +140,14 @@
 			if (ele.value === val) {
 				formDate.value.branchName = ele.text
 			}
+		})
+	}
+
+	const changeAvatar = () => {
+		chooseImg(1, async (uploadFileRes) => {
+			const res = JSON.parse(uploadFileRes.data)
+			console.log(res);
+			formDate.value.faceUrl = res.content
 		})
 	}
 
@@ -193,5 +185,14 @@
 		top: 20%;
 		right: 10px;
 		color: #2979ff;
+	}
+
+	.icon-con {
+		background-color: #e9e9eb;
+		width: 150rpx;
+		height: 150rpx;
+		line-height: 150rpx;
+		border-radius: 15rpx;
+		text-align: center;
 	}
 </style>
