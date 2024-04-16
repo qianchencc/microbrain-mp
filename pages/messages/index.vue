@@ -37,6 +37,7 @@
 
 	onShow(() => {
 		getUnreadNotifyCount()
+		queryList()
 	})
 
 	const queryList = async (pageNo, pageSize) => {
