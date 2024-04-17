@@ -4,6 +4,7 @@ import { ref, watch, computed } from 'vue'
 import { DOMAIN } from '@/config/settings'
 import { useUserStoreHook } from '@/store/modules/user'
 const geospatial = computed(() => useUserStoreHook().getDistrict.name)
+const authorized = computed(() => useUserStoreHook().authorized)
 export const useBannerHook = () => {
 	const bannerList = ref([{ url: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.jpg' }])
 	const getBannerList = async () => {
@@ -26,11 +27,13 @@ export const useBannerHook = () => {
 		})
 	}
 
-	watch(() => geospatial.value, () => {
+	watch([geospatial.value, authorized.value], () => {
 		getBannerList()
 	})
 
-	getBannerList()
+	if (authorized.value) {
+		getBannerList()
+	}
 
 	return {
 		bannerList

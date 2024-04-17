@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-	import { ref } from 'vue'
+	import { ref, watch } from 'vue'
 	import globalConfig from '@/config'
 	import { onShow } from '@dcloudio/uni-app'
 	import { getMyMessage, fetchUnreadNotifyCount } from '@/apis/messages/recipient'

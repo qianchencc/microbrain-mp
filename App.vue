@@ -16,7 +16,6 @@
 		},
 		onShow: function() {
 			// 获取未读消息数量
-			getUnreadNotifyCount()
 			// #ifdef MP-WEIXIN
 			// uni.openBluetoothAdapter({
 			// 	success: e => {
@@ -31,6 +30,7 @@
 
 			if (getToken()) {
 				usePermissionStoreHook().setAuthority()
+				getUnreadNotifyCount()
 			} else {
 				// #ifdef MP-WEIXIN
 				// wxLogin()
@@ -38,11 +38,8 @@
 				uni.login({
 					provider: 'weixin',
 					success: res => {
-						console.log(res);
 						useUserStoreHook().thirdLogin(res.code)
-					},
-					fail: () => {},
-					complete: () => {}
+					}
 				});
 				// #endif
 				// #ifdef H5
@@ -62,12 +59,7 @@
 			console.log('App Hide')
 		},
 		methods: {
-			univerifyLogin() {
-				console.log(useUserStoreHook().univerify);
-				if (useUserStoreHook().univerify) {
 
-				}
-			}
 		}
 
 	}

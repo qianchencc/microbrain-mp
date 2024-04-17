@@ -24,8 +24,8 @@
 						<view class="detail_title text-wrap">
 							{{item.infoSubject}}
 						</view>
-						
-						
+
+
 						<view class="detail_footer">
 							<view class=" detail_footer_label">
 								{{item.createdAt.substring(0,11)}}
@@ -33,7 +33,7 @@
 							<view class=" detail_footer_label_2">
 								{{typeName}}
 							</view>
-							
+
 						</view>
 					</view>
 				</view>
@@ -52,10 +52,11 @@
 	import { DOMAIN } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
+	const authorized = computed(() => useUserStoreHook().authorized)
 	const newTagList = ref([])
 	const newTagValue = ref('')
 	const messageList = ref([])
-	const typeName=ref('新闻热点')
+	const typeName = ref('新闻热点')
 	// 获取新闻列表
 	const gainCategoryList = async () => {
 		newTagList.value = [{
@@ -89,13 +90,14 @@
 		}
 	)
 
-	watch(() => geospatial.value, () => {
-		gainNewsInfoPage()
+	watch(() => [geospatial.value, authorized.value], () => {
+		gainCategoryList()
 	})
-	const getType=()=>{
-		newTagList.value.forEach(_=>{
-			if(_.id===newTagValue.value){
-				typeName.value= _.name
+
+	const getType = () => {
+		newTagList.value.forEach(_ => {
+			if (_.id === newTagValue.value) {
+				typeName.value = _.name
 			}
 		})
 	}
@@ -105,7 +107,7 @@
 			page: 0,
 			contentType: newTagValue.value,
 			historyType: 'WEB',
-			pageFlag:1,
+			pageFlag: 1,
 			sort: 'createdAt,desc'
 		}
 		const res = await fetchNewsPage(data)
@@ -127,7 +129,9 @@
 	}
 
 	onMounted(() => {
-		gainCategoryList()
+		if (authorized.value) {
+			gainCategoryList()
+		}
 	})
 </script>
 
@@ -170,7 +174,7 @@
 					&::after {
 						display: block;
 						content: '';
-						
+
 						width: 40upx;
 						height: 4upx;
 						background-color: #1C77FF;
@@ -226,6 +230,7 @@
 					font-size: 30upx;
 					line-height: 1.5;
 				}
+
 				.detail_footer {
 					display: flex;
 					flex-direction: row;
@@ -236,6 +241,7 @@
 						font-size: 22upx;
 						color: #B6B7BA;
 					}
+
 					.detail_footer_label_2 {
 						margin-left: 20upx;
 						line-height: 22upx;

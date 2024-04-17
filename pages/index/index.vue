@@ -25,7 +25,7 @@
 					</swiper-item>
 				</template>
 			</swiper>
-			
+
 			<view class="menu-top-con">
 				<!-- <view class="top-menu">
 					<view class="menu-item" v-for="(item, index) in topMenu" :key="index" @tap="topJumpUrl(item)">
@@ -53,8 +53,7 @@
 				</view>
 				<!-- <uni-tag style="font-weight: bold;">公告</uni-tag> -->
 				<view class="line"></view>
-				<swiper autoplay="true" display-multiple-items="1" vertical="true" circular interval="2000"
-					class="bar-swiper">
+				<swiper autoplay="true" display-multiple-items="1" vertical="true" circular interval="2000" class="bar-swiper">
 					<swiper-item v-for="(item, index) in noticeList" :key="index" class="swiper-item">
 						<view class="circle"></view>
 						<view class="item_box" @tap="click(item.id)">
@@ -78,7 +77,7 @@
 	import { fetchNewsPage } from "@/apis/home"
 	import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { onMounted,computed, reactive, ref, watch } from 'vue'
+	import { onMounted, computed, reactive, ref, watch } from 'vue'
 	import { onShow } from '@dcloudio/uni-app'
 	import { fetchCurrentUsed } from '@/apis/home'
 	import { openBle } from '@/utils/blue.js'
@@ -87,13 +86,15 @@
 	import { useBannerHook } from './utils/banner.js'
 	import { handleScan } from './utils/scan.js'
 	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'
+	import { getUnreadNotifyCount } from '@/utils/message.js'
 	import news from './news.vue'
 	const { bannerList } = useBannerHook()
-	const noticeList=ref([])
-	const bluetooth=ref(false)
-	const ifChecked=ref(false)
+	const noticeList = ref([])
+	const bluetooth = ref(false)
+	const ifChecked = ref(false)
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
+	const authorized = computed(() => useUserStoreHook().authorized)
 	const topMenu = [{
 			title: '人才公寓',
 			icon: '/static/images/index/people.png'
@@ -118,36 +119,36 @@
 			url: `/pages/index/news/noticeList`
 		})
 	}
-	const initBlueTooth=()=>{
-		if(!storageGet('bluetoothstatus')){
-			storageSet('bluetoothstatus',false)
+	const initBlueTooth = () => {
+		if (!storageGet('bluetoothstatus')) {
+			storageSet('bluetoothstatus', false)
 		}
-		bluetooth.value=storageGet('bluetoothstatus')
+		bluetooth.value = storageGet('bluetoothstatus')
 		getSwitch()
 	}
-	const getSwitch=()=>{
-		
+	const getSwitch = () => {
+
 		wx.closeBluetoothAdapter({
 			complete() {
 				wx.openBluetoothAdapter({
 					success: (res) => {
 						console.info('Get Bluetooth ');
 						wx.getBluetoothAdapterState({
-						  success: function (res) {
-							ifChecked.value=true
-							if(bluetooth.value===true){
-								blueToothBroadCast()
+							success: function(res) {
+								ifChecked.value = true
+								if (bluetooth.value === true) {
+									blueToothBroadCast()
+								}
+							},
+							fail: function(res) {
+								console.log(res)
+								ifChecked.value = false
 							}
-						  },
-						  fail: function (res) {
-							  console.log(res)
-							ifChecked.value=false
-						  }
 						})
 					},
 					fail: (res) => {
 						console.log('openBluetoothAdapter failed');
-						
+
 						console.warn(res);
 					},
 					complete: (res) => {
@@ -158,40 +159,36 @@
 		})
 
 	}
-	const blueToothBroadCast=async()=>{
-		const res=await fetchCurrentUsed()
-		if(!res.content)return
-		let card=parseInt(res.content.cardNumber).toString(16).padStart(8,'0')
-		console.log('cardNumber',card)
-		let list=[]
-		list.push(parseInt(card.substring(0,2),16))
-		list.push(parseInt(card.substring(2,4),16))
-		list.push(parseInt(card.substring(4,6),16))
-		list.push(parseInt(card.substring(6,8),16))
+	const blueToothBroadCast = async () => {
+		const res = await fetchCurrentUsed()
+		if (!res.content) return
+		let card = parseInt(res.content.cardNumber).toString(16).padStart(8, '0')
+		console.log('cardNumber', card)
+		let list = []
+		list.push(parseInt(card.substring(0, 2), 16))
+		list.push(parseInt(card.substring(2, 4), 16))
+		list.push(parseInt(card.substring(4, 6), 16))
+		list.push(parseInt(card.substring(6, 8), 16))
 		// for (var i = 0; i < 4; i++) {
-		
+
 		// 	list.push(Number(card.substring((2*i,2),16)))
 		// }
-			openBle(list);
-
-
+		openBle(list);
 
 	}
-	watch(() => geospatial.value, () => {
+	watch(() => [geospatial.value, authorized.value], () => {
 		gainNewsInfoPage()
+		getUnreadNotifyCount()
 	})
-	const init=()=>{
-		
-		
-	}
+
 	onMounted(() => {
-		gainNewsInfoPage()
-		initBlueTooth()
-		console.log('----->')
+		if (authorized.value) {
+			gainNewsInfoPage()
+			initBlueTooth()
+		}
 	})
-	onShow(()=>{
+	onShow(() => {
 		initBlueTooth()
-		console.log('show',ifChecked.value,bluetooth.value)
 	})
 	const gainNewsInfoPage = async () => {
 		var data = {
@@ -204,7 +201,7 @@
 		const res = await fetchNewsPage(data)
 		if (!res) return
 		noticeList.value = res.content ? res.content.content : []
-		
+
 	}
 	const change = async (e) => {
 		const { index } = e.detail
@@ -233,11 +230,11 @@
 		position: absolute;
 		left: 0;
 		background-color: #3974F6;
-		border-bottom-left-radius:150rpx 50rpx;
-		border-bottom-right-radius:150rpx 50rpx;
+		border-bottom-left-radius: 150rpx 50rpx;
+		border-bottom-right-radius: 150rpx 50rpx;
 		height: 280rpx;
 		width: 750rpx;
-		
+
 		// 记得加背景图片
 	}
 
@@ -306,7 +303,7 @@
 		margin-top: 20rpx;
 
 		width: 95%;
-		margin-left:33rpx;
+		margin-left: 33rpx;
 		background-color: white;
 		position: relative;
 
@@ -442,18 +439,18 @@
 	.notice_bg {
 		height: 70upx;
 		margin: 20upx 35upx;
-		background: rgba(57,125,246,0.05);
+		background: rgba(57, 125, 246, 0.05);
 		border-radius: 15upx;
 		padding: 0 16upx;
 		display: flex;
 		align-items: center;
-	
+
 		.icon {
 			width: 94upx;
 			flex: none;
 			height: 30upx;
 		}
-	
+
 		.line {
 			width: 2upx;
 			flex: none;
@@ -461,7 +458,7 @@
 			margin: 0 20upx;
 			background-color: rgba(57, 125, 246, .1);
 		}
-	
+
 		.bar-swiper {
 			font-size: 24rpx;
 			font-family: PingFangSC-Regular, PingFang SC;
@@ -473,13 +470,13 @@
 			flex: 1;
 			margin-left: 12rpx;
 		}
-	
+
 		.swiper-item {
 			display: flex;
 			align-items: center;
 			overflow: hidden;
 		}
-	
+
 		.circle {
 			min-width: 10rpx;
 			width: 10rpx;
@@ -488,7 +485,7 @@
 			background-color: rgba(34, 34, 34, 0.5);
 			margin-right: 10rpx;
 		}
-	
+
 		.item_box {
 			word-break: break-all;
 			/* break-all(允许在单词内换行。) */
@@ -501,11 +498,11 @@
 			-webkit-line-clamp: 1;
 			/** 显示的行数 **/
 		}
-	
+
 		.card-title_tag_more {
 			flex: none;
 			margin-left: 15upx;
-	
+
 			.item_text {
 				font-size: 24upx;
 				color: #B6B7BA;
