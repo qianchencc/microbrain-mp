@@ -32,9 +32,6 @@ export const useUserStore = defineStore({
 		},
 		getGeospatialInfo() {
 			return this.geospatialInfo || storageGet('geospatialInfo')
-		},
-		getAuthorized() {
-			return this.authorized
 		}
 	},
 	actions: {
