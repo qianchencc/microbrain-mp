@@ -55,7 +55,7 @@
 	import { getToken } from '@/utils/auth'
 	import { getZztMsg, getApplyOnAuthCode } from '@/apis/user/principal'
 	import { zztServer } from '@/config/settings.js'
-	import { ref, computed } from 'vue'
+	import { ref, watch, computed } from 'vue'
 	import { jumpUrl } from '../../utils/tools'
 	import globalConfig from '@/config'
 	const isEdit = ref(false)
@@ -79,10 +79,14 @@
 	const menuList = computed(() => usePermissionStoreHook().getMenuList)
 	const homeMenuIndex = computed(() => usePermissionStoreHook().getHomeMenuIndex)
 
-	const homeMenuList = computed(() => {
+	const homeMenuList = ref([])
+	watch(() => homeMenuIndex.value, () => {
 		const data = [...usePermissionStoreHook().getHomeMenu]
 		data.pop()
-		return data
+		homeMenuList.value = data
+	}, {
+		deep: true,
+		immediate: true
 	})
 
 	const editMenu = (id, type) => {
@@ -92,6 +96,7 @@
 			const index = homeMenuIndex.value.indexOf(id)
 			homeMenuIndex.value.splice(index, 1)
 		}
+		console.log('homeMenuIndex.value: ', homeMenuIndex.value.length);
 		usePermissionStoreHook().setHomeMenuIndex(homeMenuIndex.value)
 	}
 
@@ -123,6 +128,7 @@
 			font-weight: 500;
 			color: #303030;
 			width: 100%;
+			margin-bottom: 10rpx;
 
 			display: flex;
 			justify-content: space-between;
@@ -130,9 +136,9 @@
 
 			button {
 				width: 70px;
-				height: 26px;
-				line-height: 26px;
-				border-radius: 13px;
+				// height: 30px;
+				// line-height: 30px;
+				// border-radius: 15px;
 				margin: 0;
 				color: #3984F6;
 				border-color: #3984F6;

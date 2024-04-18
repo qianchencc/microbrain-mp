@@ -51,7 +51,7 @@ const noChangeUri = ['miniAppId', 'http', 'wxProgram'];
 
 const defaultIndex = [
 	'cb3hi2hwunjiel6hu3qeu5gnidic580l', // 1 党建引领
-	'fjuglukm5xmi1b9ijecdbkrolsfvtfj5',	// 2 我的办公室
+	'fjuglukm5xmi1b9ijecdbkrolsfvtfj5', // 2 我的办公室
 	'vhfvtycebjqorpijhcj7u8gqwpaeamj7', // 3 访客管理
 	'itbwa3gdc8j8ajkkjnpcp07sksz3f5nh', // 4 会议管理
 	'09drtoozjudsurofnrwdfuf5axnp0bno', // 5 活动管理
@@ -95,11 +95,11 @@ export const usePermissionStore = defineStore({
 		},
 		getHomeMenu() {
 			// 合并子模块菜单，整理出全部菜单
-			const allMenu = this.getMenuList.reduce((a, b) => a.concat(b.children), [])
+			const allMenu = this.menuList.reduce((a, b) => a.concat(b.children), [])
 			// 过滤出首页应该显示菜
-			const allHomeMenu = allMenu.filter((val) => defaultIndex.includes(val.id))
+			const allHomeMenu = allMenu.filter((val) => this.homeMenuIndex.includes(val.id))
 			// 菜单排序
-			const homeMenu = allHomeMenu.sort((a, b) => defaultIndex.indexOf(a.id) - defaultIndex.indexOf(b.id))
+			const homeMenu = allHomeMenu.sort((a, b) => this.homeMenuIndex.indexOf(a.id) - this.homeMenuIndex.indexOf(b.id))
 			homeMenu.push(all)
 			return homeMenu
 		},
@@ -130,9 +130,9 @@ export const usePermissionStore = defineStore({
 			useUserStoreHook().setUserInfo()
 			/* 注册路由 */
 			let data = []
-			console.log('v',__wxConfig.envVersion)
-			
-			if(__wxConfig.envVersion!='release') {
+			console.log('v', __wxConfig.envVersion)
+
+			if (__wxConfig.envVersion != 'release') {
 				data = resource.find((v) => v.name === BASE_NAME).children
 			} else {
 				const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })
@@ -142,7 +142,7 @@ export const usePermissionStore = defineStore({
 			const { permissionBtns, permissionIds } = generateBtns(data)
 			this.accessBtns = permissionBtns
 			this.permissionIds = permissionIds
-			
+
 			// #ifdef APP-PLUS
 			appPush()
 			// #endif
