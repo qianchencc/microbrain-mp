@@ -58,8 +58,8 @@ export const useUserStore = defineStore({
 						const { token_type, access_token, expires_in } = res.content
 						const token = `${token_type} ${access_token}`
 						const expires = Math.ceil(expires_in / 60 / 60 / 24)
-						console.log(expires)
 						setToken(res.content)
+						this.authorized = true
 						usePermissionStoreHook().setAuthority()
 						uni.reLaunch({
 							url: '/pages/index/index'
@@ -90,7 +90,7 @@ export const useUserStore = defineStore({
 			uni.request({
 				url: url,
 				method: 'POST',
-				success(res) {
+				success: (res) => {
 					if (res.statusCode === 200) {
 						const {
 							access_token,
@@ -98,6 +98,7 @@ export const useUserStore = defineStore({
 							expires_in
 						} = res.data
 						setToken(res.data)
+						this.authorized = true
 						usePermissionStoreHook().setAuthority()
 						// uni.closeAuthView()
 						uni.reLaunch({

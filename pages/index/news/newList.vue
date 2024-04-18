@@ -12,7 +12,7 @@
 						<view class=" detail_footer_label">
 							{{item.createdAt.substring(0,11)}}
 						</view>
-						
+
 					</view>
 				</view>
 			</view>
@@ -21,21 +21,29 @@
 </template>
 
 <script setup>
-	import { ref } from 'vue'
+	import { ref, watch } from 'vue'
 	import { onLoad } from '@dcloudio/uni-app'
 	import { fetchNewsPage } from "@/apis/home"
 	import { DOMAIN } from '@/config/settings'
+	import { useUserStoreHook } from '@/store/modules/user'
+	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
+	const authorized = computed(() => useUserStoreHook().authorized)
 	const paging = ref(null)
 	const dataList = ref([])
 
 	const queryList = async (pageNo, pageSize) => {
-		const res = await fetchNewsPage({pageFlag:1})
+		if (!authorized.value) return
+		const res = await fetchNewsPage({ pageFlag: 1 })
 		if (res.content) {
 			paging.value.complete(res.content.content)
 		} else {
 			paging.value.complete(false)
 		}
 	}
+
+	watch([geospatial.value, authorized.value], () => {
+		paging.value.reload()
+	})
 
 	const handleRouteNewsDetail = async (id) => {
 		if (!id) return
@@ -77,11 +85,13 @@
 				font-size: 30upx;
 				line-height: 1.5;
 			}
+
 			.detail_footer_label {
 				line-height: 22upx;
 				font-size: 22upx;
 				color: #B6B7BA;
 			}
+
 			.detail_footer {
 				display: flex;
 				align-items: center;
