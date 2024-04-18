@@ -11,7 +11,7 @@
 						<uni-easyinput v-if="formDate.status!=='ACCEPT'" :clearable="false" v-model="formDate.personalName" placeholder="请输入姓名" />
 						<text v-else>{{formDate.personalName}}</text>
 					</uni-forms-item>
-					<uni-forms-item label="人脸信息" name="personalName">
+					<uni-forms-item label="头像信息" name="personalName">
 						<img class="icon-con" v-if="formDate.status==='ACCEPT'" :src="avatar">
 						<view v-else class="icon-con" @click="changeAvatar()">
 							<img class="icon-con" v-if="formDate.faceUrl" :src="avatar">
