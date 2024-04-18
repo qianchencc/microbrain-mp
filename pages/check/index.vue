@@ -14,11 +14,14 @@
 				</view>
 				<view class="list-item">签到位置：{{item.patrolPointRecord?item.patrolPointRecord.signLocation:''}}
 				</view>
+				<view v-if="!item.patrolPointRecord&&(patrolPointName===item.name)" class="login-btn"><button class="landing" :loading="loading" type="primary" @tap="sign">{{ "签到"}}</button>
+				</view>
+				
 			</uni-list>
 		</view>
-		<view class="login-btn">
+		<!-- <view class="login-btn">
 			<button class="landing" :loading="loading" type="primary" @tap="sign">{{ loading ? "签到中...":patrolPointName+" 签到"}}</button>
-		</view>
+		</view> -->
 		<!-- <view class="cu-timeline">
 			<view class="cu-time text-blue">{{patrolPathName}}</view>
 			<view  :class="{'text-blue':item.patrolPointRecord,'text-yellow':patrolPointId===item.patrolPointId}"
@@ -222,6 +225,7 @@
 					if (res) {
 						if (this.checkItems.length !== 0) {
 							const patrolPointRecordId = res.content.id
+							//const patrolPointRecordId = this.patrolRecordId
 							console.log('签到历史patrolPointRecordId', patrolPointRecordId)
 							uni.navigateTo({
 								url: '/pages/check/detail/index?patrolPointId=' + this.patrolPointId +
@@ -230,6 +234,7 @@
 							})
 						}
 					}
+					
 				}
 
 			}

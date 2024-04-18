@@ -7,11 +7,22 @@
 					
 					<view class="cu-form-group" v-if="item.displayType==='1'">
 						<view>{{item.label}}检查:</view>
-						<evan-radio-group @change="onGroupChange" v-model="paramList[index].status" class="radio-group">
+						<!-- <evan-radio-group @change="onGroupChange" v-model="paramList[index].status" class="radio-group">
 							<view class="evan-radio-show__group-item" v-for="item in statusList" :key="item.value">
 								<evan-radio class='blue margin-left-sm' :label="item.value">{{item.label}}</evan-radio>
 							</view>
-						</evan-radio-group>
+						</evan-radio-group> -->
+						<view class="uni-list" @click="change(index)">
+									<radio-group @change="radioChange">
+										<label  v-for="(item, index) in statusList" :key="item.checked">
+											<view>
+												<radio :value="item.value" :checked="index === current" >{{item.label}}</radio>
+												
+											</view>
+											
+										</label>
+									</radio-group>
+								</view>
 					</view>
 					<view class="login-input" v-else>
 						<view class="group-lable">{{item.label}}检查：</view>
@@ -94,6 +105,9 @@ export default {
     data() {
         return {
 			eventTypeList:[],
+			current: 0,
+			currentStatus:'',
+			currentIndex:0,
 			reportEvent:false,
 			levelList:[],
 			eventTypeId:'',
@@ -153,6 +167,7 @@ export default {
                 }
                 const param = {
                     // remarks: '',
+					type:element.displayType,
                     checkItemId: element.id
                     // status: element.displayType
                 }
@@ -162,8 +177,24 @@ export default {
             this.checkItemList = options
             console.log('巡更点中的checkItem', this.checkItemList)
         },
-		
-		
+		radioChange: function(evt) {
+			console.log('evt',evt)
+				for (let i = 0; i < this.statusList.length; i++) {
+					console.log(this.statusList[i].value,evt.detail.value)
+					if (this.statusList[i].value === evt.detail.value) {
+						console.log('this.currentIndex',this.currentIndex)
+						this.currentStatus=evt.detail.value
+						this.current = i;
+						break;
+					}
+				}
+				
+			
+		},
+		change(index){
+			console.log('index',index)
+			this.paramList[index].status=this.currentStatus
+		},
 		async getTypeList (){
 			const res = await fetchEventTypeList()
 			const option = []
@@ -206,6 +237,11 @@ export default {
         // 提交
         async submit() {
             this.loading = true
+			this.paramList.forEach(element=>{
+				if(element.type==='1'&&!element.status){
+					element.status='1'
+				}
+			})
             const data = {
                 checkItemRecordAddList: this.paramList,
                 patrolPointRecordId: this.patrolPointRecordId,
