@@ -76,11 +76,11 @@
 			</uni-list>
 		</view>
 
-		<view class="list">
+		<!-- <view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="NFC测试" showArrow clickable @click="NfcTest()" />
 			</uni-list>
-		</view>
+		</view> -->
 		<uni-popup ref="alertDialog" type="dialog">
 			<uni-popup-dialog cancelText="关闭" confirmText="确认" title="手机蓝牙未打开!" content="使用蓝牙广播前请先打开手机蓝牙!" @confirm="dialogConfirm"
 				@close="dialogClose"></uni-popup-dialog>

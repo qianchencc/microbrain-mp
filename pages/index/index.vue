@@ -27,12 +27,12 @@
 			</swiper>
 
 			<view class="menu-top-con">
-				<view class="top-menu">
+				<!-- <view class="top-menu">
 					<view class="menu-item" v-for="(item, index) in topMenu" :key="index" @tap="topJumpUrl(item)">
 						<view>{{ item.title }}</view>
 						<image :src="item.icon" mode="aspectFit"></image>
 					</view>
-				</view>
+				</view> -->
 				<uni-grid style="width:100%;background-color: #fff;padding: 20rpx 0rpx;border-radius: 10rpx;" :column="5" :square="false" :showBorder="false" @change="change">
 					<template v-for="(item, index) in menuList" :key="item.id">
 						<uni-grid-item :index="index">
