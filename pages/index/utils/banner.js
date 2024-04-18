@@ -31,9 +31,7 @@ export const useBannerHook = () => {
 		getBannerList()
 	})
 
-	if (authorized.value) {
-		getBannerList()
-	}
+	getBannerList()
 
 	return {
 		bannerList

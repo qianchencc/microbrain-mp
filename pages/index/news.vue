@@ -59,7 +59,7 @@
 	const typeName = ref('新闻热点')
 	// 获取新闻列表
 	const gainCategoryList = async () => {
-		if(__wxConfig.envVersion!='release') {
+		if (__wxConfig.envVersion != 'release') {
 			newTagList.value = [{
 					name: '新闻热点',
 					id: ''
@@ -73,7 +73,7 @@
 					id: 'BUSINESS_ACTIVITIES'
 				}
 			]
-		}else{
+		} else {
 			newTagList.value = [{
 					name: '新闻热点',
 					id: ''
@@ -146,9 +146,7 @@
 	}
 
 	onMounted(() => {
-		if (authorized.value) {
-			gainCategoryList()
-		}
+		gainCategoryList()
 	})
 </script>
 

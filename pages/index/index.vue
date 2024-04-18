@@ -182,10 +182,8 @@
 	})
 
 	onMounted(() => {
-		if (authorized.value) {
-			gainNewsInfoPage()
-			initBlueTooth()
-		}
+		gainNewsInfoPage()
+		initBlueTooth()
 	})
 	onShow(() => {
 		initBlueTooth()
