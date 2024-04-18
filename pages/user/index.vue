@@ -76,7 +76,7 @@
 			</uni-list>
 		</view>
 
-<!-- 		<view class="list">
+		<!-- <view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="NFC测试" showArrow clickable @click="NfcTest()" />
 			</uni-list>

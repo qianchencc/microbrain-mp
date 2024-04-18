@@ -216,13 +216,13 @@ export default {
 				remark:this.remark
             }
 			console.log('data',data)
-   //          const res = await postCheckResult(data)
-			// console.log('log',res,data)
-   //          this.loading = false
-   //          if(!res) return
-   //          uni.navigateBack({
-   //              delta: 1
-   //          })
+            const res = await postCheckResult(data)
+			console.log('log',res,data)
+            this.loading = false
+            if(!res) return
+            uni.navigateBack({
+                delta: 1
+            })
         },
         // 重置
         reset() {
