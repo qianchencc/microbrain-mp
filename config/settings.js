@@ -14,6 +14,7 @@ export const applyAddress = TO_TEST ? 'http://pc87ix.natappfree.cc' : 'https://w
 
 export const EvnIP = {
 	release: 'https://ncim.577119.com', //（正式版） 
+	//develop: 'https://ncim.577119.com',
 	develop: 'http://118.89.77.114:8080', //（开发版）
 	trial: 'http://118.89.77.114:8080' //（体验版）
 }

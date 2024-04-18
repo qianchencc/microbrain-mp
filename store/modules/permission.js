@@ -130,7 +130,9 @@ export const usePermissionStore = defineStore({
 			useUserStoreHook().setUserInfo()
 			/* 注册路由 */
 			let data = []
-			if (TO_TEST) {
+			console.log('v',__wxConfig.envVersion)
+			
+			if(__wxConfig.envVersion!='release') {
 				data = resource.find((v) => v.name === BASE_NAME).children
 			} else {
 				const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })

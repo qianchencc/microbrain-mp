@@ -58,23 +58,40 @@
 	const typeName=ref('新闻热点')
 	// 获取新闻列表
 	const gainCategoryList = async () => {
-		newTagList.value = [{
-				name: '新闻热点',
-				id: ''
-			},
-			{
-				name: '党建活动',
-				id: 'PARTY_BUILDING'
-			},
-			{
-				name: '集团要闻',
-				id: 'BUSINESS_ACTIVITIES'
-			},
-			{
-				name: '公共资讯',
-				id: 'COMMON_NEWS'
-			}
-		]
+		if(__wxConfig.envVersion!='release') {
+			newTagList.value = [{
+					name: '新闻热点',
+					id: ''
+				},
+				{
+					name: '党建活动',
+					id: 'PARTY_BUILDING'
+				},
+				{
+					name: '集团要闻',
+					id: 'BUSINESS_ACTIVITIES'
+				}
+			]
+		}else{
+			newTagList.value = [{
+					name: '新闻热点',
+					id: ''
+				},
+				{
+					name: '党建活动',
+					id: 'PARTY_BUILDING'
+				},
+				{
+					name: '集团要闻',
+					id: 'BUSINESS_ACTIVITIES'
+				},
+				{
+					name: '公共资讯',
+					id: 'COMMON_NEWS'
+				}
+			]
+		}
+		
 		// const res = await fetchNewsInfoCategoryList()
 		// if (!res) return
 		// newTagList.value = newTagList.value.concat(res.content)
