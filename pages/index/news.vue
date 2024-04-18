@@ -92,7 +92,7 @@
 				}
 			]
 		}
-		
+		console.log(newTagList.value)
 		// const res = await fetchNewsInfoCategoryList()
 		// if (!res) return
 		// newTagList.value = newTagList.value.concat(res.content)

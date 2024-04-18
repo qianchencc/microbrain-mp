@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-	import { ref, watch } from 'vue'
+	import { ref, watch,computed } from 'vue'
 	import { onLoad } from '@dcloudio/uni-app'
 	import { fetchNewsPage } from "@/apis/home"
 	import { DOMAIN } from '@/config/settings'
