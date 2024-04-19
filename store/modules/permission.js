@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { store } from '@/store'
-import { TO_TEST, BASE_NAME, DOMAIN } from '@/config/settings'
+import { TO_TEST, BASE_NAME, DOMAIN, MOCK_MENU } from '@/config/settings'
 import resource from '@/config/menu.json'
 import { getResourceTree } from '@/apis/user/menu'
 import { storageSet, storageGet } from '@/utils/storage'
@@ -130,9 +130,8 @@ export const usePermissionStore = defineStore({
 			useUserStoreHook().setUserInfo()
 			/* 注册路由 */
 			let data = []
-			console.log('v', __wxConfig.envVersion)
 
-			if (__wxConfig.envVersion != 'release') {
+			if (MOCK_MENU) {
 				data = resource.find((v) => v.name === BASE_NAME).children
 			} else {
 				const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })

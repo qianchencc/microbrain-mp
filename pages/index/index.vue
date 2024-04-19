@@ -120,11 +120,13 @@
 		})
 	}
 	const initBlueTooth = () => {
+		// #ifdef MP-WEIXIN
 		if (!storageGet('bluetoothstatus')) {
 			storageSet('bluetoothstatus', false)
 		}
 		bluetooth.value = storageGet('bluetoothstatus')
 		getSwitch()
+		// #endif
 	}
 	const getSwitch = () => {
 

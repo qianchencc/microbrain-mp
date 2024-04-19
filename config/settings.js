@@ -22,7 +22,9 @@ export const EvnIP = {
 
 // #ifdef MP-WEIXIN
 export const DOMAIN = EvnIP[__wxConfig.envVersion]
+export const MOCK_MENU = __wxConfig.envVersion != 'release'
 // #endif
 // #ifndef MP-WEIXIN
-export const DOMAIN = 'http://118.89.77.114:8080'
+export const DOMAIN = 'http://' + location.host
+export const MOCK_MENU = true
 // #endif

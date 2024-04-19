@@ -49,7 +49,7 @@
 	import { onMounted, ref, computed, watch } from 'vue'
 	import { fetchNewsPage } from "@/apis/home"
 	import globalConfig from '@/config'
-	import { DOMAIN } from '@/config/settings'
+	import { DOMAIN, MOCK_MENU } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const authorized = computed(() => useUserStoreHook().authorized)
@@ -59,7 +59,7 @@
 	const typeName = ref('新闻热点')
 	// 获取新闻列表
 	const gainCategoryList = async () => {
-		if (__wxConfig.envVersion != 'release') {
+		if (MOCK_MENU) {
 			newTagList.value = [{
 					name: '新闻热点',
 					id: ''
