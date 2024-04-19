@@ -16,7 +16,7 @@
 									<radio-group @change="radioChange">
 										<label  v-for="(item, index) in statusList" :key="item.checked">
 											<view>
-												<radio :value="item.value" :checked="index === current" >{{item.label}}</radio>
+												<radio :value="item.value" :checked="index === paramList[index].current" >{{item.label}}</radio>
 												
 											</view>
 											
@@ -168,7 +168,8 @@ export default {
                 const param = {
                     // remarks: '',
 					type:element.displayType,
-                    checkItemId: element.id
+                    checkItemId: element.id,
+					current:0
                     // status: element.displayType
                 }
                 this.paramList.push(param)

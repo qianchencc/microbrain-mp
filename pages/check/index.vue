@@ -235,6 +235,7 @@
 						}
 					}
 					
+					
 				}
 
 			}
@@ -343,7 +344,7 @@
 
 	.login-btn {
 		margin-top: 20rpx;
-
+		margin-bottom: 20rpx;
 		// margin-top: 10rpx;
 		.landing {
 			width: 70%;
