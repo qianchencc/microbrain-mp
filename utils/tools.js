@@ -22,7 +22,7 @@ export const chooseImg = (count = 9, success) => {
 			const tempFilePaths = res.tempFilePaths
 			tempFilePaths.forEach(element => {
 				uni.uploadFile({
-					url: `${globalConfig.ssoUrl}/file/upload`,
+					url: `${baseUrl}/file/upload`,
 					header: {
 						authorization: token
 					},
@@ -31,6 +31,41 @@ export const chooseImg = (count = 9, success) => {
 					formData: {
 						path: 'mp'
 					},
+					success: success,
+					fail: (e) => {
+						uni.showToast({
+							title: '文件上传失败'
+						})
+					},
+					complete() {
+						uni.hideLoading()
+					}
+				})
+			})
+		}
+	})
+}
+
+// getway提交
+export const chooseImg2 = (count = 9, success) => {
+	uni.chooseImage({
+		count: count, // 默认9
+		success: function(res) {
+			uni.showLoading({
+				title: '上传中...',
+				icon: 'loading',
+				mask: true
+			})
+			const token = getToken()
+			const tempFilePaths = res.tempFilePaths
+			tempFilePaths.forEach(element => {
+				uni.uploadFile({
+					url: `${globalConfig.baseUrl}/api/setting/file/upload`,
+					header: {
+						authorization: token
+					},
+					filePath: element,
+					name: 'file',
 					success: success,
 					fail: (e) => {
 						uni.showToast({

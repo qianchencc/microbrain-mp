@@ -47,7 +47,7 @@
 <script setup>
 	import { ref, computed, onMounted } from 'vue'
 	import globalConfig from '@/config'
-	import { chooseImg } from '@/utils/tools.js'
+	import { chooseImg2 } from '@/utils/tools.js'
 	import { fecthAllBranch } from '@/apis/user/org'
 	import { createConfirmation, fecthMyConfirmation, fetchValidateCode } from '@/apis/user/confirmation'
 	import { useVerifyCode } from '@/utils/verifyCode.js'
@@ -106,18 +106,18 @@
 		}
 	}
 
-	const avatar = computed(() => formDate.value.faceUrl ? globalConfig.ssoUrl + formDate.value.faceUrl : null)
+	const avatar = computed(() => formDate.value.faceUrl ? globalConfig.fileAddr + formDate.value.faceUrl : null)
 
 	const getConfirmation = async () => {
 		const res = await fecthMyConfirmation()
 		if (res.content) {
 			formDate.value = res.content
+			formDate.value.status = ''
 		}
 	}
 	const { text, isDisabled } = useVerifyCode()
 	async function suffixClicked(phone, fetchCode) {
 		const isPhone = /^[1][23456789][0-9]{9}$/.test(phone)
-		console.log(/^[1][23456789][0-9]{9}$/.test(phone));
 		if (!isPhone) return
 		useVerifyCode().start(phone, fetchCode)
 	}
@@ -144,11 +144,10 @@
 	}
 
 	const changeAvatar = () => {
-		chooseImg(1, async (uploadFileRes) => {
+		chooseImg2(1, async (uploadFileRes) => {
 			const res = JSON.parse(uploadFileRes.data)
-			console.log(res);
 			formDate.value.faceUrl = res.content
-		})
+		}, globalConfig.baseUrl)
 	}
 
 	const submit = async (ref) => {

@@ -144,6 +144,10 @@
 		})
 	}
 
+	defineExpose({
+		gainCategoryList
+	})
+
 	onMounted(() => {
 		gainCategoryList()
 	})
