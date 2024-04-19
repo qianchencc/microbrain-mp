@@ -142,10 +142,13 @@ export const useUserStore = defineStore({
 		},
 		// 登出 清空缓存
 		logOut() {
+			if (this.authorized) {
+				wxLogin()
+			}
 			removeToken()
 			uni.clearStorageSync();
+			this.authorized = false
 			// #ifdef MP-WEIXIN
-			// wxLogin()
 			// #endif
 			// #ifdef APP-PLUS
 			uni.reLaunch({
