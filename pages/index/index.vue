@@ -78,7 +78,7 @@
 	import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { onMounted, computed, reactive, ref, watch } from 'vue'
-	import { onShow } from '@dcloudio/uni-app'
+	import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 	import { fetchCurrentUsed } from '@/apis/home'
 	import { openBle } from '@/utils/blue.js'
 	import { wxLogin } from '@/utils/wxLogin.js'
@@ -165,7 +165,6 @@
 		const res = await fetchCurrentUsed()
 		if (!res.content) return
 		let card = parseInt(res.content.cardNumber).toString(16).padStart(8, '0')
-		console.log('cardNumber', card)
 		let list = []
 		list.push(parseInt(card.substring(0, 2), 16))
 		list.push(parseInt(card.substring(2, 4), 16))
@@ -185,11 +184,18 @@
 
 	onMounted(() => {
 		gainNewsInfoPage()
-		initBlueTooth()
 	})
 	onShow(() => {
 		initBlueTooth()
 	})
+
+	onPullDownRefresh(() => {
+		gainNewsInfoPage()
+		getUnreadNotifyCount()
+		initBlueTooth()
+		uni.stopPullDownRefresh();
+	})
+
 	const gainNewsInfoPage = async () => {
 		var data = {
 			size: 3,
