@@ -67,7 +67,7 @@
 					</text>
 				</view>
 			</view>
-			<news />
+			<news ref="newsRef" />
 		</view>
 	</view>
 </template>
@@ -92,6 +92,7 @@
 	const noticeList = ref([])
 	const bluetooth = ref(false)
 	const ifChecked = ref(false)
+	const newsRef = ref(null)
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const authorized = computed(() => useUserStoreHook().authorized)
@@ -193,6 +194,7 @@
 		gainNewsInfoPage()
 		getUnreadNotifyCount()
 		initBlueTooth()
+		newsRef.value.gainCategoryList()
 		uni.stopPullDownRefresh();
 	})
 
