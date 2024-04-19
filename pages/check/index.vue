@@ -10,7 +10,7 @@
 				<view class="list-title"><span class="title-text">{{item.name}}</span></view>
 				<view class="list-item">签到时间：{{item.patrolPointRecord?item.patrolPointRecord.signInTime:''}}
 				</view>
-				<view class="list-item">签到状态：{{item.patrolPointRecord?item.name+'| 检查完毕 | 正常签到':''}}
+				<view class="list-item">签到状态：{{item.patrolPointRecord?' 检查完毕 | 正常签到':''}}
 				</view>
 				<view class="list-item">签到位置：{{item.patrolPointRecord?item.patrolPointRecord.signLocation:''}}
 				</view>
