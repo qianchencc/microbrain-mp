@@ -14,8 +14,7 @@
 							<text> {{item.messageSubject}} </text>
 							<uni-dateformat style="font-size: 14px;color: #999;" :date="item.createdAt" format="MM-dd hh:mm" :threshold="[60000, 201600000]"></uni-dateformat>
 						</view>
-						<view class="info-note">
-							{{item.notifyContent}}
+						<view class="info-note" v-html="item.notifyContent">
 						</view>
 					</view>
 				</view>
