@@ -51,7 +51,7 @@
 						</view>
 					</template>
 				</uni-list-item>
-				
+
 			</uni-list>
 		</view>
 		<view class="list">
@@ -63,9 +63,9 @@
 		</view>
 		<view class="list">
 			<uni-list :border="false">
-				<uni-list-item title="蓝牙广播" >
+				<uni-list-item title="蓝牙广播">
 					<template v-slot:footer>
-						<switch ref="switchRef" :checked="bluetooth" style="transform:scale(0.7)" @change="switchOn"/>
+						<switch ref="switchRef" :checked="bluetooth" style="transform:scale(0.7)" @change="switchOn" />
 					</template>
 				</uni-list-item>
 			</uni-list>
@@ -81,15 +81,19 @@
 				<uni-list-item :border="false" title="NFC测试" showArrow clickable @click="NfcTest()" />
 			</uni-list>
 		</view> -->
+		<view class="list">
+			<uni-list :border="false">
+				<uni-list-item :border="false" title="推送测试" showArrow clickable @click="pushTest()" />
+			</uni-list>
+		</view>
 		<uni-popup ref="alertDialog" type="dialog">
-			<uni-popup-dialog cancelText="关闭" confirmText="确认" title="手机蓝牙未打开!" content="使用蓝牙广播前请先打开手机蓝牙!" @confirm="dialogConfirm"
-				@close="dialogClose"></uni-popup-dialog>
+			<uni-popup-dialog cancelText="关闭" confirmText="确认" title="手机蓝牙未打开!" content="使用蓝牙广播前请先打开手机蓝牙!" @confirm="dialogConfirm" @close="dialogClose"></uni-popup-dialog>
 		</uni-popup>
 	</view>
 </template>
 
 <script setup>
-	import { computed, reactive,ref ,onMounted} from 'vue'
+	import { computed, reactive, ref, onMounted } from 'vue'
 	import { onShow } from '@dcloudio/uni-app'
 	import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 	import globalConfig from '@/config'
@@ -100,17 +104,18 @@
 	import { pageMenu, faceAuthStatus, confirmationStatus } from './utils/enums.js'
 	import { transceive } from '@/utils/NFC.js'
 	import { jumpUrl } from '@/utils/tools'
-	
+
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 	const changeAvatar = () => {
 		uni.navigateTo({
 			url: './principal'
 		})
 	}
-	const switchRef=ref(null)
-	const alertDialog=ref(null)
-	const bluetooth=ref(false)
-	const ifChecked=ref(false)
+	const switchRef = ref(null)
+	const alertDialog = ref(null)
+	const bluetooth = ref(false)
+	const ifChecked = ref(false)
+
 	function toPage(item) {
 		if (item.name === 'incomplete') return
 		jumpUrl({
@@ -124,12 +129,14 @@
 			url: `/pages/webView/index?path=${DOMAIN}/${domain}/#/${url || ''}`
 		})
 	}
+
 	function dialogConfirm() {
-		bluetooth.value=false
+		bluetooth.value = false
 
 	}
+
 	function dialogClose() {
-		bluetooth.value=false
+		bluetooth.value = false
 	}
 	const integralList = reactive([{
 			label: '信用积分',
@@ -152,109 +159,105 @@
 	onMounted(() => {
 		initBlueTooth()
 	})
-	onShow(()=>{
-		console.log('show',ifChecked.value,bluetooth.value)
+	onShow(() => {
+		console.log('show', ifChecked.value, bluetooth.value)
 		initBlueTooth()
 	})
-	const initBlueTooth=()=>{
-		if(!storageGet('bluetoothstatus')){
-			storageSet('bluetoothstatus',false)
+	const initBlueTooth = () => {
+		if (!storageGet('bluetoothstatus')) {
+			storageSet('bluetoothstatus', false)
 		}
-		
+
 		getSwitch()
-		bluetooth.value=storageGet('bluetoothstatus')
+		bluetooth.value = storageGet('bluetoothstatus')
 	}
-	const getSwitch=()=>{
+	const getSwitch = () => {
 
 		wx.closeBluetoothAdapter({
-					complete() {
-						wx.openBluetoothAdapter({
-							success: (res) => {
-								console.info('Get Bluetooth ');
-								wx.getBluetoothAdapterState({
-								  success: function (res) {
-									ifChecked.value=true
-									if(bluetooth.value===true){
-										blueToothBroadCast()
-									}
-								  },
-								  fail: function (res) {
-									  console.log(res)
-									ifChecked.value=false
-									if (bluetooth.value===true){
-										alertDialog.value.open()
-									}
-								  }
-								})
+			complete() {
+				wx.openBluetoothAdapter({
+					success: (res) => {
+						console.info('Get Bluetooth ');
+						wx.getBluetoothAdapterState({
+							success: function(res) {
+								ifChecked.value = true
+								if (bluetooth.value === true) {
+									blueToothBroadCast()
+								}
 							},
-							fail: (res) => {
-								console.log('openBluetoothAdapter failed');
-								
-								console.warn(res);
-							},
-							complete: (res) => {
-								console.debug('openBluetoothAdapter completed');
-							},
-						});
-					}
-				})
-		
+							fail: function(res) {
+								console.log(res)
+								ifChecked.value = false
+								if (bluetooth.value === true) {
+									alertDialog.value.open()
+								}
+							}
+						})
+					},
+					fail: (res) => {
+						console.log('openBluetoothAdapter failed');
+
+						console.warn(res);
+					},
+					complete: (res) => {
+						console.debug('openBluetoothAdapter completed');
+					},
+				});
+			}
+		})
 
 	}
-	const blueToothBroadCast=async()=>{
-		const res=await fetchCurrentUsed()
-		if(!res.content){
+	const blueToothBroadCast = async () => {
+		const res = await fetchCurrentUsed()
+		if (!res.content) {
 			uni.showToast({
-			    title: '当前用户无卡号！请联系管理员下发卡号！',
-			    icon: 'none'
+				title: '当前用户无卡号！请联系管理员下发卡号！',
+				icon: 'none'
 			})
-		}else{
-			let card=parseInt(res.content.cardNumber).toString(16).padStart(8,'0')
-			console.log('cardNumber',card)
-			let list=[]
-			list.push(parseInt(card.substring(0,2),16))
-			list.push(parseInt(card.substring(2,4),16))
-			list.push(parseInt(card.substring(4,6),16))
-			list.push(parseInt(card.substring(6,8),16))
+		} else {
+			let card = parseInt(res.content.cardNumber).toString(16).padStart(8, '0')
+			console.log('cardNumber', card)
+			let list = []
+			list.push(parseInt(card.substring(0, 2), 16))
+			list.push(parseInt(card.substring(2, 4), 16))
+			list.push(parseInt(card.substring(4, 6), 16))
+			list.push(parseInt(card.substring(6, 8), 16))
 			// for (var i = 0; i < 4; i++) {
-			
+
 			// 	list.push(Number(card.substring((2*i,2),16)))
 			// }
-			console.log('list',list)
-			if(bluetooth.value===true){
+			console.log('list', list)
+			if (bluetooth.value === true) {
 
-					openBle(list);
-				
+				openBle(list);
 
-			}
-			else{
+			} else {
 				console.log('close')
 			}
 		}
-		
+
 	}
-	const switchOn =async (val) => {
-		bluetooth.value=val.target.value
-		console.log('switch',bluetooth.value)
-		if(bluetooth.value===false){
+	const switchOn = async (val) => {
+		bluetooth.value = val.target.value
+		console.log('switch', bluetooth.value)
+		if (bluetooth.value === false) {
 			wx.closeBluetoothAdapter({
-			  complete: function (res) {
-			    console.log('bluetooth close',res)
-			  }
+				complete: function(res) {
+					console.log('bluetooth close', res)
+				}
 			})
-			
-			
-		}else{
+
+		} else {
 			getSwitch()
 		}
-		
-		storageSet('bluetoothstatus',val.target.value)
-		console.log('switch2',val)
+
+		storageSet('bluetoothstatus', val.target.value)
+		console.log('switch2', val)
 	}
 	const NfcTest = () => {
 		uni.navigateTo({
-		    url: '/pages/check/index?code=' + '1dc13ff1920000',
-		    animationType: 'pop-in'
+			url: '/pages/check/index?code=' + '1dc13ff1920000',
+			animationType: 'pop-in'
 		})
 		// transceive('a001ffffffffffffffffffffffffffffffff')
 	}
@@ -277,22 +280,22 @@
 
 		// #endif
 		const data = {
-			touser: "oiSqO602XfqfqhclCy_aIqLNF7wQ",
-			template_id: "w_uQuByW3kkgiCxminzynXIO1NOYtixfR1JTe0BTEis",
+			touser: "oEGbu5NW0mtJxdy6lFyawfb66dYA",
+			template_id: "yHhsrja9_8GSpPIFKSF8xe3rmWR2mpHagGbeL4sSk6Q",
 			page: "pages/messages/index", // 小程序页面地址
 			miniprogram_state: "developer", // 跳转小程序类型：developer为开发版；trial为体验版；formal为正式版；默认为正式版
 			lang: "zh_CN",
 			data: {
-				name5: {
+				character_string9: {
+					value: 887766
+				},
+				thing26: {
 					value: "张三"
 				},
-				phone_number19: {
-					value: "15695128837"
+				time22: {
+					value: "2024年04月23日 14:34"
 				},
-				date7: {
-					value: "2015年01月05日"
-				},
-				thing1: {
+				thing7: {
 					value: '来看你了'
 				}
 			}
@@ -432,9 +435,8 @@
 			border-radius: 15rpx;
 			padding: 10rpx 0;
 		}
-		.bluetooth{
-			
-		}
-		
+
+		.bluetooth {}
+
 	}
 </style>

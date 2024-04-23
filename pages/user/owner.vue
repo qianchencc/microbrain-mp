@@ -112,7 +112,6 @@
 		const res = await fecthMyConfirmation()
 		if (res.content) {
 			formDate.value = res.content
-			formDate.value.status = ''
 		}
 	}
 	const { text, isDisabled } = useVerifyCode()
