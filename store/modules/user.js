@@ -5,7 +5,7 @@ import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 import { login, getPrincipalAllInfo, getGeospatialList, getWxOpenId, userUpdateOpenId } from '@/apis/user/principal'
 import { fetchCardPrincipalInfo } from '@/apis/home'
 import { usePermissionStoreHook } from './permission'
-import { setToken, removeToken } from '@/utils/auth'
+import { setToken, getToken, removeToken } from '@/utils/auth'
 import { aesEncrypt } from '@/utils/cryptojs'
 import globalConfig from '@/config'
 
@@ -142,7 +142,7 @@ export const useUserStore = defineStore({
 		},
 		// 登出 清空缓存
 		logOut() {
-			if (this.authorized) {
+			if (this.authorized || getToken()) {
 				wxLogin()
 			}
 			removeToken()
