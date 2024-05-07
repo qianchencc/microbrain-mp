@@ -29,15 +29,12 @@
 		},
 		onLoad: async function(option) {
 			await checkToken()
-			
+
 			option.token = getTokenId()
 			option.tenantCode = useUserStoreHook().getDistrict.id
 			option.timestamp = new Date().getTime()
 			// 额外参数, 请encodeURIComponent
-			console.log(option)
-			console.log(333333, option.path);
 			this.url = option.path + '?' + obj2Query(option) + (option.otherQuery ? decodeURIComponent(option.otherQuery) : '')
-			console.log(this.url)
 			// #ifdef APP-NVUE
 			this.eventChannel = this.$scope.eventChannel // 兼容APP-NVUE
 			// #endif
@@ -118,6 +115,37 @@
 						uni.navigateTo({
 							url: `/pages/webView/index?path=${DOMAIN}/${target.module}/#${target.path}`
 						})
+					} else if (target.action === 'shareMiLogo') {
+						console.log('web view =====>', target)
+						// #ifdef MP-WEIXIN
+						// 分享访客微信小程序
+						if (target.logoUrl) { // 网络地址
+							wx.downloadFile({
+								url: DOMAIN + target.logoUrl,
+								success: (res) => {
+									wx.showShareImageMenu({
+										path: res.tempFilePath,
+										complete: () => {
+											uni.navigateTo({
+												url: `/pages/webView/index?path=${DOMAIN}/${target.module}/`
+											})
+										}
+									})
+								}
+							})
+						} else {
+							wx.showShareImageMenu({
+								path: '/static/images/visitors/miLogo.jpg',
+								complete: () => {
+									uni.navigateTo({
+										url: `/pages/webView/index?path=${DOMAIN}/${target.module}/`
+									})
+								}
+							})
+						}
+
+						// #endif
+
 					}
 				} else if (target.photo) {
 					this.eventChannel.emit('acceptImageData', target.photo)
