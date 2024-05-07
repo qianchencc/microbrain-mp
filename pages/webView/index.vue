@@ -116,7 +116,6 @@
 							url: `/pages/webView/index?path=${DOMAIN}/${target.module}/#${target.path}`
 						})
 					} else if (target.action === 'shareMiLogo') {
-						console.log('web view =====>', target)
 						// #ifdef MP-WEIXIN
 						// 分享访客微信小程序
 						if (target.logoUrl) { // 网络地址
@@ -130,15 +129,6 @@
 												url: `/pages/webView/index?path=${DOMAIN}/${target.module}/`
 											})
 										}
-									})
-								}
-							})
-						} else {
-							wx.showShareImageMenu({
-								path: '/static/images/visitors/miLogo.jpg',
-								complete: () => {
-									uni.navigateTo({
-										url: `/pages/webView/index?path=${DOMAIN}/${target.module}/`
 									})
 								}
 							})
