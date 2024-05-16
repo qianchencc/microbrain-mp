@@ -51,6 +51,7 @@
 	import { fecthAllBranch } from '@/apis/user/org'
 	import { createConfirmation, fecthMyConfirmation, fetchValidateCode } from '@/apis/user/confirmation'
 	import { useVerifyCode } from '@/utils/verifyCode.js'
+	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'
 	const valiForm = ref(null)
 	const loading = ref(false)
 	const imageValue = ref(null)
@@ -158,6 +159,7 @@
 			const res = await createConfirmation(formDate.value)
 			loading.value = false
 			if (res.code !== 201) return
+			setSubscribeMessages('card', 'owner')
 			uni.navigateBack()
 		}).catch(err => {
 			console.log('err', err)

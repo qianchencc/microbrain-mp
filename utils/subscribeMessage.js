@@ -10,6 +10,7 @@ export const setSubscribeMessages = (menu, type) => {
 	} catch (e) {
 		tmplIds = []
 	}
+	console.log(tmplIds);
 	uni.requestSubscribeMessage({
 		tmplIds: tmplIds, // 小程序订阅消息模板id
 		success: () => {},

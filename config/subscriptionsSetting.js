@@ -10,6 +10,10 @@ const subscriptions = {
 	},
 	patrol: {
 		home: ['RIFhIfyJj0-vSJP-Gyyumn0h3vz_HeQUboMp3PX3hZo']
+	},
+	card: {
+		user: ['wyDMO2XORCbcTMVB-X12qtagxoyfpts9pRsMaibUHEo'],
+		owner: ['rUwgE5cvAOkwqo1_c8EWF_dIBXSRpUOjrWERCXcg-9E']
 	}
 }
 

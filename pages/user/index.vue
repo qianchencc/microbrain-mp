@@ -44,7 +44,7 @@
 		</view> -->
 		<view class="list">
 			<uni-list :border="false">
-				<uni-list-item :border="false" title="组织确权" showArrow link="navigateTo" :to="userInfo.confirmationStatus==='ACCEPT'?'./owner':'./owner'">
+				<uni-list-item :border="false" title="组织确权" showArrow link="navigateTo" clickable @click="toOwner()">
 					<template v-slot:footer>
 						<view class="tag-view">
 							<uni-tag :circle="true" :text="confirmationStatus[userInfo.confirmationStatus].text" :type="confirmationStatus[userInfo.confirmationStatus].type" />
@@ -87,6 +87,12 @@
 				<uni-list-item :border="false" title="推送测试" showArrow clickable @click="pushTest()" />
 			</uni-list>
 		</view> -->
+
+		<!-- <view class="list">
+			<uni-list :border="false">
+				<uni-list-item :border="false" title="分享测试" showArrow clickable @click="share()" />
+			</uni-list>
+		</view> -->
 		<uni-popup ref="alertDialog" type="dialog">
 			<uni-popup-dialog cancelText="关闭" confirmText="确认" title="手机蓝牙未打开!" content="使用蓝牙广播前请先打开手机蓝牙!" @confirm="dialogConfirm" @close="dialogClose"></uni-popup-dialog>
 		</uni-popup>
@@ -105,6 +111,7 @@
 	import { pageMenu, faceAuthStatus, confirmationStatus } from './utils/enums.js'
 	import { transceive } from '@/utils/NFC.js'
 	import { jumpUrl } from '@/utils/tools'
+	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'
 
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
 	const changeAvatar = () => {
@@ -238,6 +245,17 @@
 		}
 
 	}
+
+	// 去授权
+	function toOwner() {
+		setSubscribeMessages('card', 'user')
+		uni.navigateTo({
+			url: './owner',
+			success: res => {
+				setSubscribeMessages('card', 'user')
+			}
+		});
+	}
 	const switchOn = async (val) => {
 		bluetooth.value = val.target.value
 		console.log('switch', bluetooth.value)
@@ -334,6 +352,13 @@
 		// 		console.log(res);
 		// 	},
 		// })
+	}
+
+	// 分享测试
+	const share = () => {
+		wx.showShareImageMenu({
+			path: '/static/images/visitors/miLogo.jpg'
+		})
 	}
 </script>
 
