@@ -94,6 +94,12 @@
 			}
 		},
 		{
+			"path": "pages/user/opinion",
+			"style": {
+				"navigationBarTitleText": "意见反馈"
+			}
+		},
+		{
 			"path": "pages/check/index",
 			"style": {
 				"navigationBarTitleText": "巡更任务"

@@ -73,6 +73,7 @@
 		<view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="关于我们" showArrow link="navigateTo" to="./about" />
+				<uni-list-item :border="false" title="意见反馈" showArrow clickable @click="toOpinion()" />
 			</uni-list>
 		</view>
 
@@ -260,6 +261,12 @@
 			animationType: 'pop-in'
 		})
 		// transceive('a001ffffffffffffffffffffffffffffffff')
+	}
+	const toOpinion=()=>{
+		uni.navigateTo({
+			url: '/pages/user/opinion',
+			animationType: 'pop-in'
+		})
 	}
 	const pushTest = () => {
 		// const data = { "push_clientid": "a8a9bad564747be64d026a6aa0c4e553", "title": "消息提醒", "content": "工作提醒：您对苏州新捷正科技有限公司吴昌英发出的邀约已被接受", "payload": "877" }
