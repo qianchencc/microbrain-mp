@@ -154,8 +154,7 @@
 			"title": "微脑·服务",
 			"name": "service",
 			"type": "MODULE",
-			"children": [
-				{
+			"children": [{
 					"id": "88s83zofzhp9s540ed0w2lugoupjy37k",
 					"title": "智能语音",
 					"name": "incomplete",
@@ -198,10 +197,10 @@
 				},
 				{
 					"id": "d9mppyru6uskaz49xpu3kul3vxecqbsm",
-					"title": "温州吃玩惠",
+					"title": "温州之旅",
 					"name": "wzEatHappyGood",
-					"icon": "icon_wzcwq.png",
-					"uri": "miniAppId=wx8dffd911ab68ab11",
+					"icon": "icon_wzzl.jpg",
+					"uri": "https://nlw.nongchanlian.com/h5/#/?agentCode=25958144&noToken=true",
 					"type": "MENU"
 				},
 				{
@@ -214,10 +213,10 @@
 				},
 				{
 					"id": "kfglgvegfau6ealzshn5icp4odoor8fc",
-					"title": "E游温州",
+					"title": "周边推荐",
 					"name": "eTravelWz",
-					"icon": "icon_tarvalWz.png",
-					"uri": "miniAppId=wx4a6b3a87cbdb6d40",
+					"icon": "icon_zbtj.png",
+					"uri": "https://nlw.nongchanlian.com/h5/#/?agentCode=00000000",
 					"type": "MENU"
 				},
 				{
