@@ -148,7 +148,7 @@ export const jumpUrl = async menu => {
 			menuFuc[menu.name](menu)
 		} else {
 			uni.navigateTo({
-				url: '/pages/webView/index?path=' + menu.uri.replace('?', '&')
+				url: '/pages/webView/index?path=' + menu.uri.replaceAll('?', '&')
 			})
 		}
 	}

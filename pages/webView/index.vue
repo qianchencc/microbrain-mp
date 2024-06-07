@@ -29,10 +29,11 @@
 		},
 		onLoad: async function(option) {
 			await checkToken()
-
-			option.token = getTokenId()
-			option.tenantCode = useUserStoreHook().getDistrict.id
-			option.timestamp = new Date().getTime()
+			if (!option.noToken) {
+				option.token = getTokenId()
+				option.tenantCode = useUserStoreHook().getDistrict.id
+				option.timestamp = new Date().getTime()
+			}
 			// 额外参数, 请encodeURIComponent
 			this.url = option.path + '?' + obj2Query(option) + (option.otherQuery ? decodeURIComponent(option.otherQuery) : '')
 			// #ifdef APP-NVUE
