@@ -3,7 +3,7 @@
 		<scroll-view class="container" scroll-y="true">
 			<view class="cu-form">
 				<image class="cu-imgs" src="@/static/logo.png"></image>
-				<view class="cu-title">{{appInfo.name||'智慧园区微脑控制系统V1.0'}}</view>
+				<view class="cu-title">{{appInfo.name||'智慧园区微脑控制系统'}}</view>
 				<view class="cu-subtitle">Version {{appInfo.version||'1.0.0'}}</view>
 			</view>
 			<view class="info">

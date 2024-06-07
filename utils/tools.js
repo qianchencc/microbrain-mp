@@ -22,7 +22,7 @@ export const chooseImg = (count = 9, success) => {
 			const tempFilePaths = res.tempFilePaths
 			tempFilePaths.forEach(element => {
 				uni.uploadFile({
-					url: `${baseUrl}/file/upload`,
+					url: `${globalConfig.ssoUrl}/file/upload`,
 					header: {
 						authorization: token
 					},
