@@ -220,6 +220,14 @@
 					"type": "MENU"
 				},
 				{
+					"id": "rob527ehkkvwpqhxgykknb3hkkfuhmrx",
+					"title": "未来乡村",
+					"name": "village",
+					"icon": "icon_village.png",
+					"uri": "",
+					"type": "MENU"
+				},
+				{
 					"id": "97dxb68smbh1zibm16ovz6xmxs5t4hur",
 					"title": "大学生驿站",
 					"name": "universityStudentPosthouse",
