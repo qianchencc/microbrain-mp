@@ -40,21 +40,12 @@ function getUserProfile() {
 }
 
 async function wxLogin() {
-	getCode().then(e => {
-		return getOpenID(e.code)
-	}).then(e => {
-		const { openid, token, tokenExpired } = e.result;
-		uni.setStorageSync('uni_id_token_expired', tokenExpired)
-		uni.setStorageSync('openid', openid)
-		uni.setStorageSync('token', token)
-		uni.login({
-			provider: 'weixin', //使用微信登录
-			success: function(loginRes) {
-				useUserStoreHook().thirdLogin(loginRes.code)
-			}
-		})
-	}).catch(err => console.log(err))
-
+	uni.login({
+		provider: 'weixin', //使用微信登录
+		success: function(loginRes) {
+			useUserStoreHook().thirdLogin(loginRes.code)
+		}
+	})
 }
 
 export {

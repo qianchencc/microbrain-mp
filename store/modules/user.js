@@ -109,7 +109,6 @@ export const useUserStore = defineStore({
 				fail(e) {
 					console.log(e);
 				}
-
 			})
 		},
 		async setDict() {
