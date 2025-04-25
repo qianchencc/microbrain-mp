@@ -16,7 +16,7 @@ export function openBle(list) {
 	    				let uuid2 = '0000ae8f-0000-1000-8000-00805f9b34fb';
 	    				// let buff = [0x84, 0xe8, 0xa3, 0x3d];
 	    				let buff = list;
-	    
+
 	    				server.startAdvertising({
 	    					advertiseRequest: {
 	    						deviceName: '',
@@ -31,7 +31,7 @@ export function openBle(list) {
 	    						}]
 	    					},
 	    					powerLevel:'low'
-	    					
+
 	    				}).then(
 	    					(res) => {
 	    						console.log('Adverstising.. ', res);
@@ -39,7 +39,7 @@ export function openBle(list) {
 	    					(res) => {
 	    						console.warn('Advertising failed', res);
 	    					});
-							
+
 	    			},
 	    			fail: (res) => {
 	    				console.warn('createBLEPeripheralServer failed');
@@ -59,5 +59,4 @@ export function openBle(list) {
 	    });
 	  }
 	})
-	
 }

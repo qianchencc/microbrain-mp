@@ -9,14 +9,14 @@ const toZzt = async menu => {
 	let res = await getZztMsg()
 	if (!res) return
 	let { loginId, openId } = res.content
-	let otherQuery = `fcbm=${zztCode}&telephone=${userInfo.mobile}&loginId=${loginId}&openid=${openId}&noToken=true`
+	let query = `fcbm=${zztCode}&telephone=${userInfo.mobile}&loginId=${loginId}&openid=${openId}&noToken=true`
 	// #ifdef MP-WEIXIN
 	uni.navigateTo({
-		url: `/pages/webView/index?path=${url}&${otherQuery}`
+		url: `/pages/webView/index?path=${url}&${query}`
 	})
 	// #endif
 	// #ifdef H5
-	location.href = `${url}?${otherQuery}`
+	location.href = `${url}?${query}`
 	// #endif
 }
 

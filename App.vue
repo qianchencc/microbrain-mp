@@ -34,7 +34,6 @@
 			} else {
 				// #ifdef MP-WEIXIN
 				// wxLogin()
-
 				uni.login({
 					provider: 'weixin',
 					success: res => {
@@ -61,7 +60,6 @@
 		methods: {
 
 		}
-
 	}
 </script>
 

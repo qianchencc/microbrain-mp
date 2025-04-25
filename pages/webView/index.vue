@@ -13,7 +13,7 @@
 	function obj2Query(obj) {
 		const keys = []
 		for (const key in obj) {
-			if (key !== 'path' && key !== 'otherQuery' && key !== 'noToken') {
+			if (key !== 'path' && key !== 'noToken') {
 				keys.push(`${key}=${obj[key]}`)
 			}
 		}
@@ -35,7 +35,8 @@
 				option.timestamp = new Date().getTime()
 			}
 			// 额外参数, 请encodeURIComponent
-			this.url = option.path + '?' + obj2Query(option) + (option.otherQuery ? decodeURIComponent(option.otherQuery) : '')
+			this.url = option.path + '?' + obj2Query(option)
+			console.log('webView url ------------------->', this.url)
 			// #ifdef APP-NVUE
 			this.eventChannel = this.$scope.eventChannel // 兼容APP-NVUE
 			// #endif
@@ -55,13 +56,8 @@
 								// 有href,进行跳转,扫码结果作JSON解析成参数, 在跳进webView参数encodeURIComponent
 								const data = JSON.parse(res.result)
 								if (target.href) {
-									let otherQuery = ''
-									Object.entries(data).map(([k, v]) => {
-										otherQuery += `&${k}=${v}`
-									})
-
 									uni.navigateTo({
-										url: `/pages/webView/index?path=${target.href}&otherQuery=${encodeURIComponent(otherQuery)}`
+										url: `/pages/webView/index?path=${target.href}&${target.query}`
 									})
 								} else if (target.type === 'joinGroup') {
 									let res = await joinGroup(data.groupNumber)
@@ -161,7 +157,7 @@
 			if (e.webViewUrl.indexOf('/pages/push/activityShareDetail') > -1) {
 				return {
 					title: '活动助力分享',
-					path: `/pages/webView/index?path=${location.href}&otherQuery=${encodeURIComponent(`&id=${location.id}&isShare=true`)}`
+					path: `/pages/webView/index?path=${location.href}&id=${location.id}&isShare=true`
 				}
 			} else {
 				let str = ''
@@ -172,7 +168,7 @@
 				})
 				return {
 					title: '分享',
-					path: `/pages/webView/index?path=${location.href}&otherQuery=${encodeURIComponent(str)}`
+					path: `/pages/webView/index?path=${location.href}${str}`
 				}
 			}
 		},
@@ -183,7 +179,7 @@
 			if (e.webViewUrl.indexOf('/pages/push/activityShareDetail') > -1) {
 				return {
 					title: '活动助力分享',
-					path: `/pages/webView/index?path=${location.href}&otherQuery=${encodeURIComponent(`&id=${location.id}&isShare=true`)}`
+					path: `/pages/webView/index?path=${location.href}&id=${location.id}&isShare=true`
 				}
 			} else {
 				let str = ''
@@ -194,7 +190,7 @@
 				})
 				return {
 					title: '分享',
-					path: `/pages/webView/index?path=${location.href}&otherQuery=${encodeURIComponent(str)}`
+					path: `/pages/webView/index?path=${location.href}${str}`
 				}
 			}
 		}
