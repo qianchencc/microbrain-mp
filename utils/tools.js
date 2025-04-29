@@ -144,8 +144,8 @@ export const jumpUrl = async menu => {
 			}
 		})
 	} else {
-		if (menuFuc[menu.name]) {
-			menuFuc[menu.name](menu)
+		if (menuFuc[menu.resourceName]) {
+			menuFuc[menu.resourceName](menu)
 		} else {
 			uni.navigateTo({
 				url: '/pages/webView/index?path=' + menu.uri.replaceAll('?', '&')
@@ -165,8 +165,8 @@ export const jumpUrl = async menu => {
 	}
 	// #endif
 	// #ifdef APP-PLUS
-	if (menuFuc[menu.name]) {
-		menuFuc[menu.name](menu)
+	if (menuFuc[menu.resourceName]) {
+		menuFuc[menu.resourceName](menu)
 	} else {
 		uni.navigateTo({
 			url: '/pages/webView/index?path=' + menu.uri

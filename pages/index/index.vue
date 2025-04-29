@@ -27,12 +27,6 @@
 			</swiper>
 
 			<view class="menu-top-con">
-				<!-- <view class="top-menu">
-					<view class="menu-item" v-for="(item, index) in topMenu" :key="index" @tap="topJumpUrl(item)">
-						<view>{{ item.title }}</view>
-						<image :src="item.icon" mode="aspectFit"></image>
-					</view>
-				</view> -->
 				<uni-grid style="width:100%;background-color: #fff;padding: 20rpx 0rpx;border-radius: 10rpx;" :column="5" :square="false" :showBorder="false" @change="change">
 					<template v-for="(item, index) in menuList" :key="item.id">
 						<uni-grid-item :index="index">
@@ -40,8 +34,7 @@
 								<view class="box-img_back">
 									<image class="box-img" :src="item.icon.startsWith('http') ? item.icon : `/static/images/home/${item.icon}`" alt="" />
 								</view>
-								<!-- <uni-icons class="box-img_back icon" v-else type="star" :size="30" :color="'#777'" /> -->
-								<text class="text">{{item.title}}</text>
+								<text class="text">{{item.resourceTitle}}</text>
 							</view>
 						</uni-grid-item>
 					</template>
@@ -51,7 +44,6 @@
 				<view class="tag-view">
 					<span style="font-weight:bold;color:#ffffff;background-color:#1C77FF;padding-left:0.2rem;padding-right:0.25rem; border-radius: 5rem;">公告</span>
 				</view>
-				<!-- <uni-tag style="font-weight: bold;">公告</uni-tag> -->
 				<view class="line"></view>
 				<swiper autoplay="true" display-multiple-items="1" vertical="true" circular interval="2000" class="bar-swiper">
 					<swiper-item v-for="(item, index) in noticeList" :key="index" class="swiper-item">
@@ -96,20 +88,6 @@
 	const menuList = computed(() => usePermissionStoreHook().getHomeMenu)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const authorized = computed(() => useUserStoreHook().authorized)
-	const topMenu = [{
-			title: '人才公寓',
-			icon: '/static/images/index/people.png'
-		},
-		{
-			title: '任务中心',
-			icon: '/static/images/index/mission.png'
-		},
-		{
-			title: '积分商城',
-			icon: '/static/images/index/shop.png'
-		}
-	]
-	// const bannerList = [{ pic: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.png' }]
 	const open = () => {
 		uni.navigateTo({
 			url: './indexlist'
@@ -214,19 +192,19 @@
 	const change = async (e) => {
 		const { index } = e.detail
 		const menu = menuList.value[index]
-		if (menu.name.includes('incomplete')) {
+		if (menu.resourceName.includes('incomplete')) {
 			uni.showToast({
 				title: `敬请期待`,
 				icon: 'none'
 			})
-		} else if (menu.name === 'all') {
+		} else if (menu.resourceName === 'all') {
 			uni.navigateTo({
 				url: './all'
 			})
 		} else {
 			// #ifdef MP-WEIXIN
 			// 订阅消息
-			setSubscribeMessages(menu.name, 'home')
+			setSubscribeMessages(menu.resourceName, 'home')
 			// #endif
 			jumpUrl(menu)
 		}

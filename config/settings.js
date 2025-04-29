@@ -13,7 +13,7 @@ export const zztCode = TO_TEST ? '3303000034' : '330300-0045'
 export const applyAddress = TO_TEST ? 'http://pc87ix.natappfree.cc' : 'https://wswlsq.wzscr.cn'
 
 export const EvnIP = {
-	release: 'https://ncim.577119.com', //（正式版） 
+	release: 'https://ncim.577119.com', //（正式版）
 	//develop: 'https://ncim.577119.com',
 	develop: 'https://ncim.577119.com', //（开发版）
 	//trial: 'http://118.89.77.114:8080' ,//（体验版）
@@ -22,7 +22,7 @@ export const EvnIP = {
 
 // #ifdef MP-WEIXIN
 export const DOMAIN = EvnIP[__wxConfig.envVersion]
-export const MOCK_MENU = __wxConfig.envVersion != 'release'
+export const MOCK_MENU = __wxConfig.envVersion !== 'release'
 // #endif
 // #ifndef MP-WEIXIN
 export const DOMAIN = 'http://' + location.host

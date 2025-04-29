@@ -13,7 +13,7 @@
 							<view class="box-img_back">
 								<image class="box-img" :src="item.icon.startsWith('http') ? item.icon : `/static/images/home/${item.icon}`" alt="" />
 							</view>
-							<text class="text">{{item.title}}</text>
+							<text class="text">{{item.resourceTitle}}</text>
 						</view>
 					</uni-grid-item>
 				</template>
@@ -22,14 +22,13 @@
 		<template v-for="menu in menuList" :key="menu.id">
 			<view v-if="hasRouter(menu)" class="my-menu" style="margin-top: 10px;">
 				<view class="menu-header">
-					<text>{{menu.title}}</text>
+					<text>{{menu.resourceTitle}}</text>
 				</view>
 				<uni-grid :column="4" :square="false" :showBorder="false">
 					<template v-for="(item) in menu.children" :key="item.id">
 						<uni-grid-item v-if="item.enable !== 0" style="width: 25%;" @tap="change(item)">
 							<view class="grid-item-box">
-								<img v-if="isEdit&&!homeMenuIndex.includes(item.id)" class="icon-add" src="/static/images/home/icon_add.png" @tap="editMenu(item.id,'add')">
-								<!-- <view class="box-img_back" v-if="!item.uri.includes('incomplete')"> -->
+								<img v-if="isEdit && !homeMenuIndex.includes(item.id)" class="icon-add" src="/static/images/home/icon_add.png" @tap="editMenu(item.id,'add')">
 								<view class="box-img_back">
 									<template v-if="item.externalResource === 1">
 										<image class="box-img" :src="showNewsImage(item.icon)" alt="" />
@@ -38,8 +37,7 @@
 										<image class="box-img" :src="item.icon.startsWith('http') ? item.icon : `/static/images/home/${item.icon}`" alt="" />
 									</template>
 								</view>
-								<!-- <uni-icons class="icon" v-else type="star" :size="30" :color="'#777'" /> -->
-								<text class="text">{{item.title}}</text>
+								<text class="text">{{item.resourceTitle}}</text>
 							</view>
 						</uni-grid-item>
 					</template>
@@ -62,7 +60,7 @@
 	const noticeRef = ref(null)
 
 	function hasRouter(data) {
-		return data.children.map(v => v.name).some(v => !v.includes('incomplete'))
+		return data.children.map(v => v.resourceName).some(v => !v.includes('incomplete'))
 	}
 
 	// 显示资讯图片
@@ -108,8 +106,6 @@
 				title: `敬请期待`,
 				icon: 'none'
 			})
-			// } else if (userInfo.value.mobile !== '11111112222' && ((menu.resourceTag === 'OWNER' && userInfo.value.tag !== 'OWNER') || (menu.resourceTag === 'REALNAME' && userInfo.value.tag === 'TOURIST'))) { // 判断用户是否需要确认消息
-			// 	noticeRef.value.openDialog()
 		} else {
 			jumpUrl(menu)
 		}

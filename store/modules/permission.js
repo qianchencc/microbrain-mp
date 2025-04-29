@@ -58,7 +58,7 @@ const defaultIndex = [
 	'ubvqwwuzwlxxnr0segmn9jfjbfho8tbc', // 6 投票管理
 	'jspmjdw8hhfim8eedacr8alq0bs1kdya', // 7 随手拍
 	'pxstjr5bjr7eh3mf5ui4rofdbpfzf3je', // 9 空间预约
-	'y0z8vu9wigh52gfehulmmdcfo7yn3xu5', // 10 事件协同	
+	'y0z8vu9wigh52gfehulmmdcfo7yn3xu5', // 10 事件协同
 	'6qtuwdg8yxxnefpmxnljmd4prmdqgapl', // 11 事件处理
 	'ebiu0rbag72oysevwitsjvuv8pjfqka4', // 12 智慧门禁
 	'braam9wwxsy9vphu2omy7aevrfegvt3y', // 13 视频监控
@@ -71,8 +71,8 @@ const all = {
 	'resourceType': 'MODULE',
 	'uri': '/all',
 	'icon': 'icon_gd.png',
-	'name': 'all',
-	'title': '更多'
+	'resourceName': 'all',
+	'resourceTitle': '更多'
 }
 
 export const usePermissionStore = defineStore({
@@ -113,35 +113,27 @@ export const usePermissionStore = defineStore({
 			storageSet('homeMenuIndex', homeMenuIndex)
 		},
 		async setAuthority() {
-			const menuList = resource.find((v) => v.name === BASE_NAME).children
-			menuList.forEach(ele => {
+			const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })
+			if (!resourceData) return
+			let data = resourceData.children
+			console.log(data)
+			data.forEach(ele => {
 				ele.children.forEach(val => {
 					// 根据uri值，配置不同的跳转方式
 					// 1.uri包含http,属于外部跳转
 					// 2.uri不包含http,输入内部跳转，指定子页面
 					// 3.uri包含miniAppId, 属于小程序跳转
-					if (noChangeUri.every(item => !val.uri.includes(item))) {
-						val.uri = DOMAIN + `/${val.name.toLocaleLowerCase()}` + (val.uri || '/')
+					if (noChangeUri.every(item => !val.uri?.includes(item))) {
+						val.uri = DOMAIN + `/${val.resourceName.toLocaleLowerCase()}` + (val.uri || '/')
 					}
 				})
 			})
-			this.menuList = menuList
-			useUserStoreHook().setGeospatialInfo()
-			useUserStoreHook().setUserInfo()
-			/* 注册路由 */
-			let data = []
-
-			if (MOCK_MENU) {
-				data = resource.find((v) => v.name === BASE_NAME).children
-			} else {
-				const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })
-				if (!resourceData) return
-				data = resourceData.children
-			}
+			this.menuList = data;
 			const { permissionBtns, permissionIds } = generateBtns(data)
 			this.accessBtns = permissionBtns
 			this.permissionIds = permissionIds
-
+			useUserStoreHook().setGeospatialInfo()
+			useUserStoreHook().setUserInfo()
 			// #ifdef APP-PLUS
 			appPush()
 			// #endif

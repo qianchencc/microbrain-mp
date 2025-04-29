@@ -24,8 +24,6 @@
 						<view class="detail_title text-wrap">
 							{{item.infoSubject}}
 						</view>
-
-
 						<view class="detail_footer">
 							<view class=" detail_footer_label">
 								{{item.createdAt.substring(0,11)}}
@@ -33,7 +31,6 @@
 							<view class=" detail_footer_label_2">
 								{{typeName}}
 							</view>
-
 						</view>
 					</view>
 				</view>
@@ -60,7 +57,8 @@
 	// 获取新闻列表
 	const gainCategoryList = async () => {
 		if (MOCK_MENU) {
-			newTagList.value = [{
+			newTagList.value = [
+				{
 					name: '新闻热点',
 					id: ''
 				},
@@ -74,7 +72,8 @@
 				}
 			]
 		} else {
-			newTagList.value = [{
+			newTagList.value = [
+				{
 					name: '新闻热点',
 					id: ''
 				},
@@ -247,6 +246,11 @@
 					color: #303030;
 					font-size: 30upx;
 					line-height: 1.5;
+					display: -webkit-box;
+					-webkit-box-orient: vertical;
+					-webkit-line-clamp: 2;
+					overflow: hidden;
+					text-overflow: ellipsis;
 				}
 
 				.detail_footer {
