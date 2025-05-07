@@ -116,7 +116,6 @@ export const usePermissionStore = defineStore({
 			const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })
 			if (!resourceData) return
 			let data = resourceData.children
-			console.log(data)
 			data.forEach(ele => {
 				ele.children.forEach(val => {
 					// 根据uri值，配置不同的跳转方式
