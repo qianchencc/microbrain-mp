@@ -25,35 +25,20 @@ const ssoApiPrefix = '/sso-api'
  * 针对不同平台的baseUrl
  */
 const getGatewayBaseUrl = () => {
-	// #ifdef H5
-	return gatewayApiPrefix
-	// #endif
-	// #ifndef H5
 	return ipAddress + gatewayApiPrefix
-	// #endif
 }
 
 /**
  * 针对不同平台的baseUrl
  */
 const getSsoBaseUrl = () => {
-	// #ifdef H5
-	return ssoApiPrefix
-	// #endif
-	// #ifndef H5
 	return ipAddress + ssoApiPrefix
-	// #endif
 }
 /**
  * 文件服务器的baseUrl
  */
 const getFileBaseUrl = () => {
-	// #ifdef H5
-	return fileAddress
-	// #endif
-	// #ifndef H5
 	return ipAddress + fileAddress
-	// #endif
 }
 
 export default {

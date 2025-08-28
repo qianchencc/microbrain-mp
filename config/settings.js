@@ -20,11 +20,5 @@ export const EvnIP = {
 	trial: 'https://ncim.577119.com' //（体验版）
 }
 
-// #ifdef MP-WEIXIN
 export const DOMAIN = EvnIP[__wxConfig.envVersion]
 export const MOCK_MENU = __wxConfig.envVersion !== 'release'
-// #endif
-// #ifndef MP-WEIXIN
-export const DOMAIN = 'http://' + location.host
-export const MOCK_MENU = true
-// #endif

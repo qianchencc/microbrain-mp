@@ -14,8 +14,6 @@
 					</uni-icons>
 				</view>
 				<view class="header-handle">
-					<!-- <image class="handle-image" src="../../static/images/icon-home_voice.png" mode=""></image>
-					<image class="handle-image" src="../../static/images/icon-home_cut.png" mode=""></image> -->
 				</view>
 			</view>
 			<swiper class="page_swiper" autoplay indicator-dots="true" circular>
