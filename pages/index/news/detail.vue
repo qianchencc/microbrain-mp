@@ -23,14 +23,8 @@
 					<uni-icons type="eye" :size="null" :color="null"></uni-icons>
 					{{detail.viewCount}}
 				</view>
-				<view class="footer-handle-item" @click="updateLikes">
-					<uni-icons :type="isLikes ? 'hand-up-filled' : 'hand-up'" :size="null" :color="null">
-					</uni-icons>
-					{{detail.likesCount}}
-				</view>
 				<view class="footer-handle-item" @click="handleForward">
 					<uni-icons type="redo" :size="null" :color="null"></uni-icons>
-					{{detail.shareCount}}
 				</view>
 			</view>
 		</view>
@@ -48,40 +42,9 @@
 			}
 		},
 		onLoad(e) {
-			console.log('detail onLoad ----------', e)
 			this.gainNewsInfoDetail(e.id)
-			switch (e.type){
-				case 'PARTY_BUILDING':
-				uni.setNavigationBarTitle({
-				  title: '党建活动详情'
-				})
-				break;
-				case 'BUSINESS_ACTIVITIES':
-				uni.setNavigationBarTitle({
-				  title: '要闻详情'
-				})
-				break;
-				case 'ANNOUNCEMENT':
-				uni.setNavigationBarTitle({
-				  title: '公告详情'
-				})
-				break;
-				case 'ANNOUNCEMENT':
-				uni.setNavigationBarTitle({
-				  title: '资讯详情'
-				})
-				break;
-				default:
-					break;
-			}
-			
 		},
 		computed: {
-			showNewsTime() {
-				return val => {
-					return val && val.replace(/T/g, " ")
-				}
-			},
 			showNewsDetail() {
 				return val => {
 					return val && val.replace(/\<img/gi, '<img class="rich-img" ').replaceAll('../..', `${DOMAIN}`)
@@ -95,39 +58,17 @@
 			}
 		},
 		methods: {
-			// 点赞
-			async updateLikes() {
-				const res = await (this.isLikes ? fetchNewsInfoUnlikes(this.detail.id) : fetchNewsInfoLikes(this.detail
-					.id))
-				if (!res) return
-				if (this.isLikes) {
-					this.isLikes = false
-					this.detail.likesCount--
-				} else {
-					this.isLikes = true
-					this.detail.likesCount++
-				}
-				// this.gainNewsInfoDetail(this.detail.id)
-			},
 			handleForward() {
 				uni.showToast({
 					title: '点击右上角转发',
 					icon: 'none'
 				})
 			},
-			// 转发
-			async updateForward() {
-				const res = await fetchNewsInfoForward(this.detail.id)
-				if (!res) return
-				this.gainNewsInfoDetail(this.detail.id)
-			},
 			// 获取资讯详情
 			async gainNewsInfoDetail(id) {
 				const res = await fetchNewsById(id)
 				if (!res) return
 				this.detail = res.content
-				this.isLikes = !!this.detail.likesTime
-				console.log('gain news info detail -------', res, this.isLikes)
 			}
 		}
 	}

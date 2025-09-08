@@ -2,7 +2,7 @@ import { getToken, getTokenId } from '@/utils/auth'
 import globalConfig from '@/config'
 import { useUserStoreHook } from "../store/modules/user";
 import { menuFuc } from "./application";
-import { ImageUrl } from '../config/settings';
+import {DOMAIN} from '../config/settings';
 import { usePermissionStore } from '../store/modules/permission';
 
 export const chooseImg = (count = 9, success) => {
@@ -127,7 +127,7 @@ export function handleStr(str, frontNum, afterNum) {
 export function getUrl(val) {
 	let base = ''
 	if (val && !val.startsWith('http')) {
-		base = ImageUrl
+		base = `${DOMAIN}/file/`
 	}
 	return base + val
 }

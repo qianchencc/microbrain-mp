@@ -6,7 +6,7 @@ import { useUserStoreHook } from '@/store/modules/user'
 const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 const authorized = computed(() => useUserStoreHook().authorized)
 export const useBannerHook = () => {
-	const bannerList = ref([{ url: '/static/images/index/map.png' }, { pic: '/static/images/index/banner01.jpg' }])
+	const bannerList = ref([])
 	const getBannerList = async () => {
 		const res = await fetchBanner()
 		if (!res || !res.content) return

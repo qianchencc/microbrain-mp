@@ -1,25 +1,23 @@
 <template>
 	<view class="card-box">
 		<view class="card-title_tag">
-			<template v-for="(item, tagIndex) in newTagList">
-				<view class="card-title_tag_item" :class="{is_active: item.id === newTagValue}" v-if="tagIndex < 4">
-					<text class="item_text" @click="newTagValue = item.id">
+			<template v-for="item in newTagList">
+				<view class="card-title_tag_item is_active">
+					<text class="item_text">
 						{{item.name}}
-						<text class="new" v-if="item.new">NEW</text>
 					</text>
 				</view>
 			</template>
 			<view class="card-title_tag_more">
 				<text class="item_text" @click="handleRouteNewsList">
-					更多>
+					更多
 				</text>
 			</view>
 		</view>
 		<view style="height: 550rpx;overflow: scroll;">
 			<view v-if="messageList.length > 0">
 				<view class="message-item" v-for="(item,index) in messageList" :key="index" @click="handleRouteNewsDetail(item.id)">
-					<image class="message-item_image" :src="`${DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
-					</image>
+					<image class="message-item_image" :src="getUrl(item.coverPicUrl)" mode="aspectFill"></image>
 					<view class="message-item_detail">
 						<view class="detail_title text-wrap">
 							{{item.infoSubject}}
@@ -28,99 +26,43 @@
 							<view class=" detail_footer_label">
 								{{item.createdAt.substring(0,11)}}
 							</view>
-							<view class=" detail_footer_label_2">
-								{{typeName}}
-							</view>
 						</view>
 					</view>
 				</view>
 			</view>
 			<m-empty v-else></m-empty>
-
 		</view>
-
 	</view>
 </template>
 
 <script setup>
 	import { onMounted, ref, computed, watch } from 'vue'
 	import { fetchNewsPage } from "@/apis/home"
-	import globalConfig from '@/config'
-	import { DOMAIN, MOCK_MENU } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
+	import {getUrl} from "@/utils/tools";
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const authorized = computed(() => useUserStoreHook().authorized)
-	const newTagList = ref([])
-	const newTagValue = ref('')
+	const newTagList = ref([
+		{
+			name: '最新公告',
+			id: ''
+		}
+	])
 	const messageList = ref([])
-	const typeName = ref('新闻热点')
 	// 获取新闻列表
 	const gainCategoryList = async () => {
-		if (MOCK_MENU) {
-			newTagList.value = [
-				{
-					name: '新闻热点',
-					id: ''
-				},
-				{
-					name: '党建活动',
-					id: 'PARTY_BUILDING'
-				},
-				{
-					name: '集团要闻',
-					id: 'BUSINESS_ACTIVITIES'
-				}
-			]
-		} else {
-			newTagList.value = [
-				{
-					name: '新闻热点',
-					id: ''
-				},
-				{
-					name: '党建活动',
-					id: 'PARTY_BUILDING'
-				},
-				{
-					name: '集团要闻',
-					id: 'BUSINESS_ACTIVITIES'
-				},
-				{
-					name: '公共资讯',
-					id: 'COMMON_NEWS'
-				}
-			]
-		}
-		// const res = await fetchNewsInfoCategoryList()
-		// if (!res) return
-		// newTagList.value = newTagList.value.concat(res.content)
 		gainNewsInfoPage()
 	}
-
-	watch(
-		() => newTagValue.value,
-		() => {
-			gainNewsInfoPage()
-			getType()
-		}
-	)
 
 	watch(() => [geospatial.value, authorized.value], () => {
 		gainCategoryList()
 	})
 
-	const getType = () => {
-		newTagList.value.forEach(_ => {
-			if (_.id === newTagValue.value) {
-				typeName.value = _.name
-			}
-		})
-	}
 	const gainNewsInfoPage = async () => {
-		var data = {
+		let data = {
 			size: 3,
 			page: 0,
-			contentType: newTagValue.value,
+			contentType: '',
 			historyType: 'WEB',
 			pageFlag: 1,
 			sort: 'createdAt,desc'
@@ -139,7 +81,7 @@
 	const handleRouteNewsDetail = async (id) => {
 		if (!id) return
 		uni.navigateTo({
-			url: `/pages/index/news/detail?id=${id}&type=${newTagValue.value}`
+			url: `/pages/index/news/detail?id=${id}`
 		})
 	}
 
@@ -187,16 +129,13 @@
 				}
 
 				&.is_active {
-
 					&::after {
 						display: block;
 						content: '';
-
 						width: 40upx;
 						height: 4upx;
 						background-color: #1C77FF;
 						border-radius: 2upx;
-						margin: 0 auto;
 						position: relative;
 						bottom: 14upx;
 					}
@@ -216,6 +155,9 @@
 				.item_text {
 					font-size: 24upx;
 					color: #B6B7BA;
+					&:after {
+						content: '>';
+					}
 				}
 			}
 		}

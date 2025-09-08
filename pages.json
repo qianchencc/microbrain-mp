@@ -10,12 +10,6 @@
 			}
 		},
 		{
-			"path": "pages/index/all",
-			"style": {
-				"navigationBarTitleText": "全部应用"
-			}
-		},
-		{
 			"path": "pages/index/indexlist",
 			"style": {
 				"navigationBarTitleText": "小区列表"
@@ -24,7 +18,7 @@
 		{
 			"path": "pages/index/news/newList",
 			"style": {
-				"navigationBarTitleText": "新闻列表"
+				"navigationBarTitleText": "公告列表"
 			}
 		},
 		{

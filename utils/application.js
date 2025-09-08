@@ -1,5 +1,4 @@
 import { useUserStoreHook } from "../store/modules/user";
-// import {fetchApplicationDistributionCode, getJztMsg, getZztMsg} from "../apis/user/principal";
 import { zztCode, zztServer } from "../config/settings";
 
 // 浙住通方法

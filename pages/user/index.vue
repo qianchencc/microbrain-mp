@@ -106,7 +106,7 @@
 	import globalConfig from '@/config'
 	import { fetchCurrentUsed } from '@/apis/home'
 	import { openBle } from '@/utils/blue.js'
-	import { DOMAIN, zztServer } from '@/config/settings'
+	import { DOMAIN } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { pageMenu, faceAuthStatus, confirmationStatus } from './utils/enums.js'
 	import { transceive } from '@/utils/NFC.js'

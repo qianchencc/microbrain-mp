@@ -2,8 +2,7 @@
 	<view class="content">
 		<z-paging ref="paging" v-model="dataList" default-page-no="0" @query="queryList">
 			<view class="message-item" v-for="(item,index) in dataList" :key="index" @click="handleRouteNewsDetail(item.id)">
-				<image class="message-item_image" :src="`${DOMAIN}/file/${item.coverPicUrl}`" mode="aspectFill">
-				</image>
+				<image class="message-item_image" :src="getUrl(item.coverPicUrl)" mode="aspectFill"></image>
 				<view class="message-item_detail">
 					<view class="detail_title text-wrap">
 						{{item.infoSubject}}
@@ -12,7 +11,6 @@
 						<view class=" detail_footer_label">
 							{{item.createdAt.substring(0,11)}}
 						</view>
-
 					</view>
 				</view>
 			</view>
@@ -22,28 +20,19 @@
 
 <script setup>
 	import { ref, watch,computed } from 'vue'
-	import { onLoad } from '@dcloudio/uni-app'
 	import { fetchNewsPage } from "@/apis/home"
-	import { DOMAIN } from '@/config/settings'
-	import { useUserStoreHook } from '@/store/modules/user'
-	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
-	const authorized = computed(() => useUserStoreHook().authorized)
-	const paging = ref(null)
+	import {getUrl} from "@/utils/tools";
 	const dataList = ref([])
+	const paging = ref(null)
 
 	const queryList = async (pageNo, pageSize) => {
-		if (!authorized.value) return
-		const res = await fetchNewsPage({ pageFlag: 1 })
+		const res = await fetchNewsPage({ pageFlag: 1, size: pageSize, page: pageNo })
 		if (res.content) {
 			paging.value.complete(res.content.content)
 		} else {
 			paging.value.complete(false)
 		}
 	}
-
-	watch([geospatial.value, authorized.value], () => {
-		paging.value.reload()
-	})
 
 	const handleRouteNewsDetail = async (id) => {
 		if (!id) return

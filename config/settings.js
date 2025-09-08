@@ -1,7 +1,5 @@
 export const TO_TEST = false
 
-export const ImageUrl = TO_TEST ? 'https://filecommunity.wzscr.cn/future-community/' : 'https://fcsq.longwan.gov.cn/s3oss/t720y28035/'
-
 // 项目基础名称
 export const BASE_NAME = 'mirco-mp'
 
@@ -14,11 +12,9 @@ export const applyAddress = TO_TEST ? 'http://pc87ix.natappfree.cc' : 'https://w
 
 export const EvnIP = {
 	release: 'https://ncim.577119.com', //（正式版）
-	//develop: 'https://ncim.577119.com',
+	trial: 'https://ncim.577119.com', //（体验版）
 	develop: 'https://ncim.577119.com', //（开发版）
-	//trial: 'http://118.89.77.114:8080' ,//（体验版）
-	trial: 'https://ncim.577119.com' //（体验版）
 }
 
 export const DOMAIN = EvnIP[__wxConfig.envVersion]
-export const MOCK_MENU = __wxConfig.envVersion !== 'release'
+export const isDev = __wxConfig.envVersion === 'develop'
