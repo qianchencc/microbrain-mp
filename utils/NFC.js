@@ -24,10 +24,6 @@ export const initNfc = () => {
 		    url: '/pages/check/index?code=' + id,
 		    animationType: 'pop-in'
 		})
-		
-		// if (res.techs.includes('NFC-A')) {
-		// 	initNfcA(NFCAdapter)
-		// }
 	})
 }
 

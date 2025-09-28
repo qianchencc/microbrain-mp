@@ -9,49 +9,19 @@
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
 		onLaunch: function() {
-			// #ifdef MP-WEIXIN
 			initNfc()
-
-			// #endif
 		},
 		onShow: function() {
-			// 获取未读消息数量
-			// #ifdef MP-WEIXIN
-			// uni.openBluetoothAdapter({
-			// 	success: e => {
-			// 		console.log('初始化蓝牙成功:' + e.errMsg);
-			// 		openBle();
-			// 	},
-			// 	fail: e => {
-			// 		console.log('初始化蓝牙失败，错误码：' + (e.errCode || e.errMsg));
-			// 	}
-			// });
-			// #endif
-
 			if (getToken()) {
 				usePermissionStoreHook().setAuthority()
 				getUnreadNotifyCount()
 			} else {
-				// #ifdef MP-WEIXIN
-				// wxLogin()
-				uni.login({
+				wx.login({
 					provider: 'weixin',
 					success: res => {
 						useUserStoreHook().thirdLogin(res.code)
 					}
 				});
-				// #endif
-				// #ifdef H5
-				uni.navigateTo({
-					url: '/pages/login/index'
-				})
-				// #endif
-				// #ifdef APP-PLUS
-				uni.navigateTo({
-					url: '/pages/login/index'
-				})
-
-				// #endif
 			}
 		},
 		onHide: function() {

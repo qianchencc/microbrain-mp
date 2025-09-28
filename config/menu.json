@@ -16,7 +16,7 @@
 						"id": "fjuglukm5xmi1b9ijecdbkrolsfvtfj5",
 						"title": "我的办公室",
 						"name": "office",
-						"icon": "https://filecommunity.wzscr.cn/future-community/2025/9/8/f97261a7cd9d4239a24ab0b155e26a06.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjNyAeag1AAAHeHOhLnc923.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -24,7 +24,7 @@
 						"id": "d2263d13aa0b46b8a55d696db45e24e8",
 						"title": "智慧空调",
 						"name": "aircold",
-						"icon": "icon_jgrz.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjtKABskaAAAmQY5LN1Q583.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -32,7 +32,7 @@
 						"id": "vea3ye47dvzzpakbxerf2lirnyawrqou",
 						"title": "智慧照明",
 						"name": "lighting",
-						"icon": "icon_yqwz.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjTSAKJsrAAAI1ayJIpQ329.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -40,7 +40,7 @@
 						"id": "ebiu0rbag72oysevwitsjvuv8pjfqka4",
 						"title": "智慧门禁",
 						"name": "access",
-						"icon": "icon.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjV2ATOBoAABNQda_mm4553.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -48,7 +48,7 @@
 						"id": "braam9wwxsy9vphu2omy7aevrfegvt3y",
 						"title": "智慧监控",
 						"name": "video",
-						"icon": "icon_zhjk.jpg",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjZOAPknrAABBfBwTZ-4627.jpg",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -56,7 +56,7 @@
 						"id": "cb3hi2hwunjiel6hu3qeu5gnidic580l",
 						"title": "党建引领",
 						"name": "party",
-						"icon": "icon_djyl.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjbqAP_slAAAJQs2jkmk598.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -64,7 +64,7 @@
 						"id": "vhfvtycebjqorpijhcj7u8gqwpaeamj7",
 						"title": "访客管理",
 						"name": "visitors",
-						"icon": "icon_fkgl.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjc6AbXr3AAAIXbHgCjc486.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -72,7 +72,7 @@
 						"id": "itbwa3gdc8j8ajkkjnpcp07sksz3f5nh",
 						"title": "会议管理",
 						"name": "meeting",
-						"icon": "icon_djhd.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjeqAWWqxAAAJTHOUyp0522.png",
 						"uri": "/",
 						"type": "MENU"
 					}
@@ -88,7 +88,7 @@
 						"id": "09drtoozjudsurofnrwdfuf5axnp0bno",
 						"title": "活动管理",
 						"name": "activity",
-						"icon": "icon_ykt.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjfyAQKCgAAADkSYgvq4412.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -96,7 +96,7 @@
 						"id": "y0z8vu9wigh52gfehulmmdcfo7yn3xu5",
 						"title": "事件中心",
 						"name": "event/events",
-						"icon": "icon_bmrx.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjgmAfomzAAAKPz87LQM906.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -104,7 +104,7 @@
 						"id": "6qtuwdg8yxxnefpmxnljmd4prmdqgapl",
 						"title": "事件处理",
 						"name": "event/eventHandlers",
-						"icon": "icon_tzsc.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjhqASt7XAAAH4CMeJck526.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -112,7 +112,7 @@
 						"id": "83rakyuslx9fyq5n4odlhzo8k7hk8ofe",
 						"title": "物业报修",
 						"name": "event",
-						"icon": "icon_tpzx.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjjaAbOHdAAAImeroCyI564.png",
 						"uri": "/eventReport?eventTypeId=0fb6ef848c8779370d4053029b5047f1",
 						"type": "MENU"
 					},
@@ -120,7 +120,7 @@
 						"id": "jspmjdw8hhfim8eedacr8alq0bs1kdya",
 						"title": "随手拍",
 						"name": "event",
-						"icon": "icon_ssp.jpg",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjkOANIOHAAAjiMT9sHw079.jpg",
 						"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
 						"type": "MENU"
 					},
@@ -128,7 +128,7 @@
 						"id": "jamglujwkfii0pjgbmc8tg1kbdhxppek",
 						"title": "投诉建议",
 						"name": "onestop",
-						"icon": "icon_wyhs.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjniAQNv3AAAGsz_rK_8297.png",
 						"uri": "/index?eventType=COMPLAINT",
 						"type": "MENU"
 					}

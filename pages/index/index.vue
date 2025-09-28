@@ -21,7 +21,9 @@
 					<view class="menu-top-con">
 						<template v-for="menu in module.children" :key="menu.id">
 							<view class="menu-item" @click="goMenu(menu)">
-								<image class="box-img" :src="getUrl(menu.icon)" mode="contain" />
+								<view class="img-con">
+									<image :src="getUrl(menu.icon)" mode="contain" />
+								</view>
 								<view class="text">{{menu.resourceTitle}}</view>
 							</view>
 						</template>
@@ -206,9 +208,19 @@
 		padding: 25rpx;
 		.menu-item {
 			text-align: center;
-			image {
-				width: 90rpx;
-				height: 90rpx;
+			.img-con {
+				width: 100upx;
+				height: 100upx;
+				background-color: #F5F5F5;
+				margin: 0 auto;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border-radius: 50%;
+				image {
+					width: 55rpx;
+					height: 55rpx;
+				}
 			}
 		}
 	}
