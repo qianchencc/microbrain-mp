@@ -15,41 +15,41 @@
 					{
 						"id": "fjuglukm5xmi1b9ijecdbkrolsfvtfj5",
 						"title": "我的办公室",
-						"name": "office",
+						"name": "owner",
 						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjNyAeag1AAAHeHOhLnc923.png",
-						"uri": "/",
+						"uri": "/#/pages/office/index",
 						"type": "MENU"
 					},
 					{
 						"id": "d2263d13aa0b46b8a55d696db45e24e8",
 						"title": "智慧空调",
-						"name": "aircold",
+						"name": "owner",
 						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjtKABskaAAAmQY5LN1Q583.png",
-						"uri": "/",
+						"uri": "/#/pages/aircold/index",
 						"type": "MENU"
 					},
 					{
 						"id": "vea3ye47dvzzpakbxerf2lirnyawrqou",
 						"title": "智慧照明",
-						"name": "lighting",
+						"name": "owner",
 						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjTSAKJsrAAAI1ayJIpQ329.png",
-						"uri": "/",
+						"uri": "/#/pages/light/index",
 						"type": "MENU"
 					},
 					{
 						"id": "ebiu0rbag72oysevwitsjvuv8pjfqka4",
 						"title": "智慧门禁",
-						"name": "access",
+						"name": "owner",
 						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjV2ATOBoAABNQda_mm4553.png",
-						"uri": "/",
+						"uri": "/#/pages/access/index",
 						"type": "MENU"
 					},
 					{
 						"id": "braam9wwxsy9vphu2omy7aevrfegvt3y",
 						"title": "智慧监控",
-						"name": "video",
+						"name": "owner",
 						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjZOAPknrAABBfBwTZ-4627.jpg",
-						"uri": "/",
+						"uri": "/#/pages/monitor/index",
 						"type": "MENU"
 					},
 					{
