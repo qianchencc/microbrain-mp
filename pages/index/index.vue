@@ -4,8 +4,7 @@
 			<view class="header-back"></view>
 			<view class="header-bar">
 				<view class="address" @click="open">
-					<text class="address-text uni-ellipsis">{{geospatial}} </text>
-					<uni-icons type="arrowdown" color="#fff" :size="null" />
+					<text class="address-text uni-ellipsis">{{geospatial}}</text>
 				</view>
 			</view>
 			<swiper class="page_swiper" autoplay indicator-dots="true" circular>
@@ -168,7 +167,14 @@
 			.address-text {
 				overflow: hidden;
 				font-size: 30upx;
-				flex: 1;
+				display: flex;
+				align-items: center;
+				
+				&::after {
+					content: '▼';
+					font-size: 25rpx;
+					margin-left: 10rpx;
+				}
 			}
 			
 			.uniui-arrowdown {
