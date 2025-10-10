@@ -130,10 +130,7 @@
 	})
 	
 	const goMenu = item => {
-		// #ifdef MP-WEIXIN
-		// 订阅消息
 		setSubscribeMessages(item.resourceName, 'home')
-		// #endif
 		jumpUrl(item)
 	}
 </script>
