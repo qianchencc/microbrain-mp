@@ -7,7 +7,8 @@
 					<text class="address-text uni-ellipsis">{{geospatial}}</text>
 				</view>
 			</view>
-			<swiper class="page_swiper" autoplay indicator-dots="true" circular>
+			
+			<swiper class="page_swiper" autoplay indicator-dots circular>
 				<template v-if="bannerList.length > 0">
 					<swiper-item v-for="(img,key) in bannerList" :key="key">
 						<image class="swiper-image" :src="img.url" mode="aspectFill" />
@@ -37,10 +38,9 @@
 
 <script setup>
 	import { usePermissionStoreHook } from '@/store/modules/permission'
-	import { fetchNewsPage } from "@/apis/home"
-	import { storageGet, storageSet, storageRemove } from '@/utils/storage'
+	import { storageGet, storageSet } from '@/utils/storage'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { onMounted, computed, reactive, ref, watch } from 'vue'
+	import { computed, ref, watch } from 'vue'
 	import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 	import { fetchCurrentUsed } from '@/apis/home'
 	import { openBle } from '@/utils/blue.js'
