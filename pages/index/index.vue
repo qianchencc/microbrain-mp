@@ -16,13 +16,14 @@
 				</template>
 			</swiper>
 			
-			<swiper class="menu_swiper" circular>
-				<swiper-item v-for="module in menuList" :key="module.id">
+			<swiper class="menu_swiper" circular @change="swiperChange">
+				<swiper-item class="menu_swiper_item" v-for="module in menuList" :key="module.id">
 					<view class="menu-top-con">
 						<template v-for="menu in module.children" :key="menu.id">
 							<view class="menu-item" @click="goMenu(menu)">
 								<view class="img-con">
-									<image :src="getUrl(menu.icon)" mode="contain" />
+									<image v-if="menu.icon.startsWith('http')" :src="getUrl(menu.icon)" mode="contain"></image>
+									<image v-else :src="`/static/images/home/${menu.icon}`" mode="contain"></image>
 								</view>
 								<view class="text">{{menu.resourceTitle}}</view>
 							</view>
@@ -40,7 +41,7 @@
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	import { storageGet, storageSet } from '@/utils/storage'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { computed, ref, watch } from 'vue'
+	import { computed, ref, watch, onMounted, getCurrentInstance } from 'vue'
 	import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 	import { fetchCurrentUsed } from '@/apis/home'
 	import { openBle } from '@/utils/blue.js'
@@ -130,9 +131,30 @@
 	})
 	
 	const goMenu = item => {
-		setSubscribeMessages(item.resourceName, 'home')
-		jumpUrl(item)
+		if (item.name.includes('incomplete')) {
+			uni.showToast({
+				title: `敬请期待`,
+				icon: 'none'
+			})
+		} else {
+			setSubscribeMessages(item.resourceName, 'home')
+			jumpUrl(item)
+		}
 	}
+	
+	const swiperHeightList = ref([]);
+	const swiperIndex = ref(0);
+	const swiperHeight = computed(() => swiperHeightList.value.length ? swiperHeightList.value[swiperIndex.value] : '360rpx')
+	const swiperChange = ({ detail }) => {
+		swiperIndex.value = detail.current
+	}
+	onMounted(() => {
+		const query = uni.createSelectorQuery();
+		query.selectAll('.menu-top-con').boundingClientRect(res => {
+			swiperHeightList.value = res.map(item => `${item.height}px`)
+			console.log(swiperHeightList.value)
+		}).exec()
+	})
 </script>
 
 <style lang="scss" scoped>
@@ -201,7 +223,7 @@
 	}
 	
 	.menu_swiper{
-		height: 360rpx;
+		height: v-bind(swiperHeight);
 	}
 	
 	.menu-top-con {
