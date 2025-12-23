@@ -131,7 +131,7 @@
 	})
 	
 	const goMenu = item => {
-		if (item.name.includes('incomplete')) {
+		if (item.resourceName.includes('incomplete')) {
 			uni.showToast({
 				title: `敬请期待`,
 				icon: 'none'
@@ -152,7 +152,6 @@
 		const query = uni.createSelectorQuery();
 		query.selectAll('.menu-top-con').boundingClientRect(res => {
 			swiperHeightList.value = res.map(item => `${item.height}px`)
-			console.log(swiperHeightList.value)
 		}).exec()
 	})
 </script>
