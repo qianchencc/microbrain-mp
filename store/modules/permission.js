@@ -64,8 +64,7 @@ export const usePermissionStore = defineStore({
 				data = resource[0].children;
 			} else {
 				const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })
-				if (!resourceData) return
-				data = resourceData.children
+				data = resourceData?.children || []
 			}
 			data.forEach(ele => {
 				ele.children.forEach(val => {

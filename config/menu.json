@@ -131,6 +131,22 @@
 						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjniAQNv3AAAGsz_rK_8297.png",
 						"uri": "/index?eventType=COMPLAINT",
 						"type": "MENU"
+					},
+					{
+						"id": "1490f2f026804cd5817ae9e0775ef40e",
+						"title": "邻里购",
+						"name": "neighborBuy",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/1F/wKgB5WnDf36AJssmAACeQD-4N7E007.jpg",
+						"uri": "miniAppId=wxe210b0a16b50444c=%2FpagesTab%2Faround%3FagentCode%3D06699264",
+						"type": "MENU"
+					},
+					{
+						"id": "33ovaqywiu7vupuplvilqsh5ueyj1dtn",
+						"title": "社区周边",
+						"name": "areaOver",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/1F/wKgB5WnDf46AUYpuAAALgFixMR4312.png",
+						"uri": "https://nlw.nongchanlian.com/h5/#/?agentCode=00000000&noToken=true",
+						"type": "MENU"
 					}
 				]
 			},

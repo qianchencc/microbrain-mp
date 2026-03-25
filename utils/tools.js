@@ -90,8 +90,10 @@ export const jumpUrl = async menu => {
 		return
 	}
 	if (menu.uri.startsWith('miniAppId=')) {
+		let [type, appId, path] = menu.uri.split('=');
 		uni.navigateToMiniProgram({
-			appId: menu.uri.split('=')[1],
+			appId: appId,
+			path: path ? decodeURIComponent(path) : null,
 			fail: res => {
 				uni.showToast({
 					title: '打开小程序失败',

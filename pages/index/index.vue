@@ -16,7 +16,7 @@
 				</template>
 			</swiper>
 			
-			<swiper class="menu_swiper" circular @change="swiperChange">
+			<swiper v-if="menuList.length" class="menu_swiper" circular @change="swiperChange">
 				<swiper-item class="menu_swiper_item" v-for="module in menuList" :key="module.id">
 					<view class="menu-top-con">
 						<template v-for="menu in module.children" :key="menu.id">
@@ -31,6 +31,7 @@
 					</view>
 				</swiper-item>
 			</swiper>
+			<view v-else class="empty" @click="goUser">请前往个人中心确权！</view>
 			
 			<news ref="newsRef" />
 		</view>
@@ -142,6 +143,12 @@
 		}
 	}
 	
+	const goUser = () => {
+		uni.switchTab({
+			url: '/pages/user/index'
+		})
+	}
+	
 	const swiperHeightList = ref([]);
 	const swiperIndex = ref(0);
 	const swiperHeight = computed(() => swiperHeightList.value.length ? swiperHeightList.value[swiperIndex.value] : '360rpx')
@@ -247,5 +254,15 @@
 				}
 			}
 		}
+	}
+	
+	.empty {
+		width: 700rpx;
+		margin: 0 auto 20rpx;
+		padding: 20rpx 0;
+		text-align: center;
+		font-size: 30rpx;
+		box-shadow: 0 0 5rpx rgba(0, 0, 0, 0.4);
+		border-radius: 15rpx;
 	}
 </style>

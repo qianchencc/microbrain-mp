@@ -5,43 +5,20 @@
 				<img v-if="userInfo.avatar" class="header-image" :src="globalConfig.ssoUrl+userInfo.avatar">
 				<view v-else class="header-image title-avatar">
 					<text>
-						{{userInfo.nickname?userInfo.nickname.charAt(0):userInfo.code.charAt(0)}}
+						{{ userInfo.nickname ? userInfo.nickname.charAt(0) : userInfo.code.charAt(0) }}
 					</text>
 				</view>
 				<view>
 					<h3>
-						{{userInfo.nickname||userInfo.code}}
+						{{ userInfo.nickname || userInfo.code }}
 					</h3>
-					<!-- <view>{{userInfo.code}}</view> -->
-					<!-- <uni-tag :mark="true" :text="faceAuthStatus[userInfo.faceAuthStatus].text" :type="faceAuthStatus[userInfo.faceAuthStatus].type" size="mini" /> -->
 				</view>
 				<view class="edit-con" @click="changeAvatar">
 					<uni-icons type="compose" color="#3974F6" size="20"></uni-icons>
 					<text style="font-size: 24rpx;">编辑</text>
 				</view>
 			</view>
-			<!-- <view class="integral_list">
-				<template v-for="(item,index) in integralList" :key="item.id">
-					<view class="integral_item" @click="toWebView('ranking', item.url)">
-						<image class="integral_icon" :src="item.icon" />
-						<view class="integral_content">
-							<view class="integral_number">
-								{{item.value}}
-							</view>
-							<view class="integral_type">
-								{{item.label}}
-							</view>
-						</view>
-					</view>
-					<view class="line" v-if="index < integralList.length - 1" />
-				</template>
-			</view> -->
 		</view>
-		<!-- <view class="list">
-			<uni-list :border="false">
-				<uni-list-item :border="false" title="积分商城" showArrow clickable @click="toWebView('epidemic')" />
-			</uni-list>
-		</view> -->
 		<view class="list">
 			<uni-list :border="false">
 				<uni-list-item :border="false" title="组织确权" showArrow link="navigateTo" clickable @click="toOwner()">
@@ -51,7 +28,6 @@
 						</view>
 					</template>
 				</uni-list-item>
-
 			</uni-list>
 		</view>
 		<view class="list">
@@ -76,23 +52,7 @@
 				<uni-list-item :border="false" title="意见反馈" showArrow clickable @click="toOpinion()" />
 			</uni-list>
 		</view>
-
-		<!-- <view class="list">
-			<uni-list :border="false">
-				<uni-list-item :border="false" title="NFC测试" showArrow clickable @click="NfcTest()" />
-			</uni-list>
-		</view> -->
-		<!-- <view class="list">
-			<uni-list :border="false">
-				<uni-list-item :border="false" title="推送测试" showArrow clickable @click="pushTest()" />
-			</uni-list>
-		</view> -->
-
-		<!-- <view class="list">
-			<uni-list :border="false">
-				<uni-list-item :border="false" title="分享测试" showArrow clickable @click="share()" />
-			</uni-list>
-		</view> -->
+		
 		<uni-popup ref="alertDialog" type="dialog">
 			<uni-popup-dialog cancelText="关闭" confirmText="确认" title="手机蓝牙未打开!" content="使用蓝牙广播前请先打开手机蓝牙!" @confirm="dialogConfirm" @close="dialogClose"></uni-popup-dialog>
 		</uni-popup>
@@ -100,7 +60,7 @@
 </template>
 
 <script setup>
-	import { computed, reactive, ref, onMounted } from 'vue'
+	import { computed, ref, onMounted } from 'vue'
 	import { onShow } from '@dcloudio/uni-app'
 	import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 	import globalConfig from '@/config'
@@ -108,8 +68,7 @@
 	import { openBle } from '@/utils/blue.js'
 	import { DOMAIN } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { pageMenu, faceAuthStatus, confirmationStatus } from './utils/enums.js'
-	import { transceive } from '@/utils/NFC.js'
+	import { pageMenu, confirmationStatus } from './utils/enums.js'
 	import { jumpUrl } from '@/utils/tools'
 	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'
 
@@ -132,12 +91,6 @@
 		})
 	}
 
-	function toWebView(domain, url) {
-		uni.navigateTo({
-			url: `/pages/webView/index?path=${DOMAIN}/${domain}/#/${url || ''}`
-		})
-	}
-
 	function dialogConfirm() {
 		bluetooth.value = false
 
@@ -146,24 +99,7 @@
 	function dialogClose() {
 		bluetooth.value = false
 	}
-	const integralList = reactive([{
-			label: '信用积分',
-			value: 0,
-			icon: '/static/images/user/icon_xyjf.png'
-		},
-		{
-			label: '微脑积分',
-			value: 0,
-			icon: '/static/images/user/icon_wsjf.png',
-			url: 'pages/index/index'
-		}
-	])
-	const goToPath = (val) => {
-		if (!val) return
-		uni.navigateTo({
-			url: val
-		})
-	}
+	
 	onMounted(() => {
 		initBlueTooth()
 	})
@@ -180,7 +116,6 @@
 		bluetooth.value = storageGet('bluetoothstatus')
 	}
 	const getSwitch = () => {
-
 		wx.closeBluetoothAdapter({
 			complete() {
 				wx.openBluetoothAdapter({
@@ -230,15 +165,8 @@
 			list.push(parseInt(card.substring(2, 4), 16))
 			list.push(parseInt(card.substring(4, 6), 16))
 			list.push(parseInt(card.substring(6, 8), 16))
-			// for (var i = 0; i < 4; i++) {
-
-			// 	list.push(Number(card.substring((2*i,2),16)))
-			// }
-			console.log('list', list)
 			if (bluetooth.value === true) {
-
 				openBle(list);
-
 			} else {
 				console.log('close')
 			}
@@ -258,14 +186,12 @@
 	}
 	const switchOn = async (val) => {
 		bluetooth.value = val.target.value
-		console.log('switch', bluetooth.value)
 		if (bluetooth.value === false) {
 			wx.closeBluetoothAdapter({
 				complete: function(res) {
 					console.log('bluetooth close', res)
 				}
 			})
-
 		} else {
 			getSwitch()
 		}
@@ -273,91 +199,10 @@
 		storageSet('bluetoothstatus', val.target.value)
 		console.log('switch2', val)
 	}
-	const NfcTest = () => {
-		uni.navigateTo({
-			url: '/pages/check/index?code=' + '1dc13ff1920000',
-			animationType: 'pop-in'
-		})
-		// transceive('a001ffffffffffffffffffffffffffffffff')
-	}
 	const toOpinion=()=>{
 		uni.navigateTo({
 			url: '/pages/user/opinion',
 			animationType: 'pop-in'
-		})
-	}
-	const pushTest = () => {
-		// const data = { "push_clientid": "a8a9bad564747be64d026a6aa0c4e553", "title": "消息提醒", "content": "工作提醒：您对苏州新捷正科技有限公司吴昌英发出的邀约已被接受", "payload": "877" }
-		// const json = JSON.stringify(data)
-		// console.log(json);
-		// uni.request({
-		// 	method: 'POST',
-		// 	header: {
-		// 		"content-type": 'application/json'
-		// 	},
-		// 	url: 'https://fc-mp-5f22d5b4-17e7-4822-ac80-68d07c2a2201.next.bspapp.com/push',
-		// 	data,
-		// 	success(res) {
-		// 		console.log(res);
-		// 	}
-		// })
-		// #ifdef MP-WEIXIN
-
-		// #endif
-		const data = {
-			touser: "oEGbu5NW0mtJxdy6lFyawfb66dYA",
-			template_id: "yHhsrja9_8GSpPIFKSF8xe3rmWR2mpHagGbeL4sSk6Q",
-			page: "pages/messages/index", // 小程序页面地址
-			miniprogram_state: "developer", // 跳转小程序类型：developer为开发版；trial为体验版；formal为正式版；默认为正式版
-			lang: "zh_CN",
-			data: {
-				character_string9: {
-					value: 887766
-				},
-				thing26: {
-					value: "张三"
-				},
-				time22: {
-					value: "2024年04月23日 14:34"
-				},
-				thing7: {
-					value: '来看你了'
-				}
-			}
-		}
-		uni.request({
-			method: 'POST',
-			url: 'https://fc-mp-5f22d5b4-17e7-4822-ac80-68d07c2a2201.next.bspapp.com/weixinMpPush',
-			data,
-			success(res) {
-				console.log(res);
-			}
-		})
-		// uni.request({
-		// 	url: 'https://api.weixin.qq.com/cgi-bin/user/tag/get?access_token=75_WN7228Vo62CFHXNzbUvq6w1trKsnPnA3UkE0Oqurf8ySmCcp65gJIH_nSe27Kmm8pEK-Kb6v7Dj_nne7Hrro1vKMlkTGkgtqZ6nscd5HQ7Jbj-O0mqoI9Gap8RMFRDiAEASEQ',
-		// 	method: 'POST',
-		// 	data: {
-		// 		tagid: 102,
-		// 		next_openid: ''
-		// 	},
-		// 	success(res) {
-		// 		console.log(res);
-		// 	}
-
-		// })
-		// uniCloud.callFunction({
-		// 	name: 'weixin-mp-push',
-		// 	data,
-		// 	success(res) {
-		// 		console.log(res);
-		// 	},
-		// })
-	}
-
-	// 分享测试
-	const share = () => {
-		wx.showShareImageMenu({
-			path: '/static/images/visitors/miLogo.jpg'
 		})
 	}
 </script>
