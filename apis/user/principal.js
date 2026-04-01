@@ -1,6 +1,5 @@
 import request from './api.js'
 import globalConfig from '@/config'
-import { applyAddress } from '../../config/settings'
 // 登录
 export const login = (data) => request.globalRequest(`/login/word/v2`, 'POST', data)
 
@@ -36,9 +35,6 @@ export const getWxOpenId = (code) => request.globalRequest(`/wx/miniProgram/code
 
 // 用户更新openid
 export const userUpdateOpenId = openId => request.globalRequest(`/identity/principal/wxOpenId/${openId}`, 'GET', { noShow: true })
-
-// 应用下发code获取
-export const getApplyOnAuthCode = data => request.globalRequest(`${applyAddress}/thirdparty/app/service/info/apply/code`, 'POST', data)
 
 // 更新clientID
 export const changeClientId = clientId => request.globalRequest(`/account/socials/to/${clientId}`, 'GET')
