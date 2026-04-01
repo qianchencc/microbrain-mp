@@ -6,7 +6,7 @@
 					<span v-if="item.count" class="img-badge">
 						<text class="count">{{item.count}}</text>
 					</span>
-					<image class="info-img" src="../../static/images/messages/notify.png" mode="aspectFit"></image>
+					<image class="info-img" src="/static/images/messages/notify.png" mode="aspectFit"></image>
 				</view>
 				<view class="notify-info">
 					<view class="info-con">
@@ -54,14 +54,11 @@
 	}
 
 	const clicked = (item) => {
-		const msgType = messagesType[appId.value]
 		const options = []
 		const navigatePage = '/pages/webView/index?'
-
 		const path = `${DOMAIN}/${item.forwardUrl}/`
-		options.push(`id=${item.targetId}`) // 信息详情记录ID
-		// #ifdef MP-WEIXIN
 		options.push(`path=${path}`)
+		if (item.targetId) options.push(`id=${item.targetId}`) // 信息详情记录ID
 		uni.navigateTo({
 			url: navigatePage + arr2String(options),
 			success: () => {
@@ -69,29 +66,7 @@
 				changeMesState(item.recipientId, item.appId)
 				getUnreadNotifyCount()
 			}
-
 		})
-		// #endif
-		// #ifdef H5
-		if (false) { // 内部页面跳转
-			uni.navigateTo({
-				url: msgType.target,
-				success: () => {
-					// 修改已读未读状态
-					changeMesState(item.recipientId, item.appId)
-					getUnreadNotifyCount()
-				}
-
-			})
-		} else {
-			options.push(`token=${getTokenId()}`)
-			options.push(`tenantCode=${useUserStoreHook().getDistrict.id}`)
-			location.href = path + '?' + arr2String(options)
-			// 修改已读未读状态
-			changeMesState(item.recipientId, item.appId)
-			getUnreadNotifyCount()
-		}
-		// #endif
 	}
 
 	function arr2String(arr) {

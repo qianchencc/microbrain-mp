@@ -69,7 +69,7 @@
 	import { DOMAIN } from '@/config/settings'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { pageMenu, confirmationStatus } from './utils/enums.js'
-	import { jumpUrl } from '@/utils/tools'
+	import {jumpUrl, webJump} from '@/utils/tools'
 	import { setSubscribeMessages } from '@/utils/subscribeMessage.js'
 
 	const userInfo = computed(() => useUserStoreHook().getUserInfo)
@@ -85,10 +85,7 @@
 
 	function toPage(item) {
 		if (item.name === 'incomplete') return
-		jumpUrl({
-			...item,
-			uri: DOMAIN + `/${item.name.toLocaleLowerCase()}` + (item.uri || '/')
-		})
+		webJump(item.name, item.uri)
 	}
 
 	function dialogConfirm() {

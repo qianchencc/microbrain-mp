@@ -142,6 +142,7 @@
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const authorized = computed(() => useUserStoreHook().authorized)
 
+	// region 蓝牙部分
 	const initBlueTooth = () => {
 		if (!storageGet('bluetoothstatus')) {
 			storageSet('bluetoothstatus', false)
@@ -192,6 +193,7 @@
 			getUnreadNotifyCount()
 		}
 	)
+	// endregion
 	
 	const goodList = ref([])
 	const getGoodList = async () => {
