@@ -1,5 +1,6 @@
 {
-	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+	"pages": [
+		//pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
 		{
 			"path": "pages/index/index",
 			"style": {
@@ -18,13 +19,7 @@
 		{
 			"path": "pages/index/news/newList",
 			"style": {
-				"navigationBarTitleText": "公告列表"
-			}
-		},
-		{
-			"path": "pages/index/news/noticeList",
-			"style": {
-				"navigationBarTitleText": "公告列表"
+				"navigationBarTitleText": "新闻列表"
 			}
 		},
 		{
@@ -121,18 +116,27 @@
 			"style": {
 				"titleNView": false
 			}
+		},
+		{
+			"path": "pages/index/secondMenu",
+			"style": {
+				"navigationBarTitleText": "",
+				"enablePullDownRefresh": false
+			}
 		}
 	],
 	"tabBar": {
 		"color": "#8a8a8a",
 		"selectedColor": "#1C77FF",
 		"backgroundColor": "#ffffff",
-		"list": [{
+		"list": [
+			{
 				"pagePath": "pages/index/index",
 				"text": "首页",
 				"iconPath": "static/images/tabbar/icon_home_normal@3x.jpg",
 				"selectedIconPath": "static/images/tabbar/icon_home_active@3x.jpg"
-			}, {
+			},
+			{
 				"pagePath": "pages/messages/index",
 				"text": "消息",
 				"iconPath": "static/images/tabbar/icon_news_nomal@3x.jpg",

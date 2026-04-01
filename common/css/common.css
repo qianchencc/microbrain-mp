@@ -1,3 +1,7 @@
+view, swiper, scroll-view {
+	box-sizing: border-box;
+}
+
 .uni-flex {
 	display: flex;
 }

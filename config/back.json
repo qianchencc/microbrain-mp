@@ -1,0 +1,926 @@
+[
+	{
+		"id": "86074c7e810198296f5441a2da023cd9",
+		"type": "MODULE",
+		"uri": "",
+		"name": "mirco-mp",
+		"title": "微脑管理APP",
+		"children": [
+			{
+				"id": "f2fcc4968ad74727b82f3d1f963983c3",
+				"title": "微脑·办公室",
+				"name": "neighbourhood",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "86a35ebb35fa4bb0b3dfc5b126ec5001",
+						"title": "我的办公室",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjNyAeag1AAAHeHOhLnc923.png",
+						"uri": "/#/pages/office/index",
+						"type": "MENU"
+					},
+					{
+						"id": "d2263d13aa0b46b8a55d696db45e24e8",
+						"title": "智慧空调",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjtKABskaAAAmQY5LN1Q583.png",
+						"uri": "/#/pages/aircold/index",
+						"type": "MENU"
+					},
+					{
+						"id": "6a0a9b4c5f3b43a28d0c2a2c4b4d53a0",
+						"title": "智慧照明",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjTSAKJsrAAAI1ayJIpQ329.png",
+						"uri": "/#/pages/light/index",
+						"type": "MENU"
+					},
+					{
+						"id": "6f21e0ccdcc843e1aeb721ebf0a5408d",
+						"title": "智慧门禁",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjV2ATOBoAABNQda_mm4553.png",
+						"uri": "/#/pages/access/index",
+						"type": "MENU"
+					},
+					{
+						"id": "f3472174f1d041f5bbf2ad49d47b2f0e",
+						"title": "智慧监控",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjZOAPknrAABBfBwTZ-4627.jpg",
+						"uri": "/#/pages/monitor/index",
+						"type": "MENU"
+					},
+					{
+						"id": "16956d886aa747149b3c0b942b705c2a",
+						"title": "党建引领",
+						"name": "party",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjbqAP_slAAAJQs2jkmk598.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "4aa7ea7661544b579eca930aac3b04cc",
+						"title": "访客管理",
+						"name": "visitors",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjc6AbXr3AAAIXbHgCjc486.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "6a2ad67d52c74bb495a7f817a61fcf84",
+						"title": "会议管理",
+						"name": "meeting",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjeqAWWqxAAAJTHOUyp0522.png",
+						"uri": "/",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "f8c9452be42d441584b91c1f0984aabb",
+				"title": "微脑·物业",
+				"name": "service",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "f2823328b95f4795a840aa9cd166e6be",
+						"title": "活动管理",
+						"name": "activity",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjfyAQKCgAAADkSYgvq4412.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "5f3d31c55252439499eabe8adee414bd",
+						"title": "事件中心",
+						"name": "event/events",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjgmAfomzAAAKPz87LQM906.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "4e41f235530b4d898888090dd9b9c998",
+						"title": "事件处理",
+						"name": "event/eventHandlers",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjhqASt7XAAAH4CMeJck526.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "aec49aadbca94f5da776f170a5923f77",
+						"title": "物业报修",
+						"name": "event",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjjaAbOHdAAAImeroCyI564.png",
+						"uri": "/eventReport?eventTypeId=0fb6ef848c8779370d4053029b5047f1",
+						"type": "MENU"
+					},
+					{
+						"id": "736ff6e613c44ecb8eaead0fa5d03395",
+						"title": "随手拍",
+						"name": "event",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjkOANIOHAAAjiMT9sHw079.jpg",
+						"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
+						"type": "MENU"
+					},
+					{
+						"id": "67044949fdb649ee929dafd5c564fea3",
+						"title": "投诉建议",
+						"name": "onestop",
+						"icon": "https://ncim.577119.com/file/group1/M00/01/9D/wKgB5WjYjniAQNv3AAAGsz_rK_8297.png",
+						"uri": "/index?eventType=COMPLAINT",
+						"type": "MENU"
+					},
+					{
+						"id": "1490f2f026804cd5817ae9e0775ef40e",
+						"title": "邻里购",
+						"name": "neighborBuy",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/1F/wKgB5WnDf36AJssmAACeQD-4N7E007.jpg",
+						"uri": "miniAppId=wxe210b0a16b50444c=%2FpagesTab%2Faround%3FagentCode%3D06699264",
+						"type": "MENU"
+					},
+					{
+						"id": "33ovaqywiu7vupuplvilqsh5ueyj1dtn",
+						"title": "社区周边",
+						"name": "areaOver",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/1F/wKgB5WnDf46AUYpuAAALgFixMR4312.png",
+						"uri": "https://nlw.nongchanlian.com/h5/#/?agentCode=00000000&noToken=true",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "sfskhxjgw3cbz8snpnvhriaaqhb5bm43",
+				"title": "微脑·邻里",
+				"name": "neighbourhood",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "ufticxenzope8pqoorf5y8liwvaa6p0z",
+						"title": "邻里风采",
+						"name": "incomplete",
+						"icon": "icon_jmfc.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "tptinhmrfh4qqdj68e7lo2lfj61aenpp",
+						"title": "邻里达人",
+						"name": "incomplete",
+						"icon": "icon_wyqz.png",
+						"uri": "/",
+						"type": "MENU",
+						"resourceTag": "REALNAME"
+					},
+					{
+						"id": "a9379b8c6e5a461a97f43dc8454af0f4",
+						"title": "社群圈子",
+						"name": "incomplete",
+						"icon": "icon_sq.png",
+						"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/fcircle/#/",
+						"type": "MENU"
+					},
+					{
+						"id": "25mxmipfhipzn8ib6h8rgj3jcjwplouv",
+						"title": "邻里社团",
+						"name": "incomplete",
+						"icon": "icon_llst.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "stmskymriwljg2yq3xkj6xl0fsvug0ko",
+						"title": "活动中心",
+						"name": "incomplete",
+						"uri": "/",
+						"icon": "icon_hdzx.png",
+						"type": "MENU"
+					},
+					{
+						"id": "zvccoehe3g69zbwqt0yipgwae5d312k2",
+						"title": "邻里访",
+						"name": "incomplete",
+						"icon": "icon_zhfk.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+
+					{
+						"id": "yceqdj1aplddngivk1bwvxt6shoaufx2",
+						"title": "微脑导览",
+						"name": "incomplete",
+						"icon": "icon_wsdl.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "tloe9ckoca8ctdcwxhvept4ry3kyyis2",
+						"title": "装修管理",
+						"name": "incomplete",
+						"icon": "icon_zxgl.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "ik3mp1vh2gvxrmnaoztr2omtlpgbhrri",
+						"title": "幸运转盘",
+						"name": "incomplete",
+						"icon": "icon_xyx.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "yvtw53zzy2qtjm7y0pewqrk4xp4cdod3",
+						"title": "知识题",
+						"name": "incomplete",
+						"icon": "icon_zst.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "ackjlekm3dx1l9u7zczatliccrjzmulc",
+						"title": "调查问卷",
+						"name": "incomplete",
+						"icon": "icon_dcwj.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "xgi3mjffr0fv6bmfeiancecpswxv2h9u",
+						"title": "文e家",
+						"name": "incomplete",
+						"icon": "icon_dcwj.png",
+						"uri": "https://why.zjwhhly.com/cultureCloudMobile/#/home",
+						"type": "MENU"
+					},
+					{
+						"id": "weeosma6mz64ncewykeksa4srdthve1b",
+						"title": "家头条",
+						"name": "incomplete",
+						"icon": "icon_jtt.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "37c5f07ea8d64eadae9f52a8f3a7a44d",
+						"title": "邻里交往",
+						"name": "incomplete",
+						"icon": "icon_lljw.png",
+						"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/findex/#/",
+						"type": "MENU"
+					},
+					{
+						"id": "191868c59547457998341dd26a5fe45b",
+						"title": "党员风采",
+						"name": "incomplete",
+						"icon": "icon_dyfc.png",
+						"uri": "https://wlsq.jst.zj.gov.cn/sqgzc/provincepartybuilding-h5/#/pages/memberShow/index",
+						"type": "MENU"
+					},
+					{
+						"id": "88455e6e3f574cc2a7b73763de20d348",
+						"title": "居民动态",
+						"name": "incomplete",
+						"icon": "icon_jmdt.png",
+						"uri": "https://wlsq.jst.zj.gov.cn/smart/open-app/fsquare/#/",
+						"type": "MENU"
+					},
+					{
+						"id": "a8893420b199443590d58ee9a7cfcd28",
+						"title": "我的社区",
+						"name": "incomplete",
+						"icon": "icon_wdsq.png",
+						"uri": "https://wlsq.jst.zj.gov.cn/sqgzc/grid-h5/#/",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "ndjjzhcpnccdnqp9ybcpommce1vjkygv",
+				"title": "微脑·治理",
+				"name": "government",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "cb3hi2hwunjiel6hu3qeu5gnidic580l",
+						"title": "党建引领",
+						"name": "party",
+						"icon": "icon_djyl.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "ebiu0rbag72oysevwitsjvuv8pjfqka4",
+						"title": "智慧门禁",
+						"name": "access",
+						"icon": "icon.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "fjuglukm5xmi1b9ijecdbkrolsfvtfj5",
+						"title": "我的办公室",
+						"name": "office",
+						"icon": "icon_jgrz.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "pfi0bimwq4cwlwb30fpmkcuaokcloeer",
+						"title": "智慧停车",
+						"name": "parking",
+						"icon": "icon_zhtc.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "braam9wwxsy9vphu2omy7aevrfegvt3y",
+						"title": "智慧监控",
+						"name": "video",
+						"icon": "icon_zhjk.jpg",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "yj7syptaz0vkpdfk3duqptti6nzzvd7l",
+						"title": "智慧巡更",
+						"name": "patrol",
+						"icon": "icon_zhxg.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "vhfvtycebjqorpijhcj7u8gqwpaeamj7",
+						"title": "访客管理",
+						"name": "visitors",
+						"icon": "icon_fkgl.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "pxstjr5bjr7eh3mf5ui4rofdbpfzf3je",
+						"title": "空间预约",
+						"name": "space",
+						"icon": "icon_kjyy.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "itbwa3gdc8j8ajkkjnpcp07sksz3f5nh",
+						"title": "会议管理",
+						"name": "meeting",
+						"icon": "icon_djhd.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "qb9vtuad3ruonmsmdi2rm9rqrsoej8b9",
+						"title": "能耗管理",
+						"name": "energy",
+						"icon": "icon_nhdj.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "y0z8vu9wigh52gfehulmmdcfo7yn3xu5",
+						"title": "事件中心",
+						"name": "event/events",
+						"icon": "icon_bmrx.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "6qtuwdg8yxxnefpmxnljmd4prmdqgapl",
+						"title": "事件处理",
+						"name": "event/eventHandlers",
+						"icon": "icon_tzsc.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "ds8ka4bzzxv1d9ol9pwzw5dealfewa5h",
+						"title": "设备报修",
+						"name": "event",
+						"icon": "icon_bxdj.png",
+						"uri": "/eventReport?eventTypeId=3ead2f66dc106f3a778cde9f53c713fd",
+						"type": "MENU"
+					},
+					{
+						"id": "83rakyuslx9fyq5n4odlhzo8k7hk8ofe",
+						"title": "物业报修",
+						"name": "event",
+						"icon": "icon_tpzx.png",
+						"uri": "/eventReport?eventTypeId=0fb6ef848c8779370d4053029b5047f1",
+						"type": "MENU"
+					},
+					{
+						"id": "tqbgc3nl1ldghiuklwldh5kxlobtss7b",
+						"title": "缺陷上报",
+						"name": "event",
+						"icon": "icon_qxsb.png",
+						"uri": "/eventReport?eventTypeId=2c8b9157901c6150b9eca9e44af04a30",
+						"type": "MENU"
+					},
+					{
+						"id": "jspmjdw8hhfim8eedacr8alq0bs1kdya",
+						"title": "随手拍",
+						"name": "event",
+						"icon": "icon_ssp.jpg",
+						"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
+						"type": "MENU"
+					},
+					{
+						"id": "wzc817ffirnwnwc2upwdj6swu8echrtu",
+						"title": "法律咨询",
+						"name": "onestop",
+						"icon": "icon_flyz.png",
+						"uri": "/index?eventType=LEGAL_ADVICE",
+						"type": "MENU"
+					},
+					{
+						"id": "9mauw4iiaqhptiyw6clpubgth3knblrt",
+						"title": "心理咨询",
+						"name": "onestop",
+						"icon": "icon_mtsb.png",
+						"uri": "/index?eventType=PSYCHOLOGICAL_COUNSELING",
+						"type": "MENU"
+					},
+					{
+						"id": "ecwh2ogylqywk32qtdr8ty5cjmqvomy4",
+						"title": "矛调中心",
+						"name": "onestop",
+						"icon": "icon_mlzx.png",
+						"uri": "/index?eventType=CONTRADICTION_MEDIATION",
+						"type": "MENU"
+					},
+					{
+						"id": "jamglujwkfii0pjgbmc8tg1kbdhxppek",
+						"title": "投诉建议",
+						"name": "onestop",
+						"icon": "icon_wyhs.png",
+						"uri": "/index?eventType=COMPLAINT",
+						"type": "MENU"
+					},
+					{
+						"id": "vea3ye47dvzzpakbxerf2lirnyawrqou",
+						"title": "智慧照明",
+						"name": "lighting",
+						"icon": "icon_yqwz.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "09drtoozjudsurofnrwdfuf5axnp0bno",
+						"title": "活动管理",
+						"name": "activity",
+						"icon": "icon_ykt.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "szj6cxetp5qr3t8isbglwizrjxr9nbos",
+						"title": "一卡通",
+						"name": "incomplete",
+						"uri": "/",
+						"icon": "icon_ykt.png",
+						"type": "MENU"
+					},
+					{
+						"id": "ubvqwwuzwlxxnr0segmn9jfjbfho8tbc",
+						"title": "投票管理",
+						"name": "vote",
+						"icon": "icon_tpzx.png",
+						"uri": "/",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "qbkipysvgizvrjnqa5jsxsqacgtvupc3",
+				"title": "微脑·服务",
+				"name": "service",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "88s83zofzhp9s540ed0w2lugoupjy37k",
+						"title": "智能语音",
+						"name": "incomplete",
+						"icon": "icon_znyy.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "y4hmdgveajxdrsb2ywpczy05wttrsrde",
+						"title": "大屏控制",
+						"name": "screen",
+						"icon": "icon_znyy.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "bkqaixcbtotgagc44zuyqa6ai5sc4y03",
+						"title": "积分商城",
+						"name": "incomplete",
+						"uri": "/",
+						"icon": "icon_jfsc.png",
+						"type": "MENU",
+						"resourceTag": "OWNER"
+					},
+					{
+						"id": "unnzcgakh54hqz8cq2vo4qlsdzefhk9f",
+						"title": "积分排名",
+						"name": "incomplete",
+						"icon": "icon_jfpm.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "59elkx4d3asjco9edo0nbnbfb7ceygpm",
+						"title": "温州政务通",
+						"name": "governmentAffairs",
+						"icon": "icon_zwt.png",
+						"uri": "miniAppId=wx8e8690a45d6ff120",
+						"type": "MENU"
+					},
+					{
+						"id": "d9mppyru6uskaz49xpu3kul3vxecqbsm",
+						"title": "温州之旅",
+						"name": "wzEatHappyGood",
+						"icon": "icon_wzzl.jpg",
+						"uri": "https://nlw.nongchanlian.com/h5/#/?agentCode=25958144&noToken=true",
+						"type": "MENU"
+					},
+					{
+						"id": "bbhllc3w8dksjgmyelxhkmgph52rofla",
+						"title": "温州优选",
+						"name": "wzGoodAt",
+						"icon": "icon_wzyx.png",
+						"uri": "miniAppId=wx16c6c0eef6a62ed4",
+						"type": "MENU"
+					},
+					{
+						"id": "kfglgvegfau6ealzshn5icp4odoor8fc",
+						"title": "周边推荐",
+						"name": "eTravelWz",
+						"icon": "icon_zbtj.png",
+						"uri": "https://nlw.nongchanlian.com/h5/#/?agentCode=00000000",
+						"type": "MENU"
+					},
+					{
+						"id": "rob527ehkkvwpqhxgykknb3hkkfuhmrx",
+						"title": "未来乡村",
+						"name": "village",
+						"icon": "icon_village.png",
+						"uri": "",
+						"type": "MENU"
+					},
+					{
+						"id": "97dxb68smbh1zibm16ovz6xmxs5t4hur",
+						"title": "大学生驿站",
+						"name": "universityStudentPosthouse",
+						"icon": "icon_dxsyz.png",
+						"uri": "miniAppId=wx25f2f75aa658fede",
+						"type": "MENU"
+					},
+					{
+						"id": "aqxxpaaenepxm7ogojv8hqf5jyiewquk",
+						"title": "温州天气",
+						"name": "wzWeather",
+						"icon": "icon_tqxgj.png",
+						"uri": "miniAppId=wx72bfbc39508a7398",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "zzvzvjc0tx23fycknjwt0adteu4utwj8",
+				"title": "微脑·教育",
+				"name": "education",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "mnehxitknpynyf7ymvbqrvepxxuv19gz",
+						"title": "幸福学堂",
+						"name": "incomplete",
+						"icon": "icon_xfxt.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "x4lwakfubxyvijzr6jsukb3ed78c0zcv",
+						"title": "浙学通",
+						"name": "incomplete",
+						"icon": "icon_zxt.png",
+						"uri": "miniAppId=wxe5836065d4c39bbf",
+						"type": "MENU"
+					},
+					{
+						"id": "293576ae2f7a470aaf6fb53233927204",
+						"title": "生育登记",
+						"name": "incomplete",
+						"icon": "icon_sydj.png",
+						"uri": "wxProgram://浙里办/7bgApBkEGhZLOGa",
+						"type": "MENU"
+					},
+					{
+						"id": "bc2884a4953b465996ce23decc9ee73b",
+						"title": "生育津贴支付",
+						"name": "incomplete",
+						"icon": "icon_syjt.png",
+						"uri": "wxProgram://浙里办/A5vLHAP1gtc3y7E",
+						"type": "MENU"
+					},
+					{
+						"id": "3b15ae8cfc324fefb3391235863ea1a3",
+						"title": "入学早知道",
+						"name": "incomplete",
+						"icon": "icon_rxzzd.png",
+						"uri": "wxProgram://浙里办/Qa9iXDJili4lA0C",
+						"type": "MENU"
+					},
+					{
+						"id": "e21434ee60c842eea87e0698c565f280",
+						"title": "浙有姻缘",
+						"name": "incomplete",
+						"icon": "icon_zyyy.png",
+						"uri": "wxProgram://浙里办/sEaYxvq6sGIjVtu",
+						"type": "MENU"
+					},
+					{
+						"id": "s9myu6trp0yr4pztrevvkelnh79bunpu",
+						"title": "教育就业",
+						"name": "incomplete",
+						"icon": "icon_jyjy.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "sah7qlwpddtmebwchphx9bdqirx1nmlf",
+						"title": "之江汇",
+						"name": "incomplete",
+						"icon": "icon_zjh.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "9vuyxxczq0ohjmnbpckcpktdhu0aj3vx",
+						"title": "智慧书柜",
+						"name": "incomplete ",
+						"icon": "icon_zhsg.jpg",
+						"uri": "miniAppId=wx4bca206c64bbc580",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "oxvydk0inrcymaodvbgqnrmss10iu3jp",
+				"title": "微脑·健康",
+				"name": "healthy",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "io4zjprouxxwqjotvos3o0rfiak7rgzz",
+						"title": "健康档案",
+						"name": "incomplete",
+						"icon": "icon_jkda.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "v9i7edxwzxzd1arbqk5z5zifiaxuvmog",
+						"title": "海智康",
+						"name": "incomplete",
+						"icon": "icon_hzk.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "l4azukh8qlrrjzmwzvpvak6rhyw6oxjo",
+						"title": "未来康养智城",
+						"name": "incomplete",
+						"icon": "icon_wlkyzc.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "jlklug3az9gesezta5mwupgobmdw10qo",
+						"title": "健康驿站",
+						"name": "incomplete",
+						"icon": "icon_jkyz.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "c6kh1pf2frjzrbi43yzkgth2eayja8sd",
+						"title": "心理咨询",
+						"name": "incomplete",
+						"uri": "/",
+						"icon": "icon_xlzx.png",
+						"type": "MENU"
+					},
+					{
+						"id": "b95ba9983fe84980bb00cdc948af18a1",
+						"title": "预约挂号",
+						"name": "incomplete",
+						"icon": "icon_yygh.png",
+						"uri": "wxProgram://浙里办/jXkNoDd2FzP9qHh",
+						"type": "MENU"
+					},
+					{
+						"id": "9b890ddc591f4e8a9448cc5aafc8a9e4",
+						"title": "老年大学",
+						"name": "incomplete",
+						"icon": "icon_lndx.png",
+						"uri": "wxProgram://浙里办/m60Wlj48Vrk0xDt",
+						"type": "MENU"
+					},
+					{
+						"id": "b81de7cb62524e1f8077c6e952d5c9fd",
+						"title": "药+平台",
+						"name": "incomplete",
+						"icon": "icon_yjpt.png",
+						"uri": "wxProgram://浙里办/Tz36AAXBDoUV2gg",
+						"type": "MENU"
+					},
+					{
+						"id": "b56908c5515443d0b1fe94062a436a7c",
+						"title": "社保查询",
+						"name": "incomplete",
+						"icon": "icon_sbcx.png",
+						"uri": "wxProgram://浙里办/SnGL2o1n0fclIdc",
+						"type": "MENU"
+					},
+					{
+						"id": "48e1d2a7d7d644a690b54a15d2806f4c",
+						"title": "浙里医保",
+						"name": "incomplete",
+						"icon": "icon_zlyb.png",
+						"uri": "wxProgram://浙里办/fNWOAjRD8i70UAe",
+						"type": "MENU"
+					},
+					{
+						"id": "e0a6d70250be4c71a4cbb10e4c9beb92",
+						"title": "浙里救",
+						"name": "incomplete",
+						"icon": "icon_zlj.png",
+						"uri": "wxProgram://浙里办/0GtRu0XjctuO0Nb",
+						"type": "MENU"
+					},
+					{
+						"id": "elr0g8nab9edi1ccird2o7f6s2uqzirv",
+						"title": "AI健康",
+						"name": "incomplete",
+						"icon": "icon_AIjk.png",
+						"uri": "miniAppId=wx46919926569a6f52",
+						"type": "MENU"
+					},
+					{
+						"id": "m9xzbrsmyxntxdddslzggreendxhwpyd",
+						"title": "云呵护",
+						"name": "incomplete",
+						"icon": "icon_yhh.png",
+						"uri": "miniAppId=wx46dc5071b1340d0e",
+						"type": "MENU"
+					},
+					{
+						"id": "hfea0aiqnprpimvf4wo0uqzpjqiglmxt",
+						"title": "智慧跑道",
+						"name": "incomplete",
+						"icon": "icon_runway.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "3cyy8p3znoumw4dwrniliymwmcwddsfu",
+						"title": "智慧篮球场",
+						"name": "incomplete",
+						"icon": "icon_zhlqc.png",
+						"uri": "/",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "nnojtlel0ccvfvo0sgx1cgvztybyo0m3",
+				"title": "微脑·创业",
+				"name": "startBusiness",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "hzcditr3uoz1tfcufrvgv0wd770m2v8c",
+						"title": "机构入驻",
+						"name": "incomplete",
+						"icon": "icon_jgrz.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "m98mx5e6f1vbsevqfzoyw0ijwcuicmrm",
+						"title": "浙就业",
+						"name": "incomplete",
+						"icon": "icon_zjy.png",
+						"uri": "/",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "pkyuowd2mhnfesdlx2ykxpmboesihmiz",
+				"title": "微脑·交通",
+				"name": "traffic",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "sazbdf8chxg80n1zlzpnley6tokixlxn",
+						"title": "公交站点",
+						"name": "incomplete",
+						"icon": "icon_gjzd.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "ndknqeuedgfuweec5i7jptl5lgvbmng3",
+						"title": "交通违法缴费",
+						"name": "incomplete",
+						"icon": "icon_jtwfjf.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "xxs6pnuqfibwebjdpbr9l01zdw9lxgv2",
+						"title": "车检预约",
+						"name": "incomplete",
+						"icon": "icon_cjyy.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "mdpevyfgnx5gc8cegrf3hj8ggd59brrg",
+						"title": "浙住通",
+						"name": "incomplete",
+						"icon": "icon_zzt.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "vcck1jnkd53ipammtbdnmwt89mqgmjsc",
+						"title": "轻轨时刻表",
+						"name": "incomplete",
+						"icon": "icon_gdsk.png",
+						"uri": "miniAppId=wxe84a485904c12a87",
+						"type": "MENU"
+					},
+					{
+						"id": "bussy5qzzb8oarsrt7p534trilfoy4dj",
+						"title": "温州交运",
+						"name": "incomplete",
+						"icon": "icon_wzjy.png",
+						"uri": "miniAppId=wx2859a8d53cd0cd7c",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "ayh4rbktmcev7hmoiycww8nvsfw2vdgi",
+				"title": "微脑·低碳",
+				"name": "lowCarbon",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "rhxsblfjlhtlatvr6yuwtqxx01ahctvo",
+						"title": "跳蚤市场",
+						"name": "incomplete",
+						"icon": "icon_tzsc.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "s0nll8wvlytgkzx8xtgrorc2ltsgmwng",
+						"title": "智慧垃圾桶",
+						"name": "incomplete",
+						"icon": "icon_zhljt.jpg",
+						"uri": "miniAppId=wx3e84ec47f31ee3bf",
+						"type": "MENU"
+					}
+				]
+			},
+			{
+				"id": "rhiprpn5pvpktun7v3ywpaxtzy8yqoyn",
+				"title": "微脑·建筑",
+				"name": "startBusiness",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "xgdsqdueyg65aqhbro5updq2erzg4jov",
+						"title": "一张图",
+						"name": "incomplete",
+						"icon": "icon_yzt.png",
+						"uri": "/",
+						"type": "MENU"
+					}
+				]
+			}
+		]
+	}
+]

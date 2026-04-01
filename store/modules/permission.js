@@ -30,7 +30,7 @@ const generateBtns = (routes) => {
 }
 
 // 菜单uri不改变
-const noChangeUri = ['miniAppId', 'http', 'wxProgram'];
+const noChangeUri = ['miniAppId', 'http', 'wxProgram', 'toOtherApp'];
 
 const dealResource = list => {
 	list.forEach(item => {
@@ -41,6 +41,23 @@ const dealResource = list => {
 		if (item.children && item.children.length) {
 			dealResource(item.children)
 		}
+	})
+}
+
+const dealToMenu = list => {
+	list.forEach(item => {
+		if (item.resourceType === 'MENU') {
+			// 根据uri值，配置不同的跳转方式
+			// 1.uri包含http,属于外部跳转
+			// 2.uri不包含http,输入内部跳转，指定子页面
+			// 3.uri包含miniAppId, 属于小程序跳转
+			if (noChangeUri.every(e => !item.uri?.includes(e))) {
+				item.uri = DOMAIN + `/${item.resourceName.toLocaleLowerCase()}` + (item.uri || '/')
+			}
+		} else if (item.resourceType === 'MODULE') {
+			item.uri = ''
+		}
+		if (item.children && item.children.length) dealToMenu(item.children)
 	})
 }
 
@@ -66,17 +83,7 @@ export const usePermissionStore = defineStore({
 				const { content: resourceData } = await getResourceTree({ resourceCode: BASE_NAME })
 				data = resourceData?.children || []
 			}
-			data.forEach(ele => {
-				ele.children.forEach(val => {
-					// 根据uri值，配置不同的跳转方式
-					// 1.uri包含http,属于外部跳转
-					// 2.uri不包含http,输入内部跳转，指定子页面
-					// 3.uri包含miniAppId, 属于小程序跳转
-					if (noChangeUri.every(item => !val.uri?.includes(item))) {
-						val.uri = DOMAIN + `/${val.resourceName.toLocaleLowerCase()}` + (val.uri || '/')
-					}
-				})
-			})
+			dealToMenu(data)
 			this.menuList = data;
 			const { permissionBtns, permissionIds } = generateBtns(data)
 			this.accessBtns = permissionBtns

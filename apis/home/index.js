@@ -20,3 +20,9 @@ export const fetchCardPrincipalInfo = (id) => request.globalRequest(`/api/card/a
 
 // 查询当前卡号
 export const fetchCurrentUsed = () => request.globalRequest('/api/card/account/card/current/used', 'GET')
+
+// 查询环境设备信息
+export const fetchEnvData = () => request.globalRequest('/api/iot-center/home/yq/env/data', 'GET')
+
+// 获取活动分页
+export const fetchActivityPage = (data) => request.globalRequest('/api/activity/activity/page', 'GET', data)
