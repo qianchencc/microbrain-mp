@@ -201,7 +201,7 @@
 	const openGood = (item) => {
 		uni.openEmbeddedMiniProgram({
 			appId: item.appId,
-			path: item.path,
+			path: `${item.path}?id=${item.id}`,
 			success: () => {
 				console.log('成功打开小程序')
 			},
