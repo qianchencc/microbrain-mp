@@ -8,4 +8,4 @@ export const EvnIP = {
 }
 
 export const DOMAIN = EvnIP[__wxConfig.envVersion]
-export const isDev = __wxConfig.envVersion === 'develop'
+export const isDev = __wxConfig.envVersion !== 'release'
