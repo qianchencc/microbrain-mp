@@ -4,7 +4,7 @@
 			<view class="address" @click="goPage('/pages/index/indexlist')">
 				<text>{{geospatial}}</text>
 			</view>
-			<swiper class="page_swiper" autoplay indicator-dots circular>
+			<swiper class="page_swiper" autoplay circular>
 				<template v-if="bannerList.length > 0">
 					<swiper-item v-for="(img,key) in bannerList" :key="key">
 						<image class="swiper-image" :src="img.url" mode="aspectFill" />
@@ -47,10 +47,10 @@
 					</view>
 				</view>
 				<view class="good-list con">
-					<swiper class="good_swiper" autoplay indicator-dots>
+					<swiper class="good_swiper" autoplay circular>
 						<template v-if="bannerList.length > 0">
-							<swiper-item v-for="(img, key) in goodList" :key="key">
-								<image class="good-item" :src="img.url" mode="aspectFill" @click="openGood(item)" />
+							<swiper-item v-for="item in goodList" :key="item.id">
+								<image class="good-item" :src="item.goodsImage" mode="aspectFill" @click="openGood(item)" />
 							</swiper-item>
 						</template>
 					</swiper>
@@ -135,6 +135,7 @@
 	import {formatTime, getUrl, goPage, jumpUrl, webJump} from '@/utils/tools'
 	import { useBannerHook } from './utils/banner.js'
 	import { getUnreadNotifyCount } from '@/utils/message.js'
+	import {isDev} from "@/config/settings";
 	const { bannerList } = useBannerHook()
 	const bluetooth = ref(false)
 	const ifChecked = ref(false)
@@ -195,13 +196,29 @@
 	)
 	// endregion
 	
+	const reqUrl = isDev ? 'https://nltest.nongchanlian.com' : 'https://nlw.nongchanlian.com'
 	const goodList = ref([])
 	const getGoodList = async () => {
+		uni.request({
+			url: `${reqUrl}/nl/dailywelfare/getValidList`,
+			method: 'get',
+			dataType: 'json',
+			success: (res) => {
+				if (res.statusCode === 200 && res.data.code === 0) {
+					goodList.value = res.data.data
+				} else {
+					uni.showToast({
+						title: '第三方接口异常',
+						icon: 'none'
+					})
+				}
+			}
+		})
 	}
 	const openGood = (item) => {
 		uni.openEmbeddedMiniProgram({
-			appId: item.appId,
-			path: `${item.path}?id=${item.id}`,
+			appId: item.jumpId,
+			path: `${item.jumpPath}?id=${item.goodsCommonId}&storeId=${item.storeId}`,
 			success: () => {
 				console.log('成功打开小程序')
 			},
