@@ -153,10 +153,10 @@
 				"children": [
 					{
 						"id": "39fb420ccb13445f95e4a22c5132a39f",
-						"title": "邻里服务",
+						"title": "零里服务",
 						"name": "neighborhoodServices",
 						"icon": "https://ncim.577119.com/file/group1/M00/02/24/wKgB5WnMaOCAeQ7dAACZYyqnZ4E635.png",
-						"uri": "https://www.baidu.com",
+						"uri": "miniAppId=wxe210b0a16b50444c=%2Fpages%2Ftabbar%2Findex",
 						"type": "MENU"
 					},
 					{
@@ -164,7 +164,7 @@
 						"title": "周边推荐",
 						"name": "aroundRecommend",
 						"icon": "https://ncim.577119.com/file/group1/M00/02/24/wKgB5WnMaPKABy4aAACyJj4H3Z4955.png",
-						"uri": "https://www.baidu.com",
+						"uri": "miniAppId=wxe210b0a16b50444c=%2FpagesB%2Fcircum%2Findex",
 						"type": "MENU"
 					},
 					{
@@ -172,7 +172,7 @@
 						"title": "我的小店",
 						"name": "myShop",
 						"icon": "https://ncim.577119.com/file/group1/M00/02/24/wKgB5WnMaQCAdLltAACR1elGcQo267.png",
-						"uri": "https://www.baidu.com",
+						"uri": "miniAppId=wxe210b0a16b50444c=%2FpagesF%2Fdistr%2Fregister",
 						"type": "MENU"
 					},
 					{
@@ -180,7 +180,7 @@
 						"title": "积分商城",
 						"name": "pointShop",
 						"icon": "https://ncim.577119.com/file/group1/M00/02/24/wKgB5WnMaQ2ADaeUAACFt12jyE8593.png",
-						"uri": "https://www.baidu.com",
+						"uri": "miniAppId=wxe210b0a16b50444c=%2FpagesE%2Fintegral%2Findex",
 						"type": "MENU"
 					}
 				]
