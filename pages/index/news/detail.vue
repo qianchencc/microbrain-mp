@@ -19,13 +19,9 @@
 			<view class="line" />
 			<view class="line" />
 			<view class="footer-handle">
-				<view class="footer-handle-item">
-					<uni-icons type="eye" :size="null" :color="null"></uni-icons>
-					{{detail.viewCount}}
-				</view>
-				<view class="footer-handle-item" @click="handleForward">
+				<button open-type="share" class="footer-handle-item">
 					<uni-icons type="redo" :size="null" :color="null"></uni-icons>
-				</view>
+				</button>
 			</view>
 		</view>
 	</view>
@@ -58,12 +54,6 @@
 			}
 		},
 		methods: {
-			handleForward() {
-				uni.showToast({
-					title: '点击右上角转发',
-					icon: 'none'
-				})
-			},
 			// 获取资讯详情
 			async gainNewsInfoDetail(id) {
 				const res = await fetchNewsById(id)
@@ -157,6 +147,7 @@
 				justify-content: space-between;
 
 				.footer-handle-item {
+					all: unset;
 					flex: 1;
 					height: 40upx;
 					margin: 20upx 0;
