@@ -33,6 +33,13 @@ export default {
 			return this.comObj.children
 		}
 	},
+	watch: {
+		comName(){
+			uni.setNavigationBarTitle({
+				title: this.comObj.resourceTitle
+			})
+		}
+	},
 	methods: {
 		findName(list, id) {
 			for (let item of list) {

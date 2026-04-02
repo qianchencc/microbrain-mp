@@ -43,7 +43,7 @@
 				<view class="image-title">
 					<view class="title-left">
 						<image src="/static/images/index/good.png" mode="aspectFit"></image>
-						<view>天天好礼</view>
+						<view>天天福利</view>
 					</view>
 				</view>
 				<view class="good-list con">
@@ -462,6 +462,9 @@
 				&:first-child {
 					margin-right: 15rpx;
 					background-image: linear-gradient(to left, #ffd8b2, #fff3e8);
+				}
+				&:last-child {
+					padding-left: 2em;
 				}
 				
 				.temp-item {

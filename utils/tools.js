@@ -83,7 +83,6 @@ export const chooseImg2 = (count = 9, success) => {
 // 有专属二级页面的菜单
 const secondMenu = ['Property', 'MyOffice', 'MyApply']
 export const jumpUrl = async menu => {
-	console.log(menu)
 	if (menu.resourceName.includes('incomplete')) {
 		uni.showToast({
 			title: `敬请期待`,
