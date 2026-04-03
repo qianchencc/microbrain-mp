@@ -439,7 +439,7 @@
 					width: 100%;
 					height: $height;
 					.good-item {
-						width: 100%;
+						width: 680rpx;
 						height: $height;
 						border-radius: 15rpx;
 					}
