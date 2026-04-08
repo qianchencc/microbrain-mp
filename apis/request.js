@@ -28,7 +28,7 @@ const createRequest = (options = {}) => {
 			} else if (res.statusCode === 401) {
 				SERVER_CODE.get(res.statusCode)(res)
 			} else {
-				throw res.data
+				return res.data
 			}
 		}).catch(parmas => {
 			try {

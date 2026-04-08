@@ -81,7 +81,7 @@ export const chooseImg2 = (count = 9, success) => {
 
 // 菜单跳转
 // 有专属二级页面的菜单
-const secondMenu = ['Property', 'MyOffice', 'MyApply']
+const secondMenu = ['Property', 'MyOffice', 'MyApply', 'CompanyManage']
 export const jumpUrl = async menu => {
 	if (menu.resourceName.includes('incomplete')) {
 		uni.showToast({

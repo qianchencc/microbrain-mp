@@ -21,34 +21,18 @@
 						"type": "MENU"
 					},
 					{
-						"id": "466c1bab267d42899ee3991c8fc55a04",
-						"title": "物业服务",
-						"name": "Property",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/24/wKgB5WnMaKuAFsT3AAB1Jijr8qU155.png",
+						"id": "12f07723216f4f9595de1a190e5e6f7a",
+						"title": "企业管理",
+						"name": "CompanyManage",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/29/wKgB5WnWDfSADXbXAAGnXSBcHMM576.png",
 						"type": "MODULE",
 						"children": [
 							{
-								"id": "aec49aadbca94f5da776f170a5923f77",
-								"title": "物业报修",
-								"name": "event",
-								"icon": "https://ncim.577119.com/file/group1/M00/02/25/wKgB5WnMr0qASlcMAAAR8Ho6oHM033.png",
-								"uri": "/eventReport?eventTypeId=0fb6ef848c8779370d4053029b5047f1",
-								"type": "MENU"
-							},
-							{
-								"id": "6qtuwdg8yxxnefpmxnljmd4prmdqgapl",
-								"title": "事件处理",
-								"name": "event/eventHandlers",
-								"icon": "https://ncim.577119.com/file/group1/M00/02/25/wKgB5WnMr1iAaweDAAAO4rRo7MU999.png",
-								"uri": "/",
-								"type": "MENU"
-							},
-							{
-								"id": "736ff6e613c44ecb8eaead0fa5d03395",
-								"title": "随手拍",
-								"name": "event",
-								"icon": "https://ncim.577119.com/file/group1/M00/02/25/wKgB5WnMr2GAX-7IAAASLSZI-J4671.png",
-								"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
+								"id": "ac9861c838944e66a56664824b4c223d",
+								"title": "人员培训",
+								"name": "training",
+								"icon": "https://ncim.577119.com/file/group1/M00/02/29/wKgB5WnWDl6AfbrRAAFDSxBKoE0134.png",
+								"uri": "toOtherApp:=:https://ksgl.577119.com",
 								"type": "MENU"
 							}
 						]
@@ -139,6 +123,39 @@
 								"name": "activity",
 								"icon": "https://ncim.577119.com/file/group1/M00/02/24/wKgB5WnMrs6AeJshAAHxzc_wdlU929.png",
 								"uri": "/",
+								"type": "MENU"
+							}
+						]
+					},
+					{
+						"id": "466c1bab267d42899ee3991c8fc55a04",
+						"title": "物业服务",
+						"name": "Property",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/24/wKgB5WnMaKuAFsT3AAB1Jijr8qU155.png",
+						"type": "MODULE",
+						"children": [
+							{
+								"id": "aec49aadbca94f5da776f170a5923f77",
+								"title": "物业报修",
+								"name": "event",
+								"icon": "https://ncim.577119.com/file/group1/M00/02/25/wKgB5WnMr0qASlcMAAAR8Ho6oHM033.png",
+								"uri": "/eventReport?eventTypeId=0fb6ef848c8779370d4053029b5047f1",
+								"type": "MENU"
+							},
+							{
+								"id": "6qtuwdg8yxxnefpmxnljmd4prmdqgapl",
+								"title": "事件处理",
+								"name": "event/eventHandlers",
+								"icon": "https://ncim.577119.com/file/group1/M00/02/25/wKgB5WnMr1iAaweDAAAO4rRo7MU999.png",
+								"uri": "/",
+								"type": "MENU"
+							},
+							{
+								"id": "736ff6e613c44ecb8eaead0fa5d03395",
+								"title": "随手拍",
+								"name": "event",
+								"icon": "https://ncim.577119.com/file/group1/M00/02/25/wKgB5WnMr2GAX-7IAAASLSZI-J4671.png",
+								"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
 								"type": "MENU"
 							}
 						]

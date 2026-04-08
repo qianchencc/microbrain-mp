@@ -399,9 +399,10 @@
 					padding: 15rpx 0;
 				}
 				.menu-list {
-					display: flex;
+					display: grid;
+					grid-template-columns: repeat(4, 1fr);
+					grid-row-gap: 20rpx;
 					.menu-item {
-						flex: 1;
 						display: flex;
 						flex-direction: column;
 						align-items: center;

@@ -1,22 +1,27 @@
 <template>
 	<view class="second-page">
 		<my-office v-if="comName === 'MyOffice'" :list="list"></my-office>
-		<my-apply v-else-if="comName === 'MyApply'" :list="list"></my-apply>
-		<property v-else-if="comName === 'Property'" :list="list"></property>
+		<menu-com v-else-if="menuPage.includes(comName)" :list="list"></menu-com>
+		<list-com v-else-if="listPage.includes(comName)" :list="list"></list-com>
 	</view>
 </template>
 
 <script>
 import {usePermissionStoreHook} from "@/store/modules/permission";
+// 特殊二级页
 import MyOffice from "./second/MyOffice.vue";
-import MyApply from "./second/MyApply.vue";
-import Property from "./second/Property.vue";
+// 通用二级页，菜单型，列表型
+import MenuCom from "./second/MenuCom.vue";
+import ListCom from "./second/ListCom.vue";
 
 export default {
-	components: {Property, MyApply, MyOffice},
+	components: {ListCom, MenuCom, MyOffice},
 	data() {
 		return {
-			id: null
+			id: null,
+			
+			menuPage: ['MyApply'],
+			listPage: ['Property', 'CompanyManage']
 		};
 	},
 	onLoad(options) {
