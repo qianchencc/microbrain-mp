@@ -218,7 +218,7 @@
 	const openGood = (item) => {
 		uni.openEmbeddedMiniProgram({
 			appId: item.jumpId,
-			path: `${item.jumpPath}?id=${item.goodsCommonId}&storeId=${item.storeId}`,
+			path: `${item.jumpPath}?id=${item.goodsCommonId}&storeId=${item.storeId}&isExternal=1&distId=${item.distId}`,
 			success: () => {
 				console.log('成功打开小程序')
 			},
