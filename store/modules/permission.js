@@ -90,6 +90,7 @@ export const usePermissionStore = defineStore({
 			this.permissionIds = permissionIds
 			useUserStoreHook().setGeospatialInfo()
 			useUserStoreHook().setUserInfo()
+			useUserStoreHook().setDict()
 			// #ifdef APP-PLUS
 			appPush()
 			// #endif

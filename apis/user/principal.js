@@ -38,3 +38,6 @@ export const userUpdateOpenId = openId => request.globalRequest(`/identity/princ
 
 // 更新clientID
 export const changeClientId = clientId => request.globalRequest(`/account/socials/to/${clientId}`, 'GET')
+
+// 查询字典
+export const getAllDictMap = () => request.globalRequest(`/normalDict/allMap`, 'GET')

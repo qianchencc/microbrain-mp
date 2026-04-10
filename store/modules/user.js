@@ -8,6 +8,7 @@ import { usePermissionStoreHook } from './permission'
 import { setToken, getToken, removeToken } from '@/utils/auth'
 import { aesEncrypt } from '@/utils/cryptojs'
 import globalConfig from '@/config'
+import {getAllDictMap} from "@/apis/user/principal";
 
 const token = storageGet('authorized-token')
 
@@ -15,7 +16,7 @@ export const useUserStore = defineStore({
 	id: 'ehe-user',
 	state: () => ({
 		authorized: false,
-		dict: {},
+		dict: null,
 		// 用户信息
 		userInfo: storageGet('userInfo'),
 		//组织信息
@@ -32,6 +33,12 @@ export const useUserStore = defineStore({
 		},
 		getGeospatialInfo() {
 			return this.geospatialInfo || storageGet('geospatialInfo')
+		},
+		getDict() {
+			return this.dict || storageGet('dict') || {}
+		},
+		getShowIndexAi(){
+			return !!Object.keys(this.getDict['ShowMiniAI'])?.length
 		}
 	},
 	actions: {
@@ -112,9 +119,11 @@ export const useUserStore = defineStore({
 			})
 		},
 		async setDict() {
-			const { content } = await getAllDictMap()
-			this.dict = content
-			storageSet('dict', content)
+			const res = await getAllDictMap()
+			if (res) {
+				this.dict = res.content
+				storageSet('dict', res.content)
+			}
 		},
 		async setUserInfo() {
 			const { content: userInfo } = await getPrincipalAllInfo()

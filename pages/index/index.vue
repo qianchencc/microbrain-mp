@@ -71,7 +71,7 @@
 						<image src="/static/images/index/weather.png" mode="aspectFit"></image>
 					</view>
 				</view>
-				<view class="msg-item" @click="webJump('owner', '/#/pages/projectAi/index')">
+				<view class="msg-item" v-if="showAi" @click="webJump('owner', '/#/pages/projectAi/index')">
 					<view class="msg-title">AI问</view>
 					<view class="icon">
 						<image src="/static/images/index/ai.png" mode="aspectFit"></image>
@@ -142,6 +142,7 @@
 	const menuList = computed(() => usePermissionStoreHook().getMenuList)
 	const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 	const authorized = computed(() => useUserStoreHook().authorized)
+	const showAi = computed(() => useUserStoreHook().getShowIndexAi)
 
 	// region 蓝牙部分
 	const initBlueTooth = () => {
@@ -461,11 +462,13 @@
 				align-items: center;
 				justify-content: space-between;
 				&:first-child {
-					margin-right: 15rpx;
 					background-image: linear-gradient(to left, #ffd8b2, #fff3e8);
 				}
 				&:last-child {
-					padding-left: 2em;
+					margin-left: 15rpx;
+					.msg-title {
+						margin-left: 1em;
+					}
 				}
 				
 				.temp-item {
