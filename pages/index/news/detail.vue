@@ -30,6 +30,7 @@
 <script>
 	import { fetchNewsById } from '@/apis/home'
 	import { DOMAIN } from '@/config/settings'
+	import {getUrl} from "@/utils/tools";
 	export default {
 		data() {
 			return {
@@ -50,7 +51,8 @@
 		onShareAppMessage(e) {
 			return {
 				title: this.detail.title,
-				path: `/pages/news/detail?id=${this.detail.id}`
+				path: `/pages/index/news/detail?id=${this.detail.id}`,
+				imageUrl: getUrl(this.detail.coverPicUrl)
 			}
 		},
 		methods: {

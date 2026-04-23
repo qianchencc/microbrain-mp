@@ -270,6 +270,7 @@
 		fetchNewsPage({
 			size: 4,
 			page: 0,
+			pageFlag: 1,
 			historyType: 'WEB',
 			sort: 'createdAt,desc'
 		}).then(res => {
