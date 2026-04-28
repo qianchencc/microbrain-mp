@@ -34,6 +34,14 @@
 								"icon": "https://ncim.577119.com/file/group1/M00/02/29/wKgB5WnWDl6AfbrRAAFDSxBKoE0134.png",
 								"uri": "toOtherApp:=:https://ksgl.577119.com",
 								"type": "MENU"
+							},
+							{
+								"id": "78293111c71d4080a8c87595a43196e9",
+								"title": "在线考试",
+								"name": "testOnline",
+								"icon": "https://ncim.577119.com/file/group1/M00/02/3A/wKgB5WnwZCGAA4HkAAAyYNb-P_4849.png",
+								"uri": "https://ks.577119.com",
+								"type": "MENU"
 							}
 						]
 					},
