@@ -48,11 +48,9 @@
 				</view>
 				<view class="good-list con">
 					<swiper class="good_swiper" autoplay circular>
-						<template v-if="bannerList.length > 0">
-							<swiper-item v-for="item in goodList" :key="item.id">
-								<image class="good-item" :src="item.goodsImage" mode="aspectFill" @click="openGood(item)" />
-							</swiper-item>
-						</template>
+						<swiper-item v-for="item in goodList" :key="item.id">
+							<image class="good-item" :src="item.goodsImage" mode="aspectFill" @click="openGood(item)" />
+						</swiper-item>
 					</swiper>
 				</view>
 			</view>
