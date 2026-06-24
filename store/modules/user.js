@@ -37,7 +37,7 @@ export const useUserStore = defineStore({
 		getDict() {
 			return this.dict || storageGet('dict') || {}
 		},
-		getShowIndexAi(){
+		getShowIndex(){
 			return !!Object.keys(this.getDict['ShowMiniAI'])?.length
 		}
 	},

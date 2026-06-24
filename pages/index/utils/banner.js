@@ -3,7 +3,6 @@ import { fecthFilePage } from '@/apis/common'
 import { ref, watch, computed } from 'vue'
 import { DOMAIN } from '@/config/settings'
 import { useUserStoreHook } from '@/store/modules/user'
-const geospatial = computed(() => useUserStoreHook().getDistrict.name)
 const authorized = computed(() => useUserStoreHook().authorized)
 export const useBannerHook = () => {
 	const bannerList = ref([])
@@ -26,10 +25,6 @@ export const useBannerHook = () => {
 			}
 		})
 	}
-
-	watch([geospatial.value, authorized.value], () => {
-		getBannerList()
-	})
 
 	getBannerList()
 

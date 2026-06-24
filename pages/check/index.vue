@@ -1,9 +1,5 @@
 <template>
 	<view class="container">
-		<!-- <view class="header">
-			功能开发中，敬请期待！最新完成：
-			<text class="tui-current" @tap="currentStep">消息界面</text>
-		</view> -->
 		<view class="title">{{patrolPathName}}</view>
 		<view class="field" v-for="(item,index) in VOList" :key="index">
 			<uni-list class="list" :border="true">
@@ -19,35 +15,6 @@
 				
 			</uni-list>
 		</view>
-		<!-- <view class="login-btn">
-			<button class="landing" :loading="loading" type="primary" @tap="sign">{{ loading ? "签到中...":patrolPointName+" 签到"}}</button>
-		</view> -->
-		<!-- <view class="cu-timeline">
-			<view class="cu-time text-blue">{{patrolPathName}}</view>
-			<view  :class="{'text-blue':item.patrolPointRecord,'text-yellow':patrolPointId===item.patrolPointId}"
-				v-for="(item,index) in VOList" :key="index">
-						<uni-list>
-							<uni-list :border="true">
-								<view class="content">
-									<view class="cu-capsule radius" v-if="item.patrolPointRecord">
-										<view class="cu-tag bg-blue"></view>
-										<view class="cu-tag line-blue">{{item.patrolPointRecord?item.patrolPointRecord.signInTime:'' }}</view>
-									</view>
-									<view class="cu-capsule radius" v-else>
-										<view class="cu-tag">{{item.name?item.name:''}} </view>
-									</view>
-									<view  class="margin-left-sm">签到状态：{{item.patrolPointRecord?item.name+'| 检查完毕 | 正常签到':''}} 
-									</view>
-									<view  class="margin-left-sm">签到位置：{{item.patrolPointRecord?item.patrolPointRecord.signLocation:''}}
-									</view>
-								</view>
-						
-							</uni-list>
-						</uni-list>		
-			</view>
-		</view>
-		 -->
-
 	</view>
 </template>
 
@@ -57,27 +24,10 @@
 		fatchPointCheckItem,
 		getPatrolInfoByCode
 	} from '@/apis/check/index.js'
-	// import $weatherApi from '@/apis/weather.js'
 	import QQMapwx from './detail/qqmap-wx-jssdk.js'
 
 	export default {
 		filters: {
-			//    formatDate(value) {
-			//        if (!value) return ''
-			//        var date = new Date(value)
-			//        var month = date.getMonth() + 1
-			//        var hours = date.getHours()
-			//        if (hours < 10) {
-			//            hours = '0' + hours
-			//        }
-			//        var minutes = date.getMinutes()
-			//        if (minutes < 10) {
-			//            minutes = '0' + minutes
-			//        }
-			//        var time = date.getFullYear() + '-' + month + '-' + date.getDate() +
-			// ' ' + hours + ':' + minutes
-			//        return time
-			//    },
 			formatDate(val) {
 				if (val) { return new Date(val.replace(/-/g, '/')).format('yyyy-MM-dd hh:mm') }
 
@@ -204,10 +154,6 @@
 			},
 			// 签到
 			async sign() {
-				// uni.navigateTo({
-				//     url: '/pages/check/detail/index?patrolPointId=' + this.patrolPointId ,
-				//     animationType: 'pop-in'
-				// })
 				if (this.signEnable) {
 					uni.showToast({
 						title: '没有巡更任务',

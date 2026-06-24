@@ -80,8 +80,6 @@ export const chooseImg2 = (count = 9, success) => {
 }
 
 // 菜单跳转
-// 有专属二级页面的菜单
-const secondMenu = ['Property', 'MyOffice', 'MyApply', 'CompanyManage']
 export const jumpUrl = async menu => {
 	if (menu.resourceName.includes('incomplete')) {
 		uni.showToast({
@@ -119,9 +117,6 @@ export const jumpUrl = async menu => {
 			// 处理第三方
 			let [fucName, url] = menu.uri.split(':=:')
 			menuFuc(fucName, menu)
-		} else if (secondMenu.some(item => item === menu.resourceName)) {
-			// 处理二级页面
-			goPage(`/pages/index/secondMenu?id=${menu.id}`)
 		} else {
 			// 网页跳转
 			webJump(menu.uri)

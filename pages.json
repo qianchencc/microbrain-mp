@@ -11,45 +11,21 @@
 			}
 		},
 		{
-			"path": "pages/index/indexlist",
-			"style": {
-				"navigationBarTitleText": "小区列表"
-			}
-		},
-		{
-			"path": "pages/index/news/newList",
+			"path": "pages/news/newList",
 			"style": {
 				"navigationBarTitleText": "新闻列表"
 			}
 		},
 		{
-			"path": "pages/index/news/detail",
+			"path": "pages/news/detail",
 			"style": {
 				"navigationBarTitleText": "要闻详情"
-			}
-		},
-		{
-			"path": "pages/messages/index",
-			"style": {
-				"navigationBarTitleText": "消息"
-			}
-		},
-		{
-			"path": "pages/messages/detail",
-			"style": {
-				"navigationBarTitleText": ""
 			}
 		},
 		{
 			"path": "pages/user/index",
 			"style": {
 				"navigationBarTitleText": "我的"
-			}
-		},
-		{
-			"path": "pages/user/face",
-			"style": {
-				"navigationBarTitleText": "头像录入"
 			}
 		},
 		{
@@ -110,46 +86,8 @@
 			"style": {
 				"navigationBarTitleText": ""
 			}
-		},
-		{
-			"path": "pages/login/index",
-			"style": {
-				"titleNView": false
-			}
-		},
-		{
-			"path": "pages/index/secondMenu",
-			"style": {
-				"navigationBarTitleText": "",
-				"enablePullDownRefresh": false
-			}
 		}
 	],
-	"tabBar": {
-		"color": "#8a8a8a",
-		"selectedColor": "#1C77FF",
-		"backgroundColor": "#ffffff",
-		"list": [
-			{
-				"pagePath": "pages/index/index",
-				"text": "首页",
-				"iconPath": "static/images/tabbar/icon_home_normal@3x.jpg",
-				"selectedIconPath": "static/images/tabbar/icon_home_active@3x.jpg"
-			},
-			{
-				"pagePath": "pages/messages/index",
-				"text": "消息",
-				"iconPath": "static/images/tabbar/icon_news_nomal@3x.jpg",
-				"selectedIconPath": "static/images/tabbar/icon_news_active@3x.jpg"
-			},
-			{
-				"pagePath": "pages/user/index",
-				"text": "我的",
-				"iconPath": "static/images/tabbar/icon_user_normal@3x.jpg",
-				"selectedIconPath": "static/images/tabbar/icon_user_active@3x.jpg"
-			}
-		]
-	},
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
 		"navigationBarTitleText": "微脑3.0",

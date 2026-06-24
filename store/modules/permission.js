@@ -71,6 +71,16 @@ export const usePermissionStore = defineStore({
 	getters: {
 		getMenuList() {
 			return this.menuList || []
+		},
+		getAllMenu() {
+			let list = []
+			this.menuList.forEach(item => {
+				list.push(item)
+				if (item.children && item.children.length) {
+					list.push(...item.children)
+				}
+			})
+			return list
 		}
 	},
 	actions: {

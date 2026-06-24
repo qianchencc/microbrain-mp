@@ -125,6 +125,12 @@
             "scope.userLocation" : {
                 "desc" : "您的位置用于进行巡更任务签到时获取签到时所在位置"
             }
+        },
+        "plugins" : {
+            "WechatSI" : {
+                "version" : "0.3.7",
+                "provider" : "wx069ba97219f66d99"
+            }
         }
     },
     "mp-alipay" : {

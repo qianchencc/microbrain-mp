@@ -1,11 +1,7 @@
 <script>
 	import { useUserStoreHook } from '@/store/modules/user.js'
 	import { getToken } from '@/utils/auth'
-	import { wxLogin } from '@/utils/wxLogin.js'
-	import { appPush } from '@/utils/appPush.js'
 	import { initNfc } from '@/utils/NFC.js'
-	import { openBle } from '@/utils/blue.js'
-	import { getUnreadNotifyCount } from '@/utils/message.js'
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	export default {
 		onLaunch: function() {
@@ -14,7 +10,6 @@
 		onShow: function() {
 			if (getToken()) {
 				usePermissionStoreHook().setAuthority()
-				getUnreadNotifyCount()
 			} else {
 				wx.login({
 					provider: 'weixin',
