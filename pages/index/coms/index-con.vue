@@ -86,7 +86,7 @@
 	// 顶部菜单配置（key: 菜单名称，value: 菜单图标）
 	const topObj = computed(() => useUserStoreHook().getDict['MiniTopMenu'] || {})
 	const topMenu = computed(() => Object.values(topObj.value))
-	const workMenu = computed(() => menuList.value.find(item => item.name === 'workSpace')?.children || [])
+	const workMenu = computed(() => menuList.value.find(item => item.resourceName === 'workSpace')?.children || [])
 	const topMenuList = computed(() => {
 		let obj = {};
 		Object.entries(topObj.value).forEach(([k, v]) => obj[v] = k)
@@ -99,7 +99,7 @@
 	// 工作菜单
 	const workMenuList = computed(() => workMenu.value.filter(item => !topMenu.value.includes(item.resourceTitle)))
 	// 服务菜单
-	const serviceMenuList = computed(() => menuList.value.find(item => item.name === 'serviceSpace')?.children || [])
+	const serviceMenuList = computed(() => menuList.value.find(item => item.resourceName === 'serviceSpace')?.children || [])
 	
 	const reqUrl = isDev ? 'https://nltest.nongchanlian.com' : 'https://nlw.nongchanlian.com'
 	const goodList = ref([])
