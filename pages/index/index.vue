@@ -77,7 +77,6 @@
 					this.toBottom()
 					if (data.query) {
 						chatToAi(data.query).then(res => {
-							console.log(res)
 							this.$nextTick(() => {
 								this.$refs.loading.toEnd()
 								if (res) {
