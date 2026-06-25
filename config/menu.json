@@ -24,7 +24,7 @@
 						"id": "ac9861c838944e66a56664824b4c223d",
 						"title": "人员培训",
 						"name": "training",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7fs2Ab1mHAAAjUL3zkmo200.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8flmAWZPDAACz275ih_E197.png",
 						"uri": "toOtherApp:=:https://ksgl.577119.com",
 						"type": "MENU"
 					},
@@ -32,7 +32,7 @@
 						"id": "78293111c71d4080a8c87595a43196e9",
 						"title": "考评中心",
 						"name": "testOnline",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7ft-AJi_qAAAkkMAGkbY908.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8fmOAJnqYAAEJt_LYXqE390.png",
 						"uri": "https://ks.577119.com",
 						"type": "MENU"
 					},
@@ -40,7 +40,7 @@
 						"id": "86a35ebb35fa4bb0b3dfc5b126ec5001",
 						"title": "我的办公室",
 						"name": "owner",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7fvCAR_NMAAAVczDt4MQ743.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8fmyAeR7jAAC6iAXiohw168.png",
 						"uri": "/#/pages/office/index",
 						"type": "MENU"
 					},

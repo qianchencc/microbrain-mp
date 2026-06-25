@@ -47,7 +47,7 @@ export default {
 		},
 		// 输入发送
 		inputConfirm(e){
-			this.sendMsg({type: 'me', data: e.detail.value, query: e.detail.value})
+			this.sendMsg({type: 'me', data: e.detail.value, query: {message: e.detail.value}})
 			this.value = ''
 		},
 		// 语音发送
@@ -65,7 +65,7 @@ export default {
 			console.log("成功开始录音识别", res)
 		},
 		voiceStop(res) {
-			this.sendMsg({type: 'me', data: res.result, query: res.result})
+			this.sendMsg({type: 'me', data: res.result, query: {message: res.result}})
 		},
 		voiceError(res) {
 			console.error("error msg", res.msg)

@@ -79,15 +79,26 @@
 	import {useUserStoreHook} from "@/store/modules/user";
 	
 	const { bannerList } = useBannerHook()
+	// 是否显示首页菜单
 	const showIndex = computed(() => useUserStoreHook().getShowIndex)
+	// 菜单列表
 	const menuList = computed(() => usePermissionStoreHook().getMenuList)
-	const topMenu = computed(() => Object.keys(useUserStoreHook().getDict['MiniTopMenu'] || {}))
+	// 顶部菜单配置（key: 菜单名称，value: 菜单图标）
+	const topObj = computed(() => useUserStoreHook().getDict['MiniTopMenu'] || {})
+	const topMenu = computed(() => Object.values(topObj.value))
 	const workMenu = computed(() => menuList.value.find(item => item.name === 'workSpace')?.children || [])
-	const topMenuList = computed(() => workMenu.value.filter(item => topMenu.value.includes(item.id)).map(item => ({
-		...item,
-		resourceTitle: item.resourceTitle.slice(0, 2) + '<br/>' + item.resourceTitle.slice(2)
-	})))
-	const workMenuList = computed(() => workMenu.value.filter(item => !topMenu.value.includes(item.id)))
+	const topMenuList = computed(() => {
+		let obj = {};
+		Object.entries(topObj.value).forEach(([k, v]) => obj[v] = k)
+		return workMenu.value.filter(item => topMenu.value.includes(item.resourceTitle)).map(item => ({
+			...item,
+			icon: obj[item.resourceTitle],
+			resourceTitle: item.resourceTitle.slice(0, 2) + '<br/>' + item.resourceTitle.slice(2)
+		}))
+	})
+	// 工作菜单
+	const workMenuList = computed(() => workMenu.value.filter(item => !topMenu.value.includes(item.resourceTitle)))
+	// 服务菜单
 	const serviceMenuList = computed(() => menuList.value.find(item => item.name === 'serviceSpace')?.children || [])
 	
 	const reqUrl = isDev ? 'https://nltest.nongchanlian.com' : 'https://nlw.nongchanlian.com'

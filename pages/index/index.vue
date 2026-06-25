@@ -7,12 +7,12 @@
 					<view class="me">{{ chatItem.data }}</view>
 				</view>
 				<view v-else class="ai-item con">
-					<view v-if="chatItem.type === 'AI_ANSWER'" class="ai">
+					<view v-if="['EXCEPTION', 'AI_ANSWER'].includes(chatItem.type)" class="ai">
 						<zero-markdown-view :markdown="chatItem.data" @load="toBottom"/>
 					</view>
 					<ActivityCon v-else-if="chatItem.type === 'ACTIVITY'" @toBottom="toBottom"/>
 					<NewsCon v-else-if="chatItem.type === 'NEWS'" @toBottom="toBottom"/>
-					<MenuCon v-else-if="chatItem.type === 'MENU'" :name="chatItem.data"/>
+					<MenuCon v-else-if="chatItem.type === 'BUSINESS_MODULE'" :name="chatItem.data"/>
 				</view>
 			</view>
 			<loading ref="loading" v-if="loading" @toLoading="toBottom"></loading>
@@ -34,6 +34,7 @@
 	import ActivityCon from "@/pages/index/coms/ActivityCon.vue";
 	import NewsCon from "@/pages/index/coms/NewsCon.vue";
 	import MenuCon from "@/pages/index/coms/MenuCon.vue";
+	import {chatToAi} from "@/apis/common";
 	
 	export default {
 		components: {
@@ -66,44 +67,41 @@
 			// 发送消息
 			sendMsg(data) {
 				if (this.loading) return
-				if (data.type === 'me') this.chatList.push(data)
+				if (data.type === 'me') {
+					this.chatList.push(data)
+					this.toBottom(0)
+				}
 				// auto: 自动发送，query：请求参数，params：非请求参数
 				if (!data.auto) {
 					this.loading = true;
 					this.toBottom()
 					if (data.query) {
-						// aiPage.chatToAi(data.query).then(res => {
+						chatToAi(data.query).then(res => {
+							console.log(res)
 							this.$nextTick(() => {
 								this.$refs.loading.toEnd()
-								setTimeout(() => {
-									// if (res) {
-									// 	let chat = res.content
-									// 	this.chatList.push({type: chat.scene, data: chat.message})
-									// }
-									this.chatList.push({type: 'MENU', data: '智慧空调,考评中心,我的办公室,智慧照明'})
-									this.loading = false
-									this.toBottom()
-								}, 500)
+								if (res) {
+									let chat = res.content
+									this.chatList.push({type: chat.scene, data: chat.message})
+								}
+								this.loading = false
+								this.toBottom()
 							})
-						// })
+						})
 					} else if (data.params) {
 						this.$nextTick(() => {
 							this.$refs.loading.toEnd()
 							// 内部模块，自定义参数，直接推入
-							setTimeout(() => {
-								this.chatList.push(data.params)
-								this.loading = false
-								this.toBottom()
-							}, 500)
+							this.chatList.push(data.params)
+							this.loading = false
+							this.toBottom()
 						})
 					}
 				} else {
 					this.inView = 'bottom';
-					setTimeout(() => {
-						this.chatList.push(data.auto)
-						this.loading = false;
-						this.toBottom()
-					}, 500)
+					this.chatList.push(data.auto)
+					this.loading = false;
+					this.toBottom()
 				}
 			},
 			
@@ -112,13 +110,13 @@
 				this.chatList = []
 			},
 			// 工具
-			toBottom () {
+			toBottom (time = 1500) {
 				console.log('---------------- toBottom ----------------')
 				this.inView = ''
 				this.$nextTick(() => {
 					setTimeout(() => {
 						this.inView = 'bottom'
-					}, 500)
+					}, time)
 				})
 			},
 			// 蓝牙部分
