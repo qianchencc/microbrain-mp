@@ -1,6 +1,8 @@
 <template>
 	<view class="index">
 		<scroll-view class="chat-con" scroll-y="true" scroll-with-animation="true" :scroll-into-view="inView">
+			<!--为了滚动到底做的view-->
+			<view id="top"></view>
 			<index-con ref="indexCon" @sendMsg="sendMsg"></index-con>
 			<view v-for="(chatItem, chatIndex) in chatList" :key="chatIndex">
 				<view v-if="chatItem.type === 'me'" class="me-item con">
@@ -21,6 +23,8 @@
 		</scroll-view>
 		
 		<input-com @sendMsg="sendMsg" @clearChat="clearChat"></input-com>
+		
+		<image v-if="chatList.length" class="top" src="/static/top.png" mode="aspectFit" @click="toTop"></image>
 	</view>
 </template>
 
@@ -118,6 +122,12 @@
 					}, time)
 				})
 			},
+			toTop(){
+				this.inView = '';
+				this.$nextTick(() => {
+					this.inView = 'top'
+				})
+			},
 			// 蓝牙部分
 			initBlueTooth() {
 				if (!storageGet('bluetoothstatus')) {
@@ -200,6 +210,15 @@
 				@extend .chat-style;
 			}
 		}
+	}
+	
+	.top {
+		width: 70rpx;
+		height: 70rpx;
+		position: fixed;
+		bottom: calc(160rpx + env(safe-area-inset-bottom));
+		right: 20rpx;
+		z-index: 99;
 	}
 }
 </style>

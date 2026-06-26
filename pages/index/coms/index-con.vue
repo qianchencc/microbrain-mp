@@ -16,7 +16,7 @@
 							<image src="/static/images/index/notice.png" mode="aspectFit"></image>
 							<swiper class="notice-list" circular vertical>
 								<swiper-item v-for="item in noticeList" :key="item.id">
-									<view class="notice-item" @click="goPage(`/pages/index/news/detail?id=${item.id}`)">
+									<view class="notice-item" @click="goPage(`/pages/news/detail?id=${item.id}`)">
 										{{ item.infoSubject }}
 									</view>
 								</swiper-item>
