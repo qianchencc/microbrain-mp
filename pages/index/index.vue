@@ -1,6 +1,6 @@
 <template>
 	<view class="index">
-		<scroll-view class="chat-con" scroll-y="true" scroll-with-animation="true" :scroll-into-view="inView">
+		<scroll-view class="chat-con" scroll-y="true" scroll-with-animation="true" :scroll-into-view="inView" @scroll="scrollTop">
 			<!--为了滚动到底做的view-->
 			<view id="top"></view>
 			<index-con ref="indexCon" @sendMsg="sendMsg"></index-con>
@@ -24,7 +24,7 @@
 		
 		<input-com @sendMsg="sendMsg" @clearChat="clearChat"></input-com>
 		
-		<image v-if="chatList.length" class="top" src="/static/top.png" mode="aspectFit" @click="toTop"></image>
+		<image v-if="showTop > 0" class="top" src="/static/top.png" mode="aspectFit" @click="toTop"></image>
 	</view>
 </template>
 
@@ -57,7 +57,8 @@
 				
 				// 蓝牙部分
 				bluetooth: false,
-				ifChecked: false
+				ifChecked: false,
+				showTop: 0
 			}
 		},
 		onShow() {
@@ -128,6 +129,9 @@
 					this.inView = 'top'
 				})
 			},
+			scrollTop(e){
+				this.showTop = e.detail.scrollTop - 200
+			},
 			// 蓝牙部分
 			initBlueTooth() {
 				if (!storageGet('bluetoothstatus')) {
@@ -180,6 +184,7 @@
 	padding: 25rpx 25rpx env(safe-area-inset-bottom);
 	display: flex;
 	flex-direction: column;
+	background: linear-gradient(to bottom, #3974F6 0%, #F7F7F7 100%);
 	.chat-con {
 		height: 0;
 		flex-grow: 1;
