@@ -7,7 +7,7 @@
 			<view class="name">{{ detail.projectName || '-' }}</view>
 			<view class="code">
 				<text class="code-label">项目编号</text>
-				<text class="code-value">{{ detail.projectCode || '-' }}</text>
+				<text class="code-value">{{ detail.projectNo || '-' }}</text>
 			</view>
 		</view>
 
@@ -56,104 +56,105 @@
 </template>
 
 <script>
-// nav配置：key对应详情数据里的子对象
+import {fetchProjectDetail} from "@/apis/common";
+
 const SECTIONS = [
 	{
-		key: 'base',
+		key: 'projectBaseInfo',
 		title: '项目基础信息',
 		fields: [
 			{ label: '业务员', prop: 'salesman' },
-			{ label: '制单员', prop: 'preparedBy' },
+			{ label: '制单员', prop: 'documentCreator' },
 			{ label: '项目类型', prop: 'projectType' },
-			{ label: '所属机构', prop: 'belongOrg' },
-			{ label: '承建机构', prop: 'buildOrg' },
-			{ label: '是否公建', prop: 'publicBuild' },
+			{ label: '所属机构', prop: 'owningOrg' },
+			{ label: '承建机构', prop: 'constructionOrg' },
+			{ label: '是否公建', prop: 'publicBuilding', type: 'boolean' },
 			{ label: '质量标准', prop: 'qualityStandard' },
-			{ label: '立项年份', prop: 'approvalYear' },
+			{ label: '立项年份', prop: 'projectYear' },
 			{ label: '项目经理', prop: 'projectManager' },
-			{ label: '项目地址', prop: 'address', full: true },
-			{ label: '计划工期', prop: 'planDuration' },
+			{ label: '项目地址', prop: 'projectAddress', full: true },
+			{ label: '计划工期', prop: 'plannedDuration' },
 			{ label: '实际工期', prop: 'actualDuration' },
-			{ label: '建设单位', prop: 'buildUnit' },
-			{ label: '项目所属', prop: 'projectBelong' },
-			{ label: '承建分支机构', prop: 'buildBranch' },
-			{ label: '项目是否分包', prop: 'subcontract' },
+			{ label: '建设单位', prop: 'constructionUnit' },
+			{ label: '项目所属', prop: 'projectOwnership' },
+			{ label: '承建分支机构', prop: 'constructionBranch' },
+			{ label: '项目是否分包', prop: 'subcontracted', type: 'boolean' },
 			{ label: '总包项目', prop: 'generalContractProject', full: true },
-			{ label: '投标编号', prop: 'bidCode' },
+			{ label: '投标编号', prop: 'bidNo' },
 			{ label: '投标项目名称', prop: 'bidProjectName', full: true },
-			{ label: '投标项目经理', prop: 'bidManager' },
-			{ label: '开标日期', prop: 'bidOpenDate' },
-			{ label: '中标日期', prop: 'bidWinDate' }
+			{ label: '投标项目经理', prop: 'bidProjectManager' },
+			{ label: '开标日期', prop: 'bidOpeningDate' },
+			{ label: '中标日期', prop: 'bidWinningDate' }
 		]
 	},
 	{
-		key: 'progress',
+		key: 'latestProgress',
 		title: '最新进度',
 		fields: [
-			{ label: '所属阶段', prop: 'stage' },
-			{ label: '项目进度', prop: 'progress', type: 'progress' },
-			{ label: '进度详情', prop: 'detail', full: true },
+			{ label: '所属阶段', prop: 'currentStage' },
+			{ label: '进度比例', prop: 'progressRatio', type: 'progress' },
+			{ label: '进度详情', prop: 'progressDetail', full: true },
 			{ label: '提交人', prop: 'submitter' },
 			{ label: '提交时间', prop: 'submitTime' }
 		]
 	},
 	{
-		key: 'income',
+		key: 'incomeContract',
 		title: '收入合同',
 		fields: [
 			{ label: '合同份数', prop: 'contractCount' },
-			{ label: '合同变更数', prop: 'changeCount' },
-			{ label: '初始化合同金额', prop: 'initAmount', type: 'money' },
-			{ label: '变更后合同金额', prop: 'changedAmount', type: 'money' },
+			{ label: '合同变更数', prop: 'contractChangeCount' },
+			{ label: '初始化合同金额', prop: 'initialContractAmount', type: 'money' },
+			{ label: '变更后合同金额', prop: 'modifiedContractAmount', type: 'money' },
 			{ label: '累计变更金额', prop: 'totalChangeAmount', type: 'money' },
-			{ label: '累计收款金额', prop: 'totalReceivedAmount', type: 'money' },
+			{ label: '累计收款金额', prop: 'totalReceiptAmount', type: 'money' },
 			{ label: '更新日期', prop: 'updateDate' },
 			{ label: '更新人', prop: 'updater' }
 		]
 	},
 	{
-		key: 'labor',
+		key: 'laborSubcontract',
 		title: '劳务分包合同',
 		fields: [
 			{ label: '合同份数', prop: 'contractCount' },
-			{ label: '合同变更数', prop: 'changeCount' },
+			{ label: '合同变更数', prop: 'contractChangeCount' },
 			{ label: '累计合同金额', prop: 'totalContractAmount', type: 'money' },
 			{ label: '累计变更金额', prop: 'totalChangeAmount', type: 'money' },
-			{ label: '累计支付金额', prop: 'totalPayAmount', type: 'money' }
+			{ label: '累计支付金额', prop: 'totalPaymentAmount', type: 'money' }
 		]
 	},
 	{
-		key: 'purchase',
+		key: 'purchaseContract',
 		title: '采购合同',
 		fields: [
 			{ label: '合同份数', prop: 'contractCount' },
-			{ label: '合同变更数', prop: 'changeCount' },
+			{ label: '合同变更数', prop: 'contractChangeCount' },
 			{ label: '累计合同金额', prop: 'totalContractAmount', type: 'money' },
 			{ label: '累计变更金额', prop: 'totalChangeAmount', type: 'money' },
-			{ label: '累计支付金额', prop: 'totalPayAmount', type: 'money' }
+			{ label: '累计支付金额', prop: 'totalPaymentAmount', type: 'money' }
 		]
 	},
 	{
-		key: 'input',
+		key: 'inputInvoiceSummary',
 		title: '进项汇总',
 		fields: [
-			{ label: '收票金额', prop: 'receiveAmount', type: 'money' },
-			{ label: '合同支出', prop: 'contractExpense', type: 'money' },
-			{ label: '其他支出', prop: 'otherExpense', type: 'money' },
-			{ label: '进项税额', prop: 'inputTax', type: 'money' },
-			{ label: '与销项差额度', prop: 'outputDiff', type: 'money' }
+			{ label: '收票金额', prop: 'invoiceReceivedAmount', type: 'money' },
+			{ label: '合同支出', prop: 'contractExpenditure', type: 'money' },
+			{ label: '其他支出', prop: 'otherExpenditure', type: 'money' },
+			{ label: '进项税额', prop: 'inputTaxAmount', type: 'money' },
+			{ label: '与销项差额度', prop: 'outputTaxCheckAmount', type: 'money' }
 		]
 	},
 	{
-		key: 'output',
+		key: 'outputInvoiceSummary',
 		title: '销项汇总',
 		fields: [
 			{ label: '合同金额', prop: 'contractAmount', type: 'money' },
-			{ label: '项目资金余额', prop: 'fundBalance', type: 'money' },
-			{ label: '开票金额', prop: 'invoiceAmount', type: 'money' },
+			{ label: '项目资金余额', prop: 'projectFundBalance', type: 'money' },
+			{ label: '开票金额', prop: 'invoicedAmount', type: 'money' },
 			{ label: '合同收入', prop: 'contractIncome', type: 'money' },
 			{ label: '其他收入', prop: 'otherIncome', type: 'money' },
-			{ label: '销项税额', prop: 'outputTax', type: 'money' }
+			{ label: '销项税额', prop: 'outputTaxAmount', type: 'money' }
 		]
 	}
 ]
@@ -165,93 +166,15 @@ export default {
 			currentNav: 0,
 			navIntoView: '',
 			sections: SECTIONS,
-			detail: {},
-			// 接口未接入前的假数据，接入后字段名按实际返回调整
-			mockDetail: {
-				projectName: '智慧园区综合管理平台建设项目',
-				projectCode: 'XM-2026-0101',
-				base: {
-					salesman: '张三',
-					preparedBy: '李四',
-					projectType: '房屋建筑工程',
-					belongOrg: '新世纪发展集团总部',
-					buildOrg: '第一工程分公司',
-					publicBuild: '是',
-					qualityStandard: '合格（争创鲁班奖）',
-					approvalYear: '2026年',
-					projectManager: '王五',
-					address: '浙江省杭州市滨江区智慧新天地园区',
-					planDuration: '540天',
-					actualDuration: '320天',
-					buildUnit: '杭州智慧园区建设发展有限公司',
-					projectBelong: '集团直营',
-					buildBranch: '华东区域分公司',
-					subcontract: '是',
-					generalContractProject: '智慧园区综合管理平台总承包工程',
-					bidCode: 'ZB-2025-1208',
-					bidProjectName: '智慧园区综合管理平台建设项目施工总承包',
-					bidManager: '赵六',
-					bidOpenDate: '2025-12-18',
-					bidWinDate: '2025-12-25'
-				},
-				progress: {
-					stage: '主体施工',
-					progress: 65,
-					detail: '主体结构施工至18层，二次结构施工至12层，机电安装随主体结构同步预埋，整体进度符合计划要求。',
-					submitter: '王五',
-					submitTime: '2026-07-20 14:30'
-				},
-				income: {
-					contractCount: 3,
-					changeCount: 1,
-					initAmount: 125000000,
-					changedAmount: 128500000,
-					totalChangeAmount: 3500000,
-					totalReceivedAmount: 68500000,
-					updateDate: '2026-07-15',
-					updater: '陈七'
-				},
-				labor: {
-					contractCount: 5,
-					changeCount: 2,
-					totalContractAmount: 18600000,
-					totalChangeAmount: 850000,
-					totalPayAmount: 12300000
-				},
-				purchase: {
-					contractCount: 12,
-					changeCount: 0,
-					totalContractAmount: 32400000,
-					totalChangeAmount: 0,
-					totalPayAmount: 21800000
-				},
-				input: {
-					receiveAmount: 28900000,
-					contractExpense: 34100000,
-					otherExpense: 1250000,
-					inputTax: 3120000,
-					outputDiff: 1980000
-				},
-				output: {
-					contractAmount: 128500000,
-					fundBalance: 15200000,
-					invoiceAmount: 72300000,
-					contractIncome: 68500000,
-					otherIncome: 380000,
-					outputTax: 5960000
-				}
-			}
+			detail: {}
 		}
 	},
 	computed: {
 		currentSection() {
 			return this.sections[this.currentNav]
 		},
-		currentData() {
-			return this.detail[this.currentSection.key] || {}
-		},
 		progressValue() {
-			const num = parseFloat(this.currentData.progress)
+			const num = parseFloat(this.detail.progressRatio) * 100
 			if (isNaN(num)) return 0
 			return Math.min(100, Math.max(0, num))
 		}
@@ -262,15 +185,15 @@ export default {
 	},
 	methods: {
 		// 获取项目详情（接口未接入，暂时使用假数据）
-		getDetail() {
-			// TODO: 接入项目详情接口，如 getProjectDetail({ code: this.code }).then(res => this.detail = res.data)
-			this.detail = this.mockDetail
+		async getDetail() {
+			let res = await fetchProjectDetail({type: this.currentSection.key, code: this.code})
+			if (!res) return
+			this.detail = res.content
 		},
-
 		// 切换nav
 		switchNav(index) {
 			this.currentNav = index
-			// 让选中项滚动到可视区域（偏左一位，露出前一项）
+			this.getDetail()
 			this.navIntoView = ''
 			this.$nextTick(() => {
 				this.navIntoView = 'nav-' + Math.max(0, index - 1)
@@ -279,9 +202,10 @@ export default {
 
 		// 值格式化：空值显示-，金额千分位
 		formatValue(field) {
-			const val = this.currentData[field.prop]
+			const val = this.detail[field.prop]
 			if (val === null || val === undefined || val === '') return '-'
 			if (field.type === 'money') return this.formatMoney(val)
+			if (field.type === 'boolean') return val ? '是' : '否'
 			return val
 		},
 		formatMoney(val) {
@@ -289,7 +213,7 @@ export default {
 			if (isNaN(num)) return val
 			const parts = String(num).split('.')
 			parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-			return parts.join('.')
+			return `¥${parts.join('.')}`
 		}
 	}
 }

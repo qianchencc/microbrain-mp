@@ -9,7 +9,7 @@
 						<view class="me">{{ chatItem.data }}</view>
 					</view>
 					<view v-else class="ai-item con">
-						<view v-if="['EXCEPTION', 'AI_ANSWER'].includes(chatItem.type)" class="ai">
+						<view v-if="chatItem.type === 'AI_ANSWER'" class="ai">
 							<zero-markdown-view :markdown="chatItem.data" @load="toBottom"/>
 						</view>
 						<project-con v-else :list="chatItem.data"></project-con>
@@ -56,9 +56,17 @@ export default {
 				this.chatList.push(data)
 				this.toBottom(0)
 			}
-			// auto: 自动发送，query：请求参数，params：非请求参数
-			chatToAiProject({search: data.data}).then(res => {
-				console.log(res)
+			this.loading = true
+			chatToAiProject(data.data).then(res => {
+				if (res) {
+					let haveData = res.content.content && res.content.content.length
+					this.chatList.push({
+						type: haveData ? 'PRROJECT' : 'AI_ANSWER',
+						data: haveData ? res.content.content : '未查询到任何项目,请重新描述'
+					})
+					this.loading = false
+					this.toBottom()
+				}
 			})
 		},
 		
@@ -67,7 +75,7 @@ export default {
 			this.chatList = []
 		},
 		// 工具
-		toBottom (time = 1500) {
+		toBottom (time = 500) {
 			console.log('---------------- toBottom ----------------')
 			this.inView = ''
 			this.$nextTick(() => {

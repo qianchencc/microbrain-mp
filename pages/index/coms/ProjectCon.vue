@@ -8,8 +8,8 @@
 			<view class="item" hover-class="item-hover" v-for="(item, index) in list" :key="index" @click="toDetail(item)">
 				<image class="cover" src="/static/project.png" mode="aspectFit"></image>
 				<view class="info">
-					<view class="name">{{ item.name }}</view>
-					<view class="code">项目编号：{{ item.code }}</view>
+					<view class="name">{{ item.projectName }}</view>
+					<view class="code">项目编号：{{ item.projectNo }}</view>
 				</view>
 				<view class="arrow"></view>
 			</view>
@@ -28,11 +28,9 @@ export default {
 			default: () => []
 		}
 	},
-	computed: {
-	},
 	methods: {
 		toDetail(item) {
-			goPage(`/pages/detail/project?code=${item.code}`)
+			goPage(`/pages/detail/project?code=${item.projectNo}`)
 		}
 	}
 }
@@ -46,6 +44,7 @@ export default {
 	border-radius: 24rpx;
 	padding: 24rpx;
 	box-shadow: 0 8rpx 24rpx rgba(57, 116, 246, 0.08);
+	margin-bottom: 20rpx;
 
 	.tip {
 		display: flex;
