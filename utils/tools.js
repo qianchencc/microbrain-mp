@@ -117,6 +117,8 @@ export const jumpUrl = async menu => {
 			// 处理第三方
 			let [fucName, url] = menu.uri.split(':=:')
 			menuFuc(fucName, menu)
+		} else if (menu.uri.startsWith('inMini')) {
+			goPage(menu.uri.split('=')[1])
 		} else {
 			// 网页跳转
 			webJump(menu.uri)

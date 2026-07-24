@@ -30,7 +30,7 @@ const generateBtns = (routes) => {
 }
 
 // 菜单uri不改变
-const noChangeUri = ['miniAppId', 'http', 'wxProgram', 'toOtherApp'];
+const noChangeUri = ['miniAppId', 'http', 'wxProgram', 'toOtherApp', 'inMini'];
 
 const dealResource = list => {
 	list.forEach(item => {

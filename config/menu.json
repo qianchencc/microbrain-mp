@@ -13,6 +13,14 @@
 				"type": "MODULE",
 				"children": [
 					{
+						"id": "80a67f2aeba146729aa5e983830544bf",
+						"title": "项目查询",
+						"name": "project",
+						"icon": "https://ncim.577119.com/sso-api/upload/upload/1784794712054.png",
+						"uri": "inMini=/pages/index/project",
+						"type": "MENU"
+					},
+					{
 						"id": "16956d886aa747149b3c0b942b705c2a",
 						"title": "党务团建",
 						"name": "party",

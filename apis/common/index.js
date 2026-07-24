@@ -5,3 +5,6 @@ export const fecthFilePage = data => request.globalRequest(`/api/setting/attachm
 
 // ai查询
 export const chatToAi = data => request.globalRequest(`/api/ai/business/coze/chat/chat`, 'POST', data)
+
+// ai查询项目
+export const chatToAiProject = data => request.globalRequest(`/api/ai/business/coze/chat/chat/project`, 'POST', data)

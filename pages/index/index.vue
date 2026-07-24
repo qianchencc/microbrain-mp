@@ -14,7 +14,7 @@
 					</view>
 					<ActivityCon v-else-if="chatItem.type === 'ACTIVITY'" @toBottom="toBottom"/>
 					<NewsCon v-else-if="chatItem.type === 'NEWS'" @toBottom="toBottom"/>
-					<MenuCon v-else-if="chatItem.type === 'BUSINESS_MODULE'" :name="chatItem.data"/>
+					<MenuCon v-else-if="chatItem.type === 'BUSINESS_MODULE'" :name="chatItem.data" @toBottom="toBottom" />
 				</view>
 			</view>
 			<loading ref="loading" v-if="loading" @toLoading="toBottom"></loading>

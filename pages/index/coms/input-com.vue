@@ -1,7 +1,7 @@
 <template>
 	<view class="input-voice">
 		<view class="others-con">
-			<view class="item" @click="goPage('/pages/user/index')">
+			<view v-if="showCenter" class="item" @click="goPage('/pages/user/index')">
 				<image src="/static/images/user.png" mode="aspectFit"></image>
 				<text>个人中心</text>
 			</view>
@@ -11,7 +11,7 @@
 			</view>
 		</view>
 		<view class="input-con">
-			<input v-if="!isVoice" type="text" v-model="value" confirm-type="send" placeholder="有什么可以帮到您的吗 ~" @confirm="inputConfirm">
+			<input v-if="!isVoice" type="text" v-model="value" confirm-type="send" :placeholder="placeholder" @confirm="inputConfirm">
 			<view v-else class="voice-btn" @touchstart="startVoice" @touchend="endVoice">按住说话</view>
 			<view class="voice-bg" @click.stop="isVoice = !isVoice">
 				<image :src="`/static/${isVoice ? 'keybore' : 'voice'}.png`" mode="aspectFit"></image>
@@ -29,6 +29,16 @@ let manager = plugin.getRecordRecognitionManager();
 
 export default {
 	name: "InputCom",
+	props: {
+		showCenter: {
+			type: Boolean,
+			default: true
+		},
+		placeholder: {
+			type: String,
+			default: '有什么可以帮到您的吗 ~'
+		}
+	},
 	mounted() {
 		manager.onStart = this.voiceStart
 		manager.onStop = this.voiceStop

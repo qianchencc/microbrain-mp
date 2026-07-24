@@ -1,10 +1,13 @@
 <template>
-	<view class="con">
-		<view class="tip">为您找到以下服务:</view>
-		<view class="menu-list">
-			<view v-for="menu in showMenu" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
-				<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
-				<view class="text">{{ menu.resourceTitle }}</view>
+	<view>
+		<access-con v-if="name === '智慧门禁'" :menu="menu" @toBottom="toBottom"></access-con>
+		<view v-else class="con">
+			<view class="tip">为您找到以下服务:</view>
+			<view class="menu-list">
+				<view class="menu-item" @click="jumpUrl(menu)">
+					<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
+					<view class="text">{{ menu.resourceTitle }}</view>
+				</view>
 			</view>
 		</view>
 	</view>
@@ -13,16 +16,24 @@
 <script>
 import {usePermissionStoreHook} from "@/store/modules/permission";
 import {getUrl, jumpUrl} from "@/utils/tools";
+import AccessCon from "@/pages/index/coms/AccessCon.vue";
 
 export default {
+	components: {AccessCon},
 	props: {
 		name: String
 	},
-	methods:{getUrl, jumpUrl},
 	computed: {
-		showMenu(){
+		menu(){
 			const menuList = usePermissionStoreHook().getAllMenu
-			return menuList.filter(item => this.name.split(',').includes(item.resourceTitle))
+			return menuList.find(item => this.name === item.resourceTitle)
+		}
+	},
+	methods: {
+		getUrl,
+		jumpUrl,
+		toBottom(){
+			this.$emit('toBottom')
 		}
 	}
 }
@@ -34,6 +45,7 @@ export default {
 	border-radius: 15rpx;
 	background-color: white;
 	margin-bottom: 20rpx;
+	width: fit-content;
 	.tip {
 		font-size: 30rpx;
 		margin-bottom: 15rpx;

@@ -86,6 +86,20 @@
 			"style": {
 				"navigationBarTitleText": ""
 			}
+		},
+		{
+			"path": "pages/index/project",
+			"style": {
+				"navigationBarTitleText": "项目查询",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "pages/detail/project",
+			"style": {
+				"navigationBarTitleText": "项目详情",
+				"enablePullDownRefresh": false
+			}
 		}
 	],
 	"globalStyle": {

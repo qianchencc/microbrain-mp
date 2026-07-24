@@ -296,7 +296,7 @@
 		
 		.menu-one {
 			display: grid;
-			grid-template-columns: repeat(6, 165rpx);
+			grid-template-columns: repeat(7, 165rpx);
 			grid-gap: 20rpx 0;
 			.menu-item {
 				text-align: center;
