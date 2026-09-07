@@ -9,11 +9,11 @@
 		</view>
 		<view class="news-list">
 			<template v-for="item in newsList" :key="item.id">
-				<view class="news-item" @click="goPage(`/pages/news/detail?id=${item.id}`)">
-					<image class="cover" :src="getUrl(item.coverPicUrl)" mode="aspectFill"></image>
+				<view class="news-item" @click="handleRouteNewsDetail(item.url)">
+					<image class="cover" :src="getUrl(item.cover)" mode="aspectFill"></image>
 					<view class="detail">
-						<view class="title">{{ item.infoSubject }}</view>
-						<view class="time">{{ formatTime(item.createdAt) }}</view>
+						<view class="title">{{ item.title }}</view>
+						<view class="time">{{ formatTime(item.publishTime) }}</view>
 					</view>
 				</view>
 			</template>
@@ -38,14 +38,14 @@ export default {
 	methods: {
 		getNewsList(){
 			fetchNewsPage({
-				size: 4,
-				page: 0,
+				pageSize: 4,
+				pageNum: 0,
 				pageFlag: 1,
 				historyType: 'WEB',
 				sort: 'createdAt,desc'
 			}).then(res => {
 				if (res) {
-					this.newsList = res.content?.content || []
+					this.newsList = res.content?.records || []
 					if (this.newsList.length === 0) this.$emit('sendMsg', {auto: {type: 'AI_ANSWER', data: '暂未查找到任何新闻'}})
 					this.$emit('toBottom')
 				}
@@ -53,7 +53,10 @@ export default {
 		},
 		formatTime,
 		getUrl,
-		goPage
+		goPage,
+		handleRouteNewsDetail(url) {
+			goPage(`/pages/news/web?url=${encodeURIComponent(url)}`)
+		}
 	}
 }
 </script>

@@ -17,6 +17,12 @@
 			}
 		},
 		{
+			"path": "pages/news/noticeList",
+			"style": {
+				"navigationBarTitleText": "公告列表"
+			}
+		},
+		{
 			"path": "pages/news/detail",
 			"style": {
 				"navigationBarTitleText": "要闻详情"
@@ -100,6 +106,13 @@
 				"navigationBarTitleText": "项目详情",
 				"enablePullDownRefresh": false
 			}
+		},
+		{
+			"style": {
+				"navigationBarTitleText": "",
+				"enablePullDownRefresh": false
+			},
+			"path": "pages/news/web"
 		}
 	],
 	"globalStyle": {

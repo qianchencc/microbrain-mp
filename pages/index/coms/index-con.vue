@@ -21,6 +21,7 @@
 									</view>
 								</swiper-item>
 							</swiper>
+							<view class="notice-more" @click="goPage('/pages/news/noticeList')">更多</view>
 						</view>
 						<view class="top-menu">
 							<view v-for="menu in topMenuList" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
@@ -72,7 +73,7 @@
 <script setup>
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	import { computed, ref } from 'vue'
-	import {fetchNewsPage} from '@/apis/home'
+	import {fetchNoticePage} from '@/apis/home'
 	import {getUrl, goPage, jumpUrl} from '@/utils/tools'
 	import { useBannerHook } from '../utils/banner.js'
 	import {isDev} from "@/config/settings";
@@ -139,7 +140,7 @@
 	
 	const noticeList = ref([])
 	const getNoticePage = () => {
-		fetchNewsPage({
+		fetchNoticePage({
 			size: 3,
 			page: 0,
 			contentType: 'ANNOUNCEMENT',
@@ -261,19 +262,27 @@
 				white-space: nowrap;
 				font-size: 30rpx;
 			}
+			.notice-more {
+				flex-shrink: 0;
+				margin-left: 15rpx;
+				font-size: 22rpx;
+				color: #6a6a6a;
+				&:after {
+					content: ">";
+				}
+			}
 		}
 		
 		.top-menu {
 			display: grid;
-			grid-template-columns: repeat(3, 1fr);
-			grid-gap: 20rpx;
+			grid-template-columns: repeat(4, 1fr);
+			grid-gap: 10rpx;
 			padding: 20rpx 0;
 			.menu-item {
 				width: 100%;
-				background-color: #ecf3fe;
 				border-radius: 15rpx;
 				padding: 10rpx;
-				height: 140rpx;
+				height: 120rpx;
 				position: relative;
 				.text {
 					position: absolute;
@@ -281,15 +290,15 @@
 					right: 10rpx;
 					z-index: 5;
 					text-align: right;
-					font-size: 26rpx;
+					font-size: 20rpx;
 					line-height: 1.2;
 				}
 				image {
 					position: absolute;
-					bottom: 10rpx;
-					left: 10rpx;
-					width: 90rpx;
-					height: 90rpx;
+					top: 0;
+					left: 0;
+					width: 100%;
+					height: 100%;
 				}
 			}
 		}
@@ -305,7 +314,7 @@
 					height: 80rpx;
 				}
 				.text {
-					font-size: 24rpx;
+					font-size: 20rpx;
 				}
 			}
 		}
