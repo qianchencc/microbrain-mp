@@ -177,7 +177,7 @@
 						"title": "周边推荐",
 						"name": "aroundRecommend",
 						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefvCARIIyAAA_WfDOUqw686.png",
-						"uri": "miniAppId=wx3e9bb6b4d60aa30d=%2FpagesB%2Fcircum%2Findex%3Flabel%3D%E5%85%B1%E4%BA%AB%E5%A4%A7%E6%95%B0%E6%8D%AE",
+						"uri": "miniAppId=wx3e9bb6b4d60aa30d=%2FpagesB%2Fcircum%2Findex%3FisOther%3D1%26agentCode%3D00000000%26label%3D%E5%85%B1%E4%BA%AB%E5%A4%A7%E6%95%B0%E6%8D%AE",
 						"type": "MENU"
 					},
 					{
