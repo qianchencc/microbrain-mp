@@ -169,7 +169,7 @@
 						"title": "零里服务",
 						"name": "neighborhoodServices",
 						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefueAMrQUAABGlT-k_JQ056.png",
-						"uri": "miniAppId=wxd72afcdd37d26bfc=%2Fpages%2Ftabbar%2Findex",
+						"uri": "miniAppId=wxe210b0a16b50444c=%2Fpages%2Ftabbar%2Findex",
 						"type": "MENU"
 					},
 					{
@@ -177,7 +177,7 @@
 						"title": "周边推荐",
 						"name": "aroundRecommend",
 						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefvCARIIyAAA_WfDOUqw686.png",
-						"uri": "miniAppId=wxd72afcdd37d26bfc=%2FpagesB%2Fcircum%2Findex",
+						"uri": "miniAppId=wx3e9bb6b4d60aa30d=%2FpagesB%2Fcircum%2Findex%3Flabel%3D%E5%85%B1%E4%BA%AB%E5%A4%A7%E6%95%B0%E6%8D%AE",
 						"type": "MENU"
 					},
 					{
