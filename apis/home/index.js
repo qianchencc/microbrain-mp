@@ -28,4 +28,4 @@ export const fetchCurrentUsed = () => request.globalRequest('/api/card/account/c
 export const fetchEnvData = () => request.globalRequest('/api/iot-center/home/yq/env/data', 'GET')
 
 // 获取活动分页
-export const fetchActivityPage = (data) => request.globalRequest('/api/activity/activity/page', 'GET', data)
+export const fetchActivityPage = (data) => request.globalRequest('/api/activity/activity/agent/page', 'GET', data)
