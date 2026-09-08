@@ -29,14 +29,20 @@
 								<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
 							</view>
 						</view>
-						<scroll-view class="scroll-menu" scroll-x="true" v-if="workMenuList.length">
-							<view class="menu-one">
-								<view v-for="menu in workMenuList" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
-									<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
-									<view class="text">{{ menu.resourceTitle }}</view>
+						<swiper class="menu-swiper" v-if="workMenuPages.length"
+							:style="{ height: workMenuPages.length > 1 ? '300rpx' : '250rpx' }"
+							:indicator-dots="workMenuPages.length > 1"
+							indicator-color="rgba(54, 96, 146, 0.3)"
+							indicator-active-color="#366092">
+							<swiper-item v-for="(page, index) in workMenuPages" :key="index">
+								<view class="menu-one">
+									<view v-for="menu in page" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
+										<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
+										<view class="text">{{ menu.resourceTitle }}</view>
+									</view>
 								</view>
-							</view>
-						</scroll-view>
+							</swiper-item>
+						</swiper>
 					</view>
 					<view class="line"></view>
 					<view class="menu-con" v-if="serviceMenuList.length">
@@ -84,21 +90,34 @@
 	const showIndex = computed(() => useUserStoreHook().getShowIndex)
 	// 菜单列表
 	const menuList = computed(() => usePermissionStoreHook().getMenuList)
-	// 顶部菜单配置（key: 菜单名称，value: 菜单图标）
-	const topObj = computed(() => useUserStoreHook().getDict['MiniTopMenu'] || {})
-	const topMenu = computed(() => Object.values(topObj.value))
-	const workMenu = computed(() => menuList.value.find(item => item.resourceName === 'workSpace')?.children || [])
+	// 顶部菜单
 	const topMenuList = computed(() => {
-		let obj = {};
-		Object.entries(topObj.value).forEach(([k, v]) => obj[v] = k)
-		return workMenu.value.filter(item => topMenu.value.includes(item.resourceTitle)).map(item => ({
+		const list = menuList.value.find(item => item.resourceName === 'topMenu')?.children || []
+		return list.map(item => ({
 			...item,
-			icon: obj[item.resourceTitle],
 			resourceTitle: item.resourceTitle.slice(0, 2) + '<br/>' + item.resourceTitle.slice(2)
 		}))
 	})
 	// 工作菜单
-	const workMenuList = computed(() => workMenu.value.filter(item => !topMenu.value.includes(item.resourceTitle)))
+	const workMenuList = computed(() => {
+		const list = menuList.value.find(item => item.resourceName === 'workSpace')?.children || [];
+		const sortObj = useUserStoreHook().getDict['IndexMenuSort'] || {}
+		const menuMap = new Map(list.map(item => [item.id, item]))
+		// 按字典排序值升序排列的菜单id
+		const sortedIds = Object.entries(sortObj)
+			.sort((a, b) => parseInt(a[1]) - parseInt(b[1]))
+			.map(([id]) => id)
+			.filter(id => menuMap.has(id))
+		return sortedIds.map(id => menuMap.get(id))
+	})
+	// 工作菜单分页，每页8个（4列x2行）
+	const workMenuPages = computed(() => {
+		const pages = []
+		for (let i = 0; i < workMenuList.value.length; i += 8) {
+			pages.push(workMenuList.value.slice(i, i + 8))
+		}
+		return pages
+	})
 	// 服务菜单
 	const serviceMenuList = computed(() => menuList.value.find(item => item.resourceName === 'serviceSpace')?.children || [])
 	
@@ -303,9 +322,13 @@
 			}
 		}
 		
+		.menu-swiper {
+			width: 100%;
+		}
+
 		.menu-one {
 			display: grid;
-			grid-template-columns: repeat(7, 165rpx);
+			grid-template-columns: repeat(4, 1fr);
 			grid-gap: 20rpx 0;
 			.menu-item {
 				text-align: center;
@@ -315,6 +338,9 @@
 				}
 				.text {
 					font-size: 20rpx;
+					overflow: hidden;
+					white-space: nowrap;
+					text-overflow: ellipsis;
 				}
 			}
 		}

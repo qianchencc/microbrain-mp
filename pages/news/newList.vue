@@ -6,7 +6,7 @@
 					<image class="cover" :src="getUrl(item.cover)" mode="aspectFill"></image>
 					<view class="detail">
 						<view class="title">{{item.title}}</view>
-						<view class="time">{{formatTime(item.publishTime)}}</view>
+						<view class="time">{{formatTime(item.publishTime, '{y}-{m}-{d}')}}</view>
 					</view>
 				</view>
 			</view>
@@ -22,7 +22,7 @@
 	const paging = ref(null)
 
 	const queryList = async (pageNo, pageSize) => {
-		const res = await fetchNewsPage({ pageSize: pageSize, pageNum: pageNo, sort: 'createdAt,desc' })
+		const res = await fetchNewsPage({ size: pageSize, page: pageNo })
 		if (res.content) {
 			paging.value.complete(res.content.records)
 		} else {

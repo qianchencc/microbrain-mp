@@ -13,7 +13,7 @@
 					<image class="cover" :src="getUrl(item.cover)" mode="aspectFill"></image>
 					<view class="detail">
 						<view class="title">{{ item.title }}</view>
-						<view class="time">{{ formatTime(item.publishTime) }}</view>
+						<view class="time">{{ formatTime(item.publishTime, '{y}-{m}-{d}') }}</view>
 					</view>
 				</view>
 			</template>
@@ -38,11 +38,7 @@ export default {
 	methods: {
 		getNewsList(){
 			fetchNewsPage({
-				pageSize: 4,
-				pageNum: 0,
-				pageFlag: 1,
-				historyType: 'WEB',
-				sort: 'createdAt,desc'
+				size: 4
 			}).then(res => {
 				if (res) {
 					this.newsList = res.content?.records || []

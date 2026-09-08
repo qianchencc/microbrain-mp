@@ -7,6 +7,46 @@
 		"title": "微脑管理APP",
 		"children": [
 			{
+				"id": "38fd198d09cb4f638fa2f00eacb027b3",
+				"title": "顶部菜单",
+				"name": "topMenu",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "ac9861c838944e66a56664824b4c223d",
+						"title": "人员培训",
+						"name": "training",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefN2AHVHOAAG7H1U3fn0112.png",
+						"uri": "toOtherApp:=:https://ksgl.577119.com",
+						"type": "MENU"
+					},
+					{
+						"id": "78293111c71d4080a8c87595a43196e9",
+						"title": "考评中心",
+						"name": "testOnline",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefO2AEua3AAGsRcWzsdU366.png",
+						"uri": "https://ks.577119.com",
+						"type": "MENU"
+					},
+					{
+						"id": "86a35ebb35fa4bb0b3dfc5b126ec5001",
+						"title": "我的办公室",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefM-AcFWSAAGw927mbpU507.png",
+						"uri": "/#/pages/office/index",
+						"type": "MENU"
+					},
+					{
+						"id": "a5e3809ee6684aa58f3dbf432f1dc582",
+						"title": "新闻资讯",
+						"name": "news",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefLmAIgRnAAGQA09DWKY997.png",
+						"uri": "inMini=/pages/news/newList",
+						"type": "MENU"
+					}
+				]
+			},
+			{
 				"id": "5924eccc12994667b8e82ac7140dad53",
 				"title": "工作区",
 				"name": "workSpace",
@@ -114,38 +154,6 @@
 						"name": "event",
 						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefqaAenixAAAwStaLqEo497.png",
 						"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
-						"type": "MENU"
-					},
-					{
-						"id": "ac9861c838944e66a56664824b4c223d",
-						"title": "人员培训",
-						"name": "training",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8flmAWZPDAACz275ih_E197.png",
-						"uri": "toOtherApp:=:https://ksgl.577119.com",
-						"type": "MENU"
-					},
-					{
-						"id": "78293111c71d4080a8c87595a43196e9",
-						"title": "考评中心",
-						"name": "testOnline",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8fmOAJnqYAAEJt_LYXqE390.png",
-						"uri": "https://ks.577119.com",
-						"type": "MENU"
-					},
-					{
-						"id": "86a35ebb35fa4bb0b3dfc5b126ec5001",
-						"title": "我的办公室",
-						"name": "owner",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8fmyAeR7jAAC6iAXiohw168.png",
-						"uri": "/#/pages/office/index",
-						"type": "MENU"
-					},
-					{
-						"id": "a5e3809ee6684aa58f3dbf432f1dc582",
-						"title": "新闻资讯",
-						"name": "news",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8fmyAeR7jAAC6iAXiohw168.png",
-						"uri": "inMini=/pages/news/newList",
 						"type": "MENU"
 					}
 				]
