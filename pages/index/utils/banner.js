@@ -26,9 +26,8 @@ export const useBannerHook = () => {
 		})
 	}
 
-	getBannerList()
-
 	return {
-		bannerList
+		bannerList,
+		getBannerList
 	}
 }

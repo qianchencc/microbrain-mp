@@ -85,7 +85,7 @@
 	import {isDev} from "@/config/settings";
 	import {useUserStoreHook} from "@/store/modules/user";
 	
-	const { bannerList } = useBannerHook()
+	const { bannerList, getBannerList } = useBannerHook()
 	// 是否显示首页菜单
 	const showIndex = computed(() => useUserStoreHook().getShowIndex)
 	// 菜单列表
@@ -171,6 +171,7 @@
 	}
 	
 	const initData = async () => {
+		getBannerList()
 		getNoticePage()
 		getGoodList()
 	}
