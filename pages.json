@@ -2,6 +2,13 @@
 	"pages": [
 		//pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
 		{
+			"style": {
+				"navigationBarTitleText": "",
+				"enablePullDownRefresh": false
+			},
+			"path": "pages/index/wait"
+		},
+		{
 			"path": "pages/index/index",
 			"style": {
 				"navigationBarTitleText": "新世纪发展集团综合服务平台",
