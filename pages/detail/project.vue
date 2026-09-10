@@ -216,7 +216,7 @@ export default {
 		async getDetail() {
 			let res = await fetchProjectDetail({type: this.currentSection.key, code: this.code})
 			if (!res) return
-			this.detail = res.content
+			this.detail = res.content || {}
 		},
 		// 获取最新现场图片（单独接口）
 		async getSiteImages() {
@@ -225,8 +225,8 @@ export default {
 			let res = await fetchProjectDetail({type: 'latestProgressPicture', code: this.code})
 			if (!res) return
 			const content = res.content
-			this.siteImageList = content.pictureList || []
-			this.siteImageSubmitTime = content.submitTime || ''
+			this.siteImageList = content?.pictureList || []
+			this.siteImageSubmitTime = content?.submitTime || ''
 		},
 		// 切换nav
 		switchNav(index) {

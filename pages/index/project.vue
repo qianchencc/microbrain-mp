@@ -58,13 +58,13 @@ export default {
 			}
 			this.loading = true
 			chatToAiProject(data.data).then(res => {
+				this.loading = false
 				if (res) {
-					let haveData = res.content.content && res.content.content.length
+					let haveData = res.content && res.content.content && res.content.content.length
 					this.chatList.push({
 						type: haveData ? 'PRROJECT' : 'AI_ANSWER',
 						data: haveData ? res.content.content : '未查询到任何项目,请重新描述'
 					})
-					this.loading = false
 					this.toBottom()
 				}
 			})
