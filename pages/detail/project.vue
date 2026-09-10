@@ -51,6 +51,32 @@
 					</view>
 				</view>
 			</view>
+
+			<!-- 最新现场图片：仅最新进度模块显示 -->
+			<view class="card site-image-card" v-if="currentSection.key === 'latestProgress'">
+				<view class="card-title">
+					<view class="bar"></view>
+					<text>最新现场图片</text>
+				</view>
+				<view class="kv-item">
+					<view class="label">最新提交时间</view>
+					<view class="value">{{ siteImageSubmitTime || '-' }}</view>
+				</view>
+				<view class="image-list" v-if="siteImageList.length">
+					<image
+						v-for="(img, index) in siteImageList"
+						:key="index"
+						class="site-image"
+						:src="img"
+						mode="widthFix"
+						@click="previewSiteImage(index)">
+					</image>
+				</view>
+				<view class="empty" v-else>
+					<uni-icons type="image" size="60" color="#C7D6F7"></uni-icons>
+					<text class="empty-text">暂无现场图片</text>
+				</view>
+			</view>
 		</view>
 	</view>
 </template>
@@ -166,7 +192,9 @@ export default {
 			currentNav: 0,
 			navIntoView: '',
 			sections: SECTIONS,
-			detail: {}
+			detail: {},
+			siteImageList: [],
+			siteImageSubmitTime: ''
 		}
 	},
 	computed: {
@@ -190,13 +218,32 @@ export default {
 			if (!res) return
 			this.detail = res.content
 		},
+		// 获取最新现场图片（单独接口）
+		async getSiteImages() {
+			this.siteImageList = []
+			this.siteImageSubmitTime = ''
+			let res = await fetchProjectDetail({type: 'latestProgressPicture', code: this.code})
+			if (!res) return
+			const content = res.content
+			this.siteImageList = content.pictureList || []
+			this.siteImageSubmitTime = content.submitTime || ''
+		},
 		// 切换nav
 		switchNav(index) {
 			this.currentNav = index
 			this.getDetail()
+			if (this.currentSection.key === 'latestProgress') this.getSiteImages()
 			this.navIntoView = ''
 			this.$nextTick(() => {
 				this.navIntoView = 'nav-' + Math.max(0, index - 1)
+			})
+		},
+
+		// 预览现场图片
+		previewSiteImage(index) {
+			uni.previewImage({
+				urls: this.siteImageList,
+				current: index
 			})
 		},
 
@@ -427,6 +474,43 @@ export default {
 			font-size: 26rpx;
 			font-weight: 600;
 			color: #3974F6;
+		}
+	}
+
+	/* 最新现场图片 */
+	.site-image-card {
+		margin-top: 24rpx;
+
+		.image-list {
+			padding: 24rpx 0 20rpx;
+
+			.site-image {
+				display: block;
+				width: 100%;
+				border-radius: 16rpx;
+				background-color: #F5F5F5;
+				margin-bottom: 20rpx;
+
+				&:last-child {
+					margin-bottom: 0;
+				}
+			}
+		}
+
+		.empty {
+			margin: 24rpx 0 20rpx;
+			padding: 60rpx 0;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			background-color: #F7F9FE;
+			border-radius: 16rpx;
+
+			.empty-text {
+				margin-top: 16rpx;
+				font-size: 24rpx;
+				color: #A0A8B8;
+			}
 		}
 	}
 }
