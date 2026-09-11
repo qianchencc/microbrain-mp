@@ -10,9 +10,6 @@
 		onShow: function() {
 			if (getToken()) {
 				usePermissionStoreHook().setAuthority()
-				uni.reLaunch({
-					url: '/pages/index/index'
-				})
 			} else {
 				wx.login({
 					provider: 'weixin',

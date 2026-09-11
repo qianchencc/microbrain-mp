@@ -60,14 +60,14 @@
 				</view>
 				<view class="kv-item">
 					<view class="label">最新提交时间</view>
-					<view class="value">{{ siteImageSubmitTime || '-' }}</view>
+					<view class="value">{{ formatTime(siteImageSubmitTime, '{y}-{m}-{d}') || '-' }}</view>
 				</view>
 				<view class="image-list" v-if="siteImageList.length">
 					<image
 						v-for="(img, index) in siteImageList"
 						:key="index"
 						class="site-image"
-						:src="img"
+						:src="getUrl(img)"
 						mode="widthFix"
 						@click="previewSiteImage(index)">
 					</image>
@@ -83,6 +83,7 @@
 
 <script>
 import {fetchProjectDetail} from "@/apis/common";
+import {getUrl, formatTime} from "@/utils/tools";
 
 const SECTIONS = [
 	{
@@ -109,8 +110,8 @@ const SECTIONS = [
 			{ label: '投标编号', prop: 'bidNo' },
 			{ label: '投标项目名称', prop: 'bidProjectName', full: true },
 			{ label: '投标项目经理', prop: 'bidProjectManager' },
-			{ label: '开标日期', prop: 'bidOpeningDate' },
-			{ label: '中标日期', prop: 'bidWinningDate' }
+			{ label: '开标日期', prop: 'bidOpeningDate', type: 'date' },
+			{ label: '中标日期', prop: 'bidWinningDate', type: 'date' }
 		]
 	},
 	{
@@ -121,7 +122,7 @@ const SECTIONS = [
 			{ label: '进度比例', prop: 'progressRatio', type: 'progress' },
 			{ label: '进度详情', prop: 'progressDetail', full: true },
 			{ label: '提交人', prop: 'submitter' },
-			{ label: '提交时间', prop: 'submitTime' }
+			{ label: '提交时间', prop: 'submitTime', type: 'date' }
 		]
 	},
 	{
@@ -134,7 +135,7 @@ const SECTIONS = [
 			{ label: '变更后合同金额', prop: 'modifiedContractAmount', type: 'money' },
 			{ label: '累计变更金额', prop: 'totalChangeAmount', type: 'money' },
 			{ label: '累计收款金额', prop: 'totalReceiptAmount', type: 'money' },
-			{ label: '更新日期', prop: 'updateDate' },
+			{ label: '更新日期', prop: 'updateDate', type: 'date' },
 			{ label: '更新人', prop: 'updater' }
 		]
 	},
@@ -212,6 +213,8 @@ export default {
 		this.getDetail()
 	},
 	methods: {
+		getUrl,
+		formatTime,
 		// 获取项目详情（接口未接入，暂时使用假数据）
 		async getDetail() {
 			let res = await fetchProjectDetail({type: this.currentSection.key, code: this.code})
@@ -247,12 +250,13 @@ export default {
 			})
 		},
 
-		// 值格式化：空值显示-，金额千分位
+		// 值格式化：空值显示-，金额千分位，日期强制年月日
 		formatValue(field) {
 			const val = this.detail[field.prop]
 			if (val === null || val === undefined || val === '') return '-'
 			if (field.type === 'money') return this.formatMoney(val)
 			if (field.type === 'boolean') return val ? '是' : '否'
+			if (field.type === 'date') return this.formatTime(val, '{y}-{m}-{d}')
 			return val
 		},
 		formatMoney(val) {
