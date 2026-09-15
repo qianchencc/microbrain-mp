@@ -4,10 +4,10 @@
   <!-- 架构照抄 vaul/Base UI drawer：进场动画在 wrap 上，拖拽 transform 在内层 sheet 上，
        两者永不同元素，杜绝"拖拽样式变化触发进场动画重放"。 -->
   <view class="sheet-wrap" :class="{ shown }">
-   <view class="sheet" :style="dragStyle">
+   <view class="sheet" :class="{ tall }" :style="dragStyle">
     <view class="grab" @touchstart="start" @touchmove.stop.prevent="move" @touchend="end" @touchcancel="cancelDrag">
      <view class="handle-zone"><view class="handle" /></view>
-     <view class="header"><view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" aria-label="关闭" @tap="emit('close')"><uni-icons type="closeempty" size="22" color="#728178" /></button></view><slot name="header" /></view>
+     <view class="header"><view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" aria-label="关闭" @tap="emit('close')"><image class="close-icon" src="/static/close.svg" /></button></view><slot name="header" /></view>
     </view>
     <view class="sheet-body"><slot /></view>
    </view>
@@ -94,7 +94,8 @@ function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 .title { display:block; font-size:19px; font-weight:600; color:#24382d; flex-shrink:0; }
 .meta { font-size:12px; color:#78877e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.close { margin:0; padding:0; width:44px; height:44px; line-height:44px; background:transparent; flex-shrink:0; }
+.close { margin:0; padding:0; width:44px; height:44px; line-height:44px; background:transparent; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.close-icon { display:block; width:20px; height:20px; }
 .close::after { border:0; }
 @media(prefers-reduced-motion:reduce) { .mask,.sheet-wrap,.sheet { transition:none; animation:none; } }
 </style>
