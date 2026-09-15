@@ -4,8 +4,8 @@
   <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
     <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
-    <view v-for="turn in turns" :key="turn.id" class="turn">
-     <view class="user-row"><text class="user-message">{{ turn.content }}</text></view>
+    <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
+     <view class="user-row"><UserMessage :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" @retry="retryTurn(turn)" @edit="editTurn(turn, $event)" /></view>
      <view class="agent-reply"><AgentAvatar :running="turn.running" :conversation-id="conversationId" /><view class="agent-body"><view class="agent-heading"><text>物联 Agent</text><ThinkingOrb :running="turn.running" :failed="Boolean(turn.error)" :seconds="turn.seconds" /></view>
      <button v-if="turn.activities.length" class="trace-toggle" @click="turn.traceOpen = !turn.traceOpen"><text>处理记录</text><uni-icons :type="turn.traceOpen ? 'up' : 'down'" size="13" color="#728178" /></button>
      <view class="trace-expand" :class="{ open: turn.traceOpen }"><view class="trace-clip"><ToolActivity :items="turn.activities" /></view></view>
@@ -28,8 +28,8 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, updateSelection, retrySummary, revalidateAction, streamMessage } from '@/apis/agent'
-import { createTurn, applyEvent, restoreTurns } from './conversation.mjs'
+import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, streamMessage } from '@/apis/agent'
+import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
 import { createPresentation } from './presentation.mjs'
 import ActionDraftCard from './components/ActionDraftCard.vue'
 import AgentComposer from './components/AgentComposer.vue'
@@ -38,6 +38,7 @@ import AgentAvatar from './components/AgentAvatar.vue'
 import ThinkingOrb from './components/ThinkingOrb.vue'
 import AgentHeader from './components/AgentHeader.vue'
 import AssistantMarkdown from './components/AssistantMarkdown.vue'
+import UserMessage from './components/UserMessage.vue'
 const conversationId = ref('')
 const input = ref('')
 const composer = ref(null)
@@ -95,6 +96,9 @@ async function sendMessage(voiceText) {
  turns.value.push(createTurn('local-' + Date.now() + '-' + sequence++, content))
  const current = turns.value[turns.value.length - 1]
  if (typeof voiceText !== 'string') input.value = ''
+ await runTurn(current, content)
+}
+async function runTurn(current, content) {
  isRunning.value = true
  errorMessage.value = ''
  follow(true)
@@ -110,6 +114,17 @@ async function sendMessage(voiceText) {
  catch (error) { if (!disposed && current.running) current.error = error.message }
  finally { current.running = false; isRunning.value = false; activeRequest = null; if (!disposed) schedule() }
 }
+async function recoverTurn(turn, content) {
+ if (busy.value || !canRecoverTurn(turn, turns.value.at(-1) === turn)) return
+ mutating.value = true
+ try { await discardTurn(conversationId.value, turn.serverId) }
+ catch (error) { errorMessage.value = error.message; mutating.value = false; return }
+ mutating.value = false
+ restartTurn(turn, content)
+ await runTurn(turn, content)
+}
+function retryTurn(turn) { return recoverTurn(turn, turn.content) }
+function editTurn(turn, content) { return recoverTurn(turn, content) }
 async function selectDraft(turn, selected) {
  if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
  const previous = turn.draft.selectedActionIds
@@ -151,7 +166,7 @@ async function retryAnswer(turn) {
  catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }
-function stopRun() { if (activeRequest) { const turn = turns.value[turns.value.length - 1]; turn.running = false; for (const item of turn.activities) if (item.status === 'running') item.status = 'skipped'; presentation?.cancel(); activeRequest.abort() } }
+function stopRun() { if (activeRequest) { const turn = turns.value[turns.value.length - 1]; turn.running = false; turn.error = '本次回答已停止'; for (const item of turn.activities) if (['running','searching'].includes(item.status)) item.status = 'skipped'; presentation?.cancel(); activeRequest.abort() } }
 function clearHistory() {
  if (busy.value || !conversationId.value) return
  uni.showModal({ title: '清除会话', content: '清除当前对话和草案记录？', success: async response => {
@@ -182,7 +197,6 @@ onUnload(() => { disposed = true; uni.offKeyboardHeightChange(updateKeyboard); c
 .conversation { flex:1; height:0; min-height:0; }.conversation__inner { padding:24px 16px 32px; }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
 .turn { margin-bottom:42px; }.agent-reply { display:flex; align-items:flex-start; gap:11px; }.agent-body { flex:1; min-width:0; }.trace-expand { display:grid; grid-template-rows:0fr; transition:grid-template-rows 200ms ease; }.trace-expand.open { grid-template-rows:1fr; }.trace-clip { min-height:0; overflow:hidden; }.user-row { display:flex; justify-content:flex-end; margin-bottom:24px; }
-.user-message { max-width:85%; padding:12px 15px; border-radius:8px; background:#176b54; color:white; font-size:15px; line-height:1.6; }
 .agent-heading { display:flex; align-items:center; gap:12px; min-height:36px; margin-bottom:0; font-size:13px; font-weight:600; }
 .thinking { display:block; margin:12rpx 0; font-size:23rpx; font-weight:400; color:#74837a; }
 .execution-summary { margin-top:16px; }

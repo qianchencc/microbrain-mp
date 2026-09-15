@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createTurn, applyEvent, restoreTurns, operationText, receiptText } from '../pages/agent/conversation.mjs'
+import { createTurn, applyEvent, restoreTurns, operationText, receiptText, canRecoverTurn, restartTurn } from '../pages/agent/conversation.mjs'
 
 test('部分受理保留失败参数，门禁回执保留次数', () => {
 	assert.equal(receiptText({ outcome: 'PARTIALLY_ACCEPTED', fields: [{ field: 'power', outcome: 'ACCEPTED' }, { field: 'temperature', outcome: 'REJECTED' }, { field: 'mode', outcome: 'REJECTED' }] }), '未受理：设定温度、模式')
@@ -36,6 +36,23 @@ test('候选检索的中间零命中不完成节点，后续命中复用同一�
 	applyEvent(turn, { type: 'tool.completed', tool: 'find_device_candidates', invocationId: 'find-2', status: 'completed', details: { count: 2 }, summary: '找到 2 个设备候选 · 2 次尝试' })
 	assert.equal(turn.activities[0].status, 'completed')
 	assert.equal(turn.activities[0].summary, '找到 2 个设备候选 · 2 次尝试')
+})
+
+test('失败回合可在原位置编辑或重试，重启会清空旧回答状态', () => {
+	const turn = createTurn('local', '打开26楼空调')
+	applyEvent(turn, { type: 'run.started', turnId: 'server-turn' })
+	applyEvent(turn, { type: 'message.delta', content: '处理中' })
+	applyEvent(turn, { type: 'run.failed', message: '本次回答未完成' })
+	assert.equal(turn.serverId, 'server-turn')
+	assert.equal(canRecoverTurn(turn, true), true)
+
+	restartTurn(turn, '打开26楼会议室空调')
+	assert.equal(turn.content, '打开26楼会议室空调')
+	assert.equal(turn.text, '')
+	assert.equal(turn.error, '')
+	assert.equal(turn.running, true)
+	assert.deepEqual(turn.activities, [])
+	assert.equal(canRecoverTurn(turn, true), false)
 })
 
 test('恢复以持久化草案和收尾为准，同一草案修订只出现一次', () => {

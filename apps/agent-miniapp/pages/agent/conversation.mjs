@@ -1,10 +1,31 @@
 import { fieldLabels } from './ac-draft.js'
 
 export function createTurn(id, content) {
-	return { id, content, text: '', activities: [], draft: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
+	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', activities: [], draft: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
+}
+
+export function canRecoverTurn(turn, isLatest) {
+	return Boolean(isLatest && turn.serverId && turn.error && !turn.running && !turn.draft && !turn.result)
+}
+
+export function restartTurn(turn, content = turn.content) {
+	Object.assign(turn, {
+		content,
+		text: '',
+		activities: [],
+		draft: null,
+		result: null,
+		running: true,
+		traceOpen: true,
+		error: '',
+		startedAt: Date.now(),
+		seconds: 0,
+		serverId: '',
+	})
 }
 
 export function applyEvent(turn, event) {
+	if (event.type === 'run.started' && event.turnId) turn.serverId = event.turnId
 	if (event.type === 'tool.started') {
 		const previous = turn.activities.at(-1)
 		if (event.tool === 'find_device_candidates' && previous?.tool === event.tool && previous.status === 'searching') {

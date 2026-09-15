@@ -14,6 +14,7 @@ export const createConversation = () => request('/agent/conversations', 'POST')
 
 export const restoreConversation = () => request('/agent/conversations/current', 'GET')
 export const clearConversation = id => request(`/agent/conversations/${id}`, 'DELETE')
+export const discardTurn = (conversationId, turnId) => request(`/agent/conversations/${conversationId}/turns/${turnId}`, 'DELETE')
 export const confirmAction = (draftId, revision) => request(`/agent/action-drafts/${draftId}/confirm`, 'POST', { revision })
 export const updateSelection = (draftId, revision, selectedActionIds) => request(`/agent/action-drafts/${draftId}/selection`, 'PATCH', { revision, selectedActionIds })
 export const retrySummary = draftId => request(`/agent/action-drafts/${draftId}/summary`, 'POST')
