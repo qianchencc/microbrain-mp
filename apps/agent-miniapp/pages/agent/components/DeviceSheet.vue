@@ -7,7 +7,7 @@
    <view class="sheet" :class="{ tall }" :style="dragStyle">
     <view class="grab" @touchstart="start" @touchmove.stop.prevent="move" @touchend="end" @touchcancel="cancelDrag">
      <view class="handle-zone"><view class="handle" /></view>
-     <view class="header"><view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" aria-label="关闭" @tap="emit('close')"><image class="close-icon" src="/static/close.svg" /></button></view><slot name="header" /></view>
+     <view class="header"><view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view></view><slot name="header" /></view>
     </view>
     <view class="sheet-body"><slot /></view>
    </view>
@@ -21,7 +21,8 @@ const props = defineProps({ open: Boolean, title: String, subtitle: String, meta
 const emit = defineEmits(['close'])
 const mounted = ref(false), shown = ref(false), drag = ref(0), dragging = ref(false)
 let origin, lastY, lastTime, flickSpeed = 0, leaveTimer
-// 关闭（遮罩/把手/×）永远允许：busy 只限制编辑类操作。
+// 关闭（遮罩点击/把手下拉）永远允许：busy 只限制编辑类操作。不设 × 按钮——
+// 它位于抓取区（横杆+整个头部）右上角，会把从头部起手的拖拽截胡成点击直接关面板。
 watch(() => props.open, value => {
  clearTimeout(leaveTimer)
  if (value) {
@@ -94,8 +95,5 @@ function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 .title { display:block; font-size:19px; font-weight:600; color:#24382d; flex-shrink:0; }
 .meta { font-size:12px; color:#78877e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.close { margin:0; padding:0; width:44px; height:44px; line-height:44px; background:transparent; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-.close-icon { display:block; width:20px; height:20px; }
-.close::after { border:0; }
 @media(prefers-reduced-motion:reduce) { .mask,.sheet-wrap,.sheet { transition:none; animation:none; } }
 </style>
