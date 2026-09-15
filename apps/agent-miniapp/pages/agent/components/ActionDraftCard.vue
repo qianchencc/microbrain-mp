@@ -26,7 +26,7 @@ const props = defineProps({ draft: {type:Object,required:true}, result:Object, b
 const emit = defineEmits(['confirm','cancel','select','revalidate','updated','editing','configure','browse'])
 const scopeOpen = ref(false), states = ref({}), observation = ref('')
 const pending = computed(() => props.draft.status === 'PENDING_CONFIRMATION')
-const historyNote = computed(() => ({EXPIRED:'核验已过期，未执行。重新核验后需再次确认。',CANCELLED:'操作已取消，未执行。',NO_CHANGE:'核验时已达到目标，未发送控制指令。'}[props.draft.status] || ''))
+const historyNote = computed(() => ({EXPIRED:'核验已过期，未执行。重新核验后需再次确认。',CANCELLED:'操作已取消，未执行。发送新指令可重新下达。',NO_CHANGE:'核验时已达到目标，未发送控制指令。'}[props.draft.status] || ''))
 const selected = computed(() => props.draft.selectedActionIds || [])
 const preview = computed(() => props.draft.actions.length > 4 ? props.draft.actions.slice(0,3) : props.draft.actions)
 const heading = computed(() => ({PENDING_CONFIRMATION:'待确认操作',EXECUTING:'正在执行',CANCELLED:'草案已取消',EXPIRED:'草案已过期',NO_CHANGE:'无需操作'}[props.draft.status] || '操作结果'))

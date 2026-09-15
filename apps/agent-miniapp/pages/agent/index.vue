@@ -3,7 +3,8 @@
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
   <AgentHeader :status="statusText" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" />
-  <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
+  <view class="conversation-shell">
+   <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
     <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
@@ -18,6 +19,7 @@
     <view id="agent-bottom" class="anchor" />
    </view>
   </scroll-view>
+  </view>
   <view class="composer-shell" :style="keyboardHeight ? {paddingBottom:'8px'} : {}"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @keyboard="applyKeyboardHeight" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
   <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :busy="busy"
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)"
@@ -256,7 +258,11 @@ onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTi
 .agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; transition:height 200ms ease-out; }
 .agent-status { display:flex; align-items:center; justify-content:space-between; padding:0 32rpx; min-height:72rpx; background:#fafcfb; border-bottom:1rpx solid #e0e7e2; color:#738278; font-size:23rpx; }
 .clear { width:80rpx; height:72rpx; line-height:72rpx; padding:0; margin:0; background:transparent; }.clear::after { border:0; }
-.conversation { flex:1; height:0; min-height:0; }.conversation__inner { padding:24px 16px 32px; }
+/* scroll-view 禁止直接用 flex:1/height:0 撑高（微信 webview 已知塌陷：盒子 0 高、
+   内容被 enhanced 层画出但命中盒全灭——2026-09-17 预览"看得见点不中"根因）。
+   确定性高度链：flex 包裹层 min-height:0 + 内层 scroll-view height:100%。 */
+.conversation-shell { flex:1; min-height:0; overflow:hidden; }
+.conversation { height:100%; }.conversation__inner { padding:24px 16px 32px; }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }

@@ -21,7 +21,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { deviceDisplayName, deviceLocationLabel, resolveDeviceArtwork } from '../device-art/catalog.js'
-import { stateText } from '../device-card-state.js'
+import { stateText, tapBlockHint } from '../device-card-state.js'
 // 点选走原生 @tap。长按进度环用自有计时，但监听一律不带 .stop（bind 不阻断外层滚动），
 // 位移超 10px 视为滚动并取消计时；完成后的随行 tap 用一次性 holdDone 状态屏蔽。
 // 禁止 reintroduce catch 触摸事件或 suppress 时间戳（会吞滚动/误吞点击）。
@@ -70,7 +70,12 @@ function holdCancel() { stopHold(); holdDone = false }
 function stopHold() { clearInterval(holdTimer); holdTimer = null; startTouch = null; holding.value = false; progress.value = 0 }
 function onToggle() {
  if (holdDone) { holdDone = false; return }
- if (!props.readonly && !props.disabled) emit('toggle')
+ if (props.readonly || props.disabled) {
+  const hint = tapBlockHint(props.phase, { readonly: props.readonly, disabled: props.disabled })
+  if (hint) uni.showToast({ title: hint, icon: 'none' })
+  return
+ }
+ emit('toggle')
 }
 onBeforeUnmount(() => clearInterval(holdTimer))
 </script>

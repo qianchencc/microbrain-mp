@@ -16,3 +16,13 @@ export function receiptPhase(action, outcome, state) {
     key === 'closeOrOpen' ? state === (value === 1) : state[key] === value);
   return reached ? 'complete' : 'accepted';
 }
+
+// 只读/禁用卡片被点击时必须给出原因与出路；静默无反应会被用户当成"坏了"
+// （2026-09-17 预览环境"卡片完全无法交互"实为草案被退役后整卡静默转只读）。
+export function tapBlockHint(phase, { readonly = false, disabled = false } = {}) {
+  if (phase === 'cancelled') return '草案已取消，发送新指令可重新下达';
+  if (phase === 'expired') return '草案已过期，重新核验后可继续调整';
+  if (disabled) return '正在处理，请稍候';
+  if (readonly) return '该操作当前不可修改';
+  return '';
+}
