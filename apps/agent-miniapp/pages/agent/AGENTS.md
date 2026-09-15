@@ -12,5 +12,8 @@
 - 编辑/重试只作用于最后一条未产生草案的失败回合：先用服务端 `turnId` 丢弃失败记录，再复用同一个前端 turn 原位启动；禁止保留失败轮后追加一条重复消息。
 - `AgentReplySurface.vue` 是身份、轨迹、正文、草案和执行收尾的唯一编排层；不要再把这些区域直接拼回页面，也不要恢复按会话随机生成头像。
 - 设备卡片的短按只负责选择，长按才负责打开设备配置；长按事件必须阻止冒泡，避免一次长按同时改选择状态。
-- `DeviceSheet.vue` 是页面级底部面板，必须压在 composer 之上；历史/过期/取消/执行态不得继续挂载配置编辑器。
+- `DeviceSheet.vue` 是自绘的页面级底部面板（遮罩 + fixed 层，v-if 挂载 + class 过渡）；项目未安装 uni-popup，禁止再引入 uni-popup 或任何未安装的 uni-ui 组件。
+- 面板内容统一由页面根部的 `DraftSheetLayer.vue` 渲染（在 composer 之后），`ActionDraftCard` 只通过 `configure`/`browse` 事件请求打开；面板只允许 PENDING_CONFIRMATION 草案（`draft-sheet.mjs` 的 `sheetDraftFrom`）。
+- 输入栏 textarea 常驻（v-show 切换语音胶囊），避免原生组件重挂载闪烁；键盘高度 0 需 120ms 去抖（`applyKeyboardHeight`，输入法面板切换会先报 0 再报真实高度），页面高度变化带 200ms 过渡。
+- 折叠面板（处理记录）不要用 `grid-template-rows: 0fr/1fr` 过渡，小程序内核不动画；用实测高度驱动（`AgentReplySurface` 的 measure→transition→height:auto 三段式），折叠箭头用单图标 rotate(180deg)，禁止 up/down 字形互换（会引发布局跳动）。
 - 只有存在两个或以上同类动作时才显示“应用到全部同类设备”开关；单设备配置不显示一个不可用的伪控件。

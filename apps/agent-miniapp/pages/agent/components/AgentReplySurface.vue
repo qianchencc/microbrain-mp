@@ -12,15 +12,16 @@
    <view v-if="turn.activities.length" class="trace" :class="{ 'trace--open': turn.traceOpen }">
     <button class="trace__toggle" hover-class="trace__toggle--pressed" @tap="$emit('toggle-trace')">
      <view class="trace__label"><uni-icons type="list" size="14" color="#6c7d73" /><text>处理记录</text></view>
-     <uni-icons :type="turn.traceOpen ? 'up' : 'down'" size="13" color="#7f8d85" />
+     <uni-icons class="trace__chevron" :class="{ 'trace__chevron--open': turn.traceOpen }" type="down" size="13" color="#7f8d85" />
     </button>
-    <view class="trace__expand"><view class="trace__clip"><ToolActivity :items="turn.activities" /></view></view>
+    <view class="trace__expand" :style="expandStyle"><view class="trace__clip"><ToolActivity :items="turn.activities" /></view></view>
    </view>
 
    <AssistantMarkdown v-if="turn.text" :content="turn.text" />
    <ActionDraftCard v-if="turn.draft" :draft="turn.draft" :result="turn.result" :busy="busy"
     @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
-    @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)" />
+    @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
+    @configure="$emit('configure', $event)" @browse="$emit('browse')" />
    <view v-if="turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
     <text v-if="turn.result.summary.status === 'completed'" class="execution-answer">{{ turn.result.summary.text }}</text>
     <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>
@@ -32,14 +33,48 @@
 </template>
 
 <script setup>
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import ActionDraftCard from './ActionDraftCard.vue'
 import AgentAvatar from './AgentAvatar.vue'
 import AssistantMarkdown from './AssistantMarkdown.vue'
 import ThinkingOrb from './ThinkingOrb.vue'
 import ToolActivity from './ToolActivity.vue'
 
-defineProps({ turn: { type: Object, required: true }, busy: Boolean })
-defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer'])
+const props = defineProps({ turn: { type: Object, required: true }, busy: Boolean })
+defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse'])
+
+// 展开/收起用实测高度驱动过渡：grid-template-rows 的 0fr/1fr 过渡在小程序内核上不可用。
+const instance = getCurrentInstance()
+const expandHeight = ref(0)
+const expandAuto = ref(false)
+let settleTimer
+function measureClip() {
+ return new Promise(resolve => {
+  uni.createSelectorQuery().in(instance.proxy).select('.trace__clip').boundingClientRect(rect => resolve(rect?.height ?? 0)).exec()
+ })
+}
+async function applyOpen(open) {
+ clearTimeout(settleTimer)
+ if (open) {
+  expandAuto.value = false
+  const height = await measureClip()
+  if (!props.turn.traceOpen) return
+  expandHeight.value = height
+  settleTimer = setTimeout(() => { if (props.turn.traceOpen) expandAuto.value = true }, 300)
+ } else {
+  if (expandAuto.value) {
+   expandAuto.value = false
+   const height = await measureClip()
+   if (props.turn.traceOpen) return
+   expandHeight.value = height
+   await nextTick()
+  }
+  expandHeight.value = 0
+ }
+}
+watch(() => props.turn.traceOpen, applyOpen)
+onBeforeUnmount(() => clearTimeout(settleTimer))
+const expandStyle = computed(() => expandAuto.value ? { height: 'auto', opacity: 1 } : { height: expandHeight.value + 'px' })
 </script>
 
 <style scoped>
@@ -54,9 +89,11 @@ defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updat
 .trace__toggle::after,.execution-retry::after { border:0; }
 .trace__toggle--pressed { transform:scale(.985); opacity:.72; }
 .trace__label { display:flex; align-items:center; gap:7px; }
-.trace__expand { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows 200ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
-.trace--open .trace__expand { grid-template-rows:1fr; opacity:1; }
-.trace__clip { min-height:0; overflow:hidden; padding:0 11px; }
+.trace__chevron { transition:transform 220ms cubic-bezier(.23,1,.32,1); }
+.trace__chevron--open { transform:rotate(180deg); }
+.trace__expand { overflow:hidden; height:0; opacity:0; transition:height 260ms cubic-bezier(.23,1,.32,1),opacity 200ms ease; }
+.trace--open .trace__expand { opacity:1; }
+.trace__clip { padding:0 11px; }
 .trace :deep(.activity) { margin:2px 0 10px; }
 .execution-summary { margin-top:16px; }
 .execution-answer { display:block; color:#253b30; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
@@ -66,5 +103,5 @@ defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updat
 .execution-spinner { width:14px; height:14px; box-sizing:border-box; flex-shrink:0; border:1.5px solid #ccd6d0; border-top-color:#738177; border-radius:50%; animation:execution-spin .8s linear infinite; }
 .reply-error { display:inline-block; margin-top:12px; padding:7px 10px; border-radius:10px; background:#f4ece1; color:#99651e; font-size:12px; line-height:1.5; }
 @keyframes execution-spin { to { transform:rotate(360deg); } }
-@media(prefers-reduced-motion:reduce) { .trace,.trace__toggle,.trace__expand,.execution-retry { transition:none; }.execution-spinner { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .trace,.trace__toggle,.trace__expand,.trace__chevron,.execution-retry { transition:none; }.execution-spinner { animation:none; } }
 </style>

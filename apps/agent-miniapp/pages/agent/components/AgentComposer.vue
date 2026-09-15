@@ -8,17 +8,17 @@
     <image class="mode-icon" :src="voiceMode ? '/static/compose.svg' : '/static/mic.svg'" />
    </button>
    <view class="input-area">
-    <textarea v-if="!voiceMode" class="composer-input" :value="modelValue" :disabled="disabled"
+    <textarea v-show="!voiceMode" class="composer-input" :value="modelValue" :disabled="disabled"
      :auto-height="true" :adjust-position="false" :hold-keyboard="true" :show-confirm-bar="false"
      confirm-type="send" :confirm-hold="true" :maxlength="200" placeholder="想查看或调整什么设备？" placeholder-class="composer-placeholder"
      @keyboardheightchange="$emit('keyboard', $event.detail.height)" @focus="focused = true" @blur="focused = false"
      @input="$emit('update:modelValue', $event.detail.value)" @confirm="send" />
-    <view v-else class="hold-input" role="button" aria-label="按住说话，上滑取消"
+    <view v-if="voiceMode" class="hold-input" role="button" aria-label="按住说话，上滑取消"
      @touchstart.stop="startVoice" @touchmove.stop.prevent="moveVoice" @touchend.stop="endVoice" @touchcancel.stop="interrupt">
      <text>{{ phase === 'idle' ? '按住说话' : feedback }}</text>
     </view>
    </view>
-   <button v-if="!voiceMode || running" class="send-button" :class="{ ready: running || modelValue.trim() }"
+   <button v-show="!voiceMode || running" class="send-button" :class="{ ready: running || modelValue.trim() }"
     :disabled="!running && (disabled || !modelValue.trim())" :aria-label="running ? '停止回答' : '发送'" hover-class="pressed" @tap="running ? $emit('stop') : send()">
     <view v-if="running" class="stop-mark" /><image v-else class="send-icon" src="/static/send.svg" />
    </button>

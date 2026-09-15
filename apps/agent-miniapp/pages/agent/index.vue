@@ -9,13 +9,17 @@
      <AgentReplySurface :turn="turn" :busy="busy"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
-      @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)" />
+      @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
+      @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)" />
     </view>
     <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
     <view id="agent-bottom" class="anchor" />
    </view>
   </scroll-view>
-  <view class="composer-shell" :style="keyboardHeight ? {paddingBottom:'8px'} : {}"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @keyboard="keyboardHeight = $event; follow()" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
+  <view class="composer-shell" :style="keyboardHeight ? {paddingBottom:'8px'} : {}"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @keyboard="applyKeyboardHeight" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
+  <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :busy="busy"
+   @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)"
+   @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event" />
  </view>
 </template>
 <script setup>
@@ -24,9 +28,11 @@ import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, streamMessage } from '@/apis/agent'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
 import { createPresentation } from './presentation.mjs'
+import { sheetDraftFrom } from './draft-sheet.mjs'
 import AgentComposer from './components/AgentComposer.vue'
 import AgentHeader from './components/AgentHeader.vue'
 import AgentReplySurface from './components/AgentReplySurface.vue'
+import DraftSheetLayer from './components/DraftSheetLayer.vue'
 import UserMessage from './components/UserMessage.vue'
 const conversationId = ref('')
 const input = ref('')
@@ -41,6 +47,24 @@ const nearBottom = ref(true)
 const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
 const busy = computed(() => isRunning.value || mutating.value || hasExecution.value)
 const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
+const sheetDraftId = ref(''), sheetBrowser = ref(false), sheetActionId = ref('')
+const sheetTurn = computed(() => turns.value.find(turn => turn.draft?.draftId === sheetDraftId.value) ?? null)
+const sheetDraft = computed(() => sheetDraftFrom(turns.value, sheetDraftId.value))
+function openSheetEditor(turn, action) {
+ if (!action || turn.draft?.status !== 'PENDING_CONFIRMATION') return
+ sheetDraftId.value = turn.draft.draftId
+ sheetBrowser.value = false
+ sheetActionId.value = action.id
+ uni.hideKeyboard()
+}
+function openSheetBrowser(turn) {
+ if (turn.draft?.status !== 'PENDING_CONFIRMATION') return
+ sheetDraftId.value = turn.draft.draftId
+ sheetBrowser.value = true
+ sheetActionId.value = ''
+ uni.hideKeyboard()
+}
+function closeSheet() { sheetDraftId.value = '' }
 let activeRequest, presentation, pollTimer, expiryTimer
 let disposed = false, visible = true, restoring = false, sequence = 0
 function follow(force = false) {
@@ -173,14 +197,23 @@ function clearHistory() {
   finally { mutating.value = false }
  } })
 }
-function updateKeyboard({ height }) { if (!disposed) { keyboardHeight.value = Math.max(0, height); follow() } }
+let keyboardCloseTimer
+function applyKeyboardHeight(height) {
+ if (disposed) return
+ clearTimeout(keyboardCloseTimer)
+ // 输入法面板切换会先报 0 再报真实高度，0 需要短暂确认，避免页面高度来回跳动
+ if (height > 0) keyboardHeight.value = height
+ else keyboardCloseTimer = setTimeout(() => { if (!disposed) keyboardHeight.value = 0 }, 120)
+ follow()
+}
+function updateKeyboard({ height }) { applyKeyboardHeight(height) }
 onLoad(() => { uni.onKeyboardHeightChange(updateKeyboard); restore() })
 onShow(() => { visible = true; if (conversationId.value && !activeRequest) restore() })
 onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer) })
-onUnload(() => { disposed = true; uni.offKeyboardHeightChange(updateKeyboard); clearTimeout(pollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
+onUnload(() => { disposed = true; uni.offKeyboardHeightChange(updateKeyboard); clearTimeout(pollTimer); clearTimeout(expiryTimer); clearTimeout(keyboardCloseTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
 <style scoped>
-.agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; }
+.agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; transition:height 200ms ease-out; }
 .agent-status { display:flex; align-items:center; justify-content:space-between; padding:0 32rpx; min-height:72rpx; background:#fafcfb; border-bottom:1rpx solid #e0e7e2; color:#738278; font-size:23rpx; }
 .clear { width:80rpx; height:72rpx; line-height:72rpx; padding:0; margin:0; background:transparent; }.clear::after { border:0; }
 .conversation { flex:1; height:0; min-height:0; }.conversation__inner { padding:24px 16px 32px; }
@@ -188,5 +221,5 @@ onUnload(() => { disposed = true; uni.offKeyboardHeightChange(updateKeyboard); c
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
 .error { display:block; margin-top:20rpx; color:#a66a13; font-size:25rpx; }
-.composer-shell { position:relative; z-index:0; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,#f4f7f5,#f9fbf9); flex-shrink:0; }.anchor { height:2rpx; }
+.composer-shell { position:relative; z-index:0; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,#f4f7f5,#f9fbf9); flex-shrink:0; transition:padding-bottom 200ms ease-out; }.anchor { height:2rpx; }
 </style>
