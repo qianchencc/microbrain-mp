@@ -2,7 +2,7 @@
  <DeviceSheet :open="open" :title="browser ? '全部设备' : current?.kind === 'ac' ? '空调调节' : '开门设置'" :subtitle="browser ? draft.summary || selected.length + ' / ' + draft.actions.length + ' 已选' : current?.deviceName" :busy="busy" @close="emit('close')">
   <swiper v-if="browser" class="pages" :current="page" :duration="250" :disable-touch="!current || busy" @change="changePage">
    <swiper-item><view class="browser">
-    <view v-if="!pending" class="stale-note"><text>核验已过期，未执行。重新核验后可继续调整。</text><button class="stale-revalidate" :disabled="busy" hover-class="stale-revalidate--pressed" @tap="emit('revalidate')">重新核验</button></view>
+    <view v-if="staleText" class="stale-note"><text>{{ staleText }}</text><button v-if="draft.status === 'EXPIRED'" class="stale-revalidate" :disabled="busy" hover-class="stale-revalidate--pressed" @tap="emit('revalidate')">重新核验</button></view>
     <view class="toolbar"><view class="modes"><view v-for="(mode, index) in groupModes" :key="mode.by" class="mode" :class="{ active: groupIndex === index }" hover-class="mode--pressed" :hover-stay-time="60" @tap="groupIndex = index">{{ mode.label }}</view></view><button class="quiet" :disabled="busy || !pending" @tap="emit('select', selected.length === draft.actions.length ? [] : draft.actions.map(a => a.id))">{{ selected.length === draft.actions.length ? '取消全选' : '全选' }}</button></view>
     <view class="search"><uni-icons type="search" size="16" color="#8a978f" /><input v-model="search" class="search-input" placeholder="搜索设备" placeholder-style="color:#8a978f" /></view>
     <scroll-view scroll-y enhanced :show-scrollbar="false" class="device-list"><view v-for="group in groups" :key="group.key" class="group"><text class="group-title">{{ group.label }} · {{ group.items.length }}</text><view class="grid"><DeviceActionCard v-for="item in group.items" :key="item.action.id" :action="item.action" :index="item.index" :selected="selected.includes(item.action.id)" :readonly="!pending" :disabled="busy" :phase="phase(item.action)" :current-state="states[item.action.deviceId] ?? null" :operation="operationLabel(item.action)" :outcome-label="outcome(item.action)" @toggle="toggle(item.action.id)" @configure="configure(item.action)" /></view></view><text v-if="!groups.length" class="note">没有匹配的设备</text></scroll-view>
@@ -34,6 +34,7 @@ const currentId = ref('')
 const groupModes = [{ label: '按区域', by: 'location' }, { label: '按类型', by: 'kind' }, { label: '按选择', by: 'selection' }]
 const open = computed(() => Boolean(props.draft))
 const pending = computed(() => props.draft?.status === 'PENDING_CONFIRMATION')
+const staleText = computed(() => ({ EXPIRED: '核验已过期，未执行。', CANCELLED: '操作已取消，未执行。' }[props.draft?.status] || ''))
 const selected = computed(() => props.draft?.selectedActionIds || [])
 const current = computed(() => props.draft?.actions.find(action => action.id === currentId.value) ?? null)
 const groups = computed(() => props.draft ? createDraftGroups(props.draft.actions.filter(action => (action.deviceName + action.location).includes(search.value.trim())), selected.value, { groupBy: groupModes[groupIndex.value].by }) : [])
@@ -47,7 +48,7 @@ function receipt(action) { return props.result?.receipts?.find(item => item.acti
 function outcome(action) { return receiptText(receipt(action)) }
 function phase(action) {
  if (props.result) return receiptPhase(action, receipt(action)?.outcome ?? (selected.value.includes(action.id) ? props.result.status : 'UNSELECTED'), states.value[action.deviceId])
- return 'pending'
+ return props.draft.status === 'CANCELLED' ? 'cancelled' : props.draft.status === 'EXPIRED' ? 'expired' : 'pending'
 }
 async function refresh() {
  if (!props.draft) return

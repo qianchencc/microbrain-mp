@@ -54,14 +54,15 @@ const sheetTurn = computed(() => turns.value.find(turn => turn.draft?.draftId ==
 // 仅当草案被新提案取代（draftId 消失）或轮次被清理时自动关闭。
 const sheetDraft = computed(() => sheetTurn.value?.draft ?? null)
 function openSheetEditor(turn, action) {
- if (!action || turn.draft?.status !== 'PENDING_CONFIRMATION') return
+ if (!action || !turn.draft) return
  sheetDraftId.value = turn.draft.draftId
  sheetBrowser.value = false
  sheetActionId.value = action.id
  uni.hideKeyboard()
 }
+// 更多设备浏览不受草案状态限制：过期/取消/已完成都可展开（只读）；仅要求草案存在
 function openSheetBrowser(turn) {
- if (turn.draft?.status !== 'PENDING_CONFIRMATION') return
+ if (!turn.draft) return
  sheetDraftId.value = turn.draft.draftId
  sheetBrowser.value = true
  sheetActionId.value = ''

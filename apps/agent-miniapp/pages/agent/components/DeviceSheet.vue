@@ -1,9 +1,11 @@
 <template>
  <view v-if="mounted" class="sheet-root">
-  <view class="mask" :class="{ shown }" @tap="maskTap" @touchmove.stop.prevent />
+  <view class="mask" :class="{ shown }" @tap="emit('close')" @touchmove.stop.prevent />
   <view class="sheet" :class="{ shown }" :style="dragStyle">
-   <view class="handle-zone" @touchstart="start" @touchmove.stop.prevent="move" @touchend="end" @touchcancel="cancelDrag"><view class="handle" /></view>
-   <view class="header"><view><text class="title">{{ title }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" aria-label="关闭" @tap="emit('close')"><uni-icons type="closeempty" size="22" color="#728178" /></button></view>
+   <view class="grab" @touchstart="start" @touchmove.stop.prevent="move" @touchend="end" @touchcancel="cancelDrag">
+    <view class="handle-zone"><view class="handle" /></view>
+    <view class="header"><view><text class="title">{{ title }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" aria-label="关闭" @tap="emit('close')"><uni-icons type="closeempty" size="22" color="#728178" /></button></view>
+   </view>
    <view class="sheet-body"><slot /></view>
   </view>
  </view>
@@ -13,8 +15,9 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 const props = defineProps({ open: Boolean, title: String, subtitle: String, busy: Boolean })
 const emit = defineEmits(['close'])
 const mounted = ref(false), shown = ref(false), drag = ref(0), dragging = ref(false)
-let origin, started, leaveTimer
-// 入场用 CSS animation（插入即播放，不受 setData 合并提交影响）；离场在已渲染节点上做 class 过渡，240ms 后卸载。
+let origin, startTime, lastY, lastTime, flickSpeed = 0, leaveTimer
+// 入场用 CSS animation（插入即播放）；离场在已渲染节点上做 class 过渡，240ms 后卸载。
+// 关闭（遮罩/把手/×）永远允许：busy 只限制编辑类操作。
 watch(() => props.open, value => {
  clearTimeout(leaveTimer)
  if (value) {
@@ -27,20 +30,39 @@ watch(() => props.open, value => {
  }
 }, { immediate: true })
 onBeforeUnmount(() => clearTimeout(leaveTimer))
-const dragStyle = computed(() => dragging.value ? { transform: `translateY(${drag.value}px)`, transition: 'none' } : {})
-// 关闭（遮罩/把手/×）永远允许：busy 只限制编辑类操作，卡死时用户必须始终能退出面板
-function maskTap() { emit('close') }
-function start(event) { if (event.touches.length !== 1) return; origin = event.touches[0].clientY; started = Date.now(); dragging.value = true }
-function move(event) { if (origin == null || event.touches.length !== 1) return; drag.value = Math.max(-12, event.touches[0].clientY - origin) }
-function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
+// 拖拽期间内联覆盖 transform/transition/animation：进场 animation 无论处于何种状态都无法与手指位移竞争
+const dragStyle = computed(() => dragging.value
+ ? { transform: `translateY(${drag.value}px)`, transition: 'none', animation: 'none' }
+ : {})
+function start(event) {
+ if (event.touches.length !== 1) { cancelDrag(); return }
+ origin = event.touches[0].clientY
+ lastY = origin
+ startTime = lastTime = Date.now()
+ flickSpeed = 0
+ dragging.value = true
+}
+function move(event) {
+ if (origin == null || event.touches.length !== 1) return
+ const y = event.touches[0].clientY
+ const now = Date.now()
+ flickSpeed = (y - lastY) / Math.max(1, now - lastTime)
+ lastY = y
+ lastTime = now
+ const delta = y - origin
+ // 向下全跟随；向上阻尼（1/3 摩擦），不做硬 clamp
+ drag.value = delta > 0 ? Math.round(delta) : Math.round(delta / 3)
+}
 function end() {
  dragging.value = false
  if (origin == null) return
- const dismiss = drag.value > 80 || drag.value > 20 && drag.value / (Date.now() - started) > .5
+ const dragged = drag.value
  origin = null
- if (dismiss) emit('close')
+ // 动量优先：轻扫即收；否则距离超过 64px 收起，否则弹回
+ if (flickSpeed > .5 || dragged > 64) emit('close')
  else drag.value = 0
 }
+function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 </script>
 <style scoped>
 /* 页面级底部面板：必须作为页面根节点的直接子级挂载（composer 之后），禁止放回滚动内容内部。 */
@@ -52,9 +74,11 @@ function end() {
 @keyframes sheet-in { from { transform:translateY(100%); } }
 @keyframes mask-in { from { opacity:0; } }
 .sheet-body { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
-.handle-zone { height:24px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+/* 抓取区 = 横杠 + 整个头部：足够大的拖拽目标，轻扫（>0.5px/ms）或拖过 64px 收起 */
+.grab { flex-shrink:0; }
+.handle-zone { height:24px; display:flex; align-items:center; justify-content:center; }
 .handle { width:42px; height:5px; background:#c4cbc6; border-radius:5px; }
-.header { display:flex; align-items:center; justify-content:space-between; padding:4px 20px 16px; border-bottom:1px solid #e3e8e4; flex-shrink:0; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:4px 20px 16px; border-bottom:1px solid #e3e8e4; }
 .header>view { min-width:0; }
 .title { display:block; font-size:19px; font-weight:600; color:#24382d; }
 .subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
