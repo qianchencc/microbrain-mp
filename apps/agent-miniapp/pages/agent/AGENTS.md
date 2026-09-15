@@ -1,0 +1,11 @@
+# Agent Page Notes
+
+- 微信分块事件的 `data` 是 `ArrayBuffer`，中文 UTF-8 字节可能跨 chunk；所有 NDJSON 解析继续复用 `apis/agent/ndjson.mjs`。
+- Android 优先消费 `onChunkReceived`，其他平台保留完整 response 回退，两条路径必须产生相同业务事件。
+- 开发凭据和生产登录态只在 `apis/agent/index.js` 组装，页面与组件不接触 header。
+- `ACCEPTED` 表示上游受理，界面保留“暂无物理状态回执”说明；只有待确认卡片可发起真实控制。
+- 恢复会话时以服务端 `draft/result` 为准；历史事件只恢复轨迹和正文，不能把已执行草案重放成待确认。
+- 选项更新和确认携带最新 revision；执行结果的 summary 由服务端生成，重试回答不得重发设备控制。
+- 独立项目构建和验收边界见项目根目录 `README.md`；H5 预览不是小程序验收。
+- 输入栏切换语音会卸载 textarea，键盘收起不能只依赖 textarea 的事件；页面监听键盘高度并在卸载时移除监听。
+- WechatSI 只能在用户开始录音时延迟加载；测试号未注册插件时保留文字输入。授权前松手、切后台和触摸取消都必须丢弃已取消的识别结果。

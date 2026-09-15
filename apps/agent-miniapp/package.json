@@ -1,0 +1,16 @@
+{
+  "name": "iot-agent-miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build:weixin": "node scripts/build.mjs",
+    "test": "node --test test/agent-*.test.mjs",
+    "test:weixin": "npm run build:weixin && node --test test/compiled-avatar.test.mjs"
+  },
+  "dependencies": {
+    "blobatar": "2.7.0",
+    "core-js": "3.50.0",
+    "markdown-it": "15.0.1",
+    "text-encoding-utf-8": "1.0.2"
+  }
+}

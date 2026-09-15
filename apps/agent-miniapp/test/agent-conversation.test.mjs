@@ -1,0 +1,45 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { createTurn, applyEvent, restoreTurns, operationText, receiptText } from '../pages/agent/conversation.mjs'
+
+test('部分受理保留失败参数，门禁回执保留次数', () => {
+	assert.equal(receiptText({ outcome: 'PARTIALLY_ACCEPTED', fields: [{ field: 'power', outcome: 'ACCEPTED' }, { field: 'temperature', outcome: 'REJECTED' }, { field: 'mode', outcome: 'REJECTED' }] }), '未受理：设定温度、模式')
+	assert.equal(receiptText({ outcome: 'PARTIALLY_ACCEPTED', attempts: [{ outcome: 'ACCEPTED' }, { outcome: 'REJECTED' }] }), '1/2 次已受理')
+	assert.equal(receiptText({ outcome: 'UNSELECTED', fields: [] }), '未选择')
+})
+
+test('重复工具调用分别完成，回答追加在同一轮并收起记录', () => {
+	const turn = createTurn('turn', '查询设备')
+	for (let i = 0; i < 2; i++) {
+		applyEvent(turn, { type: 'tool.started', tool: 'find_device_candidates' })
+		applyEvent(turn, { type: 'tool.completed', tool: 'find_device_candidates', status: 'completed', summary: `结果${i}` })
+	}
+	applyEvent(turn, { type: 'message.delta', content: '已找到' })
+	applyEvent(turn, { type: 'message.delta', content: '设备。' })
+	assert.equal(turn.text, '已找到设备。')
+	assert.equal(turn.traceOpen, false)
+	assert.deepEqual(turn.activities.map(item => item.summary), ['结果0', '结果1'])
+})
+
+test('恢复以持久化草案和收尾为准，同一草案修订只出现一次', () => {
+	const draft = { draftId: 'draft', revision: 3, status: 'ACCEPTED', selectedActionIds: ['b'] }
+	const result = { summary: { status: 'completed', text: '请求已受理。' } }
+	const turns = restoreTurns([{ id: 'a', content: '草案', events: [], draft }, { id: 'b', content: '修订', events: [], draft, result }])
+	assert.equal(turns[0].draft, null)
+	assert.deepEqual(turns[1].draft.selectedActionIds, ['b'])
+	assert.equal(turns[1].result.summary.text, '请求已受理。')
+})
+
+test('操作文案按真实命令展示，不固定为打开照明', () => {
+	assert.equal(operationText({ kind: 'lighting', command: { closeOrOpen: 0 } }), '关闭')
+	assert.equal(operationText({ kind: 'access', command: { controlType: 2, count: 3 } }), '开门 3 次')
+	assert.equal(operationText({ kind: 'ac', command: { temperature: 25 } }), '25°C')
+	assert.equal(receiptText({ outcome: 'ACCEPTED' }), '指令已受理')
+})
+
+test('恢复思考秒数使用服务端时间戳而不是当前时间', () => {
+	const [turn] = restoreTurns([{id:'timed',content:'查询',startedAt:'2026-09-06T01:00:00.000Z',events:[{type:'run.completed',timestamp:'2026-09-06T01:00:16.000Z'}]}])
+	assert.equal(turn.seconds,16)
+	const [legacy] = restoreTurns([{id:'legacy',content:'查询',events:[{type:'run.completed'}]}])
+	assert.equal(legacy.seconds,0)
+})

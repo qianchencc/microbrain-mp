@@ -1,0 +1,36 @@
+
+    <div class="composer-band">
+      <form class="composer" @submit.prevent="sendMessage">
+        <textarea
+          v-model="input"
+          rows="1"
+          maxlength="200"
+          :disabled="composerDisabled"
+          placeholder="输入设备指令"
+          aria-label="设备指令"
+          @keydown.enter.exact.prevent="sendMessage"
+        ></textarea>
+        <button
+          v-if="isRunning"
+          class="icon-button icon-button--stop"
+          type="button"
+          title="停止"
+          aria-label="停止"
+          @click="stopRun"
+        >
+          <Square :size="17" fill="currentColor" />
+        </button>
+        <button
+          v-else
+          class="icon-button"
+          type="submit"
+          title="发送"
+          aria-label="发送"
+          :disabled="composerDisabled || !input.trim()"
+        >
+          <Send :size="18" />
+        </button>
+      </form>
+    </div>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#718578" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>

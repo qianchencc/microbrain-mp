@@ -1,0 +1,12 @@
+{
+  "pages": [{
+    "path": "pages/agent/index",
+    "style": {
+      "navigationBarTitleText": "物联 Agent",
+      "navigationStyle": "custom",
+      "navigationBarTextStyle": "black",
+      "navigationBarBackgroundColor": "#fafcfb",
+      "disableScroll": true
+    }
+  }]
+}

@@ -1,0 +1,199 @@
+<template>
+ <view class="agent-page" :style="{ height: keyboardHeight ? `calc(100vh - ${keyboardHeight}px)` : '100vh' }">
+  <AgentHeader :status="statusText" :disabled="busy || !conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" />
+  <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
+   <view class="conversation__inner">
+    <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
+    <view v-for="turn in turns" :key="turn.id" class="turn">
+     <view class="user-row"><text class="user-message">{{ turn.content }}</text></view>
+     <view class="agent-reply"><AgentAvatar :running="turn.running" :conversation-id="conversationId" /><view class="agent-body"><view class="agent-heading"><text>物联 Agent</text><ThinkingOrb :running="turn.running" :failed="Boolean(turn.error)" :seconds="turn.seconds" /></view>
+     <button v-if="turn.activities.length" class="trace-toggle" @click="turn.traceOpen = !turn.traceOpen"><text>处理记录</text><uni-icons :type="turn.traceOpen ? 'up' : 'down'" size="13" color="#728178" /></button>
+     <view class="trace-expand" :class="{ open: turn.traceOpen }"><view class="trace-clip"><ToolActivity :items="turn.activities" /></view></view>
+     <AssistantMarkdown v-if="turn.text" :content="turn.text" />
+     <ActionDraftCard v-if="turn.draft" :draft="turn.draft" :result="turn.result" :busy="busy" @select="selectDraft(turn, $event)" @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)" @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" />
+     <view v-if="turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
+      <text v-if="turn.result.summary.status === 'completed'" class="execution-answer">{{ turn.result.summary.text }}</text>
+      <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>
+      <button v-else-if="turn.result.summary.status === 'failed'" class="execution-retry" :disabled="busy" @click="retryAnswer(turn)"><uni-icons type="refreshempty" size="14" color="#738177" /><text>重试回答</text></button>
+     </view>
+     <text v-if="turn.error" class="error">{{ turn.error }}</text></view></view>
+    </view>
+    <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
+    <view id="agent-bottom" class="anchor" />
+   </view>
+  </scroll-view>
+  <view class="composer-shell" :style="keyboardHeight ? {paddingBottom:'8px'} : {}"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @keyboard="keyboardHeight = $event; follow()" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
+ </view>
+</template>
+<script setup>
+import { computed, nextTick, ref, watch } from 'vue'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
+import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, updateSelection, retrySummary, revalidateAction, streamMessage } from '@/apis/agent'
+import { createTurn, applyEvent, restoreTurns } from './conversation.mjs'
+import { createPresentation } from './presentation.mjs'
+import ActionDraftCard from './components/ActionDraftCard.vue'
+import AgentComposer from './components/AgentComposer.vue'
+import ToolActivity from './components/ToolActivity.vue'
+import AgentAvatar from './components/AgentAvatar.vue'
+import ThinkingOrb from './components/ThinkingOrb.vue'
+import AgentHeader from './components/AgentHeader.vue'
+import AssistantMarkdown from './components/AssistantMarkdown.vue'
+const conversationId = ref('')
+const input = ref('')
+const composer = ref(null)
+const keyboardHeight = ref(0)
+const turns = ref([])
+const errorMessage = ref('')
+const isRunning = ref(false)
+const mutating = ref(false)
+const scrollIntoView = ref('')
+const nearBottom = ref(true)
+const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
+const busy = computed(() => isRunning.value || mutating.value || hasExecution.value)
+const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
+let activeRequest, presentation, pollTimer, expiryTimer
+let disposed = false, visible = true, restoring = false, sequence = 0
+function follow(force = false) {
+ if (!force && !nearBottom.value) return
+ scrollIntoView.value = ''
+ nextTick(() => { if (!disposed) scrollIntoView.value = 'agent-bottom' })
+}
+function handleScroll(event) { if (event.detail.deltaY > 5) nearBottom.value = false }
+function schedule() {
+ clearTimeout(pollTimer)
+ if (visible && !disposed && (hasExecution.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
+ clearTimeout(expiryTimer)
+ const pending = turns.value.filter(turn => turn.draft?.status === 'PENDING_CONFIRMATION')
+ const deadline = Math.min(...pending.map(turn => Date.parse(turn.draft.expiresAt)))
+ if (Number.isFinite(deadline)) expiryTimer = setTimeout(() => {
+  if (mutating.value) return
+  for (const turn of pending) if (turn.draft.status === 'PENDING_CONFIRMATION' && Date.parse(turn.draft.expiresAt) <= Date.now()) turn.draft.status = 'EXPIRED'
+  schedule()
+ }, Math.max(0, deadline - Date.now()))
+}
+watch(mutating, schedule)
+async function restore() {
+ if (restoring || activeRequest || disposed) return
+ restoring = true
+ try {
+  const restored = await restoreConversation()
+  const conversation = restored.conversation || await createConversation()
+  if (disposed) return
+  conversationId.value = conversation.id
+  turns.value = restoreTurns(conversation.turns)
+  isRunning.value = Boolean(conversation.running)
+  if (!isRunning.value) turns.value.forEach(turn => { turn.running = false })
+  errorMessage.value = ''
+  follow()
+  schedule()
+ } catch (error) { if (!disposed) { errorMessage.value = error.message; schedule() } }
+ finally { restoring = false }
+}
+async function sendMessage(voiceText) {
+ const content = (typeof voiceText === 'string' ? voiceText : input.value).trim()
+ if (!content || busy.value || !conversationId.value) return
+ turns.value.push(createTurn('local-' + Date.now() + '-' + sequence++, content))
+ const current = turns.value[turns.value.length - 1]
+ if (typeof voiceText !== 'string') input.value = ''
+ isRunning.value = true
+ errorMessage.value = ''
+ follow(true)
+ presentation = createPresentation(event => {
+  if (disposed) return
+  applyEvent(current, event)
+  if (event.type === 'action.proposed') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) { previous.draft = null; previous.result = null }
+  follow()
+ })
+ const request = streamMessage(conversationId.value, content, event => presentation.push(event))
+ activeRequest = request
+ try { await request.promise; await presentation.settle() }
+ catch (error) { if (!disposed && current.running) current.error = error.message }
+ finally { current.running = false; isRunning.value = false; activeRequest = null; if (!disposed) schedule() }
+}
+async function selectDraft(turn, selected) {
+ if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
+ const previous = turn.draft.selectedActionIds
+ turn.draft.selectedActionIds = selected
+ mutating.value = true
+ try { Object.assign(turn.draft, await updateSelection(turn.draft.draftId, turn.draft.revision, selected)) }
+ catch (error) { turn.draft.selectedActionIds = previous; errorMessage.value = error.message }
+ finally { mutating.value = false; schedule() }
+}
+async function confirmDraft(turn) {
+ if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION' || !turn.draft.selectedActionIds.length) return
+ mutating.value = true
+ clearTimeout(expiryTimer)
+ turn.draft.status = 'EXECUTING'
+ try { turn.result = await confirmAction(turn.draft.draftId, turn.draft.revision); turn.draft.status = turn.result.status }
+ catch (error) {
+  if (error.data?.status === 'REJECTED') { turn.result = error.data; turn.draft.status = 'REJECTED' }
+  else { errorMessage.value = error.message; await restore() }
+ } finally { mutating.value = false; schedule(); follow() }
+}
+async function cancelDraft(turn) {
+ if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
+ mutating.value = true
+ try { turn.draft.status = (await cancelAction(turn.draft.draftId)).status }
+ catch (error) { errorMessage.value = error.message }
+ finally { mutating.value = false; schedule() }
+}
+async function revalidateDraft(turn) {
+ if (busy.value) return
+ mutating.value = true
+ try { Object.assign(turn.draft, await revalidateAction(turn.draft.draftId, turn.draft.revision)) }
+ catch (error) { errorMessage.value = error.message }
+ finally { mutating.value = false; schedule() }
+}
+async function retryAnswer(turn) {
+ if (busy.value) return
+ mutating.value = true
+ try { turn.result.summary = await retrySummary(turn.draft.draftId) }
+ catch (error) { errorMessage.value = error.message }
+ finally { mutating.value = false; schedule() }
+}
+function stopRun() { if (activeRequest) { const turn = turns.value[turns.value.length - 1]; turn.running = false; for (const item of turn.activities) if (item.status === 'running') item.status = 'skipped'; presentation?.cancel(); activeRequest.abort() } }
+function clearHistory() {
+ if (busy.value || !conversationId.value) return
+ uni.showModal({ title: '清除会话', content: '清除当前对话和草案记录？', success: async response => {
+  if (!response.confirm || busy.value) return
+  mutating.value = true
+  try {
+   await clearConversation(conversationId.value)
+   const fresh = await createConversation()
+   conversationId.value = fresh.id
+   turns.value = []
+   errorMessage.value = ''
+   follow(true)
+  }
+  catch (error) { errorMessage.value = error.message }
+  finally { mutating.value = false }
+ } })
+}
+function updateKeyboard({ height }) { if (!disposed) { keyboardHeight.value = Math.max(0, height); follow() } }
+onLoad(() => { uni.onKeyboardHeightChange(updateKeyboard); restore() })
+onShow(() => { visible = true; if (conversationId.value && !activeRequest) restore() })
+onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer) })
+onUnload(() => { disposed = true; uni.offKeyboardHeightChange(updateKeyboard); clearTimeout(pollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
+</script>
+<style scoped>
+.agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; }
+.agent-status { display:flex; align-items:center; justify-content:space-between; padding:0 32rpx; min-height:72rpx; background:#fafcfb; border-bottom:1rpx solid #e0e7e2; color:#738278; font-size:23rpx; }
+.clear { width:80rpx; height:72rpx; line-height:72rpx; padding:0; margin:0; background:transparent; }.clear::after { border:0; }
+.conversation { flex:1; height:0; min-height:0; }.conversation__inner { padding:24px 16px 32px; }
+.welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
+.turn { margin-bottom:42px; }.agent-reply { display:flex; align-items:flex-start; gap:11px; }.agent-body { flex:1; min-width:0; }.trace-expand { display:grid; grid-template-rows:0fr; transition:grid-template-rows 200ms ease; }.trace-expand.open { grid-template-rows:1fr; }.trace-clip { min-height:0; overflow:hidden; }.user-row { display:flex; justify-content:flex-end; margin-bottom:24px; }
+.user-message { max-width:85%; padding:12px 15px; border-radius:8px; background:#176b54; color:white; font-size:15px; line-height:1.6; }
+.agent-heading { display:flex; align-items:center; gap:12px; min-height:36px; margin-bottom:0; font-size:13px; font-weight:600; }
+.thinking { display:block; margin:12rpx 0; font-size:23rpx; font-weight:400; color:#74837a; }
+.execution-summary { margin-top:16px; }
+.execution-answer { display:block; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; color:#253b30; }
+.execution-progress,.execution-retry { display:flex; align-items:center; gap:8px; color:#738177; font-size:12px; }
+.execution-retry { margin:0; padding:0; min-height:44px; background:transparent; }.execution-retry::after { border:0; }
+.execution-spinner { width:14px; height:14px; box-sizing:border-box; flex-shrink:0; border:1.5px solid #ccd6d0; border-top-color:#738177; border-radius:50%; animation:execution-spin .8s linear infinite; }
+@keyframes execution-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .execution-spinner { animation:none; } }
+.answer { display:block; font-size:14px; line-height:1.8; margin-top:10px; white-space:pre-wrap; overflow-wrap:break-word; }.conclusion { margin-top:24rpx; }
+.trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
+.error { display:block; margin-top:20rpx; color:#a66a13; font-size:25rpx; }
+.composer-shell { padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,#f4f7f5,#f9fbf9); flex-shrink:0; }.anchor { height:2rpx; }
+</style>

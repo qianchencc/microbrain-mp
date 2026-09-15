@@ -10,3 +10,4 @@ menu.sql
 *.iml
 .agents/
 .codex/
+.recovery/
