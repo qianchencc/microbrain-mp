@@ -66,6 +66,7 @@ function openSheetBrowser(turn) {
 }
 function closeSheet() { sheetDraftId.value = '' }
 let activeRequest, presentation, pollTimer, expiryTimer
+let staleRunSince = 0
 let disposed = false, visible = true, restoring = false, sequence = 0
 function follow(force = false) {
  if (!force && !nearBottom.value) return
@@ -86,6 +87,7 @@ function schedule() {
  }, Math.max(0, deadline - Date.now()))
 }
 watch(mutating, schedule)
+watch(() => turns.value.map(turn => turn.draft ? turn.draft.draftId + turn.draft.status + turn.draft.expiresAt : '').join('|'), () => schedule())
 async function restore() {
  if (restoring || activeRequest || disposed) return
  restoring = true
@@ -95,7 +97,9 @@ async function restore() {
   if (disposed) return
   conversationId.value = conversation.id
   turns.value = restoreTurns(conversation.turns)
-  isRunning.value = Boolean(conversation.running)
+  isRunning.value = Boolean(conversation.running) && Date.now() - staleRunSince > 300000
+  if (conversation.running && !isRunning.value) { for (const turn of turns.value) turn.running = false }
+  else if (!conversation.running) staleRunSince = 0
   if (!isRunning.value) turns.value.forEach(turn => { turn.running = false })
   errorMessage.value = ''
   follow()
@@ -140,11 +144,21 @@ function retryTurn(turn) { return recoverTurn(turn, turn.content) }
 function editTurn(turn, content) { return recoverTurn(turn, content) }
 async function selectDraft(turn, selected) {
  if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
+ if (Date.parse(turn.draft.expiresAt) <= Date.now()) {
+  turn.draft.status = 'EXPIRED'
+  uni.showToast({ title: '草案已过期，请重新核验', icon: 'none' })
+  schedule()
+  return
+ }
  const previous = turn.draft.selectedActionIds
  turn.draft.selectedActionIds = selected
  mutating.value = true
  try { Object.assign(turn.draft, await updateSelection(turn.draft.draftId, turn.draft.revision, selected)) }
- catch (error) { turn.draft.selectedActionIds = previous; errorMessage.value = error.message }
+ catch (error) {
+  turn.draft.selectedActionIds = previous
+  uni.showToast({ title: String(error.data?.message || error.message || '选择未保存').slice(0, 24), icon: 'none' })
+  if (!activeRequest && !disposed) { mutating.value = false; await restore() }
+ }
  finally { mutating.value = false; schedule() }
 }
 async function confirmDraft(turn) {
@@ -179,7 +193,16 @@ async function retryAnswer(turn) {
  catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }
-function stopRun() { if (activeRequest) { const turn = turns.value[turns.value.length - 1]; turn.running = false; turn.error = '本次回答已停止'; for (const item of turn.activities) if (['running','searching'].includes(item.status)) item.status = 'skipped'; presentation?.cancel(); activeRequest.abort() } }
+function stopRun() {
+ if (activeRequest) { const turn = turns.value[turns.value.length - 1]; turn.running = false; turn.error = '本次回答已停止'; for (const item of turn.activities) if (['running','searching'].includes(item.status)) item.status = 'skipped'; presentation?.cancel(); activeRequest.abort(); return }
+ // 服务端 running 卡死（如客户端中断后未回收）：本地解锁，5 分钟内忽略同名僵死标记
+ if (isRunning.value) {
+  staleRunSince = Date.now()
+  for (const turn of turns.value) turn.running = false
+  isRunning.value = false
+  schedule()
+ }
+}
 function clearHistory() {
  if (busy.value || !conversationId.value) return
  uni.showModal({ title: '清除会话', content: '清除当前对话和草案记录？', success: async response => {

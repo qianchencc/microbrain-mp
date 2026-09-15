@@ -16,4 +16,6 @@
 - 面板内容统一由页面根部的 `DraftSheetLayer.vue` 渲染（在 composer 之后），`ActionDraftCard` 只通过 `configure`/`browse` 事件请求打开；面板只允许 PENDING_CONFIRMATION 草案（`draft-sheet.mjs` 的 `sheetDraftFrom`）。
 - 输入栏 textarea 常驻（v-show 切换语音胶囊），避免原生组件重挂载闪烁；键盘高度 0 需 120ms 去抖（`applyKeyboardHeight`，输入法面板切换会先报 0 再报真实高度），页面高度变化带 200ms 过渡。
 - 折叠面板（处理记录）不要用 `grid-template-rows: 0fr/1fr` 过渡，小程序内核不动画；用实测高度驱动（`AgentReplySurface` 的 measure→transition→height:auto 三段式），折叠箭头用单图标 rotate(180deg)，禁止 up/down 字形互换（会引发布局跳动）。
+- 底部面板入场动画必须用 CSS `animation`（插入即播放，backwards 填充），不能用"插入后延时加 class 触发 transition"——setData 合并提交会让节点带着终态入场，动画消失；离场在已渲染节点上做 class 过渡即可。
+- 卡片单击选中的链路本身可靠；历史上"点不动"的三个真因：①草案已过期（服务端拒绝后静默回滚）——selectDraft 现在有过期预检 + toast + restore 重同步；②busy 锁（mutating/执行中/僵死 running）期间全部禁用；③服务端 conversation.running 在客户端断流后可能长时间不回收——stopRun 对无本地请求的僵死状态做本地解锁（staleRunSince 5 分钟内忽略）。
 - 只有存在两个或以上同类动作时才显示“应用到全部同类设备”开关；单设备配置不显示一个不可用的伪控件。
