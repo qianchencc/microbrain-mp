@@ -41,6 +41,7 @@ const keyboardHeight = ref(0)
 const turns = ref([])
 const errorMessage = ref('')
 const isRunning = ref(false)
+const phase = ref('')
 const mutating = ref(false)
 const scrollIntoView = ref('')
 const nearBottom = ref(true)
@@ -66,7 +67,6 @@ function openSheetBrowser(turn) {
 }
 function closeSheet() { sheetDraftId.value = '' }
 let activeRequest, presentation, pollTimer, expiryTimer
-let staleRunSince = 0
 let disposed = false, visible = true, restoring = false, sequence = 0
 function follow(force = false) {
  if (!force && !nearBottom.value) return
@@ -96,10 +96,10 @@ async function restore() {
   const conversation = restored.conversation || await createConversation()
   if (disposed) return
   conversationId.value = conversation.id
+  phase.value = conversation.phase || 'idle'
   turns.value = restoreTurns(conversation.turns)
-  isRunning.value = Boolean(conversation.running) && Date.now() - staleRunSince > 300000
-  if (conversation.running && !isRunning.value) { for (const turn of turns.value) turn.running = false }
-  else if (!conversation.running) staleRunSince = 0
+  // 相位已持久化为服务端权威（含启动自愈），前端不再做僵死 running 的本地解锁。
+  isRunning.value = Boolean(conversation.running)
   if (!isRunning.value) turns.value.forEach(turn => { turn.running = false })
   errorMessage.value = ''
   follow()
@@ -205,14 +205,13 @@ async function retryAnswer(turn) {
  finally { mutating.value = false; schedule() }
 }
 function stopRun() {
- if (activeRequest) { const turn = turns.value[turns.value.length - 1]; turn.running = false; turn.error = '本次回答已停止'; for (const item of turn.activities) if (['running','searching'].includes(item.status)) item.status = 'skipped'; presentation?.cancel(); activeRequest.abort(); return }
- // 服务端 running 卡死（如客户端中断后未回收）：本地解锁，5 分钟内忽略同名僵死标记
- if (isRunning.value) {
-  staleRunSince = Date.now()
-  for (const turn of turns.value) turn.running = false
-  isRunning.value = false
-  schedule()
- }
+ if (!activeRequest) return
+ const turn = turns.value[turns.value.length - 1]
+ turn.running = false
+ turn.error = '本次回答已停止'
+ for (const item of turn.activities) if (['running', 'searching'].includes(item.status)) item.status = 'skipped'
+ presentation?.cancel()
+ activeRequest.abort()
 }
 function clearHistory() {
  if (busy.value || !conversationId.value) return
