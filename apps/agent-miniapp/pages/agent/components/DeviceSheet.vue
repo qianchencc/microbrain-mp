@@ -81,14 +81,14 @@ function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 @keyframes mask-in { from { opacity:0; } }
 /* sheet：只负责拖拽跟随与松手回弹，永不声明 animation */
 .sheet { width:100vw; max-height:92vh; display:flex; flex-direction:column; background:#fcfdfc; border-radius:16px 16px 0 0; overflow:hidden; padding-bottom:env(safe-area-inset-bottom); transition:transform 320ms cubic-bezier(.32,.72,0,1); box-shadow:0 -8px 32px #16372814; }
-.sheet.tall { height:92vh; }
+.sheet.tall { height:78vh; }
 .sheet-body { display:flex; flex-direction:column; min-height:0; flex:1; overflow:hidden; }
 /* 抓取区 = 横杠 + 整个头部 */
 .grab { flex-shrink:0; }
-.handle-zone { height:24px; display:flex; align-items:center; justify-content:center; }
-.handle { width:42px; height:5px; background:#c4cbc6; border-radius:5px; }
+.handle-zone { height:18px; display:flex; align-items:center; justify-content:center; }
+.handle { width:36px; height:4px; background:#c4cbc6; border-radius:4px; }
 .header { display:flex; flex-direction:column; border-bottom:1px solid #e3e8e4; }
-.header-top { display:flex; align-items:center; padding:4px 20px 12px; }
+.header-top { display:flex; align-items:center; padding:2px 20px 8px; }
 .header-copy { flex:1; min-width:0; }
 .title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
 .title { display:block; font-size:19px; font-weight:600; color:#24382d; flex-shrink:0; }
