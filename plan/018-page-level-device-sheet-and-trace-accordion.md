@@ -93,6 +93,14 @@
 - 测试：`agent-idle-watchdog.test.mjs`（触发一次/kick 续命/stop 取消）、`agent-sheet-drag.test.mjs`（200px 收起/带位移轻扫收起/微抖不收起/低速弹回）；全量 32/32 通过，`build:weixin` 通过且产物含看门狗与门槛判定。
 - 同时更正 AGENTS 旧注：`stopRun` 的 staleRunSince 本地解锁已随"相位服务端权威"移除，勿复活。
 
+## 追加：预览失联终审=scroll-view 塌陷 + 横向分段菜单统一（2026-09-17）
+
+两件事收口：
+
+- **整页失联终审根因 = scroll-view 高度塌陷**（此前两轮误诊：busy 冻结→修了看门狗；草案状态静默→修了 toast，均非根因）。模式：`flex:1; height:0` 直接写在 scroll-view 上 → 微信 webview 盒子 0 高、内容被 enhanced 层画出但命中盒全灭；AX 证据=scroll-view 内全部子元素 bounds 塌缩（y=170,h=1px）而 scroll-view 外元素（header/composer）几何正常——与"顶部和输入框可点、卡片全死"逐点吻合。修复=确定性高度链：外包 `flex:1; min-height:0; overflow:hidden` 的 view + 内层 `height:100%`，落点三处：`index.vue` 会话列表（conversation-shell）、`ParameterEditor.vue`（content-shell）、`DraftSheetLayer.vue` 设备网格（device-scroll-shell，后随并行会话 8ed31d2 一并入库）。铁律已写入 AGENTS。
+- **横向分段菜单（"横杆菜单"，kitze.io 研究成果）统一**：用户裁定——更多设备面板与长按空调卡面板的横杆交互"完全是两个回事"，以空调面板（`SlidingSegments`：滑动指示块/220ms 过渡/统一禁用态）为标准。代码事实：`SlidingSegments` 全仓库仅 ParameterEditor（仅 AC 可达）使用；全部设备分组（区域/类型/选择）是第二套手写 32px 胶囊 chips。修复：DraftSheetLayer 分组切换替换为 `SlidingSegments`（默认绿 thumb，`.group-segments{flex:1}`），删除 `.modes/.mode/.fill` 自绘样式；AGENTS 增补"一切横向分段切换统一用 SlidingSegments，禁止自绘胶囊 tab"。面板拖拽横杆本身两个面板共用同一 DeviceSheet 实例与事件绑定（产物核验 bindtouchstart/catchtouchmove 完整），无代码层差异。
+- 顺带收口（误诊期间实施的 UX 兜底，保留）：只读/禁用卡片点击 toast 原因（`device-card-state.js` tapBlockHint）、CANCELLED 草案文案改"操作已取消，未执行。发送新指令可重新下达。"（不再误称"已过期"）、编辑页 stale-note 按状态显示（仅 EXPIRED 给重新核验按钮）。32/32 测试通过。
+
 ## 遗留
 
 - 模型提案间歇性缺失（归因已修正并观察好转）：当时模型实为 glm-5.3-flash（.env 于 09-15 22:53 已切换，非 deepseek），连续 3 次控制请求未调用 propose_action_draft 即直接回答"已打开"。闭环 4 上下文收敛（草案数组 → 前沿单对象）之后，同模型连续 3/3 正常提案——疑似旧多草案上下文干扰所致，继续观察；复发再排查提示词/采样。
