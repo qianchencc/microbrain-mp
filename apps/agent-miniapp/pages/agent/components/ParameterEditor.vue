@@ -9,7 +9,7 @@
    <text v-else class="off">关闭电源，温度、模式与风速不作调整</text>
    <template v-if="isDoor"><text class="current">最多 5 次</text><view class="timeline"><view v-for="n in timelineCount" :key="n"><view class="dot" /><text>{{ n === 1 ? '立即' : `${(n-1)*5}秒后` }}</text></view></view><view class="field"><uni-icons type="clock" size="18" color="#75877a" /><text>发送间隔</text><text class="right">5 秒</text></view><text class="current">确认草案后自动执行全部次数</text></template>
    <template v-else>
-    <slider v-if="!closing && min < max" :min="Math.round(min * 10)" :max="Math.round(max * 10)" :step="Math.round(temperatureStep * 10)" :value="Math.round((Number(value) || min) * 10)" :disabled="busy" activeColor="#4385c8" backgroundColor="#dce4df" :block-size="16" @change="edit('temperature', $event.detail.value / 10)" />
+    <slider v-if="!closing && min < max" :min="Math.round(min * 10)" :max="Math.round(max * 10)" :step="Math.round(temperatureStep * 10)" :value="Math.round((Number(value) || min) * 10)" :disabled="busy" activeColor="#4385c8" backgroundColor="#dce4df" :block-size="16" @changing="edit('temperature', $event.detail.value / 10)" @change="edit('temperature', $event.detail.value / 10)" />
     <view class="field"><text>电源</text><text class="muted right">{{ status('power') }}</text><switch color="#176b54" :checked="setting('power') === 'on'" :disabled="busy" @change="edit('power', $event.detail.value ? 'on' : 'off')" /></view>
     <view class="field"><text class="field-label">模式</text><SlidingSegments class="options" tone="blue" :options="modeOptions" :model-value="setting('mode')" :disabled="busy || closing" @update:model-value="edit('mode', $event)" /></view>
     <view class="field"><text class="field-label">风速</text><SlidingSegments class="options" :options="fanOptions" :model-value="setting('fanSpeed')" :disabled="busy || closing" @update:model-value="edit('fanSpeed', $event)" /></view>
@@ -34,14 +34,15 @@ const edits = computed(() => Object.entries(fields.value).reduce((out, [key, val
 const changes = computed(() => Object.entries(edits.value).map(([actionId, patch]) => ({ actionId, patch })))
 const min = computed(() => isDoor.value ? 1 : Math.max(...targets.value.map(a => a.parameters?.temperature.min ?? 16)))
 const max = computed(() => isDoor.value ? 5 : Math.min(...targets.value.map(a => a.parameters?.temperature.max ?? 30)))
-const temperatureStep = computed(() => Math.max(...targets.value.map(a => a.parameters?.temperature.step ?? .5)))
+// 产品约定最细 0.5°C：旧草案 parameters 可能残留 0.1，编辑粒度一律不细于 0.5（设备声明更粗如 1.0 时从设备）
+const temperatureStep = computed(() => Math.max(0.5, ...targets.value.map(a => a.parameters?.temperature.step ?? .5)))
 const value = computed(() => setting(isDoor.value ? 'count' : 'temperature'))
 const closing = computed(() => targets.value.some(a => (edits.value[a.id]?.power ?? a.command.power) === 'off'))
 const invalid = computed(() => changes.value.some(({ actionId, patch }) => {
  const number = isDoor.value ? patch.count : patch.temperature
  if (number === undefined) return false
  const a = targets.value.find(a => a.id === actionId), limits = a.parameters?.temperature
- return !Number.isFinite(number) || (isDoor.value ? !Number.isInteger(number) || number < 1 || number > 5 : !limits || number < limits.min || number > limits.max || Math.abs((number-limits.min)/limits.step - Math.round((number-limits.min)/limits.step)) > 1e-7)
+ return !Number.isFinite(number) || (isDoor.value ? !Number.isInteger(number) || number < 1 || number > 5 : !limits || number < limits.min || number > limits.max || Math.abs((number-limits.min)/temperatureStep.value - Math.round((number-limits.min)/temperatureStep.value)) > 1e-7)
 }))
 const modeIcons = { auto:'sparkles', cool:'snowflake', heat:'sun', dry:'droplets', fan:'wind' }
 const modeOptions = computed(() => Object.entries(modeLabels).filter(([key]) => targets.value.every(a => a.parameters?.modes.includes(key))).map(([value,label]) => ({value,label,icon:modeIcons[value]})))

@@ -101,6 +101,10 @@
 - **横向分段菜单（"横杆菜单"，kitze.io 研究成果）统一**：用户裁定——更多设备面板与长按空调卡面板的横杆交互"完全是两个回事"，以空调面板（`SlidingSegments`：滑动指示块/220ms 过渡/统一禁用态）为标准。代码事实：`SlidingSegments` 全仓库仅 ParameterEditor（仅 AC 可达）使用；全部设备分组（区域/类型/选择）是第二套手写 32px 胶囊 chips。修复：DraftSheetLayer 分组切换替换为 `SlidingSegments`（默认绿 thumb，`.group-segments{flex:1}`），删除 `.modes/.mode/.fill` 自绘样式；AGENTS 增补"一切横向分段切换统一用 SlidingSegments，禁止自绘胶囊 tab"。面板拖拽横杆本身两个面板共用同一 DeviceSheet 实例与事件绑定（产物核验 bindtouchstart/catchtouchmove 完整），无代码层差异。
 - 顺带收口（误诊期间实施的 UX 兜底，保留）：只读/禁用卡片点击 toast 原因（`device-card-state.js` tapBlockHint）、CANCELLED 草案文案改"操作已取消，未执行。发送新指令可重新下达。"（不再误称"已过期"）、编辑页 stale-note 按状态显示（仅 EXPIRED 给重新核验按钮）。32/32 测试通过。
 
+## 追加：温度滑块实时更新与 0.5 步长下限（2026-09-17）
+
+用户指出空调面板滑块拖动中温度不实时更新、步长应为 0.5。两处修复（ParameterEditor）：① 滑块补绑 `@changing`（此前仅 `@change`，松手才生效——微信 slider 语义），拖动中大数字与底部目标摘要实时跟随；② `temperatureStep` 加 0.5 下限 `Math.max(0.5, 设备step)`——旧草案 parameters 残留 0.1 时编辑粒度仍按 0.5（滑块吸附、步进器量化、手输 invalid 网格校验同用有效步长）。32/32 测试、build:weixin 通过，产物核对 bindchanging 与 Math.max(.5 均在。
+
 ## 遗留
 
 - 模型提案间歇性缺失（归因已修正并观察好转）：当时模型实为 glm-5.3-flash（.env 于 09-15 22:53 已切换，非 deepseek），连续 3 次控制请求未调用 propose_action_draft 即直接回答"已打开"。闭环 4 上下文收敛（草案数组 → 前沿单对象）之后，同模型连续 3/3 正常提案——疑似旧多草案上下文干扰所致，继续观察；复发再排查提示词/采样。
