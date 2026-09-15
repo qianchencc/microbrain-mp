@@ -16,6 +16,7 @@
 </template>
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { shouldDismissSheet } from '../sheet-drag.mjs'
 const props = defineProps({ open: Boolean, title: String, subtitle: String, meta: String, tall: Boolean, busy: Boolean })
 const emit = defineEmits(['close'])
 const mounted = ref(false), shown = ref(false), drag = ref(0), dragging = ref(false)
@@ -60,8 +61,8 @@ function end() {
  if (origin == null) return
  const dragged = drag.value
  origin = null
- // vaul 语义：轻扫即收（动量优先）；否则拖过约 1/3 高度收起；否则弹回
- if (flickSpeed > .5 || dragged > 200) emit('close')
+ // vaul 语义：带位移的轻扫即收（动量优先）；否则拖过约 1/3 高度收起；否则弹回
+ if (shouldDismissSheet(dragged, flickSpeed)) emit('close')
  else drag.value = 0
 }
 function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }

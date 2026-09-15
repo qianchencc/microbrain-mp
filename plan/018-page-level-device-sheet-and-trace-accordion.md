@@ -84,6 +84,15 @@
 
 用户报告"横杠一按菜单就消失、后续全部点不了"。两个根因：① 前一版把进场 animation 与拖拽 transform 放同一元素，拖拽时内联 animation:none、松手移除——每次松手进场动画重放（面板先掉出屏幕再滑回），表现为"按住就消失"；② 面板 mounted 意外滞留时，透明全屏 mask（z-index 1000）把整页点击吃光（重新核验/更多设备全部点不动；DevTools 模拟器窗口分离/切换时状态跨视图存活可触发）。修复照抄 vaul/Base UI drawer 结构：wrap 元素只管进出场动画、内层 sheet 只管拖拽 transform，永不同元素；`.sheet-root` 非显示态 pointer-events:none（shown 时 auto），状态即使卡住也不拦截页面。拖拽规格对齐 vaul：轻扫 >0.5px/ms 或拖过 200px 收起，否则 320ms iOS 曲线回弹。DevTools 实测序列：拖拽收起 ✓ → 重开按住不动松开不消失 ✓ → 再拖仍收起 ✓；重编译后重新核验/更多设备点击恢复 ✓。
 
+## 追加：预览环境整页失联（busy 永久冻结）+ 横杠误关闭（2026-09-17）
+
+用户在预览环境报告：鼠标 hover 仅"更多设备"变可点状、点开后面板内无法任何操作；主页面顶部与输入框仍可交互，卡片完全无法交互；点横杆仍触发面板消失。代码审查定位（不再依赖 DevTools 复现）：
+
+- **整页失联根因 = `busy` 永久卡真**。禁用矩阵逐项吻合现象：卡片/面板内容全部 `:disabled="busy"`；`openSheetBrowser` 恰好无 busy 门控（所以"只有更多设备能点"）；Header `identity` 按钮无 disabled 属性（busy 时仍可点、弹 toast）；composer 只被 `mutating || hasExecution` 禁用、`isRunning` 不禁输入（所以"顶部和输入框仍可交互"）。busy 三来源中 `mutating` 各路径均有 try/finally（60s 默认超时兜底）、`hasExecution` 有轮询自愈，唯独 **`isRunning` 有两条永久卡死路径**：① `streamMessage` 为 enableChunked 流式、无任何看门狗——流挂起时 success/fail 永不回调，且 `schedule()` 轮询条件 `isRunning && !activeRequest` 被挂起的 activeRequest 抑制，服务端恢复也无法自愈；② 服务端 `conversation.running` 僵死（runtime 仅启动时治愈 running 相位，app.ts:226；运行中僵死无治愈，且 DELETE 会话在 activeRuns/EXECUTING 时 409）。当时实测服务端健康（running=false），判定用户命中的是①（前端本地挂起）。
+- **修复**：① `streamMessage` 接入空闲看门狗（`apis/agent/idle-watchdog.mjs`：60s 无分块 → 先以"回答流超时，请重试"reject 再 abort；success/fail/onChunkReceived 分别 stop/kick；仅 MP-WEIXIN 分块通道武装）——isRunning 从此不可能本地永久卡死。② 「清除会话」逃生口：Header `disabled` 改为仅表示无会话（去掉 busy），`clearHistory` 去 busy 门控——能否在运行中清除由服务端 409 权威决定（"请等待当前请求结束后清除"），busy 卡死时用户始终有自救手段。③ 横杠误关闭：轻扫判定加位移门槛（`pages/agent/sheet-drag.mjs`：`|位移|>8px` 才允许 flick>0.5px/ms 收起）——鼠标/模拟器一次点击会合成 1~3px 高速度 touchmove，旧判定把它当成轻扫收起，即"点横杆面板消失"。
+- 测试：`agent-idle-watchdog.test.mjs`（触发一次/kick 续命/stop 取消）、`agent-sheet-drag.test.mjs`（200px 收起/带位移轻扫收起/微抖不收起/低速弹回）；全量 32/32 通过，`build:weixin` 通过且产物含看门狗与门槛判定。
+- 同时更正 AGENTS 旧注：`stopRun` 的 staleRunSince 本地解锁已随"相位服务端权威"移除，勿复活。
+
 ## 遗留
 
 - 模型提案间歇性缺失（归因已修正并观察好转）：当时模型实为 glm-5.3-flash（.env 于 09-15 22:53 已切换，非 deepseek），连续 3 次控制请求未调用 propose_action_draft 即直接回答"已打开"。闭环 4 上下文收敛（草案数组 → 前沿单对象）之后，同模型连续 3/3 正常提案——疑似旧多草案上下文干扰所致，继续观察；复发再排查提示词/采样。

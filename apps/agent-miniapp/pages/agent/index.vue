@@ -1,6 +1,8 @@
 <template>
  <view class="agent-page" :style="{ height: keyboardHeight ? `calc(100vh - ${keyboardHeight}px)` : '100vh' }">
-  <AgentHeader :status="statusText" :disabled="busy || !conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" />
+  <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
+       否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
+  <AgentHeader :status="statusText" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" />
   <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
     <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
@@ -217,9 +219,9 @@ function stopRun() {
  activeRequest.abort()
 }
 function clearHistory() {
- if (busy.value || !conversationId.value) return
+ if (!conversationId.value) return
  uni.showModal({ title: '清除会话', content: '清除当前对话和草案记录？', success: async response => {
-  if (!response.confirm || busy.value) return
+  if (!response.confirm) return
   mutating.value = true
   try {
    await clearConversation(conversationId.value)

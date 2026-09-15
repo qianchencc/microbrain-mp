@@ -21,7 +21,7 @@ const barHeight = capsule?.height && capsule.top >= top ? (capsule.top - top) * 
 const rightInset = capsule?.left ? windowInfo.windowWidth - capsule.left + 8 : 104
 function openMenu() {
  if (props.disabled) {
-  uni.showToast({ title: props.status === '正在处理' ? '处理完成后可清除会话' : '暂无可清除的会话', icon: 'none' })
+  uni.showToast({ title: '暂无可清除的会话', icon: 'none' })
   return
  }
  uni.showActionSheet({ itemList: ['清除当前会话'], success: ({ tapIndex }) => { if (tapIndex === 0) emit('clear') } })

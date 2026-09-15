@@ -1,6 +1,10 @@
 import { agentUrl, getAgentHeaders } from '@/config'
+import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
 import { requestJson } from './request.mjs'
+
+// 单个事件之间超过该时长无任何分块，视为流已挂死（正常运行的模型/工具间隔远小于此）。
+const STREAM_IDLE_TIMEOUT_MS = 60000
 
 const getHeaders = (includeJson = false) => {
 	const headers = getAgentHeaders()
@@ -33,8 +37,7 @@ export const revalidateAction = (draftId, revision) => request(`/agent/action-dr
 export const cancelAction = draftId => request(`/agent/action-drafts/${draftId}/cancel`, 'POST')
 
 export const streamMessage = (conversationId, content, onEvent) => {
-	let task
-	let receivedChunk = false
+	let task, watchdog, receivedChunk = false
 	const decoder = createNdjsonStreamDecoder(onEvent)
 	const promise = new Promise((resolve, reject) => {
 		const options = {
@@ -46,6 +49,7 @@ export const streamMessage = (conversationId, content, onEvent) => {
 			header: getHeaders(true),
 			enableChunked: true,
 			success: response => {
+				watchdog?.stop()
 				try {
 					if (!receivedChunk) consumeFinalResponse(response.data, decoder, onEvent)
 					else decoder.end()
@@ -61,13 +65,20 @@ export const streamMessage = (conversationId, content, onEvent) => {
 					reject(error)
 				}
 			},
-			fail: error => reject(new Error(error.errMsg || '网络连接失败'))
+			fail: error => { watchdog?.stop(); reject(new Error(error.errMsg || '网络连接失败')) }
 		}
 
 		// #ifdef MP-WEIXIN
 		task = wx.request(options)
 		if (task.onChunkReceived) {
+			// 看门狗只在分块通道上武装：挂起的流不会触发 success/fail，必须主动 abort 收口，
+			// 否则 isRunning 永久为真、整页 busy 冻结（2026-09-17 预览环境整页失联的根因）。
+			watchdog = createIdleWatchdog(STREAM_IDLE_TIMEOUT_MS, () => {
+				reject(new Error('回答流超时，请重试'))
+				task.abort()
+			})
 			task.onChunkReceived(({ data }) => {
+				watchdog.kick()
 				try {
 					receivedChunk = true
 					decoder.push(data)
