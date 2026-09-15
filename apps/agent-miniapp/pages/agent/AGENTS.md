@@ -12,7 +12,8 @@
 - WechatSI 只能在用户开始录音时延迟加载；测试号未注册插件时保留文字输入。授权前松手、切后台和触摸取消都必须丢弃已取消的识别结果。
 - 编辑/重试只作用于最后一条未产生草案的失败回合：先用服务端 `turnId` 丢弃失败记录，再复用同一个前端 turn 原位启动；禁止保留失败轮后追加一条重复消息。
 - `AgentReplySurface.vue` 是身份、轨迹、正文、草案和执行收尾的唯一编排层；不要再把这些区域直接拼回页面，也不要恢复按会话随机生成头像。
-- 设备卡片的短按只负责选择，长按才负责打开设备配置；长按事件必须阻止冒泡，避免一次长按同时改选择状态。
+- 设备卡片的短按只负责选择，长按才负责打开设备配置；两者必须用原生 `@tap`/`@longpress`，禁止自制 touch 状态机（catchtouchmove 吞滚动、suppress 误吞点击），卡片上禁止 catch 触摸事件。
+- 设备卡片高度统一 180px，不因设备类型加高；当前状态未知时正文不渲染"状态未知 →"起点（只保留图上角标一处），避免与指令目标（如"开启 · 25°C"）并列造成误读。
 - `DeviceSheet.vue` 是自绘的页面级底部面板（遮罩 + fixed 层，v-if 挂载 + class 过渡）；项目未安装 uni-popup，禁止再引入 uni-popup 或任何未安装的 uni-ui 组件。
 - 面板内容统一由页面根部的 `DraftSheetLayer.vue` 渲染（在 composer 之后），`ActionDraftCard` 只通过 `configure`/`browse` 事件请求打开；面板只允许 PENDING_CONFIRMATION 草案（`draft-sheet.mjs` 的 `sheetDraftFrom`）。
 - 输入栏 textarea 常驻（v-show 切换语音胶囊），避免原生组件重挂载闪烁；键盘高度 0 需 120ms 去抖（`applyKeyboardHeight`，输入法面板切换会先报 0 再报真实高度），页面高度变化带 200ms 过渡。页面高度收缩只能由 composer 自己的 `@keyboardheightchange` 驱动，禁止挂全局 `uni.onKeyboardHeightChange`：编辑器等流内 textarea 走系统 `adjust-position` 上推，全局监听会叠加补偿，把页面压短留出黑洞。

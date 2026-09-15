@@ -48,6 +48,10 @@
 
 用户指出普通→编辑过渡僵硬、操作行与参考库不符。核对 spectrum `message-actions` 源码（registry JSON）：Ghost 变体为纯图标行（28px 按钮、14px 图标、neutral-400、gap 2px、w-fit、active scale(.92)+黑 4% 底、桌面 hover 显隐/移动端常显）。当前实现三处偏离：① 文字按钮而非图标行，且 uni-icons（compose/refreshempty）在原生端不渲染、只剩裸文字；② 普通→编辑是气泡瞬时卸载（无退场）+全宽白卡淡入，宽度/配色/圆角全跳变；③ 编辑器主按钮为裸绿字。修复：操作行换项目 SVG（compose.svg + 新增 refresh.svg，与 send/mic/check 同资产体系）Ghost 规格；进入编辑先播气泡 `message-out`（scale .97+淡出 140ms）再挂编辑器，`editor-in` 背景从气泡绿过渡到纸白、textarea 文字白→墨绿同步过渡（"气泡原地变形"观感）；编辑器主按钮改实底绿（对齐 error-state retry）。参考库无"编辑用户消息"block（registry 全量核对），主流产品均为气泡原地变形，故维持原位编辑路线。
 
+## 追加：设备卡片手势重写与显示修正（2026-09-17 凌晨）
+
+用户反馈四点：空调"状态未知"与"开启 · 25°C"并列误读、卡片高度不一致、轨道边缘渐隐带生硬、卡片几乎点不选/点不消。处理：① 点选/长按重写为原生 `@tap`/`@longpress`，删除自制 touch 状态机（card-press.mjs 及其测试）——其 `catchtouchmove` 吞掉 scroll-view 滚动（卡片上拖不动手轨/网格）、suppress 标记误吞滚动后那次 tap，是"点不动"的根因；环形进度随之移除，按压反馈改 hover-class 缩放，卡片高度统一 180px；② 轨道渐隐带 10→18px、内边距对齐；③ 当前状态未知时正文不再渲染"状态未知 →"起点，只保留图上角标一处（"开启 · 25°C"是指令目标而非当前状态；状态回读不可用属后端 readStates 范畴）。ADR 0001 增补修订记录。
+
 ## 遗留
 
 - deepseek-chat 工具调用不稳定：本地探测连续 3 次控制请求未调用 `propose_device_action` 即直接回答"已打开"（同一时段模拟器内一次真实请求又成功提案，模型间歇性行为）。需后端排查（提示词/工具 schema/采样参数），前端无从规避。
