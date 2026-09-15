@@ -40,6 +40,10 @@
 
 用户截图：打开消息编辑器后整页被压短，底部留出约三分之一黑洞。根因：页面按 `100vh - keyboardHeight` 手动收缩的机制被全局 `uni.onKeyboardHeightChange` 驱动，编辑器内 textarea（走系统 `adjust-position` 自动上推）的键盘也触发收缩，形成双重补偿；模拟器不绘制键盘，黑洞直接可见，真机上则表现为顶栏被推出屏幕。修复：移除全局监听，`applyKeyboardHeight` 只接收 composer 自己的 `@keyboardheightchange`（只有它关闭了系统 adjust-position，需要手动补偿）。DevTools 实测：编辑器聚焦页面不再收缩，取消后正常收起。
 
+## 追加：编辑态收起过渡（2026-09-16 夜）
+
+用户反馈编辑态收起突兀。两个缺口：① 普通态（气泡 + 编辑/重试 chips）无入场动画，退场结束后硬切出现；② 点"重新发送"或 recoverable 状态翻转时走硬切路径，退场动画不播。修复：`.user-message`/`.message-actions` 加 `message-in` 入场（180ms 上浮淡入，插入即播）；三条收起路径（取消/提交/状态翻转）统一走 `closeEditor()`——先播 `editor-out` 160ms 再卸载。另修正上一轮宽度方案：`88vw` 在窄屏（320pt）上溢出正文区、右对齐下向左贴边（用户截图确认），改为 wrap 编辑态 `calc(100vw - 32px)`（恰为正文区内宽）上限 320px，编辑器 `width:100%`。
+
 ## 遗留
 
 - deepseek-chat 工具调用不稳定：本地探测连续 3 次控制请求未调用 `propose_device_action` 即直接回答"已打开"（同一时段模拟器内一次真实请求又成功提案，模型间歇性行为）。需后端排查（提示词/工具 schema/采样参数），前端无从规避。
