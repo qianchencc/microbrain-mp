@@ -20,7 +20,7 @@
 - 面板的关闭操作（遮罩点击、把手下拉、×）永远允许，不受 busy 限制——busy 卡死时用户必须始终能退出。
 - 输入栏 textarea 常驻（v-show 切换语音胶囊），避免原生组件重挂载闪烁；键盘高度 0 需 120ms 去抖（`applyKeyboardHeight`，输入法面板切换会先报 0 再报真实高度），页面高度变化带 200ms 过渡。页面高度收缩只能由 composer 自己的 `@keyboardheightchange` 驱动，禁止挂全局 `uni.onKeyboardHeightChange`：编辑器等流内 textarea 走系统 `adjust-position` 上推，全局监听会叠加补偿，把页面压短留出黑洞。
 - 折叠面板（处理记录）不要用 `grid-template-rows: 0fr/1fr` 过渡（小程序内核不动画），也不要用"selectorQuery 实测高度驱动 + height:auto 切换"——多轮同构组件下类名选择可能选错实例、且测量与内容增长有时间差，切换瞬间会凭空多出空白；用 `max-height: 0 ↔ 640px` 过渡（overflow:hidden，盒子高度恒贴合内容），折叠箭头用单图标 rotate(180deg)，禁止 up/down 字形互换（会引发布局跳动）。
-- 底部面板入场动画必须用 CSS `animation`（插入即播放，backwards 填充），不能用"插入后延时加 class 触发 transition"——setData 合并提交会让节点带着终态入场，动画消失；离场在已渲染节点上做 class 过渡即可。
+- 底部面板（DeviceSheet）结构铁律：① 进场动画（animation）与拖拽 transform 必须在不同元素上（wrap 管进出场，内层 sheet 管拖拽）——同一元素上切换 animation:none 会令进场动画在每次松手时重放（面板掉出屏幕再滑回）；② 入场用 CSS animation 插入即播，不能用"插入后延时加 class"（setData 合并会带终态入场）；③ 非显示态 `.sheet-root` 必须 `pointer-events:none`（shown 时 auto）——面板状态若意外卡住，隐形全屏遮罩会把整页点击吃光；④ 拖拽规格照抄 vaul/Base UI：向下全跟随、向上 1/3 阻尼、轻扫（>0.5px/ms）或拖过 200px 收起、否则 320ms cubic-bezier(.32,.72,0,1) 回弹；抓取区=横杠+整个头部。
 - 卡片单击选中的链路本身可靠；历史上"点不动"的三个真因：①草案已过期（服务端拒绝后静默回滚）——selectDraft 现在有过期预检 + toast + restore 重同步；②busy 锁（mutating/执行中/僵死 running）期间全部禁用；③服务端 conversation.running 在客户端断流后可能长时间不回收——stopRun 对无本地请求的僵死状态做本地解锁（staleRunSince 5 分钟内忽略）。
 - 只有存在两个或以上同类动作时才显示“应用到全部同类设备”开关；单设备配置不显示一个不可用的伪控件。
 - 全部设备面板的工具栏是三个即时切换的 filter chips（按区域/按类型/按选择，active 浅绿底 #e2eee8 + 深绿字，按压 scale(.96)）；禁止退回 picker 弹层 + 边框大盒子（视图选项不得是工具栏里视觉最重的控件）。选中计数只出现在确认按钮内联（"确认草案 · N"），面板副标题承载草案 summary；浏览网格卡片用流宽两列（`.grid :deep(.device-card)` 设 `calc(50% - 6px)`，聊天手轨的 DeviceActionCard 仍 119px 固定宽，勿改组件本体）；搜索行必须带放大镜图标，禁止裸灰块输入框。
