@@ -32,6 +32,10 @@
 
 用户指出：待确认草案未处理即可继续对话、历史草案跨轮仍可操作。代码审查证实为模型缺陷而非补丁可修：`POST /messages` 不检查活草案（app.ts:324,331）、新提案不取代旧草案（app.ts:495）、五条草案路由无前沿检查（569/605/692/840）、模型上下文接收草案数组（1009）、`running` 仅存内存（261）。应然方案（会话单闸门状态机 + 六不变量 + 五闭环）已冻结于 `.scratch/conversation-phase-machine/`（spec + issues 01-07），按闭环推进，推进完成后各自 handoff。
 
+## 追加：用户消息编辑态修复（2026-09-16 下午）
+
+用户消息原位编辑卡片塌缩成窄条（右侧浮卡、左侧大片空白）、"重新发送"断行成"重新发/送"、无进出场动画。根因：`.user-editor` 无确定宽度——textarea 是原生组件，`width:100%` 撑不开 fit-content 父级，整链塌缩到按钮行最小宽度；按钮 `min-width:58px` 小于 4 字 CJK 文案固有宽度（68px），flex 收缩后断行。修复：编辑态 `width:88vw; max-width:320px`；`.message-action` 加 `white-space:nowrap`；进退场 CSS animation（`editor-in` 180ms / `editor-out` 160ms，transform-origin 右上），取消先播退场再卸载。对照 spectrumhq blocks ai-assistants：参考库消息级动作为流内 action row / 原位编辑、不弹层，本实现已对齐原位编辑形态。
+
 ## 遗留
 
 - deepseek-chat 工具调用不稳定：本地探测连续 3 次控制请求未调用 `propose_device_action` 即直接回答"已打开"（同一时段模拟器内一次真实请求又成功提案，模型间歇性行为）。需后端排查（提示词/工具 schema/采样参数），前端无从规避。

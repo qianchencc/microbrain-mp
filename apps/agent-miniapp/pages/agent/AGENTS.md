@@ -19,3 +19,4 @@
 - 底部面板入场动画必须用 CSS `animation`（插入即播放，backwards 填充），不能用"插入后延时加 class 触发 transition"——setData 合并提交会让节点带着终态入场，动画消失；离场在已渲染节点上做 class 过渡即可。
 - 卡片单击选中的链路本身可靠；历史上"点不动"的三个真因：①草案已过期（服务端拒绝后静默回滚）——selectDraft 现在有过期预检 + toast + restore 重同步；②busy 锁（mutating/执行中/僵死 running）期间全部禁用；③服务端 conversation.running 在客户端断流后可能长时间不回收——stopRun 对无本地请求的僵死状态做本地解锁（staleRunSince 5 分钟内忽略）。
 - 只有存在两个或以上同类动作时才显示“应用到全部同类设备”开关；单设备配置不显示一个不可用的伪控件。
+- `UserMessage` 编辑态必须给 `.user-editor` 确定宽度（88vw、上限 320px）：textarea 是原生组件，`width:100%` 撑不开 fit-content 父级，否则整卡塌缩；消息动作按钮必须 `white-space:nowrap`（min-width 小于 CJK 文案固有宽度时会断行）；编辑器进退场用 CSS animation，取消先播 `editor-out` 再卸载（`closing` 状态）。
