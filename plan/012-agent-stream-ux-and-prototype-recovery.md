@@ -35,3 +35,10 @@
 - runtime 全量测试 3 个失败（并发会话 readStates WIP 所致，归 runtime 会话处理）
 - 二期：成功轮"重新生成"（需会话分支语义）、deepseek-reasoner 思考流折叠、停止轮入库一致性
 - restored 缺口：package-lock/构建产物（npm install + build:weixin 再生）、test/agent-avatar.test.mjs、ThinkingOrb 删除日 8 行紧凑版
+
+## 五、事故记录归档索引（按开发原则 §9 补齐）
+
+- 恢复仓轻量 AGENTS.md：`../agent-miniapp-restored/AGENTS.md`（唯一存档声明、坑、可信度分级使用法、FAQ）
+- 恢复源数据与三代挖掘器：`../agent-miniapp-restored/.recovery-sources/`（reads/state pickles + 脚本 + README，可重挖）
+- 行为规则固化：`~/.zcode/AGENTS.md` 新增 §5 "Guard Uncommitted Work"（删除未提交工作前必查 git status 与唯一副本；授权按字面理解；恢复产物必须标注逐文件可信度）
+- 进程清理（2026-09-15 收口时）：Iotfake(:3100) 与 runtime(:3200) 已停止，重启方式见「一、本地运行」
