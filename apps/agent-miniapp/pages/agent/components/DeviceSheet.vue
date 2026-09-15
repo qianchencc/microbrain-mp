@@ -32,4 +32,5 @@ function end() {
 <style scoped>
 .sheet-body { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
 .sheet { width:100vw; max-height:92vh; display:flex; flex-direction:column; background:#fcfdfc; border-radius:16px 16px 0 0; overflow:hidden; padding-bottom:env(safe-area-inset-bottom); transition:transform 220ms cubic-bezier(.32,.72,0,1); box-shadow:0 -8px 32px #16372814; }.handle-zone { height:24px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }.handle { width:42px; height:5px; background:#c4cbc6; border-radius:5px; }.header { display:flex; align-items:center; justify-content:space-between; padding:4px 20px 16px; border-bottom:1px solid #e3e8e4; flex-shrink:0; }.header>view { min-width:0; }.title { display:block; font-size:19px; font-weight:600; color:#24382d; }.subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.close { margin:0; padding:0; width:44px; height:44px; line-height:44px; background:transparent; flex-shrink:0; }.close::after { border:0; }
+:deep(.uni-popup) { z-index:1000 !important; }
 </style>

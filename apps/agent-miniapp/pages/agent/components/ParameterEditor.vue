@@ -1,6 +1,6 @@
 <template>
  <view class="editor" :class="{ embedded }">
-  <view class="scope"><view><text>应用到全部同类设备</text><text class="muted">{{ all ? `草案中 ${targets.length} 台` : '仅当前设备' }}</text></view><switch :checked="all" :disabled="busy || siblings.length < 2" color="#176b54" @change="all = $event.detail.value" /></view>
+  <view v-if="siblings.length > 1" class="scope"><view><text>应用到全部同类设备</text><text class="muted">{{ all ? `草案中 ${targets.length} 台` : '仅当前设备' }}</text></view><switch :checked="all" :disabled="busy" color="#176b54" @change="all = $event.detail.value" /></view>
   <scroll-view scroll-y class="content">
    <image class="product" :src="isDoor ? '/static/device-art/access-sliding-door.png' : '/static/device-art/central-ac-cassette.png'" mode="aspectFit" />
    <text v-if="!isDoor" class="current">{{ currentSummary }}</text>

@@ -188,5 +188,5 @@ onUnload(() => { disposed = true; uni.offKeyboardHeightChange(updateKeyboard); c
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
 .error { display:block; margin-top:20rpx; color:#a66a13; font-size:25rpx; }
-.composer-shell { padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,#f4f7f5,#f9fbf9); flex-shrink:0; }.anchor { height:2rpx; }
+.composer-shell { position:relative; z-index:0; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,#f4f7f5,#f9fbf9); flex-shrink:0; }.anchor { height:2rpx; }
 </style>

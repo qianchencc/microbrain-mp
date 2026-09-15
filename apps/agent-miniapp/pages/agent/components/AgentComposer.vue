@@ -5,7 +5,7 @@
   </view>
   <view class="composer" :class="{ focused, voice: voiceMode, held: phase === 'recording', cancel: cancelling }">
    <button class="mode-button" :disabled="disabled || running || phase !== 'idle'" :aria-label="voiceMode ? '切换文字输入' : '切换语音输入'" hover-class="pressed" @tap="toggleMode">
-    <uni-icons :type="voiceMode ? 'compose' : 'mic'" size="22" color="#637c6e" />
+    <image class="mode-icon" :src="voiceMode ? '/static/compose.svg' : '/static/mic.svg'" />
    </button>
    <view class="input-area">
     <textarea v-if="!voiceMode" class="composer-input" :value="modelValue" :disabled="disabled"
@@ -20,7 +20,7 @@
    </view>
    <button v-if="!voiceMode || running" class="send-button" :class="{ ready: running || modelValue.trim() }"
     :disabled="!running && (disabled || !modelValue.trim())" :aria-label="running ? '停止回答' : '发送'" hover-class="pressed" @tap="running ? $emit('stop') : send()">
-    <view v-if="running" class="stop-mark" /><uni-icons v-else type="arrow-up" size="22" :color="modelValue.trim() && !disabled ? '#ffffff' : '#a6b3ab'" />
+    <view v-if="running" class="stop-mark" /><image v-else class="send-icon" src="/static/send.svg" />
    </button>
   </view>
  </view>
@@ -71,6 +71,7 @@ defineExpose({ interrupt })
 .composer.focused { border-color:#92b2a0; box-shadow:0 0 0 2px rgba(56,117,84,.06),0 3px 10px rgba(37,65,47,.05); }
 .mode-button,.send-button { display:flex; align-items:center; justify-content:center; margin:0; padding:0; width:40px; height:40px; flex:0 0 40px; line-height:40px; border-radius:50%; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
 .mode-button { background:transparent; }.mode-button[disabled] { opacity:.45; }.mode-button::after,.send-button::after { border:0; }.pressed { transform:scale(.94); opacity:.8; }
+.mode-icon,.send-icon { width:21px; height:21px; opacity:.72; }.send-button.ready .send-icon { filter:brightness(0) invert(1); opacity:1; }
 .input-area { flex:1; min-width:0; }
 .composer-input { width:100%; min-height:40px; max-height:112px; box-sizing:border-box; padding:9px 2px; font-size:15px; line-height:22px; color:#263d30; }
 .composer-placeholder { color:#8b9991; font-size:14px; }

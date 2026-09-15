@@ -1,3 +1,6 @@
+export const CARD_HOLD_DELAY = 420
+export const CARD_HOLD_PROGRESS = 560
+
 export function createCardPress({ allowed, configure, select, progress }) {
  let timer, ticker, feedbackTimer, origin, suppress = false
  const point = touch => ({ x: touch.clientX ?? touch.pageX ?? touch.x, y: touch.clientY ?? touch.pageY ?? touch.y })
@@ -13,16 +16,16 @@ export function createCardPress({ allowed, configure, select, progress }) {
    origin = { identifier: touches[0].identifier, ...coordinates }
    const started = Date.now()
    feedbackTimer = setTimeout(() => {
-    progress(180 / 500 * 360)
-    ticker = setInterval(() => progress(Math.min(360, (Date.now() - started) / 500 * 360)), 32)
-   }, 180)
+    progress(0)
+    ticker = setInterval(() => progress(Math.min(360, (Date.now() - started - CARD_HOLD_DELAY) / CARD_HOLD_PROGRESS * 360)), 32)
+   }, CARD_HOLD_DELAY)
    timer = setTimeout(() => {
     if (!allowed()) { cancel(); return }
     suppress = true
     clearInterval(ticker)
     progress(360)
     configure()
-   }, 500)
+   }, CARD_HOLD_DELAY + CARD_HOLD_PROGRESS)
   },
   move(touches) {
    if (!origin) return

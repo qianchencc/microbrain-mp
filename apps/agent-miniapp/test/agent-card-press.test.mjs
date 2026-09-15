@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {createCardPress} from '../pages/agent/card-press.mjs'
+import {CARD_HOLD_DELAY, CARD_HOLD_PROGRESS, createCardPress} from '../pages/agent/card-press.mjs'
 const touch = {identifier:1,clientX:10,clientY:10}
 function setup(t) {
  t.mock.timers.enable({apis:['setTimeout','setInterval','Date']})
@@ -9,9 +9,9 @@ function setup(t) {
  t.after(press.dispose)
  return {press,events}
 }
-test('长按500ms到满圈后配置一次，抬手不切换选中',t=>{
+test('长按完成识别和圆环后配置一次，抬手不切换选中',t=>{
  const {press,events} = setup(t)
- press.start([touch]); t.mock.timers.tick(499)
+ press.start([touch]); t.mock.timers.tick(CARD_HOLD_DELAY + CARD_HOLD_PROGRESS - 1)
  assert.equal(events.includes('configure'),false)
  t.mock.timers.tick(1)
  assert.equal(events.at(-2),360)
