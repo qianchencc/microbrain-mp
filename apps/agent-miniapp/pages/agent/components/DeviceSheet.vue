@@ -3,7 +3,7 @@
   <view class="mask" :class="{ shown }" @tap="maskTap" @touchmove.stop.prevent />
   <view class="sheet" :class="{ shown }" :style="dragStyle">
    <view class="handle-zone" @touchstart="start" @touchmove.stop.prevent="move" @touchend="end" @touchcancel="cancelDrag"><view class="handle" /></view>
-   <view class="header"><view><text class="title">{{ title }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" :disabled="busy" aria-label="关闭" @tap="emit('close')"><uni-icons type="closeempty" size="22" color="#728178" /></button></view>
+   <view class="header"><view><text class="title">{{ title }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" aria-label="关闭" @tap="emit('close')"><uni-icons type="closeempty" size="22" color="#728178" /></button></view>
    <view class="sheet-body"><slot /></view>
   </view>
  </view>
@@ -28,8 +28,9 @@ watch(() => props.open, value => {
 }, { immediate: true })
 onBeforeUnmount(() => clearTimeout(leaveTimer))
 const dragStyle = computed(() => dragging.value ? { transform: `translateY(${drag.value}px)`, transition: 'none' } : {})
-function maskTap() { if (!props.busy) emit('close') }
-function start(event) { if (props.busy || event.touches.length !== 1) return; origin = event.touches[0].clientY; started = Date.now(); dragging.value = true }
+// 关闭（遮罩/把手/×）永远允许：busy 只限制编辑类操作，卡死时用户必须始终能退出面板
+function maskTap() { emit('close') }
+function start(event) { if (event.touches.length !== 1) return; origin = event.touches[0].clientY; started = Date.now(); dragging.value = true }
 function move(event) { if (origin == null || event.touches.length !== 1) return; drag.value = Math.max(-12, event.touches[0].clientY - origin) }
 function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 function end() {

@@ -16,7 +16,8 @@
 - 设备卡片高度统一 180px，不因设备类型加高；当前状态未知时正文不渲染"状态未知 →"起点（只保留图上角标一处），避免与指令目标（如"开启 · 25°C"）并列造成误读。
 - 草案手轨的边缘渐隐必须用 alpha mask（`.rail` 上的 `-webkit-mask-image`/`mask-image` 线性渐变，两端各 20px），让卡片内容连同描边整体透明渐隐；禁止用 `::before/::after` 色带覆盖层（半透明底色叠在卡片上会透出描边/图片残留细线，且与 overflow 裁切叠加产生脏边）。
 - `DeviceSheet.vue` 是自绘的页面级底部面板（遮罩 + fixed 层，v-if 挂载 + class 过渡）；项目未安装 uni-popup，禁止再引入 uni-popup 或任何未安装的 uni-ui 组件。
-- 面板内容统一由页面根部的 `DraftSheetLayer.vue` 渲染（在 composer 之后），`ActionDraftCard` 只通过 `configure`/`browse` 事件请求打开；面板只允许 PENDING_CONFIRMATION 草案（`draft-sheet.mjs` 的 `sheetDraftFrom`）。
+- 面板内容统一由页面根部的 `DraftSheetLayer.vue` 渲染（在 composer 之后），`ActionDraftCard` 只通过 `configure`/`browse` 事件请求打开；打开面板要求草案 PENDING_CONFIRMATION，但打开后面板跟随轮次上的草案对象本身——过期不再踢掉面板，转为只读 + 面板内"重新核验"提示（核验成功原地恢复可编辑）；仅当草案被新提案取代（draftId 消失）或轮次清理时自动关闭。
+- 面板的关闭操作（遮罩点击、把手下拉、×）永远允许，不受 busy 限制——busy 卡死时用户必须始终能退出。
 - 输入栏 textarea 常驻（v-show 切换语音胶囊），避免原生组件重挂载闪烁；键盘高度 0 需 120ms 去抖（`applyKeyboardHeight`，输入法面板切换会先报 0 再报真实高度），页面高度变化带 200ms 过渡。页面高度收缩只能由 composer 自己的 `@keyboardheightchange` 驱动，禁止挂全局 `uni.onKeyboardHeightChange`：编辑器等流内 textarea 走系统 `adjust-position` 上推，全局监听会叠加补偿，把页面压短留出黑洞。
 - 折叠面板（处理记录）不要用 `grid-template-rows: 0fr/1fr` 过渡（小程序内核不动画），也不要用"selectorQuery 实测高度驱动 + height:auto 切换"——多轮同构组件下类名选择可能选错实例、且测量与内容增长有时间差，切换瞬间会凭空多出空白；用 `max-height: 0 ↔ 640px` 过渡（overflow:hidden，盒子高度恒贴合内容），折叠箭头用单图标 rotate(180deg)，禁止 up/down 字形互换（会引发布局跳动）。
 - 底部面板入场动画必须用 CSS `animation`（插入即播放，backwards 填充），不能用"插入后延时加 class 触发 transition"——setData 合并提交会让节点带着终态入场，动画消失；离场在已渲染节点上做 class 过渡即可。

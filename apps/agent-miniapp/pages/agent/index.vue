@@ -19,7 +19,8 @@
   <view class="composer-shell" :style="keyboardHeight ? {paddingBottom:'8px'} : {}"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @keyboard="applyKeyboardHeight" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
   <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :busy="busy"
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)"
-   @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event" />
+   @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
+   @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
  </view>
 </template>
 <script setup>
@@ -28,7 +29,6 @@ import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, streamMessage } from '@/apis/agent'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
 import { createPresentation } from './presentation.mjs'
-import { sheetDraftFrom } from './draft-sheet.mjs'
 import AgentComposer from './components/AgentComposer.vue'
 import AgentHeader from './components/AgentHeader.vue'
 import AgentReplySurface from './components/AgentReplySurface.vue'
@@ -50,7 +50,9 @@ const busy = computed(() => isRunning.value || mutating.value || hasExecution.va
 const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
 const sheetDraftId = ref(''), sheetBrowser = ref(false), sheetActionId = ref('')
 const sheetTurn = computed(() => turns.value.find(turn => turn.draft?.draftId === sheetDraftId.value) ?? null)
-const sheetDraft = computed(() => sheetDraftFrom(turns.value, sheetDraftId.value))
+// 面板跟随轮次上的草案对象本身（含过期态）：过期不再踢掉面板，转只读 + 面板内重新核验；
+// 仅当草案被新提案取代（draftId 消失）或轮次被清理时自动关闭。
+const sheetDraft = computed(() => sheetTurn.value?.draft ?? null)
 function openSheetEditor(turn, action) {
  if (!action || turn.draft?.status !== 'PENDING_CONFIRMATION') return
  sheetDraftId.value = turn.draft.draftId
