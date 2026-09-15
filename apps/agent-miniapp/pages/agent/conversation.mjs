@@ -5,10 +5,29 @@ export function createTurn(id, content) {
 }
 
 export function applyEvent(turn, event) {
-	if (event.type === 'tool.started') turn.activities.push({ id: `${turn.id}-${turn.activities.length}`, tool: event.tool, label: event.label, status: 'running', summary: '' })
+	if (event.type === 'tool.started') {
+		const previous = turn.activities.at(-1)
+		if (event.tool === 'find_device_candidates' && previous?.tool === event.tool && previous.status === 'searching') {
+			previous.attempts = (previous.attempts || 1) + 1
+			previous.invocationIds = [...(previous.invocationIds || []), event.invocationId].filter(Boolean)
+			return
+		}
+		turn.activities.push({ id: `${turn.id}-${turn.activities.length}`, tool: event.tool, invocationId: event.invocationId, label: event.label, status: 'running', summary: '' })
+	}
 	if (event.type === 'tool.completed') {
-		const item = [...turn.activities].reverse().find(activity => activity.tool === event.tool && activity.status === 'running')
-		if (item) Object.assign(item, { status: event.status || 'completed', summary: event.summary || '', label: event.label || item.label, details: event.details })
+		const item = [...turn.activities].reverse().find(activity => activity.tool === event.tool && ['running', 'searching'].includes(activity.status))
+		if (item) {
+			const count = event.details?.count
+			if (event.tool === 'find_device_candidates' && count === 0) {
+				Object.assign(item, { status: 'searching', summary: '正在调整检索范围…', label: event.label || item.label, details: event.details })
+			} else {
+				Object.assign(item, { status: event.status || 'completed', summary: event.summary || '', label: event.label || item.label, details: event.details })
+			}
+		}
+	}
+	if (event.type === 'tool.progress') {
+		const item = [...turn.activities].reverse().find(activity => activity.tool === event.tool && ['running', 'searching'].includes(activity.status))
+		if (item) Object.assign(item, { status: event.tool === 'find_device_candidates' ? 'searching' : item.status, summary: event.summary || item.summary })
 	}
 	if (event.type === 'message.delta') { turn.text += event.content || ''; turn.traceOpen = false }
 	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.traceOpen = false }

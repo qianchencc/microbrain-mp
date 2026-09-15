@@ -21,6 +21,23 @@ test('重复工具调用分别完成，回答追加在同一轮并收起记录',
 	assert.deepEqual(turn.activities.map(item => item.summary), ['结果0', '结果1'])
 })
 
+test('候选检索的中间零命中不完成节点，后续命中复用同一节点', () => {
+	const turn = createTurn('search', '打开26楼办公区空调')
+	applyEvent(turn, { type: 'tool.started', tool: 'find_device_candidates', invocationId: 'find-1' })
+	applyEvent(turn, { type: 'tool.completed', tool: 'find_device_candidates', invocationId: 'find-1', status: 'completed', details: { count: 0 }, summary: '找到 0 个设备候选' })
+	assert.equal(turn.activities.length, 1)
+	assert.equal(turn.activities[0].status, 'searching')
+	assert.equal(turn.activities[0].summary, '正在调整检索范围…')
+
+	applyEvent(turn, { type: 'tool.started', tool: 'find_device_candidates', invocationId: 'find-2' })
+	assert.equal(turn.activities.length, 1)
+	assert.equal(turn.activities[0].attempts, 2)
+
+	applyEvent(turn, { type: 'tool.completed', tool: 'find_device_candidates', invocationId: 'find-2', status: 'completed', details: { count: 2 }, summary: '找到 2 个设备候选 · 2 次尝试' })
+	assert.equal(turn.activities[0].status, 'completed')
+	assert.equal(turn.activities[0].summary, '找到 2 个设备候选 · 2 次尝试')
+})
+
 test('恢复以持久化草案和收尾为准，同一草案修订只出现一次', () => {
 	const draft = { draftId: 'draft', revision: 3, status: 'ACCEPTED', selectedActionIds: ['b'] }
 	const result = { summary: { status: 'completed', text: '请求已受理。' } }
