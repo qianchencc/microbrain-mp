@@ -20,7 +20,9 @@ const request = (url, method, data) => new Promise((resolve, reject) => {
 	uni.request({
 		url: globalConfig.agentUrl + url,
 		method,
-		data,
+		// uni.request 默认给 POST 补 JSON content-type；空 body 会被 Fastify 以
+		// FST_ERR_CTP_EMPTY_JSON_BODY 拒绝，无载荷的变更请求必须显式发 {}。
+		data: data === undefined && method !== 'GET' ? {} : data,
 		header: getHeaders(Boolean(data)),
 		success: response => {
 			if (response.statusCode >= 200 && response.statusCode < 300) resolve(response.data)
