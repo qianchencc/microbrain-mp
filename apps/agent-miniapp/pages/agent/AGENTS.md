@@ -1,6 +1,6 @@
 # Agent Page Notes
 
-- 会话相位（2026-09-16 起，放行但收敛）：待确认草案期间可以继续发消息（模型会修订草案），只有执行中/运行中会被服务端 409（`CONVERSATION_AWAITING_CONFIRMATION`，前端撤回乐观轮次并 toast）；被取代/退役草案通过跨轮 `action.resolved` 即时转只读历史。不要按"有待确认草案就禁用输入栏"。
+- 会话相位（2026-09-16 定稿，零滞留）：待确认草案期间可以继续发消息，但下一条消息会把旧草案退役为已取消（跨轮 `action.resolved` 即时转只读），模型总是重新起草；只有执行中/运行中会被服务端 409（`CONVERSATION_AWAITING_CONFIRMATION`，前端撤回乐观轮次并 toast）。不要按"有待确认草案就禁用输入栏"，也不要复活非末轮的过期草案。
 - 微信分块事件的 `data` 是 `ArrayBuffer`，中文 UTF-8 字节可能跨 chunk；所有 NDJSON 解析继续复用 `apis/agent/ndjson.mjs`。
 - Android 优先消费 `onChunkReceived`，其他平台保留完整 response 回退，两条路径必须产生相同业务事件。
 - 开发凭据和生产登录态只在 `apis/agent/index.js` 组装，页面与组件不接触 header。
