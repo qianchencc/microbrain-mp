@@ -7,7 +7,7 @@
    <view class="sheet" :style="dragStyle">
     <view class="grab" @touchstart="start" @touchmove.stop.prevent="move" @touchend="end" @touchcancel="cancelDrag">
      <view class="handle-zone"><view class="handle" /></view>
-     <view class="header"><view><text class="title">{{ title }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" aria-label="关闭" @tap="emit('close')"><uni-icons type="closeempty" size="22" color="#728178" /></button></view>
+     <view class="header"><view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><button class="close" aria-label="关闭" @tap="emit('close')"><uni-icons type="closeempty" size="22" color="#728178" /></button></view><slot name="header" /></view>
     </view>
     <view class="sheet-body"><slot /></view>
    </view>
@@ -16,7 +16,7 @@
 </template>
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-const props = defineProps({ open: Boolean, title: String, subtitle: String, busy: Boolean })
+const props = defineProps({ open: Boolean, title: String, subtitle: String, meta: String, tall: Boolean, busy: Boolean })
 const emit = defineEmits(['close'])
 const mounted = ref(false), shown = ref(false), drag = ref(0), dragging = ref(false)
 let origin, lastY, lastTime, flickSpeed = 0, leaveTimer
@@ -80,14 +80,18 @@ function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 @keyframes mask-in { from { opacity:0; } }
 /* sheet：只负责拖拽跟随与松手回弹，永不声明 animation */
 .sheet { width:100vw; max-height:92vh; display:flex; flex-direction:column; background:#fcfdfc; border-radius:16px 16px 0 0; overflow:hidden; padding-bottom:env(safe-area-inset-bottom); transition:transform 320ms cubic-bezier(.32,.72,0,1); box-shadow:0 -8px 32px #16372814; }
-.sheet-body { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.sheet.tall { height:92vh; }
+.sheet-body { display:flex; flex-direction:column; min-height:0; flex:1; overflow:hidden; }
 /* 抓取区 = 横杠 + 整个头部 */
 .grab { flex-shrink:0; }
 .handle-zone { height:24px; display:flex; align-items:center; justify-content:center; }
 .handle { width:42px; height:5px; background:#c4cbc6; border-radius:5px; }
-.header { display:flex; align-items:center; justify-content:space-between; padding:4px 20px 16px; border-bottom:1px solid #e3e8e4; }
-.header>view { min-width:0; }
-.title { display:block; font-size:19px; font-weight:600; color:#24382d; }
+.header { display:flex; flex-direction:column; border-bottom:1px solid #e3e8e4; }
+.header-top { display:flex; align-items:center; padding:4px 20px 12px; }
+.header-copy { flex:1; min-width:0; }
+.title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
+.title { display:block; font-size:19px; font-weight:600; color:#24382d; flex-shrink:0; }
+.meta { font-size:12px; color:#78877e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .close { margin:0; padding:0; width:44px; height:44px; line-height:44px; background:transparent; flex-shrink:0; }
 .close::after { border:0; }
