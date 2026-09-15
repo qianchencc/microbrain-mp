@@ -52,9 +52,14 @@
 
 用户反馈四点：空调"状态未知"与"开启 · 25°C"并列误读、卡片高度不一致、轨道边缘渐隐带生硬、卡片几乎点不选/点不消。处理：① 点选/长按重写为原生 `@tap`/`@longpress`，删除自制 touch 状态机（card-press.mjs 及其测试）——其 `catchtouchmove` 吞掉 scroll-view 滚动（卡片上拖不动手轨/网格）、suppress 标记误吞滚动后那次 tap，是"点不动"的根因；环形进度随之移除，按压反馈改 hover-class 缩放，卡片高度统一 180px；② 轨道渐隐带 10→18px、内边距对齐；③ 当前状态未知时正文不再渲染"状态未知 →"起点，只保留图上角标一处（"开启 · 25°C"是指令目标而非当前状态；状态回读不可用属后端 readStates 范畴）。ADR 0001 增补修订记录。
 
+## 追加：温度步长 0.5 与面板交互修正（2026-09-17）
+
+用户指出温度 0.1 步进无证据、加减不居中、模式/风速选不中。证据链：0.1 出自 runtime `device-command.ts` 的 `acParameters`（人工维护、无实测出处）。修复：① runtime step 0.1→0.5（产品约定 2026-09-16），命令校验精度同步收紧为 0.5 网格（`v*2` 取整）；runtime typecheck + 67/67 通过。② 前端 ParameterEditor 兜底步长同步 0.5，步进按 `1/step` 网格量化，手输非网格值仍走 invalid 提示。③ 步进器改对称三段布局（按钮 | 数字 flex:1 居中 | 按钮），数字与单位垂直居中。④ SlidingSegments 移除全套 `.stop` 触摸劫持（与设备卡片同款病灶：吞滚动 + swiped 误吞点击），点击改原生 @tap、滑动用无劫持 touchstart/end 位移判定、滑动后 350ms 屏蔽 tap 防双触发。注：旧草案的 parameters 存有旧步长 0.1，0.5 对新提案生效；面板视觉验证受阻于后端 revalidate 超时（见遗留）。
+
 ## 遗留
 
 - 模型提案间歇性缺失（归因已修正并观察好转）：当时模型实为 glm-5.3-flash（.env 于 09-15 22:53 已切换，非 deepseek），连续 3 次控制请求未调用 propose_action_draft 即直接回答"已打开"。闭环 4 上下文收敛（草案数组 → 前沿单对象）之后，同模型连续 3/3 正常提案——疑似旧多草案上下文干扰所致，继续观察；复发再排查提示词/采样。
 - 软键盘行为需真机预览确认（模拟器不弹软键盘）。
 - 真实设备控制闭环仍按安全边界保留，未执行。
 - 后端两处待查（本轮发现）：①客户端断流后 `conversation.running` 长时间不回收（曾僵死约 20 分钟），前端已做本地解锁兜底（`stopRun` + `staleRunSince`），但根因在 runtime；②草案有效期窗口过短（约几分钟内两次过期），用户来不及确认就需重新核验，建议后端调长。
+- revalidate/readStates 无超时上限（本轮发现）：网关不可达时 revalidate 请求挂起至前端超时（"连接超时中，请稍后重试"），重新核验路径被阻塞。建议 runtime 给 revalidate（app.ts:714 一带）及 readStates 调用传 `AbortSignal.timeout`（参照 summarizeExecution 的 60s 做法）。
