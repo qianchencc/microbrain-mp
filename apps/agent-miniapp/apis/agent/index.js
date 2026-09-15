@@ -1,5 +1,5 @@
 import { agentUrl, getAgentHeaders } from '@/config'
-import { createNdjsonStreamDecoder } from './ndjson.mjs'
+import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
 import { requestJson } from './request.mjs'
 
 const getHeaders = (includeJson = false) => {
@@ -9,6 +9,14 @@ const getHeaders = (includeJson = false) => {
 }
 
 const request = (url, method, data) => requestJson(agentUrl + url, method, data, getHeaders())
+
+// 消息接口的 409 等错误体是 arraybuffer（dataType text + responseType arraybuffer），复用解码器还原契约字段。
+const parseErrorBody = data => {
+	if (!data) return null
+	if (typeof data === 'object' && !(data instanceof ArrayBuffer)) return data
+	try { return parseBufferedJson(data) } catch { return null }
+}
+const parseErrorMessage = data => parseErrorBody(data)?.message || '请求处理失败'
 
 export const createConversation = () => request('/agent/conversations', 'POST')
 
@@ -42,7 +50,13 @@ export const streamMessage = (conversationId, content, onEvent) => {
 					if (!receivedChunk) consumeFinalResponse(response.data, decoder, onEvent)
 					else decoder.end()
 					if (response.statusCode >= 200 && response.statusCode < 300) resolve()
-					else reject(new Error('请求处理失败'))
+					else {
+						// 相位门等 409 契约需要原始响应体（code/draftId），不能只剩一句通用文案。
+						const error = new Error(parseErrorMessage(response.data))
+						const body = parseErrorBody(response.data)
+						if (body) error.data = body
+						reject(error)
+					}
 				} catch (error) {
 					reject(error)
 				}

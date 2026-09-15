@@ -123,12 +123,23 @@ async function runTurn(current, content) {
   if (disposed) return
   applyEvent(current, event)
   if (event.type === 'action.proposed') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) { previous.draft = null; previous.result = null }
+  if (event.type === 'action.resolved') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) previous.draft.status = event.status
   follow()
  })
  const request = streamMessage(conversationId.value, content, event => presentation.push(event))
  activeRequest = request
  try { await request.promise; await presentation.settle() }
- catch (error) { if (!disposed && current.running) current.error = error.message }
+ catch (error) {
+  if (error.data?.code === 'CONVERSATION_AWAITING_CONFIRMATION') {
+   // 相位门（执行中）：消息未进入服务端，撤回乐观轮次并回到服务端事实。
+   const index = turns.value.indexOf(current)
+   if (index >= 0) turns.value.splice(index, 1)
+   uni.showToast({ title: '设备指令执行中，请稍候', icon: 'none' })
+   if (!disposed) restore()
+   return
+  }
+  if (!disposed && current.running) current.error = error.message
+ }
  finally { current.running = false; isRunning.value = false; activeRequest = null; if (!disposed) schedule() }
 }
 async function recoverTurn(turn, content) {
