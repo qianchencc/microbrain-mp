@@ -221,6 +221,9 @@ function clearHistory() {
  } })
 }
 let keyboardCloseTimer
+// 页面高度收缩只补偿输入栏（composer textarea 关闭了系统 adjust-position）；
+// 不能挂 uni.onKeyboardHeightChange 全局监听——编辑器内的 textarea 依赖系统上推，
+// 全局监听会让两者叠加，模拟器里表现为页面被压短、底部留出黑洞。
 function applyKeyboardHeight(height) {
  if (disposed) return
  clearTimeout(keyboardCloseTimer)
@@ -229,11 +232,10 @@ function applyKeyboardHeight(height) {
  else keyboardCloseTimer = setTimeout(() => { if (!disposed) keyboardHeight.value = 0 }, 120)
  follow()
 }
-function updateKeyboard({ height }) { applyKeyboardHeight(height) }
-onLoad(() => { uni.onKeyboardHeightChange(updateKeyboard); restore() })
+onLoad(() => { restore() })
 onShow(() => { visible = true; if (conversationId.value && !activeRequest) restore() })
 onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer) })
-onUnload(() => { disposed = true; uni.offKeyboardHeightChange(updateKeyboard); clearTimeout(pollTimer); clearTimeout(expiryTimer); clearTimeout(keyboardCloseTimer); presentation?.cancel(); activeRequest?.abort() })
+onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTimer); clearTimeout(keyboardCloseTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
 <style scoped>
 .agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; transition:height 200ms ease-out; }

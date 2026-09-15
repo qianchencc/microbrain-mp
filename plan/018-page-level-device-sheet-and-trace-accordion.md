@@ -36,6 +36,10 @@
 
 用户消息原位编辑卡片塌缩成窄条（右侧浮卡、左侧大片空白）、"重新发送"断行成"重新发/送"、无进出场动画。根因：`.user-editor` 无确定宽度——textarea 是原生组件，`width:100%` 撑不开 fit-content 父级，整链塌缩到按钮行最小宽度；按钮 `min-width:58px` 小于 4 字 CJK 文案固有宽度（68px），flex 收缩后断行。修复：编辑态 `width:88vw; max-width:320px`；`.message-action` 加 `white-space:nowrap`；进退场 CSS animation（`editor-in` 180ms / `editor-out` 160ms，transform-origin 右上），取消先播退场再卸载。对照 spectrumhq blocks ai-assistants：参考库消息级动作为流内 action row / 原位编辑、不弹层，本实现已对齐原位编辑形态。
 
+## 追加：编辑器聚焦压短页面修复（2026-09-16 傍晚）
+
+用户截图：打开消息编辑器后整页被压短，底部留出约三分之一黑洞。根因：页面按 `100vh - keyboardHeight` 手动收缩的机制被全局 `uni.onKeyboardHeightChange` 驱动，编辑器内 textarea（走系统 `adjust-position` 自动上推）的键盘也触发收缩，形成双重补偿；模拟器不绘制键盘，黑洞直接可见，真机上则表现为顶栏被推出屏幕。修复：移除全局监听，`applyKeyboardHeight` 只接收 composer 自己的 `@keyboardheightchange`（只有它关闭了系统 adjust-position，需要手动补偿）。DevTools 实测：编辑器聚焦页面不再收缩，取消后正常收起。
+
 ## 遗留
 
 - deepseek-chat 工具调用不稳定：本地探测连续 3 次控制请求未调用 `propose_device_action` 即直接回答"已打开"（同一时段模拟器内一次真实请求又成功提案，模型间歇性行为）。需后端排查（提示词/工具 schema/采样参数），前端无从规避。
