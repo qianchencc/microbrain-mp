@@ -6,17 +6,10 @@
     <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
      <view class="user-row"><UserMessage :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" @retry="retryTurn(turn)" @edit="editTurn(turn, $event)" /></view>
-     <view class="agent-reply"><AgentAvatar :running="turn.running" :conversation-id="conversationId" /><view class="agent-body"><view class="agent-heading"><text>物联 Agent</text><ThinkingOrb :running="turn.running" :failed="Boolean(turn.error)" :seconds="turn.seconds" /></view>
-     <button v-if="turn.activities.length" class="trace-toggle" @click="turn.traceOpen = !turn.traceOpen"><text>处理记录</text><uni-icons :type="turn.traceOpen ? 'up' : 'down'" size="13" color="#728178" /></button>
-     <view class="trace-expand" :class="{ open: turn.traceOpen }"><view class="trace-clip"><ToolActivity :items="turn.activities" /></view></view>
-     <AssistantMarkdown v-if="turn.text" :content="turn.text" />
-     <ActionDraftCard v-if="turn.draft" :draft="turn.draft" :result="turn.result" :busy="busy" @select="selectDraft(turn, $event)" @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)" @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" />
-     <view v-if="turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
-      <text v-if="turn.result.summary.status === 'completed'" class="execution-answer">{{ turn.result.summary.text }}</text>
-      <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>
-      <button v-else-if="turn.result.summary.status === 'failed'" class="execution-retry" :disabled="busy" @click="retryAnswer(turn)"><uni-icons type="refreshempty" size="14" color="#738177" /><text>重试回答</text></button>
-     </view>
-     <text v-if="turn.error" class="error">{{ turn.error }}</text></view></view>
+     <AgentReplySurface :turn="turn" :busy="busy"
+      @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
+      @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
+      @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)" />
     </view>
     <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
     <view id="agent-bottom" class="anchor" />
@@ -31,13 +24,9 @@ import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, streamMessage } from '@/apis/agent'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
 import { createPresentation } from './presentation.mjs'
-import ActionDraftCard from './components/ActionDraftCard.vue'
 import AgentComposer from './components/AgentComposer.vue'
-import ToolActivity from './components/ToolActivity.vue'
-import AgentAvatar from './components/AgentAvatar.vue'
-import ThinkingOrb from './components/ThinkingOrb.vue'
 import AgentHeader from './components/AgentHeader.vue'
-import AssistantMarkdown from './components/AssistantMarkdown.vue'
+import AgentReplySurface from './components/AgentReplySurface.vue'
 import UserMessage from './components/UserMessage.vue'
 const conversationId = ref('')
 const input = ref('')
@@ -196,17 +185,7 @@ onUnload(() => { disposed = true; uni.offKeyboardHeightChange(updateKeyboard); c
 .clear { width:80rpx; height:72rpx; line-height:72rpx; padding:0; margin:0; background:transparent; }.clear::after { border:0; }
 .conversation { flex:1; height:0; min-height:0; }.conversation__inner { padding:24px 16px 32px; }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
-.turn { margin-bottom:42px; }.agent-reply { display:flex; align-items:flex-start; gap:11px; }.agent-body { flex:1; min-width:0; }.trace-expand { display:grid; grid-template-rows:0fr; transition:grid-template-rows 200ms ease; }.trace-expand.open { grid-template-rows:1fr; }.trace-clip { min-height:0; overflow:hidden; }.user-row { display:flex; justify-content:flex-end; margin-bottom:24px; }
-.agent-heading { display:flex; align-items:center; gap:12px; min-height:36px; margin-bottom:0; font-size:13px; font-weight:600; }
-.thinking { display:block; margin:12rpx 0; font-size:23rpx; font-weight:400; color:#74837a; }
-.execution-summary { margin-top:16px; }
-.execution-answer { display:block; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; color:#253b30; }
-.execution-progress,.execution-retry { display:flex; align-items:center; gap:8px; color:#738177; font-size:12px; }
-.execution-retry { margin:0; padding:0; min-height:44px; background:transparent; }.execution-retry::after { border:0; }
-.execution-spinner { width:14px; height:14px; box-sizing:border-box; flex-shrink:0; border:1.5px solid #ccd6d0; border-top-color:#738177; border-radius:50%; animation:execution-spin .8s linear infinite; }
-@keyframes execution-spin { to { transform:rotate(360deg); } }
-@media(prefers-reduced-motion:reduce) { .execution-spinner { animation:none; } }
-.answer { display:block; font-size:14px; line-height:1.8; margin-top:10px; white-space:pre-wrap; overflow-wrap:break-word; }.conclusion { margin-top:24rpx; }
+.turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
 .error { display:block; margin-top:20rpx; color:#a66a13; font-size:25rpx; }
 .composer-shell { padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,#f4f7f5,#f9fbf9); flex-shrink:0; }.anchor { height:2rpx; }

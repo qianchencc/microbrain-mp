@@ -20,7 +20,7 @@ The damaged reconstruction was used only to locate candidate fragments. Files co
 
 ## Important native startup details
 
-- `pages/agent/avatar.js` must import `text-encoding-utf-8/src/polyfill.js` before `blobatar/internal`. Importing the package root is insufficient because it does not register the global encoder.
+- Recovery note (superseded on 2026-09-15): the recovered avatar originally required `text-encoding-utf-8` before `blobatar/internal`. The production Agent now uses one fixed branded inline SVG, so neither dependency belongs in the native bundle.
 - Markdown must install the `atob` compatibility layer before MarkdownIt initialization.
 
 ## Remaining acceptance boundary

@@ -18,6 +18,6 @@ npm test
 npm run test:weixin
 ```
 
-The second command validates the actual compiled mini-program bundle without browser encoding globals. The `text-encoding-utf-8/src/polyfill.js` import in `pages/agent/avatar.js` and the `core-js/actual/atob.js` import used by Markdown are required for native startup.
+The second command validates the actual compiled mini-program bundle without browser encoding globals. The Agent avatar is a fixed inline SVG and must not regain per-conversation random generation; the `core-js/actual/atob.js` import used by Markdown remains required for native startup.
 
 Import `unpackage/dist/build/mp-weixin` into WeChat DevTools for native visual and interaction checks.

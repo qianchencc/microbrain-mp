@@ -2,8 +2,8 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { avatarLayers } from '../avatar.js'
-const props = defineProps({running:Boolean, conversationId:String})
-const layers = computed(() => avatarLayers(props.conversationId))
+const props = defineProps({running:Boolean})
+const layers = computed(() => avatarLayers())
 const x = ref(0), y = ref(0)
 let timer
 onMounted(() => { timer = setInterval(() => { x.value = Math.random()*2.4-1.2; y.value = Math.random()*1.6-.8 }, 2900) })
