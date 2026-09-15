@@ -44,6 +44,10 @@
 
 用户反馈编辑态收起突兀。两个缺口：① 普通态（气泡 + 编辑/重试 chips）无入场动画，退场结束后硬切出现；② 点"重新发送"或 recoverable 状态翻转时走硬切路径，退场动画不播。修复：`.user-message`/`.message-actions` 加 `message-in` 入场（180ms 上浮淡入，插入即播）；三条收起路径（取消/提交/状态翻转）统一走 `closeEditor()`——先播 `editor-out` 160ms 再卸载。另修正上一轮宽度方案：`88vw` 在窄屏（320pt）上溢出正文区、右对齐下向左贴边（用户截图确认），改为 wrap 编辑态 `calc(100vw - 32px)`（恰为正文区内宽）上限 320px，编辑器 `width:100%`。
 
+## 追加：操作行对齐 message-actions 与普通→编辑过渡（2026-09-16 深夜）
+
+用户指出普通→编辑过渡僵硬、操作行与参考库不符。核对 spectrum `message-actions` 源码（registry JSON）：Ghost 变体为纯图标行（28px 按钮、14px 图标、neutral-400、gap 2px、w-fit、active scale(.92)+黑 4% 底、桌面 hover 显隐/移动端常显）。当前实现三处偏离：① 文字按钮而非图标行，且 uni-icons（compose/refreshempty）在原生端不渲染、只剩裸文字；② 普通→编辑是气泡瞬时卸载（无退场）+全宽白卡淡入，宽度/配色/圆角全跳变；③ 编辑器主按钮为裸绿字。修复：操作行换项目 SVG（compose.svg + 新增 refresh.svg，与 send/mic/check 同资产体系）Ghost 规格；进入编辑先播气泡 `message-out`（scale .97+淡出 140ms）再挂编辑器，`editor-in` 背景从气泡绿过渡到纸白、textarea 文字白→墨绿同步过渡（"气泡原地变形"观感）；编辑器主按钮改实底绿（对齐 error-state retry）。参考库无"编辑用户消息"block（registry 全量核对），主流产品均为气泡原地变形，故维持原位编辑路线。
+
 ## 遗留
 
 - deepseek-chat 工具调用不稳定：本地探测连续 3 次控制请求未调用 `propose_device_action` 即直接回答"已打开"（同一时段模拟器内一次真实请求又成功提案，模型间歇性行为）。需后端排查（提示词/工具 schema/采样参数），前端无从规避。
