@@ -38,13 +38,23 @@ test('候选检索的中间零命中不完成节点，后续命中复用同一�
 	assert.equal(turn.activities[0].summary, '找到 2 个设备候选 · 2 次尝试')
 })
 
-test('失败回合可在原位置编辑或重试，重启会清空旧回答状态', () => {
+test('失败或完成的纯问答回合可原位编辑或重试，带草案的回合只读', () => {
 	const turn = createTurn('local', '打开26楼空调')
 	applyEvent(turn, { type: 'run.started', turnId: 'server-turn' })
 	applyEvent(turn, { type: 'message.delta', content: '处理中' })
 	applyEvent(turn, { type: 'run.failed', message: '本次回答未完成' })
 	assert.equal(turn.serverId, 'server-turn')
 	assert.equal(canRecoverTurn(turn, true), true)
+
+	const answered = createTurn('local-2', '123')
+	applyEvent(answered, { type: 'run.started', turnId: 'server-turn-2' })
+	applyEvent(answered, { type: 'message.completed' })
+	applyEvent(answered, { type: 'run.completed' })
+	assert.equal(canRecoverTurn(answered, true), true, '成功的纯问答轮也可重试')
+	assert.equal(canRecoverTurn(answered, false), false, '仅最后一轮可改写')
+
+	applyEvent(answered, { type: 'action.proposed', draftId: 'draft', actions: [] })
+	assert.equal(canRecoverTurn(answered, true), false, '带草案的轮次不可改写')
 
 	restartTurn(turn, '打开26楼会议室空调')
 	assert.equal(turn.content, '打开26楼会议室空调')

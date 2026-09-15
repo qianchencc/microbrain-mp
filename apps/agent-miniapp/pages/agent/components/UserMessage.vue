@@ -59,7 +59,10 @@ onBeforeUnmount(() => { clearTimeout(closeTimer); clearTimeout(openTimer) })
 
 <style scoped>
 .user-message-wrap { display:flex; flex-direction:column; align-items:flex-end; max-width:88%; }
-.user-message { display:block; padding:12px 15px; border-radius:15px 15px 4px 15px; background:linear-gradient(155deg,#247b62,#145b46); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 2px 5px rgba(19,73,49,.10); color:#fff; font-size:15px; line-height:1.6; overflow-wrap:anywhere; animation:message-in 180ms cubic-bezier(.23,1,.32,1); }
+/* 气泡必须显式 max-content 定宽：fit-content 父链在微信里测宽不含自身 padding，
+   短消息（如 123）内容盒被压到负值附近，每行只放得下两个字而异常折行；
+   max-width 的减项必须与水平 padding 总量（15px×2）保持一致，否则长消息气泡溢出上限 */
+.user-message { display:block; width:max-content; max-width:calc(100% - 30px); padding:12px 15px; border-radius:15px 15px 4px 15px; background:linear-gradient(155deg,#247b62,#145b46); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 2px 5px rgba(19,73,49,.10); color:#fff; font-size:15px; line-height:1.6; overflow-wrap:anywhere; animation:message-in 180ms cubic-bezier(.23,1,.32,1); }
 .user-message--closing,.message-actions--closing { animation:message-out 140ms cubic-bezier(.23,1,.32,1) forwards; }
 @keyframes message-in { from { opacity:0; transform:translateY(4px); } }
 @keyframes message-out { to { opacity:0; transform:scale(.97); } }

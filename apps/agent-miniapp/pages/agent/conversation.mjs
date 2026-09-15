@@ -5,7 +5,8 @@ export function createTurn(id, content) {
 }
 
 export function canRecoverTurn(turn, isLatest) {
-	return Boolean(isLatest && turn.serverId && turn.error && !turn.running && !turn.draft && !turn.result)
+	// 纯问答轮（无草案无结果）无论成败都可原位改写；带设备操作事实的轮次保持只读。
+	return Boolean(isLatest && turn.serverId && !turn.running && !turn.draft && !turn.result)
 }
 
 export function restartTurn(turn, content = turn.content) {
