@@ -2,7 +2,7 @@
  * ip地址或域名
  */
 
-import { DOMAIN } from './settings'
+import { DOMAIN, isDev } from './settings'
 
 // #ifdef MP-WEIXIN
 const ipAddress = DOMAIN //'https://ncim.577119.com' //
@@ -41,11 +41,16 @@ const getFileBaseUrl = () => {
 	return ipAddress + fileAddress
 }
 
+const getAgentBaseUrl = () => {
+	return isDev ? 'http://127.0.0.1:3200/api' : getGatewayBaseUrl() + '/api/ai'
+}
+
 export default {
 	/**
 	 * 针对不同平台的baseUrl
 	 */
 	baseUrl: getGatewayBaseUrl(),
 	ssoUrl: getSsoBaseUrl(),
-	fileAddr: getFileBaseUrl()
+	fileAddr: getFileBaseUrl(),
+	agentUrl: getAgentBaseUrl()
 }

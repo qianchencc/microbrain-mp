@@ -11,6 +11,15 @@
 			}
 		},
 		{
+			"path": "pages/agent/index",
+			"style": {
+				"navigationBarTitleText": "物联助手",
+				"navigationBarTextStyle": "white",
+				"navigationBarBackgroundColor": "#0E2117",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
 			"path": "pages/news/newList",
 			"style": {
 				"navigationBarTitleText": "新闻列表"

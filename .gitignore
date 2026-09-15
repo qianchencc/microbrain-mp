@@ -8,3 +8,5 @@ unpackage/debug
 menu.sql
 .DS_Store
 *.iml
+.agents/
+.codex/

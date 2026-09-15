@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "menu": "node createMenu.mjs"
+    "menu": "node createMenu.mjs",
+    "test:agent": "node --test test/agent-*.test.mjs"
   },
   "dependencies": {
     "crypto-js": "^4.1.1",

@@ -1,0 +1,344 @@
+{
+  "scenario": "Read-only meeting-room lighting/state query; final response failed on server",
+  "frames": [
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "none",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 0,
+      "ms": 0,
+      "thinking": "思考已中断",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [],
+      "answerLength": 0,
+      "ms": 6794,
+      "thinking": "思考中",
+      "traceHeight": 0
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 11349,
+      "thinking": "思考中",
+      "traceHeight": 70
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 0,
+      "ms": 11516,
+      "thinking": "思考中",
+      "traceHeight": 92.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 15979,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.310902, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 15996,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.555695, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16012,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.730699, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16028,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.846165, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16046,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.912099, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16062,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.950951, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16079,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.973668, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16096,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.986127, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16112,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.993583, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16129,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.997477, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16145,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.999313, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16162,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 0.999884, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16178,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "matrix(1, 0, 0, 1, 0, 0)",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16195,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "none",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 0,
+      "ms": 16213,
+      "thinking": "思考中",
+      "traceHeight": 146.5
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": "none",
+          "running": false
+        },
+        {
+          "label": "查询设备状态",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 0,
+      "ms": 19933,
+      "thinking": "思考已中断",
+      "traceHeight": 146.5
+    }
+  ]
+}

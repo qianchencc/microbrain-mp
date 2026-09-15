@@ -28,8 +28,14 @@
 								<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
 							</view>
 						</view>
-						<scroll-view class="scroll-menu" scroll-x="true" v-if="workMenuList.length">
+						<scroll-view class="scroll-menu" scroll-x="true">
 							<view class="menu-one">
+								<view class="menu-item" @click="goPage('/pages/agent/index')">
+									<view class="agent-entry-icon">
+										<uni-icons type="chatboxes-filled" size="28" color="#176b54" />
+									</view>
+									<view class="text">物联助手</view>
+								</view>
 								<view v-for="menu in workMenuList" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
 									<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
 									<view class="text">{{ menu.resourceTitle }}</view>
@@ -300,6 +306,16 @@
 			grid-gap: 20rpx 0;
 			.menu-item {
 				text-align: center;
+				.agent-entry-icon {
+					width: 80rpx;
+					height: 80rpx;
+					margin: 0 auto;
+					border-radius: 16rpx;
+					background: #dcebe4;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+				}
 				image {
 					width: 80rpx;
 					height: 80rpx;

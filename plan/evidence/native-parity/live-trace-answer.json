@@ -1,0 +1,214 @@
+{
+  "scenario": "Read-only query on another floor, native renderer; no draft or control",
+  "frames": [
+    {
+      "activities": [],
+      "answerLength": 87,
+      "ms": 0,
+      "thinking": "已思考 4 秒",
+      "traceHeight": 0
+    },
+    {
+      "activities": [],
+      "answerLength": 0,
+      "ms": 1568,
+      "thinking": "思考中",
+      "traceHeight": 0
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": true
+        }
+      ],
+      "answerLength": 0,
+      "ms": 4847,
+      "thinking": "思考中",
+      "traceHeight": 70
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 0,
+      "ms": 5031,
+      "thinking": "思考中",
+      "traceHeight": 79.6953125
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13201,
+      "thinking": "思考中",
+      "traceHeight": 79.6953125
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13214,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 74.1875
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13231,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 62.1328125
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13248,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 47.1328125
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13264,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 33.84375
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13281,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 23.4765625
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13298,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 15.7421875
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13315,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 10.0625
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13332,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 5.9921875
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13349,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 3.1484375
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13364,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 1.3984375
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13382,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 0.3046875
+    },
+    {
+      "activities": [
+        {
+          "label": "检索设备候选",
+          "line": null,
+          "running": false
+        }
+      ],
+      "answerLength": 50,
+      "ms": 13399,
+      "thinking": "已思考 12 秒",
+      "traceHeight": 0
+    }
+  ]
+}
