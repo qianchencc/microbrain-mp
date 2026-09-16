@@ -1,6 +1,7 @@
 import { agentUrl, getAgentHeaders } from '@/config'
 import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
+import { TRANSPORT_ERROR_TEXT, createTerminalTracker } from './stream-errors.mjs'
 import { requestJson } from './request.mjs'
 
 // 单个事件之间超过该时长无任何分块，视为流已挂死（正常运行的模型/工具间隔远小于此）。
@@ -17,12 +18,13 @@ const getHeaders = (includeJson = false) => {
 const request = (url, method, data) => requestJson(agentUrl + url, method, data, getHeaders())
 
 // 消息接口的 409 等错误体是 arraybuffer（dataType text + responseType arraybuffer），复用解码器还原契约字段。
+// 带契约 message 的错误（相位门等）原样透传；解析不出 message 的错误体按传输层失败消毒。
 const parseErrorBody = data => {
 	if (!data) return null
 	if (typeof data === 'object' && !(data instanceof ArrayBuffer)) return data
 	try { return parseBufferedJson(data) } catch { return null }
 }
-const parseErrorMessage = data => parseErrorBody(data)?.message || '请求处理失败'
+const parseErrorMessage = data => parseErrorBody(data)?.message || TRANSPORT_ERROR_TEXT
 
 export const createConversation = () => request('/agent/conversations', 'POST')
 
@@ -41,8 +43,10 @@ export const cancelAction = draftId => request(`/agent/action-drafts/${draftId}/
 
 export const streamMessage = (conversationId, content, onEvent) => {
 	let task, watchdog, receivedChunk = false
-	// 心跳是传输层保活事件，页面不消费；其余事件原样透传。
+	const terminal = createTerminalTracker()
+	// 心跳是传输层保活事件，页面不消费；其余事件原样透传，终态哨兵顺路记账。
 	const decoder = createNdjsonStreamDecoder(event => {
+		terminal.track(event)
 		if (event && event.type !== 'heartbeat') onEvent(event)
 	})
 	const promise = new Promise((resolve, reject) => {
@@ -58,10 +62,13 @@ export const streamMessage = (conversationId, content, onEvent) => {
 			success: response => {
 				watchdog?.stop()
 				try {
-					if (!receivedChunk) consumeFinalResponse(response.data, decoder, onEvent)
+					if (!receivedChunk) consumeFinalResponse(response.data, decoder, event => { terminal.track(event); onEvent(event) })
 					else decoder.end()
-					if (response.statusCode >= 200 && response.statusCode < 300) resolve()
-					else {
+					if (response.statusCode >= 200 && response.statusCode < 300) {
+						// 2xx 但流上没有终态事件 = 传输层截断：不允许当成功收口（幽灵轮根因）。
+						if (terminal.seen) resolve()
+						else reject(new Error(TRANSPORT_ERROR_TEXT))
+					} else {
 						// 相位门等 409 契约需要原始响应体（code/draftId），不能只剩一句通用文案。
 						const error = new Error(parseErrorMessage(response.data))
 						const body = parseErrorBody(response.data)
@@ -72,7 +79,12 @@ export const streamMessage = (conversationId, content, onEvent) => {
 					reject(error)
 				}
 			},
-			fail: error => { watchdog?.stop(); reject(new Error(error.errMsg || '网络连接失败')) }
+			fail: error => {
+				watchdog?.stop()
+				// fail 通道必然是传输层故障（断网/断流/超时中止）：原始 errMsg 只进日志，不进用户界面。
+				console.warn('[agent-stream] 传输失败:', error?.errMsg)
+				reject(new Error(TRANSPORT_ERROR_TEXT))
+			}
 		}
 
 		// #ifdef MP-WEIXIN
