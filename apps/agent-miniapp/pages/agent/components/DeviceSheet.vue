@@ -2,7 +2,7 @@
  <uni-popup ref="popup" type="bottom" :is-mask-click="true" :safe-area="false" background-color="transparent" mask-background-color="rgba(20,35,28,.32)" @change="onPopupChange">
   <view class="sheet" :class="{ tall }">
    <view class="handle-zone" :data-threshold="dismissThreshold" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="sheetGesture.handleStart" @touchmove.stop.prevent="sheetGesture.handleMove" @touchend.stop="sheetGesture.handleEnd" @touchcancel.stop="sheetGesture.handleCancel"><view class="handle" /></view>
-   <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view></view>
+   <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /></view>
    <view class="header-slot"><slot name="header" /></view>
    <view class="sheet-body"><slot /></view>
   </view>
@@ -15,50 +15,44 @@ const props = defineProps({ open: Boolean, title: String, subtitle: String, meta
 const emit = defineEmits(['close'])
 const popup = ref(null)
 const visible = ref(false)
-const closing = ref(false)
 const windowHeight = uni.getSystemInfoSync().windowHeight || 600
 const dismissThreshold = Math.round(windowHeight * 0.78 * 0.25)
-let closeTimer
-let reopenAfterClose = false
+let reopenTimer
 let requestedClose = false
 watch(() => props.open, async value => {
  if (value) {
-  if (closing.value) {
-   reopenAfterClose = true
-   return
-  }
   requestedClose = false
   await nextTick()
-  if (props.open && !visible.value) popup.value?.open('bottom')
- } else if (visible.value && !closing.value) {
+  if (props.open) ensureOpen()
+ } else if (visible.value) {
   requestedClose = true
-  beginClose()
+  stopReopen()
+  popup.value?.close()
  }
 }, { immediate: true })
+// uni-popup 的 open() 在其关闭动画结束前（内部仍视自己为打开）会静默返回，既不显示面板也不发任何事件，
+// 且此时 open 属性已为 true，父级不会再产生变化来重新触发。唯一可靠的依据是 change{show:true} 反馈：
+// 调用后没等到就周期重试，直到面板真的打开或不再被要求打开。对已打开的面板重调 open 是无副作用幂等。
+function ensureOpen() {
+ stopReopen()
+ if (!props.open) return
+ popup.value?.open('bottom')
+ reopenTimer = setTimeout(() => { if (props.open && !visible.value) ensureOpen() }, 350)
+}
+function stopReopen() { clearTimeout(reopenTimer) }
 function onPopupChange(event) {
  visible.value = event.show
- if (event.show) return
- beginClose()
+ if (event.show) { stopReopen(); return }
  if (props.open && !requestedClose) { requestedClose = true; emit('close') }
-}
-function beginClose() {
- closing.value = true
- clearTimeout(closeTimer)
- closeTimer = setTimeout(() => {
-  closing.value = false
-  if (reopenAfterClose && props.open) {
-   reopenAfterClose = false
-   nextTick(() => { if (props.open && !visible.value) popup.value?.open('bottom') })
-  }
- }, 320)
 }
 function dismissFromHandle() {
  if (!props.open || requestedClose) return
  requestedClose = true
+ stopReopen()
  popup.value?.close()
  emit('close')
 }
-onBeforeUnmount(() => clearTimeout(closeTimer))
+onBeforeUnmount(() => stopReopen())
 defineExpose({ dismissFromHandle })
 </script>
 <script module="sheetGesture" lang="wxs">
@@ -154,7 +148,7 @@ module.exports = {
 .header-copy { flex:1; min-width:0; }
 .title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
 .title { display:block; font-size:19px; font-weight:600; color:#24382d; flex-shrink:0; }
-.meta { font-size:12px; color:#78877e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.meta { display:block; font-size:12px; color:#78877e; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media(prefers-reduced-motion:reduce) { .sheet { transition:none; } }
 </style>

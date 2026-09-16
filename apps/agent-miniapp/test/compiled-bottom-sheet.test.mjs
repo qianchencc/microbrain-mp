@@ -22,8 +22,11 @@ test('微信构建使用 uni-popup 承担遮罩与过渡，仅在横杆保留渲
 	assert.match(wxml, /catchtouchmove="\{\{sheetGesture\.handleMove\}\}"/)
 	assert.match(wxml, /catchtouchend="\{\{sheetGesture\.handleEnd\}\}"/)
 	assert.doesNotMatch(js, /__dragLog/)
-	assert.match(js, /320/)
-	assert.match(js, /nextTick\$1/)
+	// ensureOpen/stopReopen 是 setup 内部函数名，会被压缩改名；断言压缩后仍稳定的特征：
+	// JS 层调用 popup.open('bottom')、350ms 未可见则重试的定时器、以及取消重试的 clearTimeout。
+	assert.match(js, /open\("bottom"\)/)
+	assert.match(js, /setTimeout\([\s\S]{0,120},350\)/)
+	assert.match(js, /clearTimeout/)
 	assert.match(wxml, /if \(dismiss\)[\s\S]*resetHandle\(ownerInstance\)[\s\S]*callMethod\('dismissFromHandle'\)/)
 })
 
