@@ -5,6 +5,8 @@ import { requestJson } from './request.mjs'
 
 // 单个事件之间超过该时长无任何分块，视为流已挂死（正常运行的模型/工具间隔远小于此）。
 const STREAM_IDLE_TIMEOUT_MS = 60000
+// 整条流式请求的总超时：真实目录下模型单轮可能远超 60s 默认值，静默期由服务端心跳续活。
+const STREAM_REQUEST_TIMEOUT_MS = 300000
 
 const getHeaders = (includeJson = false) => {
 	const headers = getAgentHeaders()
@@ -39,7 +41,10 @@ export const cancelAction = draftId => request(`/agent/action-drafts/${draftId}/
 
 export const streamMessage = (conversationId, content, onEvent) => {
 	let task, watchdog, receivedChunk = false
-	const decoder = createNdjsonStreamDecoder(onEvent)
+	// 心跳是传输层保活事件，页面不消费；其余事件原样透传。
+	const decoder = createNdjsonStreamDecoder(event => {
+		if (event && event.type !== 'heartbeat') onEvent(event)
+	})
 	const promise = new Promise((resolve, reject) => {
 		const options = {
 			url: `${agentUrl}/agent/conversations/${conversationId}/messages`,
@@ -49,6 +54,7 @@ export const streamMessage = (conversationId, content, onEvent) => {
 			responseType: 'arraybuffer',
 			header: getHeaders(true),
 			enableChunked: true,
+			timeout: STREAM_REQUEST_TIMEOUT_MS,
 			success: response => {
 				watchdog?.stop()
 				try {
