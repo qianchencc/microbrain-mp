@@ -1,94 +1,123 @@
 <template>
- <view v-if="mounted" class="sheet-root" :class="{ shown }">
-  <view class="mask" :class="{ shown }" @tap.stop="closeFromMask" @touchend.stop="closeFromMask" @touchmove.stop.prevent />
-  <!-- 架构照抄 vaul/Base UI drawer：进场动画在 wrap 上，拖拽 transform 在内层 sheet 上，
-       两者永不同元素，杜绝"拖拽样式变化触发进场动画重放"。 -->
-  <view class="sheet-wrap" :class="{ shown }">
-   <view class="sheet" :class="{ tall }" :style="dragStyle" @tap.stop>
-    <view class="handle-zone" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="start" @touchmove.stop.prevent="move" @touchend.stop="end" @touchcancel.stop="cancelDrag"><view class="handle" /></view>
-    <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view></view>
-    <!-- 槽位与标题都在拖拽区之外（2026-09-17 重设计）：拖拽只认 handle-zone 全宽 44px 条带
-         （vaul 44×44 命中区规格），交互控件与标题不承担拖拽（vaul handleOnly 语义）。
-         注：触摸事件冒泡本就穿越组件边界（官方 tap 事件文档），分离是为了手势/点击互不吞没。 -->
-    <view class="header-slot"><slot name="header" /></view>
-    <view class="sheet-body"><slot /></view>
-   </view>
+ <uni-popup ref="popup" type="bottom" :is-mask-click="true" :safe-area="false" background-color="transparent" mask-background-color="rgba(20,35,28,.32)" @change="onPopupChange">
+  <view class="sheet" :class="{ tall }">
+   <view class="handle-zone" :data-threshold="dismissThreshold" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="sheetGesture.handleStart" @touchmove.stop.prevent="sheetGesture.handleMove" @touchend.stop="sheetGesture.handleEnd" @touchcancel.stop="sheetGesture.handleCancel"><view class="handle" /></view>
+   <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view></view>
+   <view class="header-slot"><slot name="header" /></view>
+   <view class="sheet-body"><slot /></view>
   </view>
- </view>
+ </uni-popup>
 </template>
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { shouldDismissSheet } from '../sheet-drag.mjs'
+import UniPopup from '@dcloudio/uni-ui/lib/uni-popup/uni-popup.vue'
+import { nextTick, ref, watch } from 'vue'
 const props = defineProps({ open: Boolean, title: String, subtitle: String, meta: String, tall: Boolean, busy: Boolean })
 const emit = defineEmits(['close'])
-const mounted = ref(false), shown = ref(false), drag = ref(0), dragging = ref(false)
-let origin, lastY, lastTime, flickSpeed = 0, leaveTimer
-// 关闭（遮罩点击/把手下拉）永远允许：busy 只限制编辑类操作。不设 × 按钮——
-// 它位于抓取区（横杆+整个头部）右上角，会把从头部起手的拖拽截胡成点击直接关面板。
-watch(() => props.open, value => {
- clearTimeout(leaveTimer)
+const popup = ref(null)
+const visible = ref(false)
+const windowHeight = uni.getSystemInfoSync().windowHeight || 600
+const dismissThreshold = Math.round(windowHeight * 0.78 * 0.25)
+let requestedClose = false
+watch(() => props.open, async value => {
  if (value) {
-  mounted.value = true
-  shown.value = true
- } else {
-  shown.value = false
-  cancelDrag()
-  leaveTimer = setTimeout(() => { mounted.value = false }, 320)
+  requestedClose = false
+  await nextTick()
+  popup.value?.open('bottom')
+ } else if (visible.value) {
+  popup.value?.close()
  }
 }, { immediate: true })
-onBeforeUnmount(() => clearTimeout(leaveTimer))
-const dragStyle = computed(() => dragging.value
- ? { transform: `translateY(${drag.value}px)`, transition: 'none' }
- : {})
-function closeFromMask() { if (props.open) emit('close') }
-function start(event) {
- const app = typeof getApp === 'function' ? getApp() : null; if (app) (app.__dragLog ||= []).push(`start n=${event.touches.length} y=${event.touches[0]?.clientY}`)
- if (event.touches.length !== 1) { cancelDrag(); return }
- origin = event.touches[0].clientY
- lastY = origin
- lastTime = Date.now()
- flickSpeed = 0
- dragging.value = true
+function onPopupChange(event) {
+ visible.value = event.show
+ if (!event.show && props.open && !requestedClose) {
+  requestedClose = true
+  emit('close')
+ }
 }
-function move(event) {
- if (origin == null || event.touches.length !== 1) return
- const app = typeof getApp === 'function' ? getApp() : null; if (app) (app.__dragLog ||= []).push(`move y=${event.touches[0].clientY}`)
- const y = event.touches[0].clientY
- const now = Date.now()
- flickSpeed = (y - lastY) / Math.max(1, now - lastTime)
- lastY = y
- lastTime = now
- const delta = y - origin
- // 向下全跟随；向上只做阻尼回馈，不能通过向上拖动关闭面板
- drag.value = delta > 0 ? Math.round(delta) : Math.round(delta / 3)
+function dismissFromHandle() {
+ if (!props.open || requestedClose) return
+ requestedClose = true
+ popup.value?.close()
+ emit('close')
 }
-function end() {
- dragging.value = false
- if (origin == null) return
- const dragged = drag.value
- origin = null
- // vaul CLOSE_THRESHOLD：面板可见高度的 25%（面板高≈78vh，量窗高折算），替换旧的固定 200px（小屏不适配）
- const panelHeight = Math.round((uni.getSystemInfoSync().windowHeight || 600) * 0.78)
- const app = typeof getApp === 'function' ? getApp() : null; if (app) (app.__dragLog ||= []).push(`end dragged=${dragged} flick=${flickSpeed.toFixed(2)} h=${panelHeight} dismiss=${shouldDismissSheet(dragged, flickSpeed, panelHeight)}`)
- // vaul 语义：带位移的轻扫即收（动量优先）；否则拖过面板 25% 收起；否则弹回
- if (shouldDismissSheet(dragged, flickSpeed, panelHeight)) emit('close')
- else drag.value = 0
+defineExpose({ dismissFromHandle })
+</script>
+<script module="sheetGesture" lang="wxs">
+var handleActive = false
+var handleStartY = 0
+var handleLastY = 0
+var handleLastTime = 0
+var handleVelocity = 0
+var handleOffset = 0
+
+function touchPoint(event) {
+ var points = event.touches && event.touches.length ? event.touches : event.changedTouches
+ return points && points.length ? points[0] : null
 }
-function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
+
+function setSheetStyle(ownerInstance, styles) {
+ var target = ownerInstance.selectComponent('.sheet')
+ if (target) target.setStyle(styles)
+}
+
+function handleStart(event, ownerInstance) {
+ var point = touchPoint(event)
+ if (!point || !event.touches || event.touches.length !== 1) { handleActive = false; return false }
+ handleActive = true
+ handleStartY = point.clientY
+ handleLastY = handleStartY
+ handleLastTime = event.timeStamp || 0
+ handleVelocity = 0
+ handleOffset = 0
+ setSheetStyle(ownerInstance, { transition: 'none', transform: 'translateY(0px)' })
+ return false
+}
+
+function handleMove(event, ownerInstance) {
+ if (!handleActive || !event.touches || event.touches.length !== 1) return false
+ var point = touchPoint(event)
+ if (!point) return false
+ var now = event.timeStamp || handleLastTime + 16
+ handleVelocity = (point.clientY - handleLastY) / Math.max(1, now - handleLastTime)
+ handleLastY = point.clientY
+ handleLastTime = now
+ var delta = point.clientY - handleStartY
+ handleOffset = delta > 0 ? Math.round(delta) : Math.round(delta / 3)
+ setSheetStyle(ownerInstance, { transition: 'none', transform: 'translateY(' + handleOffset + 'px)' })
+ return false
+}
+
+function resetHandle(ownerInstance) {
+ setSheetStyle(ownerInstance, { transition: 'transform 300ms cubic-bezier(.32,.72,0,1)', transform: 'translateY(0px)' })
+ handleActive = false
+ handleOffset = 0
+ handleVelocity = 0
+}
+
+function handleEnd(event, ownerInstance) {
+ if (!handleActive) return false
+ var threshold = event.currentTarget.dataset.threshold || 150
+ var dismiss = handleOffset > threshold || (handleVelocity > 0.5 && handleOffset > 8)
+ handleActive = false
+ if (dismiss) ownerInstance.callMethod('dismissFromHandle')
+ else resetHandle(ownerInstance)
+ return false
+}
+
+function handleCancel(event, ownerInstance) {
+ if (handleActive) resetHandle(ownerInstance)
+ return false
+}
+
+module.exports = {
+ handleStart: handleStart,
+ handleMove: handleMove,
+ handleEnd: handleEnd,
+ handleCancel: handleCancel
+}
 </script>
 <style scoped>
-/* 页面级底部面板：必须作为页面根节点的直接子级挂载（composer 之后），禁止放回滚动内容内部。 */
-/* 只在打开和退场的 320ms 内挂载，避免依赖小程序对 fixed + pointer-events 的命中实现。 */
-.sheet-root { position:fixed; left:0; right:0; top:0; bottom:0; z-index:1000; }
-.mask { position:absolute; top:0; right:0; bottom:0; left:0; background:rgba(20,35,28,.32); opacity:0; transition:opacity 240ms ease; animation:mask-in 240ms ease backwards; }
-.mask.shown { opacity:1; }
-/* wrap：只负责进场（animation）与退场/归位（transition），拖拽期间不被内联样式触碰 */
-.sheet-wrap { position:absolute; left:0; right:0; bottom:0; transform:translateY(100%); transition:transform 320ms cubic-bezier(.32,.72,0,1); animation:sheet-in 240ms cubic-bezier(.32,.72,0,1) backwards; }
-.sheet-wrap.shown { transform:translateY(0); }
-@keyframes sheet-in { from { transform:translateY(100%); } }
-@keyframes mask-in { from { opacity:0; } }
-/* sheet：只负责拖拽跟随与松手回弹，永不声明 animation */
-.sheet { width:100vw; max-height:92vh; display:flex; flex-direction:column; background:#fcfdfc; border-radius:16px 16px 0 0; overflow:hidden; padding-bottom:env(safe-area-inset-bottom); transition:transform 500ms cubic-bezier(.32,.72,0,1); box-shadow:0 -8px 32px #16372814; }
+.sheet { width:100vw; max-height:92vh; display:flex; flex-direction:column; background:#fcfdfc; border-radius:16px 16px 0 0; overflow:hidden; padding-bottom:env(safe-area-inset-bottom); box-shadow:0 -8px 32px #16372814; }
 .sheet.tall { height:78vh; }
 .sheet-body { display:flex; flex-direction:column; min-height:0; flex:1; overflow:hidden; }
 /* 只有横杆区域可拖拽；标题、筛选和搜索控件不再被拖拽手势吞掉。 */
@@ -103,5 +132,5 @@ function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 .title { display:block; font-size:19px; font-weight:600; color:#24382d; flex-shrink:0; }
 .meta { font-size:12px; color:#78877e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-@media(prefers-reduced-motion:reduce) { .mask,.sheet-wrap,.sheet { transition:none; animation:none; } }
+@media(prefers-reduced-motion:reduce) { .sheet { transition:none; } }
 </style>
