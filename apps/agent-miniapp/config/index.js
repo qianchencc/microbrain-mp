@@ -1,5 +1,6 @@
-// Local simulator only. Production identity must come from an authenticated session.
-export const agentUrl = 'http://127.0.0.1:3200/api'
+// Local development only. Production identity must come from an authenticated session.
+// A physical phone cannot address the Mac as 127.0.0.1; use the machine's current LAN address.
+export const agentUrl = 'http://192.168.30.63:3200/api'
 
 export function getAgentHeaders() {
   const version = uni.getAccountInfoSync().miniProgram.envVersion
