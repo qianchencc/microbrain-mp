@@ -6,7 +6,7 @@
   <view class="sheet-wrap" :class="{ shown }">
    <view class="sheet" :class="{ tall }" :style="dragStyle" @tap.stop>
     <view class="handle-zone" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="start" @touchmove.stop.prevent="move" @touchend.stop="end" @touchcancel.stop="cancelDrag"><view class="handle" /></view>
-     <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><view v-if="$slots['header-actions']" class="header-actions"><slot name="header-actions" /></view></view>
+    <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view></view>
     <!-- 槽位与标题都在拖拽区之外（2026-09-17 重设计）：拖拽只认 handle-zone 全宽 44px 条带
          （vaul 44×44 命中区规格），交互控件与标题不承担拖拽（vaul handleOnly 语义）。
          注：触摸事件冒泡本就穿越组件边界（官方 tap 事件文档），分离是为了手势/点击互不吞没。 -->
@@ -97,9 +97,8 @@ function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 .handle { width:36px; height:4px; background:#c4cbc6; border-radius:4px; transition:width 140ms cubic-bezier(.23,1,.32,1),background 140ms ease,transform 140ms ease; }
 .handle-zone--pressed .handle { width:44px; background:#9eafa5; transform:scaleY(1.15); }
 .header-slot { border-bottom:1px solid #e3e8e4; }
-.header-top { display:flex; align-items:center; gap:10px; padding:2px 16px 8px; }
+.header-top { display:flex; align-items:center; padding:2px 20px 8px; }
 .header-copy { flex:1; min-width:0; }
-.header-actions { flex:0 0 auto; min-width:0; }
 .title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
 .title { display:block; font-size:19px; font-weight:600; color:#24382d; flex-shrink:0; }
 .meta { font-size:12px; color:#78877e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
