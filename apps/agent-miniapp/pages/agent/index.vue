@@ -31,7 +31,8 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
+import { cancelAction, cancelRun, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
+import { TRANSPORT_ERROR_TEXT } from '@/apis/agent/stream-errors.mjs'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
 import { createPresentation } from './presentation.mjs'
@@ -150,6 +151,7 @@ async function runTurn(current, content) {
  })
  const request = streamMessage(conversationId.value, content, event => presentation.push(event))
  activeRequest = request
+ let transportInterrupted = false
  try { await request.promise; await presentation.settle() }
  catch (error) {
   if (error.data?.code === 'CONVERSATION_AWAITING_CONFIRMATION') {
@@ -160,9 +162,18 @@ async function runTurn(current, content) {
    if (!disposed) restore()
    return
   }
-  if (!disposed && current.running) current.error = error.message
+  if (error.message === TRANSPORT_ERROR_TEXT) {
+   // 断开≠取消：传输死了但服务端运行继续——保持进行中观感，交给 schedule 的
+   // restore 轮询收尾（运行终态后完整回复/错误自然渲染进轮次），停止走 stopRun。
+   transportInterrupted = true
+  } else if (!disposed && current.running) current.error = error.message
  }
- finally { current.running = false; isRunning.value = false; activeRequest = null; if (!disposed) schedule() }
+ finally {
+  current.running = transportInterrupted
+  isRunning.value = transportInterrupted
+  activeRequest = null
+  if (!disposed) schedule()
+ }
 }
 async function recoverTurn(turn, content) {
  if (busy.value || !canRecoverTurn(turn, turns.value.at(-1) === turn)) return
@@ -265,14 +276,21 @@ async function retryAnswer(turn) {
  catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }
-function stopRun() {
- if (!activeRequest) return
+async function stopRun() {
  const turn = turns.value[turns.value.length - 1]
+ if (activeRequest) {
+  presentation?.cancel()
+  activeRequest.abort()
+ }
  turn.running = false
  turn.error = '本次回答已停止'
  for (const item of turn.activities) if (['running', 'searching'].includes(item.status)) item.status = 'skipped'
- presentation?.cancel()
- activeRequest.abort()
+ isRunning.value = false
+ // 停止=显式取消：本地断流之外必须终止服务端在途运行（含断开重连轮询盯着的孤儿运行）。
+ if (conversationId.value) {
+  try { await cancelRun(conversationId.value) } catch { /* 无在途运行或未达服务端，以本地事实为准 */ }
+  if (!disposed) restore()
+ }
 }
 function clearHistory() {
  if (!conversationId.value) return

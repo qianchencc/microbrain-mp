@@ -41,6 +41,9 @@ export const restoreAction = (draftId, revision) => request(`/agent/action-draft
 
 export const cancelAction = draftId => request(`/agent/action-drafts/${draftId}/cancel`, 'POST')
 
+// 停止=显式取消：终止服务端在途运行（断开≠取消后，运行不随连接死亡中止）。
+export const cancelRun = conversationId => request(`/agent/conversations/${conversationId}/runs/cancel`, 'POST')
+
 export const streamMessage = (conversationId, content, onEvent) => {
 	let task, watchdog, receivedChunk = false
 	const terminal = createTerminalTracker()
