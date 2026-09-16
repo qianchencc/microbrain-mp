@@ -1,5 +1,5 @@
 <template>
- <view class="device-card" :class="[phase, { selected, ac: action.kind === 'ac' }]" hover-class="device-card--pressed" :hover-stay-time="60" :aria-label="action.deviceName" @tap="onToggle" @touchstart="holdStart" @touchmove="holdMove" @touchend="holdEnd" @touchcancel="holdCancel">
+ <view class="device-card" :class="[phase, { selected, ac: action.kind === 'ac' }]" hover-class="device-card--pressed" :hover-stay-time="60" :aria-label="action.deviceName" @tap="onToggle" @touchstart="holdStart" @touchmove="holdMove" @touchend="holdEnd" @touchcancel="holdCancel" @longpress="completeHold">
   <view v-if="holding && progress >= 90" class="hold-ring"><view class="ring-fill" :style="{ background: `conic-gradient(#176b54 ${progress}deg, #dce5df 0)` }" /></view>
   <view class="visual">
    <image v-if="art.src" class="product" :src="art.src" mode="aspectFit" :draggable="false" />
@@ -21,9 +21,9 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { deviceDisplayName, deviceLocationLabel, resolveDeviceArtwork } from '../device-art/catalog.js'
-import { stateText, tapBlockHint } from '../device-card-state.js'
-// 点选走原生 @tap。长按进度环用自有计时，但监听一律不带 .stop（bind 不阻断外层滚动），
-// 位移超 10px 视为滚动并取消计时；完成后的随行 tap 用一次性 holdDone 状态屏蔽。
+import { reduceCardHold, stateText, tapBlockHint } from '../device-card-state.js'
+// 点选走原生 @tap；touch 流驱动长按进度与滚动取消，原生 longpress 兜底完成，监听一律不带 .stop。
+// 位移超 14px 视为滚动并取消计时；完成后的随行 tap 用一次性 holdDone 状态屏蔽。
 // 禁止 reintroduce catch 触摸事件或 suppress 时间戳（会吞滚动/误吞点击）。
 const props = defineProps({ action: Object, index: Number, selected: Boolean, readonly: Boolean, disabled: Boolean, currentState: { default: null }, phase: { default: 'pending' }, outcomeLabel: String, operation: String, highlight: { type: String, default: '' } })
 const emit = defineEmits(['toggle', 'configure'])
@@ -53,15 +53,16 @@ function highlightParts(value) {
  return parts.length ? parts : [{ text, match: false }]
 }
 
-// 微信开发者工具与真实手机都会有少量触点漂移；480ms 更接近常用长按反馈，同时不把普通点按变成长按。
-const HOLD_TOTAL = 480
+// 微信开发者工具与真实手机都会有少量触点漂移；360ms 对齐微信原生 longpress，同时不把普通点按变成长按。
+const HOLD_TOTAL = 360
 const HOLD_MOVE_TOLERANCE = 14
 const holding = ref(false), progress = ref(0)
-let holdTimer = null, startTouch = null, holdDone = false
+let holdTimer = null, startTouch = null, holdDone = false, holdState = 'idle'
 
 function holdStart(e) {
  holdDone = false
  if (!configurable.value || e.touches.length !== 1) return
+ holdState = reduceCardHold('idle', 'start')
  startTouch = { id: e.touches[0].identifier, x: e.touches[0].clientX, y: e.touches[0].clientY }
  holding.value = true
  progress.value = 0
@@ -69,26 +70,39 @@ function holdStart(e) {
  holdTimer = setInterval(() => {
   const ratio = Math.min(1, (Date.now() - started) / HOLD_TOTAL)
   progress.value = Math.round(ratio * 360)
-  if (ratio >= 1) {
-   stopHold()
-   holdDone = true
-   emit('configure')
-  }
+  if (ratio >= 1) completeHold()
  }, 24)
 }
+function completeHold(e) {
+ const nativeLongPress = e?.type === 'longpress'
+ if (!configurable.value || !nativeLongPress && !startTouch || holdState === 'committed' || holdState === 'cancelled') return
+ holdState = reduceCardHold(holdState, 'complete')
+ clearInterval(holdTimer)
+ holdTimer = null
+ holdDone = true
+ startTouch = null
+ holding.value = true
+ progress.value = 360
+ emit('configure')
+}
 function holdMove(e) {
- if (!startTouch) return
+ if (!startTouch || holdState === 'committed') return
  const touch = e.touches.find(item => item.identifier === startTouch.id)
  if (touch && Math.hypot(touch.clientX - startTouch.x, touch.clientY - startTouch.y) > HOLD_MOVE_TOLERANCE) holdCancel()
 }
 function holdEnd(e) {
+ if (holdState === 'committed') { holding.value = false; progress.value = 0; return }
  if (!startTouch) return
- if (e.changedTouches.some(item => item.identifier === startTouch.id)) stopHold()
+ if (e.changedTouches.some(item => item.identifier === startTouch.id)) stopHold('end')
 }
-function holdCancel() { stopHold(); holdDone = false }
-function stopHold() { clearInterval(holdTimer); holdTimer = null; startTouch = null; holding.value = false; progress.value = 0 }
+function holdCancel() {
+ if (holdState === 'committed') { holding.value = false; progress.value = 0; return }
+ stopHold('cancel')
+ holdDone = false
+}
+function stopHold(event = 'cancel') { clearInterval(holdTimer); holdTimer = null; holdState = reduceCardHold(holdState, event); startTouch = null; holding.value = false; progress.value = 0 }
 function onToggle() {
- if (holdDone) { holdDone = false; return }
+ if (holdDone) { holdDone = false; holdState = 'idle'; return }
  if (props.readonly || props.disabled) {
   const hint = tapBlockHint(props.phase, { readonly: props.readonly, disabled: props.disabled })
   if (hint) uni.showToast({ title: hint, icon: 'none' })
@@ -96,10 +110,11 @@ function onToggle() {
  }
  emit('toggle')
 }
-onBeforeUnmount(() => clearInterval(holdTimer))
+onBeforeUnmount(stopHold)
 </script>
 <style scoped>
 .device-card { white-space:normal; position:relative; width:119px; height:180px; flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; border-radius:6px; background:#f2f5f1; color:#17251f; box-shadow:0 9px 14px -12px #1e352b47; transition:box-shadow 180ms ease,opacity 180ms ease,transform 120ms ease; }
+/* 浏览网格只计算列数与轨道宽度，卡片本体在所有表面保持 119×180px。 */
 .device-card--pressed { transform:scale(.98); }
 .hold-ring { position:absolute; left:calc(50% - 16px); top:8px; width:32px; height:32px; border-radius:50%; background:#ffffffee; z-index:8; display:flex; align-items:center; justify-content:center; }.ring-fill { width:24px; height:24px; border-radius:50%; position:relative; transform:rotate(-90deg); }.ring-fill::after { content:''; position:absolute; inset:3px; background:white; border-radius:50%; }
 .device-card::after { content:''; position:absolute; inset:0; border-radius:6px; box-shadow:inset 0 0 0 1px #1a372b38; pointer-events:none; z-index:6; }.device-card.selected::after { box-shadow:inset 0 0 0 1.5px #1c755a; }

@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { receiptPhase, stateText } from '../pages/agent/device-card-state.js'
+import { receiptPhase, reduceCardHold, stateText } from '../pages/agent/device-card-state.js'
 import { commonSetting, editSettings } from '../pages/agent/ac-draft.js'
-import { createDraftRailItems, createDraftGroups } from '../pages/agent/action-draft-presentation.js'
+import { computeDeviceGrid, createDraftRailItems, createDraftGroups } from '../pages/agent/action-draft-presentation.js'
 import { deviceLocationLabel, resolveDeviceArtwork } from '../pages/agent/device-art/catalog.js'
 
 test('受理和达到目标分开，门禁没有物理完成态', () => {
@@ -37,4 +37,19 @@ test('卡片复用原图且省去重复位置', () => {
  assert.equal(resolveDeviceArtwork({kind:'ac'}).src,'/static/device-art/central-ac-cassette.png')
  assert.equal(resolveDeviceArtwork({kind:'access'}).src,'/static/device-art/access-sliding-door.png')
  assert.equal(deviceLocationLabel({deviceName:'空调-会议室',location:'空调-会议室'}),'')
+})
+test('设备网格保持 119px 卡片规格并按可用宽度计算列数', () => {
+ assert.deepEqual(computeDeviceGrid(320),{columns:2,trackWidth:250})
+ assert.deepEqual(computeDeviceGrid(375),{columns:2,trackWidth:250})
+ assert.deepEqual(computeDeviceGrid(430),{columns:3,trackWidth:381})
+ assert.deepEqual(computeDeviceGrid(768),{columns:5,trackWidth:643})
+})
+test('原生长按一旦提交，随后的 touchcancel 不得撤销配置', () => {
+ let state = reduceCardHold('idle','start')
+ state = reduceCardHold(state,'complete')
+ state = reduceCardHold(state,'cancel')
+ assert.equal(state,'committed')
+ assert.equal(reduceCardHold(state,'complete'),'committed')
+ assert.equal(reduceCardHold('tracking','cancel'),'cancelled')
+ assert.equal(reduceCardHold('cancelled','complete'),'cancelled')
 })

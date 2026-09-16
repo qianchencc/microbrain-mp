@@ -33,6 +33,7 @@ export const retrySummary = draftId => request(`/agent/action-drafts/${draftId}/
 export const readDeviceStates = draftId => request(`/agent/action-drafts/${draftId}/device-states`, 'GET')
 export const updateParameters = (draftId, revision, changes) => request(`/agent/action-drafts/${draftId}/parameters`, 'PATCH', { revision, changes })
 export const revalidateAction = (draftId, revision) => request(`/agent/action-drafts/${draftId}/revalidate`, 'POST', { revision })
+export const restoreAction = (draftId, revision) => request(`/agent/action-drafts/${draftId}/restore`, 'POST', { revision })
 
 export const cancelAction = draftId => request(`/agent/action-drafts/${draftId}/cancel`, 'POST')
 

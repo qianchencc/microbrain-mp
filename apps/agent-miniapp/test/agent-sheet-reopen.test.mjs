@@ -55,20 +55,29 @@ function createUniPopup(clock) {
 // —— DeviceSheet 现行逻辑移植（ensureOpen 反馈重试版）——
 function createDeviceSheet(clock, popup, onClose) {
   const sheet = {
-    props: { open: false },
+    props: { open: false, openRequest: 0 },
     visible: false, requestedClose: false, reopenTimer: null,
+    async syncOpenRequest() {
+      sheet.requestedClose = false
+      await clock.flush()                                            // await nextTick()
+      if (sheet.props.open) sheet.ensureOpen()
+    },
     async setOpen(value) {
       const was = sheet.props.open
       sheet.props.open = value
       if (was === value) return
-      if (value) {
-        sheet.requestedClose = false
-        await clock.flush()                                          // await nextTick()
-        if (sheet.props.open) sheet.ensureOpen()
-      } else if (sheet.visible) {
+      if (value) await sheet.syncOpenRequest()
+      else if (sheet.visible) {
         sheet.requestedClose = true
         sheet.stopReopen()
         popup.close()
+      }
+    },
+    async requestOpen() {
+      sheet.props.openRequest++
+      if (sheet.props.open) {
+        sheet.visible = false
+        await sheet.syncOpenRequest()
       }
     },
     ensureOpen() {
@@ -139,6 +148,22 @@ test('遮罩关闭后重开恢复打开', async () => {
     const results = await runScenario({ dismiss: 'mask', retapDelays: [delay] })
     for (const [step, ok] of results) assert.ok(ok, `遮罩关闭 +${delay}ms 重开：${step} 失败`)
   }
+})
+
+test('同一草案的 open 未变化时，再点查看全部仍会重新发起打开', async () => {
+  const clock = createClock()
+  const popup = createUniPopup(clock)
+  const sheet = createDeviceSheet(clock, popup, () => {})
+  await sheet.setOpen(true); await clock.flush(); clock.advance(400)
+  assert.equal(popup.showPopup && popup.showTrans, true, '首次应打开')
+
+  popup.showTrans = false
+  popup.timer = clock.setTimeout(() => { popup.showPopup = false }, 300)
+  sheet.visible = true
+  sheet.requestedClose = true
+
+  await sheet.requestOpen(); await clock.flush(); clock.advance(800)
+  assert.equal(popup.showPopup && popup.showTrans, true, '二次点击必须纠正失配并重新打开')
 })
 
 test('打开后立刻要求关闭：不残留重开定时器，面板保持关闭', async () => {

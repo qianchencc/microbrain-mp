@@ -7,6 +7,15 @@ export function stateText(action, state) {
   return acSummary(state) || '状态未知';
 }
 
+export function reduceCardHold(state, event) {
+  if (state === 'committed' || state === 'cancelled') return event === 'start' ? 'tracking' : state;
+  if (event === 'complete') return 'committed';
+  if (event === 'start') return 'tracking';
+  if (event === 'cancel') return 'cancelled';
+  if (event === 'end') return 'idle';
+  return state;
+}
+
 export function receiptPhase(action, outcome, state) {
   if (outcome === 'UNSELECTED') return 'unselected';
   if (action.kind === 'access') return outcome === 'ACCEPTED' ? 'accepted' : 'failed';

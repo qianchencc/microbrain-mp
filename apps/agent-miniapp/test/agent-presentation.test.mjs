@@ -37,3 +37,30 @@ test('卸载后不再重放等待中的轨迹', async () => {
  await p.settle()
  assert.deepEqual(received,[])
 })
+import {createDraftBaseline, draftBaselineChanged} from '../pages/agent/action-draft-presentation.js'
+
+test('草案基线：勾选或指令偏离发布快照即判定有改动', () => {
+ const draft = {
+  selectedActionIds: ['a', 'b'],
+  actions: [
+   { id: 'a', command: { temperature: 26, mode: 'cool' } },
+   { id: 'b', command: { closeOrOpen: 1 } },
+  ],
+ }
+ const baseline = createDraftBaseline(draft)
+ assert.equal(draftBaselineChanged(draft, baseline), false)
+
+ // 勾选集合不同
+ assert.equal(draftBaselineChanged({ ...draft, selectedActionIds: ['a'] }, baseline), true)
+
+ // 指令字段被修改
+ const edited = { ...draft, actions: [{ ...draft.actions[0], command: { temperature: 25, mode: 'cool' } }, draft.actions[1]] }
+ assert.equal(draftBaselineChanged(edited, baseline), true)
+
+ // 字段被加回基线值后恢复无改动
+ const powerOffThenOn = { ...draft, actions: [{ ...draft.actions[0], command: { power: 'off' } }, draft.actions[1]] }
+ assert.equal(draftBaselineChanged(powerOffThenOn, baseline), true)
+
+ // 缺基线时按无改动处理（按钮不显示）
+ assert.equal(draftBaselineChanged(draft, null), false)
+})

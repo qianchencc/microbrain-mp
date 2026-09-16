@@ -21,8 +21,9 @@
   </scroll-view>
   </view>
   <view class="composer-shell" :style="keyboardHeight ? {paddingBottom:'8px'} : {}"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @keyboard="applyKeyboardHeight" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
-  <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :busy="busy"
-   @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)"
+  <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
+   :settle-selection="settleSelection"
+   @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
  </view>
@@ -30,8 +31,9 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, streamMessage } from '@/apis/agent'
+import { cancelAction, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
+import { createDraftBaseline } from './action-draft-presentation.js'
 import { createPresentation } from './presentation.mjs'
 import AgentComposer from './components/AgentComposer.vue'
 import AgentHeader from './components/AgentHeader.vue'
@@ -52,16 +54,20 @@ const nearBottom = ref(true)
 const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
 const busy = computed(() => isRunning.value || mutating.value || hasExecution.value)
 const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
-const sheetDraftId = ref(''), sheetBrowser = ref(false), sheetActionId = ref('')
+const sheetDraftId = ref(''), sheetBrowser = ref(false), sheetActionId = ref(''), sheetOpenRequest = ref(0)
 const sheetTurn = computed(() => turns.value.find(turn => turn.draft?.draftId === sheetDraftId.value) ?? null)
 // 面板跟随轮次上的草案对象本身（含过期态）：过期不再踢掉面板，转只读 + 面板内重新核验；
 // 仅当草案被新提案取代（draftId 消失）或轮次被清理时自动关闭。
 const sheetDraft = computed(() => sheetTurn.value?.draft ?? null)
+// 草案发布时刻的基线（勾选+指令）：面板「还原」按钮据此判断是否出现；权威还原在服务端。
+const draftBaselines = new Map()
+const sheetBaseline = computed(() => sheetTurn.value?.draft ? draftBaselines.get(sheetTurn.value.draft.draftId) ?? null : null)
 function openSheetEditor(turn, action) {
  if (!action || !turn.draft) return
  sheetDraftId.value = turn.draft.draftId
  sheetBrowser.value = false
  sheetActionId.value = action.id
+ sheetOpenRequest.value++
  uni.hideKeyboard()
 }
 // 更多设备浏览不受草案状态限制：过期/取消/已完成都可展开（只读）；仅要求草案存在
@@ -70,6 +76,7 @@ function openSheetBrowser(turn) {
  sheetDraftId.value = turn.draft.draftId
  sheetBrowser.value = true
  sheetActionId.value = ''
+ sheetOpenRequest.value++
  uni.hideKeyboard()
 }
 function closeSheet() { sheetDraftId.value = '' }
@@ -105,6 +112,10 @@ async function restore() {
   conversationId.value = conversation.id
   phase.value = conversation.phase || 'idle'
   turns.value = restoreTurns(conversation.turns)
+  for (const turn of turns.value) if (turn.draft && !draftBaselines.has(turn.draft.draftId)) {
+   draftBaselines.set(turn.draft.draftId, createDraftBaseline(turn.draft))
+   selectionSynced.set(turn.draft.draftId, turn.draft.selectedActionIds ?? [])
+  }
   // 相位已持久化为服务端权威（含启动自愈），前端不再做僵死 running 的本地解锁。
   isRunning.value = Boolean(conversation.running)
   if (!isRunning.value) turns.value.forEach(turn => { turn.running = false })
@@ -129,7 +140,11 @@ async function runTurn(current, content) {
  presentation = createPresentation(event => {
   if (disposed) return
   applyEvent(current, event)
-  if (event.type === 'action.proposed') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) { previous.draft = null; previous.result = null }
+  if (event.type === 'action.proposed') {
+   draftBaselines.set(event.draftId, createDraftBaseline(event))
+   selectionSynced.set(event.draftId, event.selectedActionIds ?? [])
+   for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) { previous.draft = null; previous.result = null }
+  }
   if (event.type === 'action.resolved') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) previous.draft.status = event.status
   follow()
  })
@@ -160,28 +175,62 @@ async function recoverTurn(turn, content) {
 }
 function retryTurn(turn) { return recoverTurn(turn, turn.content) }
 function editTurn(turn, content) { return recoverTurn(turn, content) }
-async function selectDraft(turn, selected) {
- if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
+// 点选不占 busy：本地勾选立即生效，PATCH 按 draftId 串行合并下发（latest-wins），
+// 避免每次点选都让 busy 翻转、整个面板控件闪烁，且连点不再被守卫吞掉。
+const selectionDesired = new Map(), selectionSynced = new Map(), selectionInflight = new Map()
+const sameIds = (a, b) => a.length === b.length && a.every(id => b.includes(id))
+const settleSelection = draftId => selectionInflight.get(draftId) ?? Promise.resolve()
+function selectDraft(turn, selected) {
+ if (busy.value || turn.draft?.status !== 'PENDING_CONFIRMATION') return
  if (Date.parse(turn.draft.expiresAt) <= Date.now()) {
   turn.draft.status = 'EXPIRED'
   uni.showToast({ title: '草案已过期，请重新核验', icon: 'none' })
   schedule()
   return
  }
- const previous = turn.draft.selectedActionIds
+ const draftId = turn.draft.draftId
  turn.draft.selectedActionIds = selected
+ selectionDesired.set(draftId, selected)
+ if (selectionInflight.has(draftId)) return
+ selectionInflight.set(draftId, (async () => {
+  try {
+   while (selectionDesired.has(draftId)) {
+    if (turn.draft?.draftId !== draftId) break
+    const desired = selectionDesired.get(draftId)
+    selectionDesired.delete(draftId)
+    if (sameIds(desired, selectionSynced.get(draftId) ?? [])) continue
+    try {
+     Object.assign(turn.draft, await updateSelection(draftId, turn.draft.revision, desired))
+     selectionSynced.set(draftId, desired)
+    } catch (error) {
+     const synced = selectionSynced.get(draftId)
+     if (synced && turn.draft?.draftId === draftId) turn.draft.selectedActionIds = synced
+     uni.showToast({ title: String(error.data?.message || error.message || '选择未保存').slice(0, 24), icon: 'none' })
+     selectionDesired.delete(draftId)
+     if (!activeRequest && !disposed) await restore()
+     break
+    }
+   }
+  } finally { selectionInflight.delete(draftId); schedule() }
+ })())
+}
+async function restoreDraft(turn) {
+ if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
  mutating.value = true
- try { Object.assign(turn.draft, await updateSelection(turn.draft.draftId, turn.draft.revision, selected)) }
+ await settleSelection(turn.draft.draftId)
+ try { Object.assign(turn.draft, await restoreAction(turn.draft.draftId, turn.draft.revision)) }
  catch (error) {
-  turn.draft.selectedActionIds = previous
-  uni.showToast({ title: String(error.data?.message || error.message || '选择未保存').slice(0, 24), icon: 'none' })
-  if (!activeRequest && !disposed) { mutating.value = false; await restore() }
+  uni.showToast({ title: String(error.data?.message || error.message || '还原失败').slice(0, 24), icon: 'none' })
+  if (!activeRequest && !disposed) await restore()
  }
  finally { mutating.value = false; schedule() }
 }
 async function confirmDraft(turn) {
- if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION' || !turn.draft.selectedActionIds.length) return
+ if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
  mutating.value = true
+ // 等选区同步落地再读 revision，避免确认到旧勾选
+ await settleSelection(turn.draft.draftId)
+ if (turn.draft.status !== 'PENDING_CONFIRMATION' || !turn.draft.selectedActionIds.length) { mutating.value = false; return }
  clearTimeout(expiryTimer)
  turn.draft.status = 'EXECUTING'
  try { turn.result = await confirmAction(turn.draft.draftId, turn.draft.revision); turn.draft.status = turn.result.status }
@@ -193,13 +242,15 @@ async function confirmDraft(turn) {
 async function cancelDraft(turn) {
  if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
  mutating.value = true
+ await settleSelection(turn.draft.draftId)
  try { turn.draft.status = (await cancelAction(turn.draft.draftId)).status }
  catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }
 async function revalidateDraft(turn) {
- if (busy.value) return
+ if (busy.value || !turn.draft) return
  mutating.value = true
+ await settleSelection(turn.draft.draftId)
  try { Object.assign(turn.draft, await revalidateAction(turn.draft.draftId, turn.draft.revision)) }
  catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
@@ -230,6 +281,7 @@ function clearHistory() {
    const fresh = await createConversation()
    conversationId.value = fresh.id
    turns.value = []
+   draftBaselines.clear()
    errorMessage.value = ''
    follow(true)
   }
@@ -267,5 +319,5 @@ onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTi
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
 .error { display:block; margin-top:20rpx; color:#a66a13; font-size:25rpx; }
-.composer-shell { position:relative; z-index:0; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,#f4f7f5,#f9fbf9); flex-shrink:0; transition:padding-bottom 200ms ease-out; }.anchor { height:2rpx; }
+.composer-shell { position:relative; z-index:4; padding:8px 18px calc(14px + env(safe-area-inset-bottom)); background:transparent; flex-shrink:0; transition:padding-bottom 200ms ease-out; }.anchor { height:2rpx; }
 </style>

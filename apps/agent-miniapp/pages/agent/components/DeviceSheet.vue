@@ -11,7 +11,7 @@
 <script setup>
 import UniPopup from '@dcloudio/uni-ui/lib/uni-popup/uni-popup.vue'
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
-const props = defineProps({ open: Boolean, title: String, subtitle: String, meta: String, tall: Boolean, busy: Boolean })
+const props = defineProps({ open: Boolean, openRequest: { type: Number, default: 0 }, title: String, subtitle: String, meta: String, tall: Boolean, busy: Boolean })
 const emit = defineEmits(['close'])
 const popup = ref(null)
 const visible = ref(false)
@@ -19,9 +19,10 @@ const windowHeight = uni.getSystemInfoSync().windowHeight || 600
 const dismissThreshold = Math.round(windowHeight * 0.78 * 0.25)
 let reopenTimer
 let requestedClose = false
-watch(() => props.open, async value => {
+watch(() => [props.open, props.openRequest], async ([value, request], [oldValue, oldRequest] = []) => {
  if (value) {
   requestedClose = false
+  if (oldValue && request !== oldRequest) visible.value = false
   await nextTick()
   if (props.open) ensureOpen()
  } else if (visible.value) {
