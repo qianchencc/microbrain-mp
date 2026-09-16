@@ -32,7 +32,6 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { cancelAction, cancelRun, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
-import { TRANSPORT_ERROR_TEXT } from '@/apis/agent/stream-errors.mjs'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
 import { createPresentation } from './presentation.mjs'
@@ -162,7 +161,7 @@ async function runTurn(current, content) {
    if (!disposed) restore()
    return
   }
-  if (error.message === TRANSPORT_ERROR_TEXT) {
+  if (error.transport) {
    // 断开≠取消：传输死了但服务端运行继续——保持进行中观感，交给 schedule 的
    // restore 轮询收尾（运行终态后完整回复/错误自然渲染进轮次），停止走 stopRun。
    transportInterrupted = true

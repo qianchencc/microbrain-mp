@@ -3,6 +3,13 @@
 // 不允许产生「已思考 0 秒空轮」的幽灵态。
 export const TRANSPORT_ERROR_TEXT = '连接中断，请重试'
 
+// 结构化传输失败标志：页面凭 error.transport 识别语义，不比对用户可见文案。
+export const transportError = () => {
+	const error = new Error(TRANSPORT_ERROR_TEXT)
+	error.transport = true
+	return error
+}
+
 const TERMINAL_EVENT_TYPES = new Set(['run.completed', 'run.failed', 'run.awaiting_confirmation'])
 
 export const createTerminalTracker = () => {

@@ -1,7 +1,7 @@
 import { agentUrl, getAgentHeaders } from '@/config'
 import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
-import { TRANSPORT_ERROR_TEXT, createTerminalTracker } from './stream-errors.mjs'
+import { transportError } from './stream-errors.mjs'
 import { requestJson } from './request.mjs'
 
 // 单个事件之间超过该时长无任何分块，视为流已挂死（正常运行的模型/工具间隔远小于此）。
@@ -24,7 +24,6 @@ const parseErrorBody = data => {
 	if (typeof data === 'object' && !(data instanceof ArrayBuffer)) return data
 	try { return parseBufferedJson(data) } catch { return null }
 }
-const parseErrorMessage = data => parseErrorBody(data)?.message || TRANSPORT_ERROR_TEXT
 
 export const createConversation = () => request('/agent/conversations', 'POST')
 
@@ -70,11 +69,11 @@ export const streamMessage = (conversationId, content, onEvent) => {
 					if (response.statusCode >= 200 && response.statusCode < 300) {
 						// 2xx 但流上没有终态事件 = 传输层截断：不允许当成功收口（幽灵轮根因）。
 						if (terminal.seen) resolve()
-						else reject(new Error(TRANSPORT_ERROR_TEXT))
+						else reject(transportError())
 					} else {
-						// 相位门等 409 契约需要原始响应体（code/draftId），不能只剩一句通用文案。
-						const error = new Error(parseErrorMessage(response.data))
+						// 相位门等 409 契约需要原始响应体（code/draftId）；无契约 message 的错误体按传输失败消毒。
 						const body = parseErrorBody(response.data)
+						const error = body?.message ? new Error(body.message) : transportError()
 						if (body) error.data = body
 						reject(error)
 					}
@@ -86,7 +85,7 @@ export const streamMessage = (conversationId, content, onEvent) => {
 				watchdog?.stop()
 				// fail 通道必然是传输层故障（断网/断流/超时中止）：原始 errMsg 只进日志，不进用户界面。
 				console.warn('[agent-stream] 传输失败:', error?.errMsg)
-				reject(new Error(TRANSPORT_ERROR_TEXT))
+				reject(transportError())
 			}
 		}
 
