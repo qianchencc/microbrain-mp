@@ -66,20 +66,20 @@ onBeforeUnmount(() => voice.dispose())
 defineExpose({ interrupt })
 </script>
 <style scoped>
-.composer-wrap { position:relative; }
-.composer { display:flex; align-items:flex-end; gap:4px; padding:6px; min-height:52px; box-sizing:border-box; border:1px solid #d5dfd8; border-radius:23px; background:linear-gradient(165deg,#ffffff,#f9fbf9); box-shadow:inset 0 1px 0 #fff,0 3px 10px rgba(37,65,47,.05),0 1px 2px rgba(37,65,47,.04); transition:border-color 160ms ease,box-shadow 160ms ease; }
-.composer.focused { border-color:#92b2a0; box-shadow:0 0 0 2px rgba(56,117,84,.06),0 3px 10px rgba(37,65,47,.05); }
-.mode-button,.send-button { display:flex; align-items:center; justify-content:center; margin:0; padding:0; width:40px; height:40px; flex:0 0 40px; line-height:40px; border-radius:50%; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
+.composer-wrap { position:relative; width:100%; max-width:480px; margin:0 auto; }
+.composer { display:flex; align-items:flex-end; gap:3px; padding:5px; min-height:46px; box-sizing:border-box; border:1px solid #cbd9d0; border-radius:24px; background:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.10),0 7px 22px rgba(28,57,42,.12); transition:border-color 160ms ease,box-shadow 160ms ease,transform 160ms cubic-bezier(.23,1,.32,1); }
+.composer.focused { border-color:#78a28b; box-shadow:0 0 0 2px rgba(56,117,84,.07),0 2px 4px rgba(28,57,42,.10),0 9px 26px rgba(28,57,42,.14); transform:translateY(-1px); }
+.mode-button,.send-button { display:flex; align-items:center; justify-content:center; margin:0; padding:0; width:36px; height:36px; flex:0 0 36px; line-height:36px; border-radius:50%; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
 .mode-button { background:transparent; }.mode-button[disabled] { opacity:.45; }.mode-button::after,.send-button::after { border:0; }.pressed { transform:scale(.94); opacity:.8; }
-.mode-icon,.send-icon { width:21px; height:21px; opacity:.72; }.send-button.ready .send-icon { filter:brightness(0) invert(1); opacity:1; }
+.mode-icon,.send-icon { width:19px; height:19px; opacity:.72; }.send-button.ready .send-icon { filter:brightness(0) invert(1); opacity:1; }
 .input-area { flex:1; min-width:0; }
-.composer-input { width:100%; min-height:40px; max-height:112px; box-sizing:border-box; padding:9px 2px; font-size:15px; line-height:22px; color:#263d30; }
-.composer-placeholder { color:#8b9991; font-size:14px; }
+.composer-input { width:100%; min-height:36px; max-height:108px; box-sizing:border-box; padding:7px 3px; font-size:14px; line-height:22px; color:#263d30; }
+.composer-placeholder { color:#8b9991; font-size:13px; }
 .send-button { background:#edf2ee; box-shadow:inset 0 1px 1px rgba(38,64,46,.04); }
 .send-button.ready { background:linear-gradient(155deg,#2a876c,#145c46); box-shadow:inset 0 1px 0 rgba(255,255,255,.23),0 2px 4px rgba(20,76,50,.15); }
 .send-button[disabled] { background:#edf2ee; box-shadow:none; }
 .stop-mark { width:12px; height:12px; border-radius:3px; background:#fff; }
-.hold-input { height:40px; display:flex; align-items:center; justify-content:center; padding-right:40px; font-size:14px; font-weight:500; color:#486555; user-select:none; }
+.hold-input { height:36px; display:flex; align-items:center; justify-content:center; padding-right:36px; font-size:13px; font-weight:500; color:#486555; user-select:none; }
 .composer.voice { background:linear-gradient(160deg,#f9fbf9,#eaf1eb); }
 .composer.held { border-color:#94b4a0; background:#e5eee7; box-shadow:inset 0 2px 5px rgba(30,69,44,.07); }
 .composer.cancel { border-color:#c6b1a6; background:#f4ede8; }.composer.cancel .hold-input { color:#9b6251; }
@@ -87,5 +87,5 @@ defineExpose({ interrupt })
 .voice-feedback.visible { opacity:1; transform:translate(-50%,0); }.voice-feedback.cancel { color:#9b6251; }
 .voice-light { width:6px; height:6px; border-radius:50%; background:currentColor; }.voice-light.pulsing { animation:record-pulse 1s ease-in-out infinite alternate; }
 @keyframes record-pulse { to { opacity:.35; } }
-@media(prefers-reduced-motion:reduce) { .voice-feedback,.mode-button,.send-button { transition:none; }.voice-light.pulsing { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .composer,.voice-feedback,.mode-button,.send-button { transition:none; }.voice-light.pulsing { animation:none; } }
 </style>

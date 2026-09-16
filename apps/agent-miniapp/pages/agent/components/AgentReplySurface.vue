@@ -45,8 +45,8 @@ defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updat
 
 <style scoped>
 .reply-surface { width:100%; min-width:0; }
-.reply-identity { display:flex; align-items:center; gap:10px; min-height:36px; }
-.reply-identity__meta { display:flex; align-items:center; gap:10px; min-width:0; }
+.reply-identity { display:flex; align-items:center; gap:8px; min-height:30px; }
+.reply-identity__meta { display:flex; align-items:center; gap:8px; min-width:0; }
 .reply-identity__name { flex-shrink:0; color:#21382c; font-size:14px; font-weight:650; letter-spacing:-.1px; }
 .reply-content { min-width:0; margin-top:8px; }
 .trace { margin:0 0 8px; border-radius:12px; background:rgba(232,239,234,.58); transition:background-color 180ms ease; }

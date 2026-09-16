@@ -10,5 +10,5 @@ onMounted(() => { timer = setInterval(() => { x.value = Math.random()*2.4-1.2; y
 onBeforeUnmount(() => clearInterval(timer))
 </script>
 <style scoped>
-.avatar { position:relative; width:36px; height:36px; border-radius:9px; background:white; box-shadow:0 0 0 1px #19372b1f; overflow:hidden; flex-shrink:0; }.body,.eyes { position:absolute; width:36px; height:36px; left:0; top:0; }.eyes { transition:transform 500ms cubic-bezier(.23,1,.32,1); }.running .body { animation:breathe 2.4s ease-in-out infinite; }@keyframes breathe { 50% { transform:scale(1.035); } }@media(prefers-reduced-motion:reduce) { .eyes { transform:none!important; transition:none; }.body {animation:none!important;} }
+.avatar { position:relative; width:30px; height:30px; border-radius:8px; overflow:hidden; flex-shrink:0; }.body,.eyes { position:absolute; width:30px; height:30px; left:0; top:0; }.eyes { transition:transform 500ms cubic-bezier(.23,1,.32,1); }.running .body { animation:breathe 2.4s ease-in-out infinite; }@keyframes breathe { 50% { transform:scale(1.035); } }@media(prefers-reduced-motion:reduce) { .eyes { transform:none!important; transition:none; }.body {animation:none!important;} }
 </style>
