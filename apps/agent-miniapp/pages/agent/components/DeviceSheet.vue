@@ -7,8 +7,11 @@
    <view class="sheet" :class="{ tall }" :style="dragStyle">
     <view class="grab" @touchstart="start" @touchmove.stop.prevent="move" @touchend="end" @touchcancel="cancelDrag">
      <view class="handle-zone"><view class="handle" /></view>
-     <view class="header"><view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view></view><slot name="header" /></view>
+     <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text><text v-if="meta" class="meta">{{ meta }}</text></view><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view></view>
     </view>
+    <!-- #header 槽位必须留在 grab 之外：slot 内容的事件沿父组件逻辑树冒泡，进不了本组件的 .grab
+         （2026-09-17「更多设备横栏拖不动、空调面板正常」真因，官方组件系统文档确认）。 -->
+    <view class="header-slot"><slot name="header" /></view>
     <view class="sheet-body"><slot /></view>
    </view>
   </view>
@@ -88,7 +91,7 @@ function cancelDrag() { dragging.value = false; drag.value = 0; origin = null }
 .grab { flex-shrink:0; }
 .handle-zone { height:18px; display:flex; align-items:center; justify-content:center; }
 .handle { width:36px; height:4px; background:#c4cbc6; border-radius:4px; }
-.header { display:flex; flex-direction:column; border-bottom:1px solid #e3e8e4; }
+.header-slot { border-bottom:1px solid #e3e8e4; }
 .header-top { display:flex; align-items:center; padding:2px 20px 8px; }
 .header-copy { flex:1; min-width:0; }
 .title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
