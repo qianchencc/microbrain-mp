@@ -65,6 +65,15 @@ test('失败或完成的纯问答回合可原位编辑或重试，带草案的�
 	assert.equal(canRecoverTurn(turn, true), false)
 })
 
+test('未达服务端的失败回合（无 serverId）可原位编辑或重试', () => {
+	const turn = createTurn('local-1', '26楼的办公区')
+	// 传输层失败：run.started 从未到达，serverId 保持为空；runTurn 的 finally 把 running 收口。
+	turn.running = false
+	assert.equal(turn.serverId, '')
+	assert.equal(canRecoverTurn(turn, true), true, '根本没发出去的消息也应可编辑重试')
+	assert.equal(canRecoverTurn(turn, false), false, '仅最后一轮可改写')
+})
+
 test('恢复以持久化草案和收尾为准，同一草案修订只出现一次', () => {
 	const draft = { draftId: 'draft', revision: 3, status: 'ACCEPTED', selectedActionIds: ['b'] }
 	const result = { summary: { status: 'completed', text: '请求已受理。' } }

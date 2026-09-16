@@ -167,8 +167,11 @@ async function runTurn(current, content) {
 async function recoverTurn(turn, content) {
  if (busy.value || !canRecoverTurn(turn, turns.value.at(-1) === turn)) return
  mutating.value = true
- try { await discardTurn(conversationId.value, turn.serverId) }
- catch (error) { errorMessage.value = error.message; mutating.value = false; return }
+ // 未达服务端的失败轮没有 serverId，也没有可退役的服务端条目，直接重发即可。
+ if (turn.serverId) {
+  try { await discardTurn(conversationId.value, turn.serverId) }
+  catch (error) { errorMessage.value = error.message; mutating.value = false; return }
+ }
  mutating.value = false
  restartTurn(turn, content)
  await runTurn(turn, content)
