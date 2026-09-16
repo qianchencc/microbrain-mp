@@ -22,6 +22,9 @@ test('微信构建使用 uni-popup 承担遮罩与过渡，仅在横杆保留渲
 	assert.match(wxml, /catchtouchmove="\{\{sheetGesture\.handleMove\}\}"/)
 	assert.match(wxml, /catchtouchend="\{\{sheetGesture\.handleEnd\}\}"/)
 	assert.doesNotMatch(js, /__dragLog/)
+	assert.match(js, /320/)
+	assert.match(js, /nextTick\$1/)
+	assert.match(wxml, /if \(dismiss\)[\s\S]*resetHandle\(ownerInstance\)[\s\S]*callMethod\('dismissFromHandle'\)/)
 })
 
 test('全部设备面板保持确定高度链，不把可交互内容压成零高', async () => {

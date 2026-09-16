@@ -10,29 +10,47 @@
 </template>
 <script setup>
 import UniPopup from '@dcloudio/uni-ui/lib/uni-popup/uni-popup.vue'
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 const props = defineProps({ open: Boolean, title: String, subtitle: String, meta: String, tall: Boolean, busy: Boolean })
 const emit = defineEmits(['close'])
 const popup = ref(null)
 const visible = ref(false)
+const closing = ref(false)
 const windowHeight = uni.getSystemInfoSync().windowHeight || 600
 const dismissThreshold = Math.round(windowHeight * 0.78 * 0.25)
+let closeTimer
+let reopenAfterClose = false
 let requestedClose = false
 watch(() => props.open, async value => {
  if (value) {
+  if (closing.value) {
+   reopenAfterClose = true
+   return
+  }
   requestedClose = false
   await nextTick()
-  popup.value?.open('bottom')
- } else if (visible.value) {
-  popup.value?.close()
+  if (props.open && !visible.value) popup.value?.open('bottom')
+ } else if (visible.value && !closing.value) {
+  requestedClose = true
+  beginClose()
  }
 }, { immediate: true })
 function onPopupChange(event) {
  visible.value = event.show
- if (!event.show && props.open && !requestedClose) {
-  requestedClose = true
-  emit('close')
- }
+ if (event.show) return
+ beginClose()
+ if (props.open && !requestedClose) { requestedClose = true; emit('close') }
+}
+function beginClose() {
+ closing.value = true
+ clearTimeout(closeTimer)
+ closeTimer = setTimeout(() => {
+  closing.value = false
+  if (reopenAfterClose && props.open) {
+   reopenAfterClose = false
+   nextTick(() => { if (props.open && !visible.value) popup.value?.open('bottom') })
+  }
+ }, 320)
 }
 function dismissFromHandle() {
  if (!props.open || requestedClose) return
@@ -40,6 +58,7 @@ function dismissFromHandle() {
  popup.value?.close()
  emit('close')
 }
+onBeforeUnmount(() => clearTimeout(closeTimer))
 defineExpose({ dismissFromHandle })
 </script>
 <script module="sheetGesture" lang="wxs">
@@ -99,7 +118,12 @@ function handleEnd(event, ownerInstance) {
  var threshold = event.currentTarget.dataset.threshold || 150
  var dismiss = handleOffset > threshold || (handleVelocity > 0.5 && handleOffset > 8)
  handleActive = false
- if (dismiss) ownerInstance.callMethod('dismissFromHandle')
+ if (dismiss) {
+  // 清除跟随拖拽留下的位移，再交给 uni-popup 播放关闭动画。
+  // 否则 popup 复用同一实例再次打开时，视觉位置与命中区域可能仍处于旧偏移。
+  resetHandle(ownerInstance)
+  ownerInstance.callMethod('dismissFromHandle')
+ }
  else resetHandle(ownerInstance)
  return false
 }
@@ -125,7 +149,7 @@ module.exports = {
 .handle-zone--pressed { background:rgba(23,107,84,.04); }
 .handle { width:36px; height:4px; background:#c4cbc6; border-radius:4px; transition:width 140ms cubic-bezier(.23,1,.32,1),background 140ms ease,transform 140ms ease; }
 .handle-zone--pressed .handle { width:44px; background:#9eafa5; transform:scaleY(1.15); }
-.header-slot { border-bottom:1px solid #e3e8e4; }
+.header-slot { position:relative; z-index:2; border-bottom:1px solid #e3e8e4; overflow:visible; }
 .header-top { display:flex; align-items:center; padding:2px 20px 8px; }
 .header-copy { flex:1; min-width:0; }
 .title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
