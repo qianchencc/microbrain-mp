@@ -113,6 +113,16 @@
 
 用户三次实测裁定：更多设备面板横杆拖拽完全不可用、空调面板正常。纠偏过程：第一轮误读为分段菜单实现差异（SlidingSegments 统一是真实但次要的缺陷）；第二轮据手势抢占研究移除了面板内 swiper（三页改 v-show + 按钮导航，保留 editorBack）——属预防性修复，未命中。**终审真因（官方组件系统文档确认）**：DeviceSheet 把 `<slot name="header"/>` 放在了 `.grab` 拖拽抓取区内部，而小程序 slot 内容的事件沿**父组件逻辑树**冒泡、进不了子组件内部节点——更多设备面板那行显眼横栏（分组条/搜索/全选，全部是槽位内容）的 touchstart 永远到不了 `.grab` 的处理器，整行死区；空调面板抓取区全是 DeviceSheet 自己的节点，拖哪都走。修复：槽位移出 grab（`grab = 横杆区 + 标题行`，与空调面板逐节点一致），`.header-slot` 独立渲染承载分割线。产物核验：grab 闭合标签在 slot 之前、touch 绑定完整。AGENTS 铁律新增第⑤条：`.grab` 内禁止放 slot。教训：两面板「同码不同行为」时，优先比对**事件到达路径**（slot 作用域/原生组件手势层），而不是只看处理器代码本身。32/32 测试、build:weixin 通过。
 
+## 追加：横杆面板 Sheet 2.0 重设计（2026-09-17，组件库调研定稿）
+
+用户指令：停止打补丁，一次性重设计横杆菜单类。三路调研（vaul/Base UI 源码级核对；animate-ui/reui/shadcn 指定库；WeUI/Vant/官方手势库/平台约束）。结论与落地：
+
+- **调研要点**：vaul=0.4px/ms 平均速度或 25% 面板高收起、500ms cubic-bezier(.32,.72,0,1) 回弹、44×44 命中区、handleOnly 语义、data-vaul-no-drag 豁免；Base UI=三层解耦（手势宿主/动画层 CSS 变量/内容层）、50% 阈值、速度自适应释放；animate-ui 无拖拽组件（排除）；reui/shadcn 经典版=vaul 封装（handle 100×8 胶囊）；shadcn base 版=SwipeHandle 纯视觉件+全宽 12px 条带；WeUI 官方半屏=纯静态无拖拽但视觉规范齐全（40×4 横杆+下拉形变参数）；官方 miniprogram-gesture=组件内 wrapper 绑 touch 四件套、WXS 渲染层直跑。
+- **重要更正**：此前「slot 内容事件进不了子组件内部节点」的根因定性是**错的**——官方 tap 事件文档原文：触摸/点击原生事件冒泡"都可以穿越组件边界"（不穿越的是 triggerEvent 自定义事件）。slot 出 grab 保留（vaul handleOnly 设计选择），但不再是"根因修复"。
+- **真凶候选（运行时差异源）**：更多设备面板的设备列表 scroll-view 用了 `enhanced`（原生滚动），空调面板内容是普通 scroll-view——enhanced 吞周边 touchmove 有社区反馈、官方无口径。Sheet 2.0 一并移除面板内全部 enhanced。
+- **落地**（DeviceSheet + DraftSheetLayer + sheet-drag.mjs）：① 拖拽只认 handle-zone 全宽 44px 条带（vaul 命中区规格，并行会话当日已收敛为 handle-only，本次补 44px）；② 收起阈值 200px→面板高 25%（窗高 78vh 折算）；③ 松手回弹 320→500ms vaul 曲线；④ 面板内 scroll-view 去 enhanced；⑤ 保留 8px 位移门槛防微抖误关。33/33 测试、build:weixin 通过，产物核对（enhanced=0、44px、新阈值、日志埋点在位）。
+- **验证装置**：DeviceSheet 临时埋 `getApp().__dragLog`（start/move/end 全记录）——因自动化协议的 Element.touch* 派发实测**不触发** bindtouchstart（日志为空，证明此前自动化拖拽实验全部无效），真实触摸是唯一验证途径。用户实测后经 9420 自动化端口读日志即可判断事件到达情况；验证通过后移除埋点。
+
 ## 遗留
 
 - 模型提案间歇性缺失（归因已修正并观察好转）：当时模型实为 glm-5.3-flash（.env 于 09-15 22:53 已切换，非 deepseek），连续 3 次控制请求未调用 propose_action_draft 即直接回答"已打开"。闭环 4 上下文收敛（草案数组 → 前沿单对象）之后，同模型连续 3/3 正常提案——疑似旧多草案上下文干扰所致，继续观察；复发再排查提示词/采样。
