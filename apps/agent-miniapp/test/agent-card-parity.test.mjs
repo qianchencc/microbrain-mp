@@ -5,6 +5,7 @@ import { commonSetting, editSettings } from '../pages/agent/ac-draft.js'
 import { computeDeviceGrid, createDraftRailItems, createDraftGroups, firstRowBelowFold, remainingBelowFold } from '../pages/agent/action-draft-presentation.js'
 import { deviceLocationLabel, resolveDeviceArtwork } from '../pages/agent/device-art/catalog.js'
 import { createFieldEchoGuard } from '../pages/agent/field-echo-guard.mjs'
+import { resolveKeyboardDock } from '../pages/agent/keyboard-dock.mjs'
 
 test('受理和达到目标分开，门禁没有物理完成态', () => {
  const ac = {kind:'ac',command:{temperature:25}}
@@ -90,4 +91,11 @@ test('原生长按一旦提交，随后的 touchcancel 不得撤销配置', () =
  assert.equal(reduceCardHold(state,'complete'),'committed')
  assert.equal(reduceCardHold('tracking','cancel'),'cancelled')
  assert.equal(reduceCardHold('cancelled','complete'),'cancelled')
+})
+test('键盘停靠归一化：duration 跨端单位统一为毫秒并封顶', () => {
+ assert.deepEqual(resolveKeyboardDock({ detail: { height: 291, duration: 0.25 } }), { height: 291, durationMs: 250 })
+ assert.deepEqual(resolveKeyboardDock({ detail: { height: 291, duration: 250 } }), { height: 291, durationMs: 250 })
+ assert.deepEqual(resolveKeyboardDock({ detail: { height: 0 } }), { height: 0, durationMs: 0 })
+ assert.deepEqual(resolveKeyboardDock({ detail: { height: 291, duration: 5 } }), { height: 291, durationMs: 400 })
+ assert.deepEqual(resolveKeyboardDock(undefined), { height: 0, durationMs: 0 })
 })

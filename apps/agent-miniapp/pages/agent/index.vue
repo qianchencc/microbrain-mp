@@ -20,7 +20,7 @@
    </view>
   </scroll-view>
   </view>
-  <view class="composer-shell"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
+  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @send="sendMessage" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" /></view>
   <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
    :settle-selection="settleSelection"
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
@@ -81,6 +81,11 @@ function openSheetBrowser(turn) {
 function closeSheet() { sheetDraftId.value = '' }
 let activeRequest, presentation, pollTimer, expiryTimer
 let disposed = false, visible = true, restoring = false, sequence = 0
+// 键盘停靠：adjust-position=false 页面不平移，键盘高度转为 composer-shell 底 padding
+//（键盘高 + 8px 缝），对话区 flex 自动收缩；弹起时仅当用户本在底部才跟到底部锚点。
+const kbHeight = ref(0), kbMs = ref(0)
+const composerShellStyle = computed(() => ({ paddingBottom: kbHeight.value ? `${kbHeight.value + 8}px` : '', transitionDuration: `${kbMs.value}ms` }))
+function onComposerKeyboard({ height, durationMs }) { kbHeight.value = height; kbMs.value = durationMs; if (height) follow() }
 function follow(force = false) {
  if (!force && !nearBottom.value) return
  scrollIntoView.value = ''
@@ -329,5 +334,6 @@ onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTi
 .user-row .um-host { width:100%; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
 .error { display:block; margin-top:20rpx; color:#a66a13; font-size:25rpx; }
-.composer-shell { position:relative; z-index:4; padding:8px 18px calc(14px + env(safe-area-inset-bottom)); background:transparent; flex-shrink:0; }.anchor { height:2rpx; }
+.composer-shell { position:relative; z-index:4; padding:8px 18px calc(14px + env(safe-area-inset-bottom)); background:transparent; flex-shrink:0; transition:padding-bottom .25s ease; }.anchor { height:2rpx; }
+@media(prefers-reduced-motion:reduce){.composer-shell{transition:none;}}
 </style>

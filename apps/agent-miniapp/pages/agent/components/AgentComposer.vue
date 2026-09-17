@@ -9,10 +9,10 @@
    </button>
    <view class="input-area">
     <textarea v-show="!voiceMode" class="composer-input" :value="fieldValue" :disabled="disabled"
-     :auto-height="true" :adjust-position="true" adjust-keyboard-to="bottom" :cursor-spacing="6" :disable-default-padding="true"
+     :auto-height="true" :adjust-position="false" :disable-default-padding="true"
      :hold-keyboard="true" :show-confirm-bar="false"
      confirm-type="send" :confirm-hold="true" :maxlength="200" placeholder="想查看或调整什么设备？" placeholder-class="composer-placeholder"
-     @focus="focused = true" @blur="focused = false"
+     @focus="focused = true" @blur="focused = false" @keyboardheightchange="onKeyboard"
      @input="onInput" @confirm="onConfirm" />
     <view v-if="voiceMode" class="hold-input" role="button" aria-label="按住说话，上滑取消"
      @touchstart.stop="startVoice" @touchmove.stop.prevent="moveVoice" @touchend.stop="endVoice" @touchcancel.stop="interrupt">
@@ -30,8 +30,9 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { createVoiceInput } from '../voice-input.mjs'
 import { createFieldEchoGuard } from '../field-echo-guard.mjs'
+import { resolveKeyboardDock } from '../keyboard-dock.mjs'
 const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean })
-const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice'])
+const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice', 'keyboard'])
 const focused = ref(false), voiceMode = ref(false), phase = ref('idle'), cancelling = ref(false)
 // 字段非受控：打字（含拼音组合中态）不写回 :value，只向上同步；
 // 仅程序性改写（发送后清空等）经回声判定后落原生层，否则 IME 会被强制提交。
@@ -48,6 +49,8 @@ const voice = createVoiceInput({
 function onInput(event) { echoGuard.track(event.detail.value); emit('update:modelValue', event.detail.value) }
 // confirm 的 detail.value 是上屏后的最终文本，先同步再发送，不丢 IME 末尾提交
 function onConfirm(event) { onInput(event); send() }
+// adjust-position=false：页面不平移，键盘高度交给父级做 composer-shell 底部停靠
+function onKeyboard(event) { emit('keyboard', resolveKeyboardDock(event)) }
 watch(() => props.modelValue, value => { if (echoGuard.shouldWrite(value)) fieldValue.value = value })
 function send() { if (!props.disabled && !props.running && props.modelValue.trim()) emit('send') }
 function toggleMode() {
