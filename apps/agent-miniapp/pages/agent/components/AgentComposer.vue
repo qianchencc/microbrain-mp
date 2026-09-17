@@ -27,7 +27,7 @@
  </view>
 </template>
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { createVoiceInput } from '../voice-input.mjs'
 import { createFieldEchoGuard } from '../field-echo-guard.mjs'
 import { resolveKeyboardDock } from '../keyboard-dock.mjs'
@@ -51,7 +51,14 @@ function onInput(event) { echoGuard.track(event.detail.value); emit('update:mode
 function onConfirm(event) { onInput(event); send() }
 // adjust-position=false：页面不平移，键盘高度交给父级做 composer-shell 底部停靠
 function onKeyboard(event) { emit('keyboard', resolveKeyboardDock(event)) }
-watch(() => props.modelValue, value => { if (echoGuard.shouldWrite(value)) fieldValue.value = value })
+// 程序性改写经 plan() 取步骤：目标值恰等于 fieldValue 时原生层仍显示回声文本，
+// 需先写显示值制造 diff 再 nextTick 写目标值，否则发送后清空的 '' 写不进去。
+watch(() => props.modelValue, value => {
+ const steps = echoGuard.plan(value, fieldValue.value)
+ if (!steps.length) return
+ fieldValue.value = steps[0]
+ if (steps.length === 2) nextTick(() => { fieldValue.value = steps[1] })
+})
 function send() { if (!props.disabled && !props.running && props.modelValue.trim()) emit('send') }
 function toggleMode() {
  if (props.disabled || props.running || phase.value !== 'idle') return
@@ -87,7 +94,7 @@ defineExpose({ interrupt })
 .mode-icon,.send-icon { width:19px; height:19px; opacity:.72; }.send-button.ready .send-icon { filter:brightness(0) invert(1); opacity:1; }
 .input-area { flex:1; min-width:0; }
 .composer-input { width:100%; min-height:36px; max-height:108px; box-sizing:border-box; padding:7px 3px; font-size:14px; line-height:22px; color:#263d30; }
-.composer-placeholder { color:#8b9991; font-size:13px; }
+.composer-placeholder { color:#8b9991; font-size:14px; line-height:22px; }
 .send-button { background:#edf2ee; box-shadow:inset 0 1px 1px rgba(38,64,46,.04); }
 .send-button.ready { background:linear-gradient(155deg,#2a876c,#145c46); box-shadow:inset 0 1px 0 rgba(255,255,255,.23),0 2px 4px rgba(20,76,50,.15); }
 .send-button[disabled] { background:#edf2ee; box-shadow:none; }

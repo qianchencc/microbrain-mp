@@ -23,7 +23,8 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { fieldWriteSteps } from '../field-echo-guard.mjs'
 const props = defineProps({ content: { type: String, default: '' }, recoverable: Boolean, disabled: Boolean })
 const emit = defineEmits(['retry', 'edit'])
 const editing = ref(false), closing = ref(false), opening = ref(false)
@@ -31,15 +32,20 @@ const editing = ref(false), closing = ref(false), opening = ref(false)
 // @input 在拼音组合中态也触发，回写 :value 会强制 IME 提交拼音。fieldText 跟踪字段实况。
 const draft = ref(props.content), fieldText = ref(props.content)
 let closeTimer, openTimer
-watch(() => props.content, value => { if (!editing.value) { draft.value = value; fieldText.value = value } })
+// 重置草稿经两步判定：目标值恰等于已写入值时原生层仍显示回声文本，须先写显示值制造 diff
+function writeDraft(target) {
+ const steps = fieldWriteSteps(fieldText.value, draft.value, target)
+ if (steps.length) { draft.value = steps[0]; if (steps.length === 2) nextTick(() => { draft.value = steps[1] }) }
+ fieldText.value = target
+}
+watch(() => props.content, value => { if (!editing.value) writeDraft(value) })
 watch(() => props.recoverable, value => {
  if (!value) { clearTimeout(openTimer); opening.value = false; closeEditor(false) }
 })
 // 进入编辑：气泡先退场（message-out），再挂载编辑器（editor-in 从气泡绿底过渡），双向都有动画
 function beginEdit() {
  if (props.disabled || closing.value || opening.value) return
- draft.value = props.content
- fieldText.value = props.content
+ writeDraft(props.content)
  opening.value = true
  openTimer = setTimeout(() => { opening.value = false; editing.value = true }, 140)
 }
@@ -49,7 +55,7 @@ function closeEditor(reset) {
  clearTimeout(openTimer)
  opening.value = false
  closing.value = true
- closeTimer = setTimeout(() => { closing.value = false; editing.value = false; if (reset) { draft.value = props.content; fieldText.value = props.content } }, 160)
+ closeTimer = setTimeout(() => { closing.value = false; editing.value = false; if (reset) writeDraft(props.content) }, 160)
 }
 function cancel() { if (!props.disabled) closeEditor(true) }
 function onEditorInput(event) { fieldText.value = event.detail.value }

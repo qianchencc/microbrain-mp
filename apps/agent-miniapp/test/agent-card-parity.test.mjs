@@ -83,6 +83,20 @@ test('输入回声守卫：打字回流不写回，程序性改写才落原生�
  guard.track('abc')
  assert.equal(guard.shouldWrite('已保存的草稿'), true)
 })
+test('回声守卫 plan：目标值恰等于已写入值时两步强制写，否则发送清空进不了原生层', () => {
+ const guard = createFieldEchoGuard('')
+ // 打字只进 track，:value 保持 ''；发送后父级清空 '' 与已写入值相同——单步写会被 Vue 跳过
+ guard.track('打开所有灯')
+ assert.deepEqual(guard.plan('', ''), ['打开所有灯', ''])
+ // 已写过目标值：后续同值不再重复写
+ assert.deepEqual(guard.plan('', ''), [])
+ // 常规程序性改写单步直达
+ guard.track('abc')
+ assert.deepEqual(guard.plan('已保存的草稿', ''), ['已保存的草稿'])
+ // 回声抑制不变：打字回流计划为空
+ guard.track('xyz')
+ assert.deepEqual(guard.plan('xyz', ''), [])
+})
 test('原生长按一旦提交，随后的 touchcancel 不得撤销配置', () => {
  let state = reduceCardHold('idle','start')
  state = reduceCardHold(state,'complete')
