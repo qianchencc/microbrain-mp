@@ -1,7 +1,7 @@
 <template>
  <view class="user-message-wrap" :class="{ 'user-message-wrap--editing': editing }">
   <template v-if="!editing">
-   <text class="user-message" :class="{ 'user-message--closing': opening }">{{ content }}</text>
+   <view class="user-message" :class="{ 'user-message--closing': opening }"><text class="user-message__text">{{ content }}</text></view>
    <view v-if="recoverable" class="message-actions" :class="{ 'message-actions--closing': opening }" aria-label="消息操作">
     <button class="message-action" :disabled="disabled" hover-class="message-action--pressed" aria-label="编辑" @tap="beginEdit">
      <image class="message-action__icon" src="/static/compose.svg" />
@@ -13,10 +13,10 @@
   </template>
   <view v-if="editing" class="user-editor" :class="{ 'user-editor--closing': closing }">
    <textarea class="user-editor__input" :value="draft" :auto-height="true" :maxlength="200" :focus="true"
-    confirm-type="send" :disabled="disabled" @input="draft = $event.detail.value" @confirm="submit" />
+    confirm-type="send" :disabled="disabled" @input="onEditorInput" @confirm="onEditorConfirm" />
    <view class="user-editor__actions">
     <button class="editor-action" :disabled="disabled" hover-class="editor-action--pressed" @tap="cancel">取消</button>
-    <button class="editor-action editor-action--primary" :disabled="disabled || !draft.trim()" hover-class="editor-action--pressed" @tap="submit">重新发送</button>
+    <button class="editor-action editor-action--primary" :disabled="disabled || !fieldText.trim()" hover-class="editor-action--pressed" @tap="submit">重新发送</button>
    </view>
   </view>
  </view>
@@ -27,9 +27,11 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 const props = defineProps({ content: { type: String, default: '' }, recoverable: Boolean, disabled: Boolean })
 const emit = defineEmits(['retry', 'edit'])
 const editing = ref(false), closing = ref(false), opening = ref(false)
-const draft = ref(props.content)
+// draft 是写进原生层的程序性值（仅进入编辑/取消重置时变），编辑期间不回写：
+// @input 在拼音组合中态也触发，回写 :value 会强制 IME 提交拼音。fieldText 跟踪字段实况。
+const draft = ref(props.content), fieldText = ref(props.content)
 let closeTimer, openTimer
-watch(() => props.content, value => { if (!editing.value) draft.value = value })
+watch(() => props.content, value => { if (!editing.value) { draft.value = value; fieldText.value = value } })
 watch(() => props.recoverable, value => {
  if (!value) { clearTimeout(openTimer); opening.value = false; closeEditor(false) }
 })
@@ -37,6 +39,7 @@ watch(() => props.recoverable, value => {
 function beginEdit() {
  if (props.disabled || closing.value || opening.value) return
  draft.value = props.content
+ fieldText.value = props.content
  opening.value = true
  openTimer = setTimeout(() => { opening.value = false; editing.value = true }, 140)
 }
@@ -46,28 +49,32 @@ function closeEditor(reset) {
  clearTimeout(openTimer)
  opening.value = false
  closing.value = true
- closeTimer = setTimeout(() => { closing.value = false; editing.value = false; if (reset) draft.value = props.content }, 160)
+ closeTimer = setTimeout(() => { closing.value = false; editing.value = false; if (reset) { draft.value = props.content; fieldText.value = props.content } }, 160)
 }
 function cancel() { if (!props.disabled) closeEditor(true) }
+function onEditorInput(event) { fieldText.value = event.detail.value }
+function onEditorConfirm(event) { onEditorInput(event); submit() }
 function submit() {
  if (closing.value) return
- const value = draft.value.trim()
+ const value = fieldText.value.trim()
  if (!props.disabled && value) { emit('edit', value); closeEditor(false) }
 }
 onBeforeUnmount(() => { clearTimeout(closeTimer); clearTimeout(openTimer) })
 </script>
 
 <style scoped>
-.user-message-wrap { display:flex; flex-direction:column; align-items:flex-end; max-width:88%; }
-/* 气泡必须显式 max-content 定宽：fit-content 父链在微信里测宽不含自身 padding，
-   短消息（如 123）内容盒被压到负值附近，每行只放得下两个字而异常折行；
-   max-width 的减项必须与水平 padding 总量（15px×2）保持一致，否则长消息气泡溢出上限 */
-.user-message { display:block; width:max-content; max-width:calc(100% - 30px); padding:12px 15px; border-radius:15px 15px 4px 15px; background:linear-gradient(155deg,#247b62,#145b46); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 2px 5px rgba(19,73,49,.10); color:#fff; font-size:15px; line-height:1.6; overflow-wrap:anywhere; animation:message-in 180ms cubic-bezier(.23,1,.32,1); }
+/* 布局不依赖 fit-content 测量：宿主由父级定宽（.user-row .um-host{width:100%}），
+   wrap 定宽块级 + text-align:right，气泡 inline-block 收缩包裹——短消息不再被
+   嵌套 intrinsic sizing 塌成一列（2026-09-16 三次实测根因）；font-size:0 消行盒
+   基线空隙，文字自行声明字号。 */
+.user-message-wrap { display:block; width:100%; text-align:right; font-size:0; }
+.user-message { display:inline-block; text-align:left; max-width:88%; box-sizing:border-box; padding:12px 15px; border-radius:15px 15px 4px 15px; background:linear-gradient(155deg,#247b62,#145b46); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 2px 5px rgba(19,73,49,.10); animation:message-in 180ms cubic-bezier(.23,1,.32,1); }
+.user-message__text { display:block; color:#fff; font-size:15px; line-height:1.6; overflow-wrap:anywhere; word-break:break-all; }
 .user-message--closing,.message-actions--closing { animation:message-out 140ms cubic-bezier(.23,1,.32,1) forwards; }
 @keyframes message-in { from { opacity:0; transform:translateY(4px); } }
 @keyframes message-out { to { opacity:0; transform:scale(.97); } }
 /* 操作行对齐 spectrum message-actions Ghost 变体：纯图标、28px、中性灰、按压 scale(.92)+浅底 */
-.message-actions { display:flex; align-items:center; gap:2px; margin-top:4px; padding:2px 0; animation:message-in 180ms cubic-bezier(.23,1,.32,1); }
+.message-actions { display:flex; justify-content:flex-end; align-items:center; gap:2px; margin-top:4px; padding:2px 0; animation:message-in 180ms cubic-bezier(.23,1,.32,1); }
 .message-action { display:flex; align-items:center; justify-content:center; width:28px; height:28px; margin:0; padding:0; border-radius:6px; background:transparent; transition:background-color 150ms ease,transform 150ms cubic-bezier(.23,1,.32,1),opacity 150ms ease; }
 .message-action::after { border:0; }
 .message-action--pressed { background:rgba(0,0,0,.04); transform:scale(.92); }
@@ -76,7 +83,7 @@ onBeforeUnmount(() => { clearTimeout(closeTimer); clearTimeout(openTimer) })
 /* 编辑态必须有确定宽度：textarea 是原生组件，width:100% 撑不开 fit-content 父级，否则整卡塌缩。
    宽度相对容器（100vw - 32px 恰为正文区内宽，上限 320px），不能用 88vw 这类视口单位——
    窄屏上会溢出内容区，右对齐布局下向左溢出、几乎贴住屏幕边缘。 */
-.user-message-wrap--editing { width:calc(100vw - 32px); max-width:320px; }
+.user-message-wrap--editing { width:calc(100vw - 32px); max-width:320px; margin-left:auto; }
 /* 编辑器入场从气泡的绿底起步（背景/圆角向纸白过渡，文字白→墨绿），观感是气泡原地变形而非换卡 */
 .user-editor { width:100%; padding:10px; border:1px solid #a9bdb1; border-radius:17px 17px 5px 17px; background:#fbfcfb; box-shadow:0 0 0 3px rgba(36,111,80,.07),0 5px 18px rgba(28,63,43,.08); transform-origin:100% 0; animation:editor-in 200ms cubic-bezier(.23,1,.32,1); }
 .user-editor--closing { animation:editor-out 160ms cubic-bezier(.23,1,.32,1) forwards; }

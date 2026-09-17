@@ -4,6 +4,7 @@ import { mergeObservedStates, receiptPhase, reduceCardHold, stateText } from '..
 import { commonSetting, editSettings } from '../pages/agent/ac-draft.js'
 import { computeDeviceGrid, createDraftRailItems, createDraftGroups } from '../pages/agent/action-draft-presentation.js'
 import { deviceLocationLabel, resolveDeviceArtwork } from '../pages/agent/device-art/catalog.js'
+import { createFieldEchoGuard } from '../pages/agent/field-echo-guard.mjs'
 
 test('受理和达到目标分开，门禁没有物理完成态', () => {
  const ac = {kind:'ac',command:{temperature:25}}
@@ -51,6 +52,21 @@ test('回读权威状态覆盖更旧的最后已知值，空项不回退', () =>
  assert.deepEqual(mergeObservedStates(lastKnown, undefined), { a: true, b: true })
  assert.equal(mergeObservedStates(lastKnown, null), lastKnown)
  assert.equal(mergeObservedStates(lastKnown, undefined), lastKnown)
+})
+test('输入回声守卫：打字回流不写回，程序性改写才落原生层', () => {
+ const guard = createFieldEchoGuard('')
+ // 打字（含拼音组合中态）回流是同值回声，禁止写 :value
+ guard.track("suo'you'd")
+ assert.equal(guard.shouldWrite("suo'you'd"), false)
+ guard.track('打开所有灯')
+ assert.equal(guard.shouldWrite('打开所有灯'), false)
+ // 发送后父级清空——非回声，必须写回清空原生字段
+ assert.equal(guard.shouldWrite(''), true)
+ // 清空后再写同值也不重复写
+ assert.equal(guard.shouldWrite(''), false)
+ // 恢复草稿等非空程序性写入放行
+ guard.track('abc')
+ assert.equal(guard.shouldWrite('已保存的草稿'), true)
 })
 test('原生长按一旦提交，随后的 touchcancel 不得撤销配置', () => {
  let state = reduceCardHold('idle','start')

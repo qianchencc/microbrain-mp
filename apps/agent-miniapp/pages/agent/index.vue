@@ -1,5 +1,5 @@
 <template>
- <view class="agent-page" :style="{ height: keyboardHeight ? `calc(100vh - ${keyboardHeight}px)` : '100vh' }">
+ <view class="agent-page">
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
   <AgentHeader :status="statusText" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" />
@@ -8,7 +8,7 @@
    <view class="conversation__inner">
     <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
-     <view class="user-row"><UserMessage :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" @retry="retryTurn(turn)" @edit="editTurn(turn, $event)" /></view>
+     <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" @retry="retryTurn(turn)" @edit="editTurn(turn, $event)" /></view>
      <AgentReplySurface :turn="turn" :busy="busy"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
@@ -20,7 +20,7 @@
    </view>
   </scroll-view>
   </view>
-  <view class="composer-shell" :style="keyboardHeight ? {paddingBottom:'8px'} : {}"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @keyboard="applyKeyboardHeight" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
+  <view class="composer-shell"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @send="sendMessage" @voice="sendMessage" @stop="stopRun" /></view>
   <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
    :settle-selection="settleSelection"
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
@@ -43,7 +43,6 @@ import UserMessage from './components/UserMessage.vue'
 const conversationId = ref('')
 const input = ref('')
 const composer = ref(null)
-const keyboardHeight = ref(0)
 const turns = ref([])
 const errorMessage = ref('')
 const isRunning = ref(false)
@@ -309,25 +308,13 @@ function clearHistory() {
   finally { mutating.value = false }
  } })
 }
-let keyboardCloseTimer
-// 页面高度收缩只补偿输入栏（composer textarea 关闭了系统 adjust-position）；
-// 不能挂 uni.onKeyboardHeightChange 全局监听——编辑器内的 textarea 依赖系统上推，
-// 全局监听会让两者叠加，模拟器里表现为页面被压短、底部留出黑洞。
-function applyKeyboardHeight(height) {
- if (disposed) return
- clearTimeout(keyboardCloseTimer)
- // 输入法面板切换会先报 0 再报真实高度，0 需要短暂确认，避免页面高度来回跳动
- if (height > 0) keyboardHeight.value = height
- else keyboardCloseTimer = setTimeout(() => { if (!disposed) keyboardHeight.value = 0 }, 120)
- follow()
-}
 onLoad(() => { restore() })
 onShow(() => { visible = true; if (conversationId.value && !activeRequest) restore() })
 onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer) })
-onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTimer); clearTimeout(keyboardCloseTimer); presentation?.cancel(); activeRequest?.abort() })
+onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
 <style scoped>
-.agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; transition:height 200ms ease-out; }
+.agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; }
 .agent-status { display:flex; align-items:center; justify-content:space-between; padding:0 32rpx; min-height:72rpx; background:#fafcfb; border-bottom:1rpx solid #e0e7e2; color:#738278; font-size:23rpx; }
 .clear { width:80rpx; height:72rpx; line-height:72rpx; padding:0; margin:0; background:transparent; }.clear::after { border:0; }
 /* scroll-view 禁止直接用 flex:1/height:0 撑高（微信 webview 已知塌陷：盒子 0 高、
@@ -337,7 +324,10 @@ onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTi
 .conversation { height:100%; }.conversation__inner { padding:24px 16px 32px; }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
+/* 宿主必须定宽：组件宿主是 flex item、宽度靠内容反推，会让整条 fit-content 链塌到
+   min-content（短消息每行一字）；定宽后气泡用 inline-block 收缩即可安全测量。 */
+.user-row .um-host { width:100%; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
 .error { display:block; margin-top:20rpx; color:#a66a13; font-size:25rpx; }
-.composer-shell { position:relative; z-index:4; padding:8px 18px calc(14px + env(safe-area-inset-bottom)); background:transparent; flex-shrink:0; transition:padding-bottom 200ms ease-out; }.anchor { height:2rpx; }
+.composer-shell { position:relative; z-index:4; padding:8px 18px calc(14px + env(safe-area-inset-bottom)); background:transparent; flex-shrink:0; }.anchor { height:2rpx; }
 </style>

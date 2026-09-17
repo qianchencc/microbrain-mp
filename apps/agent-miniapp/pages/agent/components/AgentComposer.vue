@@ -8,11 +8,12 @@
     <image class="mode-icon" :src="voiceMode ? '/static/compose.svg' : '/static/mic.svg'" />
    </button>
    <view class="input-area">
-    <textarea v-show="!voiceMode" class="composer-input" :value="modelValue" :disabled="disabled"
-     :auto-height="true" :adjust-position="false" :hold-keyboard="true" :show-confirm-bar="false"
+    <textarea v-show="!voiceMode" class="composer-input" :value="fieldValue" :disabled="disabled"
+     :auto-height="true" :adjust-position="true" adjust-keyboard-to="bottom" :cursor-spacing="6" :disable-default-padding="true"
+     :hold-keyboard="true" :show-confirm-bar="false"
      confirm-type="send" :confirm-hold="true" :maxlength="200" placeholder="想查看或调整什么设备？" placeholder-class="composer-placeholder"
-     @keyboardheightchange="$emit('keyboard', $event.detail.height)" @focus="focused = true" @blur="focused = false"
-     @input="$emit('update:modelValue', $event.detail.value)" @confirm="send" />
+     @focus="focused = true" @blur="focused = false"
+     @input="onInput" @confirm="onConfirm" />
     <view v-if="voiceMode" class="hold-input" role="button" aria-label="按住说话，上滑取消"
      @touchstart.stop="startVoice" @touchmove.stop.prevent="moveVoice" @touchend.stop="endVoice" @touchcancel.stop="interrupt">
      <text>{{ phase === 'idle' ? '按住说话' : feedback }}</text>
@@ -28,9 +29,14 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { createVoiceInput } from '../voice-input.mjs'
+import { createFieldEchoGuard } from '../field-echo-guard.mjs'
 const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean })
-const emit = defineEmits(['update:modelValue', 'send', 'stop', 'keyboard', 'voice'])
+const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice'])
 const focused = ref(false), voiceMode = ref(false), phase = ref('idle'), cancelling = ref(false)
+// 字段非受控：打字（含拼音组合中态）不写回 :value，只向上同步；
+// 仅程序性改写（发送后清空等）经回声判定后落原生层，否则 IME 会被强制提交。
+const fieldValue = ref(props.modelValue)
+const echoGuard = createFieldEchoGuard(props.modelValue)
 let startY = 0, touchId
 const feedback = computed(() => cancelling.value ? '松开取消' : ({ starting: '正在启动录音', recording: '松开发送，上滑取消', recognizing: '正在识别…', cancelling: '已取消' }[phase.value] || ''))
 const voice = createVoiceInput({
@@ -39,6 +45,10 @@ const voice = createVoiceInput({
  onResult: text => { if (!props.disabled && !props.running) emit('voice', text) },
  onError: title => uni.showToast({ title, icon: 'none' }),
 })
+function onInput(event) { echoGuard.track(event.detail.value); emit('update:modelValue', event.detail.value) }
+// confirm 的 detail.value 是上屏后的最终文本，先同步再发送，不丢 IME 末尾提交
+function onConfirm(event) { onInput(event); send() }
+watch(() => props.modelValue, value => { if (echoGuard.shouldWrite(value)) fieldValue.value = value })
 function send() { if (!props.disabled && !props.running && props.modelValue.trim()) emit('send') }
 function toggleMode() {
  if (props.disabled || props.running || phase.value !== 'idle') return
