@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mergeObservedStates, receiptPhase, reduceCardHold, stateText } from '../pages/agent/device-card-state.js'
 import { commonSetting, editSettings } from '../pages/agent/ac-draft.js'
-import { computeDeviceGrid, createDraftRailItems, createDraftGroups } from '../pages/agent/action-draft-presentation.js'
+import { computeDeviceGrid, createDraftRailItems, createDraftGroups, firstRowBelowFold, remainingBelowFold } from '../pages/agent/action-draft-presentation.js'
 import { deviceLocationLabel, resolveDeviceArtwork } from '../pages/agent/device-art/catalog.js'
 import { createFieldEchoGuard } from '../pages/agent/field-echo-guard.mjs'
 
@@ -44,6 +44,20 @@ test('设备网格保持 119px 卡片规格并按可用宽度计算列数', () =
  assert.deepEqual(computeDeviceGrid(375),{columns:2,trackWidth:250})
  assert.deepEqual(computeDeviceGrid(430),{columns:3,trackWidth:381})
  assert.deepEqual(computeDeviceGrid(768),{columns:5,trackWidth:643})
+})
+test('滚动浮标计数：视口底缘下完整隐藏的行才算「还有 N 台」，为 0 隐藏、回滚重现', () => {
+ const groups = [
+  { key:'a', label:'A', items:[1,2,3] },        // 1 行，行顶 29
+  { key:'b', label:'B', items:[1,2,3,4,5,6] },  // 2 行，行顶 258 / 450
+  { key:'c', label:'C', items:[1,2,3,4] },      // 2 行，行顶 679 / 871（末行仅 1 台）
+ ]
+ assert.equal(remainingBelowFold(groups, 3, 0, 0), 0)      // 视口未测量 → 不显示
+ assert.equal(remainingBelowFold(groups, 3, 0, 400), 7)    // B 组第二行 3 台 + C 组两行 4 台
+ assert.equal(remainingBelowFold(groups, 3, 200, 400), 4)  // 下滚后只剩 C 组
+ assert.equal(remainingBelowFold(groups, 3, 700, 400), 0)  // 到底 → 淡出
+ assert.equal(remainingBelowFold(groups, 3, 0, 400), 7)    // 回滚 → 重新出现
+ assert.equal(firstRowBelowFold(groups, 3, 0, 400), 450)
+ assert.equal(firstRowBelowFold(groups, 3, 700, 400), null)
 })
 test('回读权威状态覆盖更旧的最后已知值，空项不回退', () => {
  const lastKnown = { a: true, b: true }

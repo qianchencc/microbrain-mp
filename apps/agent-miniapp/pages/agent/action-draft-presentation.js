@@ -32,6 +32,44 @@ export function computeDeviceGrid(viewportWidth, { inlinePadding = 20, cardWidth
   return { columns, trackWidth: columns * cardWidth + (columns - 1) * gap };
 }
 
+// 全部设备列表的确定性几何：卡片 180 高 + 12 行距 = 行距 192；
+// 分组标题 17px 行高 + 12 下距 = 29；分组间距 20。列表尾部留白不参与计数。
+const CARD_ROW_PITCH = 192;
+const GROUP_TITLE_H = 29;
+const GROUP_GAP = 20;
+
+/** 视口底缘之下仍完整隐藏的卡片数（滚动浮标计数；纯几何计算，不做 DOM 测量）。 */
+export function remainingBelowFold(groups, columns, scrollTop, viewportHeight) {
+  if (!viewportHeight) return 0;
+  const bottom = scrollTop + viewportHeight;
+  let y = 0, remaining = 0;
+  for (const group of groups) {
+    const rows = Math.ceil(group.items.length / columns);
+    for (let row = 0; row < rows; row++) {
+      if (y + GROUP_TITLE_H + row * CARD_ROW_PITCH > bottom) {
+        remaining += Math.min(columns, group.items.length - row * columns);
+      }
+    }
+    y += GROUP_TITLE_H + (rows ? rows * CARD_ROW_PITCH - 12 : 0) + GROUP_GAP;
+  }
+  return remaining;
+}
+
+/** 第一个仍完整隐藏的行顶 offset，供浮标点击下滚定位；无则返回 null。 */
+export function firstRowBelowFold(groups, columns, scrollTop, viewportHeight) {
+  const bottom = scrollTop + viewportHeight;
+  let y = 0;
+  for (const group of groups) {
+    const rows = Math.ceil(group.items.length / columns);
+    for (let row = 0; row < rows; row++) {
+      const top = y + GROUP_TITLE_H + row * CARD_ROW_PITCH;
+      if (top > bottom) return top;
+    }
+    y += GROUP_TITLE_H + (rows ? rows * CARD_ROW_PITCH - 12 : 0) + GROUP_GAP;
+  }
+  return null;
+}
+
 export function createDraftRailItems(actions) {
   if (actions.length <= DRAFT_RAIL_LIMIT) {
     return actions.map((action, index) => ({ kind: "action", action, index }));

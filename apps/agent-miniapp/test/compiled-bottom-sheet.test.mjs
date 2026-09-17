@@ -73,3 +73,21 @@ test('全部设备使用单一固定规格网格，并以页面轨道进入参�
 	assert.match(wxss, /editor-surface[^}]*z-index:1[^}]*background:#fcfdfc/)
 	assert.doesNotMatch(wxml, /<swiper/)
 })
+
+test('滚动浮标编译进面板：scroll-view 回传位置、浮标与底缘渐隐按剩余数显隐', async () => {
+	const [wxml, wxss, assets] = await Promise.all([
+		readFile(new URL('DraftSheetLayer.wxml', dist), 'utf8'),
+		readFile(new URL('DraftSheetLayer.wxss', dist), 'utf8'),
+		readFile(new URL('../../../common/assets.js', dist), 'utf8'),
+	])
+	assert.match(wxml, /bindscroll=/)
+	assert.match(wxml, /scroll-top=/)
+	assert.match(wxml, /scroll-with-animation/)
+	assert.match(wxml, /cue-float/)
+	assert.match(wxml, /scroll-fade/)
+	assert.match(assets, /chevron-down\.svg/)
+	assert.match(wxss, /\.cue-float[^}]*position:absolute/)
+	assert.match(wxss, /\.cue-float\.off[^}]*pointer-events:none/)
+	assert.match(wxss, /\.scroll-fade[^}]*pointer-events:none/)
+	assert.match(wxss, /\.group-title[^}]*line-height:17px/)
+})
