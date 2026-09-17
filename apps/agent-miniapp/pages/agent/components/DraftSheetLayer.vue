@@ -36,7 +36,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { readDeviceStates, updateParameters } from '@/apis/agent'
 import { operationLabel } from '../ac-draft.js'
-import { receiptPhase } from '../device-card-state.js'
+import { mergeObservedStates, receiptPhase } from '../device-card-state.js'
 import { computeDeviceGrid, createDraftGroups, draftBaselineChanged } from '../action-draft-presentation.js'
 import { receiptText } from '../conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
@@ -76,6 +76,8 @@ watch(() => props.draft?.draftId, () => { page.value = 0; search.value = ''; sea
 // 面板内三页导航：0 全部设备 / 1 搜索 / 2 参数编辑；返回列表页即清过滤，列表始终是全量。
 watch(page, value => { if (value === 0) search.value = '' })
 watch(open, value => { if (value) refresh() })
+// 与 ActionDraftCard 一致：result 落地先合入回读权威状态再补查，否则面板内徽标停在指令前。
+watch(() => props.result, result => { states.value = mergeObservedStates(states.value, result?.observedStates); refresh() })
 function updateWindowWidth(event) { windowWidth.value = event?.size?.windowWidth || event?.windowWidth || uni.getWindowInfo?.().windowWidth || windowWidth.value }
 onMounted(() => uni.onWindowResize?.(updateWindowWidth))
 onBeforeUnmount(() => { clearTimeout(focusTimer); clearTimeout(searchTimer); uni.offWindowResize?.(updateWindowWidth) })
@@ -101,7 +103,7 @@ function phase(action) {
 }
 async function refresh() {
  if (!props.draft) return
- try { const snapshot = await readDeviceStates(props.draft.draftId); states.value = snapshot.states }
+ try { const snapshot = await readDeviceStates(props.draft.draftId); states.value = mergeObservedStates(snapshot.states, props.result?.observedStates) }
  catch { states.value = {} }
 }
 async function save(changes) {

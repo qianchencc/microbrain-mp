@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { receiptPhase, reduceCardHold, stateText } from '../pages/agent/device-card-state.js'
+import { mergeObservedStates, receiptPhase, reduceCardHold, stateText } from '../pages/agent/device-card-state.js'
 import { commonSetting, editSettings } from '../pages/agent/ac-draft.js'
 import { computeDeviceGrid, createDraftRailItems, createDraftGroups } from '../pages/agent/action-draft-presentation.js'
 import { deviceLocationLabel, resolveDeviceArtwork } from '../pages/agent/device-art/catalog.js'
@@ -43,6 +43,14 @@ test('设备网格保持 119px 卡片规格并按可用宽度计算列数', () =
  assert.deepEqual(computeDeviceGrid(375),{columns:2,trackWidth:250})
  assert.deepEqual(computeDeviceGrid(430),{columns:3,trackWidth:381})
  assert.deepEqual(computeDeviceGrid(768),{columns:5,trackWidth:643})
+})
+test('回读权威状态覆盖更旧的最后已知值，空项不回退', () => {
+ const lastKnown = { a: true, b: true }
+ const observed = { a: false, b: null }
+ assert.deepEqual(mergeObservedStates(lastKnown, observed), { a: false, b: true })
+ assert.deepEqual(mergeObservedStates(lastKnown, undefined), { a: true, b: true })
+ assert.equal(mergeObservedStates(lastKnown, null), lastKnown)
+ assert.equal(mergeObservedStates(lastKnown, undefined), lastKnown)
 })
 test('原生长按一旦提交，随后的 touchcancel 不得撤销配置', () => {
  let state = reduceCardHold('idle','start')

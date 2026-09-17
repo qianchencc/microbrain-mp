@@ -7,6 +7,15 @@ export function stateText(action, state) {
   return acSummary(state) || '状态未知';
 }
 
+// 执行结果自带回读时刻的权威状态（confirm 响应 observedStates）：
+// 覆盖普通状态查询里可能更旧的"最后已知值"；只取非空项，空项保留查询结果。
+export function mergeObservedStates(states, observedStates) {
+  if (!observedStates) return states
+  const merged = { ...states }
+  for (const [id, state] of Object.entries(observedStates)) if (state != null) merged[id] = state
+  return merged
+}
+
 export function reduceCardHold(state, event) {
   if (state === 'committed' || state === 'cancelled') return event === 'start' ? 'tracking' : state;
   if (event === 'complete') return 'committed';

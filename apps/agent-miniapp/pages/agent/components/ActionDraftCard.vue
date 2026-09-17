@@ -19,7 +19,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { readDeviceStates } from '@/apis/agent'
 import { operationLabel } from '../ac-draft.js'
-import { receiptPhase } from '../device-card-state.js'
+import { mergeObservedStates, receiptPhase } from '../device-card-state.js'
 import { receiptText } from '../conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
 const props = defineProps({ draft: {type:Object,required:true}, result:Object, busy:Boolean })
@@ -38,10 +38,12 @@ function phase(action) {
  return props.draft.status === 'CANCELLED' ? 'cancelled' : props.draft.status === 'EXPIRED' ? 'expired' : 'pending'
 }
 async function refresh() {
- try { const snapshot = await readDeviceStates(props.draft.draftId); states.value = snapshot.states; observation.value = (snapshot.source === 'simulation' ? '模拟状态' : '设备状态') + ' · 查询于 ' + new Date(snapshot.observedAt).toLocaleTimeString('zh-CN') }
+ try { const snapshot = await readDeviceStates(props.draft.draftId); states.value = mergeObservedStates(snapshot.states, props.result?.observedStates); observation.value = (snapshot.source === 'simulation' ? '模拟状态' : '设备状态') + ' · 查询于 ' + new Date(snapshot.observedAt).toLocaleTimeString('zh-CN') }
  catch { states.value = {}; observation.value = '设备状态暂不可用，回执不代表设备已到位' }
 }
-watch(() => props.result, refresh)
+// result 落地先同步合入回读权威状态（confirm 已含指令后读数），再异步补查其余设备；
+// 避免回执已显示而徽标仍按指令前快照渲染一拍。
+watch(() => props.result, result => { states.value = mergeObservedStates(states.value, result?.observedStates); refresh() })
 watch(pending, value => { if (value) refresh() })
 onMounted(refresh)
 </script>
