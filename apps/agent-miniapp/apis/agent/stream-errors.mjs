@@ -10,7 +10,7 @@ export const transportError = () => {
 	return error
 }
 
-const TERMINAL_EVENT_TYPES = new Set(['run.completed', 'run.failed', 'run.awaiting_confirmation'])
+const TERMINAL_EVENT_TYPES = new Set(['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'])
 
 export const createTerminalTracker = () => {
 	let seen = false

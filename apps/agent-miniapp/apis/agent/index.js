@@ -1,7 +1,7 @@
 import { agentUrl, getAgentHeaders } from '@/config'
 import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
-import { transportError } from './stream-errors.mjs'
+import { transportError, createTerminalTracker } from './stream-errors.mjs'
 import { requestJson } from './request.mjs'
 
 // 单个事件之间超过该时长无任何分块，视为流已挂死（正常运行的模型/工具间隔远小于此）。

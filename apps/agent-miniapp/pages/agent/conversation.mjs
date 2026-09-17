@@ -55,10 +55,14 @@ export function applyEvent(turn, event) {
 	if (event.type === 'message.delta') { turn.text += event.content || ''; turn.traceOpen = false }
 	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.traceOpen = false }
 	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
-	if (['run.completed', 'run.failed', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
+	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
 	if (event.type === 'run.failed') {
 		turn.error = event.message || '本次回答未完成'
 		for (const item of turn.activities) if (item.status === 'running') item.status = 'failed'
+	}
+	if (event.type === 'run.aborted') {
+		turn.error = event.message || '本次回答已停止'
+		for (const item of turn.activities) if (['running', 'searching'].includes(item.status)) item.status = 'skipped'
 	}
 }
 
@@ -70,7 +74,7 @@ export function restoreTurns(savedTurns = []) {
 		turn.result = saved.result || null
 		turn.traceOpen = false
 		const started = Date.parse(saved.startedAt || saved.events?.find(event => event.type === 'run.started')?.createdAt)
-		const finished = Date.parse(saved.events?.find(event => ['run.completed', 'run.failed', 'run.awaiting_confirmation'].includes(event.type))?.timestamp)
+		const finished = Date.parse(saved.events?.find(event => ['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type))?.timestamp)
 		turn.seconds = Number.isFinite(started) && Number.isFinite(finished) && finished >= started ? Math.max(1, Math.round((finished - started) / 1000)) : 0
 		return turn
 	})
