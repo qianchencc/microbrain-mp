@@ -22,6 +22,13 @@
 				<button open-type="share" class="footer-handle-item">
 					<uni-icons type="redo" :size="null" :color="null"></uni-icons>
 				</button>
+				<view
+					class="confirm-btn"
+					:class="{ confirmed }"
+					hover-class="confirm-hover"
+					@click="confirmReceive">
+					{{ confirmed ? '已确认' : '确认收到' }}
+				</view>
 			</view>
 		</view>
 	</view>
@@ -35,7 +42,8 @@
 		data() {
 			return {
 				isLikes: false,
-				detail: {}
+				detail: {},
+				confirmed: false
 			}
 		},
 		onLoad(e) {
@@ -61,6 +69,13 @@
 				const res = await fetchNewsById(id)
 				if (!res) return
 				this.detail = res.content
+			},
+
+			// 确认收到：确认后变淡不可点击
+			confirmReceive() {
+				if (this.confirmed) return
+				this.confirmed = true
+				uni.showToast({ title: '已确认收到', icon: 'none' })
 			}
 		}
 	}
@@ -165,6 +180,12 @@
 						border-right: none;
 					}
 
+					/* 去掉微信 button 默认伪元素：all:unset 使 button 失去 position:relative，
+					   默认 ::after（200% 宽高的绝对定位层）会相对页面铺开盖住旁边的按钮，抢占点击 */
+					&::after {
+						display: none;
+					}
+
 					.uni-icons {
 						font-size: 32upx;
 						margin-right: 10upx;
@@ -172,6 +193,29 @@
 						&.uniui-hand-up-filled {
 							color: #1C77FF;
 						}
+					}
+				}
+
+				.confirm-btn {
+					flex: 1;
+					height: 64upx;
+					margin: 20upx 0 20upx 20upx;
+					position: relative;
+					z-index: 1;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					border-radius: 32upx;
+					font-size: 26upx;
+					color: #ffffff;
+					background-color: #1C77FF;
+
+					&.confirm-hover {
+						opacity: 0.8;
+					}
+
+					&.confirmed {
+						opacity: 0.5;
 					}
 				}
 			}
