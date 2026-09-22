@@ -1,6 +1,8 @@
 <template>
 	<view>
 		<access-con v-if="name === '智慧门禁'" :menu="menu" @toBottom="toBottom"></access-con>
+		<light-con v-else-if="name === '智慧照明'" :menu="menu" @toBottom="toBottom"></light-con>
+		<ac-con v-else-if="name === '智慧空调'" :menu="menu" @toBottom="toBottom"></ac-con>
 		<view v-else class="con">
 			<view class="tip">为您找到以下服务:</view>
 			<view class="menu-list">
@@ -17,9 +19,11 @@
 import {usePermissionStoreHook} from "@/store/modules/permission";
 import {getUrl, jumpUrl} from "@/utils/tools";
 import AccessCon from "@/pages/index/coms/AccessCon.vue";
+import LightCon from "@/pages/index/coms/LightCon.vue";
+import AcCon from "@/pages/index/coms/AcCon.vue";
 
 export default {
-	components: {AccessCon},
+	components: {AccessCon, LightCon, AcCon},
 	props: {
 		name: String
 	},
