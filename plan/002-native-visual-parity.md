@@ -1,6 +1,8 @@
 # Native Visual Parity
 
-Goal: align apps/agent-miniapp with ../iot-agent-runtime/web. Use the H5's final component styles and business semantics, not a new visual design. The active goal is not complete yet.
+> Historical standalone-shell parity record. It is not the current product plan; use [`docs/README.md`](../docs/README.md) for the production entry.
+
+This record aligned `apps/agent-miniapp` with the earlier H5 reference. Remaining standalone parity gaps do not block customer-mainline feature work unless they reproduce a current customer defect.
 
 ## Implemented
 
@@ -27,7 +29,7 @@ Goal: align apps/agent-miniapp with ../iot-agent-runtime/web. Use the H5's final
 - Historical elapsed seconds now derive from existing server event timestamps and saved startedAt. The earlier assumption that restore had no timing information was incorrect; no backend change was necessary. Legacy events with no timestamps omit the count.
 - Voice is not present in the H5 reference and is not silently included as a new feature. WechatSI remains a separate platform-authorized integration.
 
-Suggested skills: emil-design-eng for motion/visual checks; implement for remaining business slices. Preserve original customer files and use apps/agent-miniapp as the only active native client.
+Historical continuation used `emil-design-eng` for motion/visual checks. New business slices now target the customer mini-program; use this shell only for regression evidence.
 
 ## Latest Browser-Sheet Alignment
 

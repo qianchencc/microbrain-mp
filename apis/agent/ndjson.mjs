@@ -81,3 +81,13 @@ export function createNdjsonStreamDecoder(onEvent) {
 		}
 	}
 }
+
+// 复用流式解码器解析一次性响应体（如消息接口 409 的 arraybuffer JSON）。
+export function parseBufferedJson(buffer) {
+	let parsed
+	let seen = false
+	const decoder = createNdjsonStreamDecoder(event => { if (!seen) { parsed = event; seen = true } })
+	decoder.push(buffer)
+	decoder.end()
+	return seen ? parsed : null
+}

@@ -9,9 +9,9 @@ const createRequest = (options = {}) => {
 	const request = {}
 	request.globalRequest = (url, method, data) => {
 		const token = getToken()
-		const district = useUserStoreHook().getDistrict.id
+		const district = useUserStoreHook().getDistrict?.id
 		headers['Authorization'] = token
-		headers['tenantCode'] = district
+		if (district) headers['tenantCode'] = district
 		return uni.request({
 			url: options.baseUrl ? options.baseUrl + url : globalConfig.baseUrl + url,
 			method,

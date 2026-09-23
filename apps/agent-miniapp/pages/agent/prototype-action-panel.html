@@ -1,0 +1,426 @@
+<!doctype html>
+<!-- PROTOTYPE — 回答「概览+草案合并面板」的交互与排版：3 种结构变体，?v= 或底部条切换。
+     数据取自真实场景：26楼办公区 空调→27° + 4 盏灯打开（共触及 7 台：5 草案 + 1 已亮不动 + 1 门禁排除）。
+     交互演示：页签切换 / 提案到达自动切草案 / 草案勾选与空调调参实时回流概览 / 常驻确认底栏 / 执行后状态刷新。
+     评完即弃，不进产物。 -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>操作面板原型 · 物联 Agent</title>
+<style>
+:root{--ink:#1e2f26;--sub:#5f6e66;--faint:#8b9991;--line:#e2e8e3;--card:#f4f7f4;--green:#176b54;--green-soft:#e4efe9;--amber:#8a6410;--amber-soft:#f7efdc}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#dfe4e0;font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;color:var(--ink);display:flex;justify-content:center;padding:28px 12px 110px}
+.phone{width:392px;max-width:100%;background:#f8faf8;border-radius:28px;box-shadow:0 24px 60px rgba(24,44,34,.22);overflow:hidden}
+.chat{padding:18px 14px 26px;min-height:660px}
+.bubble{margin-left:auto;max-width:80%;width:fit-content;background:linear-gradient(155deg,#247b62,#145b46);color:#fff;padding:11px 15px;border-radius:15px 15px 4px 15px;font-size:15px;line-height:1.6}
+.reply{margin-top:18px}
+.identity{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.avatar{width:28px;height:28px;border-radius:8px;background:linear-gradient(155deg,#247b62,#145b46);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center}
+.name{font-size:14px;font-weight:650}
+.meta{font-size:12px;color:var(--faint)}
+.lead{font-size:15px;line-height:1.75;margin-bottom:12px}
+.lead-toggle{font-size:11px;color:var(--faint);text-decoration:underline;cursor:pointer;margin:-6px 0 12px;display:inline-block}
+.proto-tag{position:fixed;top:14px;left:14px;font-size:11px;color:#7b887f;background:#fff;border:1px solid var(--line);padding:4px 10px;border-radius:99px;z-index:9}
+/* ============ 合并面板骨架 ============ */
+.panel{background:linear-gradient(#fff,#fbfcfa);border-radius:16px;box-shadow:inset 0 0 0 .5px rgba(26,55,43,.10),inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.06),0 10px 26px rgba(28,57,42,.07);overflow:hidden;margin-top:4px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px 0}
+.pmeta{font-size:11px;color:var(--faint)}
+.panel-strip{padding:8px 12px 0}
+/* 分段控件 */
+.seg{display:inline-flex;background:#ecefeb;border-radius:9px;padding:2px;flex-shrink:0}
+.seg button{border:0;background:none;font-size:11.5px;color:var(--sub);padding:4px 12px;border-radius:7px;cursor:pointer;font-weight:500;transition:all .18s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(28,57,42,.14),inset 0 0 0 .5px rgba(26,55,43,.06);font-weight:650}
+.seg.pulse{animation:segpulse .9s ease}
+@keyframes segpulse{0%,100%{box-shadow:0 0 0 0 rgba(23,107,84,0)}35%{box-shadow:0 0 0 5px rgba(23,107,84,.18)}}
+/* 面板体固定高：页签切换不改外卡高度，概览内部滚动 */
+.panel-body{height:248px;padding:2px 12px 12px;display:flex;flex-direction:column;animation:bodyin .22s ease;overflow:hidden}
+@keyframes bodyin{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:none}}
+/* 常驻底栏 */
+.panel-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-top:.5px solid var(--line);background:linear-gradient(#fbfdfb,#f5f8f5)}
+.foot-count{font-size:12px;color:var(--sub)}
+.foot-count b{color:var(--ink);font-variant-numeric:tabular-nums}
+.btn-primary{border:0;padding:8px 18px;border-radius:9px;font-size:12.5px;font-weight:650;background:var(--green);color:#fff;cursor:pointer;box-shadow:0 1px 2px rgba(23,107,84,.3),inset 0 1px 0 rgba(255,255,255,.18)}
+.btn-primary:disabled{background:#9fb5ab;box-shadow:none;cursor:default}
+.btn-done{background:#fff;color:var(--green);box-shadow:inset 0 0 0 .5px rgba(23,107,84,.35)}
+.foot-hint{font-size:11px;color:var(--faint)}
+/* ============ 速览条 + 概览页：与 DeviceRoster 像素级同源（inset-grouped 纸感） ============ */
+.rstrip{display:flex;border-radius:15px;background:linear-gradient(#fdfefd,#f3f6f2);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(26,55,43,.10),0 1px 2px rgba(28,57,42,.07),0 10px 24px rgba(28,57,42,.07);padding:2px 0}
+.rstat{flex:1;min-width:0;position:relative;padding:11px 4px 10px;text-align:center}
+.rstat+.rstat::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:.5px;background:#dbe2dc}
+.rstat b{display:block;color:#17251f;font-size:20px;font-weight:650;line-height:1.15;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+.rstat.act b{color:var(--green)}
+.rstat span{display:block;margin-top:2px;color:#8b9991;font-size:10.5px}
+.igroup{margin-top:10px;overflow:hidden;border-radius:14px;background:linear-gradient(#fff,#fbfcfa);box-shadow:inset 0 0 0 .5px rgba(26,55,43,.10),inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.06),0 8px 20px rgba(28,57,42,.05)}
+.igroup-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:8px 14px 6px;font-size:11px;font-weight:600;letter-spacing:.4px;color:var(--sub)}
+.igroup-head em{font-style:normal;font-weight:400;color:var(--faint);letter-spacing:0;flex-shrink:0}
+.irow{display:flex;align-items:center;gap:8px;min-height:38px;padding:9px 14px;position:relative;transition:opacity .2s}
+.irow+.irow::before{content:'';position:absolute;left:14px;right:0;top:0;height:.5px;background:#e7ebe7}
+.kbadge{flex-shrink:0;width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
+.kbadge svg{width:13px;height:13px;display:block}
+.kb-light{background:linear-gradient(155deg,#dfa63c,#c07f16)}
+.kb-ac{background:linear-gradient(155deg,#5b9ab8,#3d7590)}
+.kb-door{background:linear-gradient(155deg,#8696a2,#647684)}
+.irow-name{flex:1;min-width:0;font-size:13px;color:#263a30;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 迁移链：●现状 → 意图（行语法统一） */
+.tstate{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;max-width:40%;font-size:11px;color:#67736b;white-space:nowrap;overflow:hidden}
+.tstate i{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.dot-on{background:#c08c1d}.dot-off{background:#a9b4ad}
+.tto{flex-shrink:0;max-width:38%;font-size:11.5px;font-weight:650;color:var(--green);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .2s}
+.irow-skip .tto{color:#a8b3ac;font-weight:400}
+.irow-skip .irow-name{color:#7d8a82}
+.irow-skip .tstate{color:#a8b3ac}
+/* A：拟物 SVG 小物件（无徽章底）；B：真实插画缩略图 */
+.kpic{width:24px;height:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 1px 1px rgba(28,57,42,.16))}
+.kpic svg{width:24px;height:24px;display:block}
+.kimg{width:26px;height:26px;flex-shrink:0;border-radius:7px;background:linear-gradient(#f4f7f4,#e9eeea);box-shadow:inset 0 0 0 .5px rgba(26,55,43,.10),inset 0 1px 0 rgba(255,255,255,.7);object-fit:contain;padding:2px}
+.kbare{height:24px;width:auto;max-width:38px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 1px 1.5px rgba(28,57,42,.20))}
+/* 概览滚动容器：两端 alpha mask 渐隐 + 底部 v 形游标（对齐 DraftSheetLayer 的 cue-float 语言，只判到底不算余量） */
+.ov-shell{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.ov-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding-bottom:26px}
+.ov-scroll::-webkit-scrollbar{display:none}
+.ov-scroll.m-top{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 14px);mask-image:linear-gradient(to bottom,transparent,#000 14px)}
+.ov-scroll.m-bot{-webkit-mask-image:linear-gradient(to top,transparent,#000 14px);mask-image:linear-gradient(to top,transparent,#000 14px)}
+.ov-scroll.m-top.m-bot{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 14px,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(to bottom,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
+.ov-cue{position:absolute;z-index:5;left:50%;bottom:8px;display:flex;align-items:center;justify-content:center;width:38px;height:26px;border:1px solid #dbe3dd;border-radius:13px;background:rgba(252,253,252,.95);box-shadow:0 3px 12px rgba(28,57,42,.12),inset 0 1px 0 #fff;transform:translateX(-50%);cursor:pointer;transition:opacity .22s ease,transform .22s cubic-bezier(.23,1,.32,1);animation:cue-nudge 1.6s cubic-bezier(.32,.72,0,1) .5s 2}
+.ov-cue svg{width:11px;height:11px;display:block}
+.ov-cue.off{opacity:0;transform:translateX(-50%) translateY(6px);pointer-events:none}
+@keyframes cue-nudge{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}
+/* ============ 变体 B：边框嵌井——stats 为卡面顶层，列表凹进同一张卡 ============ */
+.fuse{position:relative;display:flex;flex-direction:column;height:100%;border-radius:15px;background:linear-gradient(#fff,#fbfcfa);box-shadow:inset 0 0 0 .5px rgba(26,55,43,.10),inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.06),0 10px 26px rgba(28,57,42,.07);overflow:hidden}
+.fuse-stats{display:flex;flex-shrink:0;background:linear-gradient(#fdfefd,#f3f6f2);box-shadow:0 .5px 0 #e2e8e3;padding:2px 0}
+.fuse-list{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;margin:0 8px 9px;padding:6px 0 26px;border-radius:0 0 10px 10px;background:#fcfdfc;box-shadow:inset 0 2px 7px rgba(28,57,42,.10),inset 0 0 0 .5px rgba(26,55,43,.10)}
+.fuse-list::-webkit-scrollbar{display:none}
+.fuse>.ov-cue{bottom:13px}
+.fgroup-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:11px 14px 4px;font-size:11px;font-weight:600;letter-spacing:.4px;color:var(--sub)}
+.fgroup-head em{font-style:normal;font-weight:400;color:var(--faint);flex-shrink:0}
+.fgroup+.fgroup{border-top:5px solid #eef1ee}
+/* ============ 草案页：设备卡轨（沿用草案卡语言） ============ */
+.rail{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:none;flex:1;min-height:0;align-items:center}
+.rail::-webkit-scrollbar{display:none}
+.dcard{width:132px;flex-shrink:0;background:#f7f9f7;border-radius:13px;box-shadow:inset 0 0 0 .5px rgba(26,55,43,.10);padding:8px;cursor:pointer;transition:opacity .2s,box-shadow .2s;position:relative;user-select:none}
+.dcard.unsel{opacity:.42}
+.dcard.unsel:hover{opacity:.6}
+.dart{height:66px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;letter-spacing:.5px;margin-bottom:7px;position:relative}
+.dstate{position:absolute;left:5px;bottom:5px;font-size:8.5px;font-weight:600;padding:2px 6px;border-radius:10px;background:rgba(255,255,255,.88);color:#5f6e66;letter-spacing:0;box-shadow:0 1px 2px rgba(20,40,30,.15)}
+.da-light{background:linear-gradient(150deg,#d9b25c,#b08a2e)}
+.da-ac{background:linear-gradient(150deg,#6ba7c9,#487f9e)}
+.da-door{background:linear-gradient(150deg,#9d8ecb,#7a68a8)}
+.dname{font-size:11.5px;font-weight:600;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+.dloc{font-size:9.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:5px}
+.dfrom{display:block;font-size:9.5px;color:#8b9991;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5}
+.dto{display:block;font-size:9.5px;color:var(--green);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5}
+.dcheck{position:absolute;top:6px;right:6px;width:17px;height:17px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(23,107,84,.4)}
+.dcard.unsel .dcheck{background:#fff;color:#b9c2bc;box-shadow:inset 0 0 0 .5px #c8cfc9}
+.stepper{display:flex;align-items:center;justify-content:space-between;margin-top:6px;background:#fff;border-radius:8px;box-shadow:inset 0 0 0 .5px rgba(26,55,43,.12);padding:2px}
+.stepper button{border:0;background:none;width:24px;height:22px;font-size:13px;color:var(--green);cursor:pointer;font-weight:700;border-radius:6px}
+.stepper button:active{background:var(--green-soft)}
+.stepper span{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.dcard.busy{pointer-events:none}
+.dcard.busy::after{content:'执行中…';position:absolute;inset:0;border-radius:13px;background:rgba(247,249,247,.75);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--sub);animation:shimmer 1.1s infinite}
+@keyframes shimmer{50%{opacity:.55}}
+.dcard.done{opacity:1}
+.dok{position:absolute;top:6px;right:6px;width:17px;height:17px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center}
+/* 草案页内确认区（变体 B / C） */
+.draft-confirm{display:flex;align-items:center;justify-content:space-between;padding-top:10px;margin-top:2px;border-top:.5px dashed var(--line)}
+/* 变体 C：行内展开概览 */
+.ov-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:none;font-size:11.5px;color:var(--sub);padding:8px 2px 4px;cursor:pointer}
+.ov-toggle .chev{transition:transform .2s;font-size:10px;color:var(--faint)}
+.ov-toggle.open .chev{transform:rotate(90deg)}
+.ov-collapse{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.ov-collapse.open{max-height:none;flex:1;min-height:0;display:flex;flex-direction:column}
+/* 结果行 */
+.result-line{margin-top:10px;font-size:11.5px;color:var(--green);display:flex;gap:6px;align-items:baseline}
+/* switcher */
+.switcher{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#12251d;color:#fff;padding:9px 14px;border-radius:99px;font-size:13px;box-shadow:0 10px 28px rgba(10,25,18,.4);z-index:9;white-space:nowrap}
+.switcher button{background:none;border:0;color:#9fd4bf;font-size:15px;cursor:pointer;padding:0 5px}
+.switcher .vlabel{min-width:170px;text-align:center;color:#dcebe3;font-size:12px}
+.switcher .vlabel b{color:#fff}
+.switcher .replay{color:#e8c87a;font-size:11.5px;border-left:1px solid rgba(255,255,255,.15);padding-left:12px}
+</style>
+</head>
+<body>
+<div class="proto-tag">PROTOTYPE · 操作面板 · ← → 变体</div>
+<svg width="0" height="0" style="position:absolute"><defs>
+ <radialGradient id="bulbG" cx="38%" cy="30%" r="82%"><stop offset="0" stop-color="#fff6d0"/><stop offset=".55" stop-color="#f4c65a"/><stop offset="1" stop-color="#dd9c24"/></radialGradient>
+ <linearGradient id="acG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6fafc"/><stop offset="1" stop-color="#d0e0e9"/></linearGradient>
+ <linearGradient id="acVent" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8f1f5"/><stop offset="1" stop-color="#c3d8e4"/></linearGradient>
+ <linearGradient id="doorG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b9caa"/><stop offset="1" stop-color="#64788a"/></linearGradient>
+</defs></svg>
+<div class="phone">
+ <div class="chat">
+  <div class="bubble">请调整下26楼办公区的空调到27度，并且打开一下26楼办公区的灯</div>
+  <div class="reply">
+   <div class="identity"><div class="avatar">灵</div><span class="name">物联 Agent</span><span class="meta">✓ 已思考 42 秒</span></div>
+   <p class="lead" id="lead">共触及 7 台设备，拟执行 5 项操作；可在下方草案中调整。</p>
+   <span class="lead-toggle" id="leadToggle">对照：瘦身前正文 ›</span>
+   <div id="panel"></div>
+  </div>
+ </div>
+</div>
+<div class="switcher">
+ <button id="prev">←</button><div class="vlabel" id="vlabel"></div><button id="next">→</button>
+ <button class="replay" id="replay">↻ 重播提案到达</button>
+</div>
+<script>
+/* ================= 数据模型 ================= */
+/* inventory：提案时刻观测快照（state 只来自观测，门禁天然无状态） */
+const inv=[
+ {id:'ac1',kind:'ac', name:'空调-26办公区（机房前）',loc:'26楼办公区',state:'制冷 · 26° · 低风'},
+ {id:'l1', kind:'light',name:'1回路过道射灯',loc:'26楼办公区',on:false},
+ {id:'l2', kind:'light',name:'2回路格栅灯',loc:'26楼办公区',on:false},
+ {id:'l3', kind:'light',name:'3回路格栅灯',loc:'26楼办公区',on:false},
+ {id:'l4', kind:'light',name:'2回路过道格栅灯',loc:'26楼办公区',on:false},
+ {id:'l5', kind:'light',name:'1回路备用筒灯',loc:'26楼办公区',on:true, disp:'none'},
+ {id:'d1', kind:'door',name:'大门门禁',loc:'26楼办公区',state:'—',disp:'excluded'},
+];
+/* draft：活草案，selected/temp 会被用户改 */
+const draft=[
+ {id:'ac1',kind:'ac', name:'空调-26办公区（机房前）',loc:'26楼办公区',sel:true,temp:27,fan:'低风',mode:'制冷'},
+ {id:'l1', kind:'light',name:'1回路过道射灯',loc:'26楼办公区',sel:true},
+ {id:'l2', kind:'light',name:'2回路格栅灯',loc:'26楼办公区',sel:true},
+ {id:'l3', kind:'light',name:'3回路格栅灯',loc:'26楼办公区',sel:true},
+ {id:'l4', kind:'light',name:'2回路过道格栅灯',loc:'26楼办公区',sel:true},
+];
+const GLYPH={
+ light:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.3 2.2h4.6c.2-.9.6-1.6 1.3-2.2A6 6 0 0 0 12 3z"/></svg>',
+ ac:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9M12 3l-2 2.5M12 3l2 2.5M12 21l-2-2.5M12 21l2-2.5"/></svg>',
+ door:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg>'};
+const KB={light:'kb-light',ac:'kb-ac',door:'kb-door'};
+const DA={light:'da-light',ac:'da-ac',door:'da-door'};
+/* A：拟物小物件 SVG（渐变 defs 在 body 顶部） */
+const SK={
+ light:'<svg viewBox="0 0 24 24"><ellipse cx="12" cy="9" rx="6.4" ry="6.8" fill="url(#bulbG)"/><ellipse cx="9.6" cy="6.4" rx="2" ry="1.3" fill="#fff" opacity=".55"/><path d="M9.4 15h5.2l-.5 3.4a2.1 2.1 0 0 1-4.2 0z" fill="#a8b2b9"/><path d="M10 16.6h4M10.3 18h3.4" stroke="#8b959d" stroke-width=".7" fill="none"/></svg>',
+ ac:'<svg viewBox="0 0 24 24"><rect x="1.5" y="6" width="21" height="11" rx="3" fill="url(#acG)"/><rect x="4" y="9.5" width="16" height="4.5" rx="1.4" fill="url(#acVent)"/><path d="M6 9.8v4M9 9.8v4M12 9.8v4M15 9.8v4M18 9.8v4" stroke="#a9c4d2" stroke-width=".9"/><circle cx="19.3" cy="8" r=".8" fill="#5f9eba"/></svg>',
+ door:'<svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="1.6" fill="url(#doorG)" stroke="#576876" stroke-width=".8"/><rect x="7.5" y="4.6" width="9" height="6.6" rx="1" fill="none" stroke="rgba(255,255,255,.42)" stroke-width=".9"/><rect x="7.5" y="13.6" width="9" height="5.6" rx="1" fill="none" stroke="rgba(255,255,255,.42)" stroke-width=".9"/><circle cx="15.6" cy="12.6" r="1.1" fill="#eef3f6"/></svg>'};
+/* B：真实插画缩略图 */
+const ART={light:'proto-art/lighting-grille-luminaire.png',ac:'proto-art/central-ac-cassette.png',door:'proto-art/access-sliding-door.png'};
+function marker(e){
+ if(cur==='B')return`<img class="kimg" src="${ART[e.kind]}" alt="">`;
+ if(cur==='A')return`<img class="kbare" src="${ART[e.kind]}" alt="">`;
+ return`<span class="kbadge ${KB[e.kind]}">${GLYPH[e.kind]}</span>`;
+}
+
+/* ================= 共享状态（每次切变体/重播重置） ================= */
+let tab, phase, temp;
+function reset(){tab='overview';phase='pending';temp=27;draft.forEach(d=>{d.sel=true;if(d.kind==='ac')d.temp=27});inv.forEach(e=>{if(e.id==='ac1')e.state='制冷 · 26° · 低风';if(e.kind==='light'&&e.id!=='l5')e.on=false});}
+
+/* ================= 派生：概览行 = 观测事实 join 活草案 ================= */
+function liveDisp(e){
+ const a=draft.find(d=>d.id===e.id);
+ if(!a)return{cls:'skip',txt:e.disp==='excluded'?'已排除':'不动'};
+ if(!a.sel)return{cls:'skip',txt:'未选择'};
+ if(a.kind==='ac')return{cls:'',txt:`→ ${a.temp}°`};
+ if(a.kind==='door')return{cls:'',txt:'→ 开门'};
+ return{cls:'',txt:'→ 打开'};
+}
+function stateSlot(e){
+ if(e.kind==='light')return`<span class="tstate"><i class="${e.on?'dot-on':'dot-off'}"></i>${e.on?'已点亮':'已关闭'}</span>`;
+ return`<span class="tstate">${e.state}</span>`;
+}
+function stats(){
+ const sel=draft.filter(d=>d.sel).length;
+ const idle=inv.filter(e=>!draft.find(d=>d.id===e.id)||!draft.find(d=>d.id===e.id).sel).length;
+ return{n:inv.length,sel,idle};
+}
+function stripHTML(){
+ const s=stats();
+ return`<div class="rstrip">
+  <div class="rstat"><b>${s.n}</b><span>共找到</span></div>
+  <div class="rstat act"><b>${s.sel}</b><span>拟执行</span></div>
+  <div class="rstat"><b>${s.idle}</b><span>不动</span></div>
+ </div>`;
+}
+
+/* ================= 渲染：概览页 ================= */
+function renderOverview(){
+ const zones={};inv.forEach(e=>{(zones[e.loc]=zones[e.loc]||[]).push(e)});
+ return Object.entries(zones).map(([loc,items])=>{
+  const act=items.filter(e=>{const d=liveDisp(e);return d.cls!=='skip'}).length;
+  return`<div class="igroup"><div class="igroup-head">${loc}<em>${act} 项拟执行</em></div>
+   ${items.map(e=>{
+    const d=liveDisp(e);
+    return`<div class="irow${d.cls==='skip'?' irow-skip':''}">${marker(e)}<span class="irow-name">${e.name}</span>${stateSlot(e)}<span class="tto">${d.txt}</span></div>`;
+   }).join('')}
+  </div>`;
+ }).join('');
+}
+const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="#4a5d52" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+function renderOverviewScroll(){return`<div class="ov-shell"><div class="ov-scroll">${renderOverview()}</div><div class="ov-cue">${CHEV}</div></div>`}
+/* 变体 B：stats 卡头 + 列表同卡延伸；区域组退化为组内 section（无嵌套卡壳） */
+function renderFusedOverview(){
+ const zones={};inv.forEach(e=>{(zones[e.loc]=zones[e.loc]||[]).push(e)});
+ const s=stats();
+ return`<div class="fuse ov-shell">
+  <div class="fuse-stats">
+   <div class="rstat"><b>${s.n}</b><span>共找到</span></div>
+   <div class="rstat act"><b>${s.sel}</b><span>拟执行</span></div>
+   <div class="rstat"><b>${s.idle}</b><span>不动</span></div>
+  </div>
+  <div class="fuse-list ov-scroll">
+   ${Object.entries(zones).map(([loc,items])=>{
+    const act=items.filter(e=>liveDisp(e).cls!=='skip').length;
+    return`<div class="fgroup"><div class="fgroup-head">${loc}<em>${act} 项拟执行</em></div>
+     ${items.map(e=>{
+      const d=liveDisp(e);
+      return`<div class="irow${d.cls==='skip'?' irow-skip':''}">${marker(e)}<span class="irow-name">${e.name}</span>${stateSlot(e)}<span class="tto">${d.txt}</span></div>`;
+     }).join('')}
+    </div>`}).join('')}
+  </div>
+  <div class="ov-cue">${CHEV}</div>
+ </div>`;
+}
+
+/* ================= 渲染：草案页卡轨 ================= */
+function renderRail(confirmInside){
+ const cards=draft.map(d=>{
+  const inv_e=inv.find(e=>e.id===d.id);
+  const from=d.kind==='ac'?(phase==='done'?`制冷 · ${d.temp}° · ${d.fan}`:'制冷 · 26° · 低风'):(inv_e.on?'已点亮':'已关闭');
+  const to=d.kind==='ac'?`→ ${d.mode} · ${d.temp}° · ${d.fan}`:'→ 开启';
+  const cls=['dcard',d.sel?'':'unsel',phase==='executing'?'busy':'',phase==='done'?'done':''].join(' ');
+  return`<div class="${cls}" data-card="${d.id}">
+   <div class="dart ${DA[d.kind]}">${KB[d.kind][1]}<span class="dstate">${d.kind==='ac'?(phase==='done'?`${d.temp}°`:'26°'):(inv_e.on?'已点亮':'已关闭')}</span></div>
+   ${phase==='done'?'<div class="dok">✓</div>':phase!=='executing'?`<div class="dcheck">${d.sel?'✓':''}</div>`:''}
+   <div class="dname">${d.name}</div><div class="dloc">${d.loc}</div>
+   <span class="dfrom">${from}</span><span class="dto">${to}</span>
+   ${d.kind==='ac'&&phase==='pending'?`<div class="stepper"><button data-step="-1" data-id="${d.id}">−</button><span>${d.temp}°</span><button data-step="1" data-id="${d.id}">+</button></div>`:''}
+  </div>`;
+ }).join('');
+ const s=stats();
+ const confirm=confirmInside?`<div class="draft-confirm"><span class="foot-count">已选 <b>${s.sel}</b>/${draft.length}</span>${confirmBtn()}</div>`:'';
+ return`<div class="rail">${cards}</div>${confirm}`;
+}
+function confirmBtn(){
+ if(phase==='executing')return`<button class="btn-primary" disabled>执行中…</button>`;
+ if(phase==='done')return`<button class="btn-primary btn-done" disabled>✓ 已完成</button>`;
+ const s=stats();
+ return`<button class="btn-primary" id="confirmBtn" ${s.sel?'':'disabled'}>确认执行 · ${s.sel}</button>`;
+}
+function footHTML(inner){
+ const s=stats();
+ if(phase==='done')return`<div class="panel-foot"><span class="result-line" style="margin:0">✓ 5/5 已受理</span>${confirmBtn()}</div>`;
+ return`<div class="panel-foot"><span class="foot-count">已选 <b>${s.sel}</b>/${draft.length} · 含 1 台空调调温</span>${confirmBtn()}</div>`;
+}
+function segHTML(){
+ return`<div class="seg" id="seg"><button data-tab="overview" class="${tab==='overview'?'on':''}">概览</button><button data-tab="draft" class="${tab==='draft'?'on':''}">草案</button></div>`;
+}
+
+/* ================= 三个变体 ================= */
+function renderA(){ /* 分段控件 + 常驻底栏（推荐） */
+ return`<div class="panel">
+  <div class="panel-head"><span class="pmeta">${tab==='overview'?'概览 · 按位置分组':'草案 · 点卡片可取消'}</span>${segHTML()}</div>
+  <div class="panel-strip">${stripHTML()}</div>
+  <div class="panel-body" id="pbody">${tab==='overview'?renderOverviewScroll():renderRail(false)}</div>
+  ${footHTML()}
+ </div>`;
+}
+function renderB(){ /* 一体化：stats 是清单卡头，列表从圆角延伸（草案页无速览条） */
+ return`<div class="panel">
+  <div class="panel-head"><span class="pmeta">${tab==='overview'?'概览 · 按位置分组':'草案 · 点卡片可取消'}</span>${segHTML()}</div>
+  <div class="panel-body" id="pbody">${tab==='overview'?renderFusedOverview():renderRail(false)}</div>
+  ${footHTML()}
+ </div>`;
+}
+let ovOpen=false;
+function renderC(){ /* 无页签：卡轨为主 + 概览行内展开（轻改） */
+ return`<div class="panel">
+  <div class="panel-head"><span class="pmeta">草案 · ${draft.length} 台 · 点卡片可取消</span><span class="foot-hint"></span></div>
+  <div class="panel-strip">${stripHTML()}</div>
+  <div class="panel-body" id="pbody">
+   ${ovOpen?'':renderRail(false)}
+   <button class="ov-toggle${ovOpen?' open':''}" id="ovToggle"><span>${ovOpen?'收起清单 · 回到草案':'查看全部 '+inv.length+' 台设备 · 含 '+(inv.length-draft.length)+' 台不操作'}</span><span class="chev">›</span></button>
+   <div class="ov-collapse${ovOpen?' open':''}" id="ovBox">${renderOverviewScroll()}</div>
+  </div>
+  ${footHTML()}
+ </div>`;
+}
+
+const variants={
+ A:{label:'A · 页签 + 常驻确认底栏（推荐）',render:renderA},
+ B:{label:'B · 一体化卡头清单',render:renderB},
+ C:{label:'C · 卡轨为主 + 概览行内展开',render:renderC},
+};
+let cur='A';
+const panel=document.getElementById('panel');
+function mount(){panel.innerHTML=variants[cur].render();wire();}
+function updScroll(sh){
+ const el=sh.querySelector('.ov-scroll'),cue=sh.querySelector('.ov-cue');
+ const more=el.scrollTop+el.clientHeight<el.scrollHeight-4;
+ el.classList.toggle('m-top',el.scrollTop>4);el.classList.toggle('m-bot',more);
+ if(cue)cue.classList.toggle('off',!more);
+}
+function wireMasks(){panel.querySelectorAll('.ov-shell').forEach(sh=>{
+ const el=sh.querySelector('.ov-scroll'),cue=sh.querySelector('.ov-cue');
+ updScroll(sh);el.onscroll=()=>updScroll(sh);
+ if(cue)cue.onclick=()=>el.scrollBy({top:el.clientHeight*.8,behavior:'smooth'});
+})}
+function wire(){
+ const seg=document.getElementById('seg');
+ if(seg)seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;remountBody()});
+ const pb=document.getElementById('pbody');
+ if(pb){
+  pb.querySelectorAll('[data-card]').forEach(c=>c.onclick=e=>{
+   if(phase!=='pending'||e.target.dataset.step)return;
+   const d=draft.find(x=>x.id===c.dataset.card);d.sel=!d.sel;syncAll();
+  });
+  pb.querySelectorAll('[data-step]').forEach(b=>b.onclick=e=>{
+   e.stopPropagation();const d=draft.find(x=>x.id===b.dataset.id);
+   d.temp=Math.max(16,Math.min(30,d.temp+ +b.dataset.step));temp=d.temp;syncAll();
+  });
+ }
+ const ot=document.getElementById('ovToggle');
+ if(ot)ot.onclick=()=>{ovOpen=!ovOpen;mount()};
+ const cb=document.getElementById('confirmBtn');
+ if(cb)cb.onclick=execute;
+ wireMasks();
+}
+function remountBody(){
+ /* 只换 body 内容，保 head/foot 不闪 */
+ const pb=document.getElementById('pbody');
+ if(cur==='A'){pb.innerHTML=tab==='overview'?renderOverviewScroll():renderRail(false);}
+ else if(cur==='B'){pb.innerHTML=tab==='overview'?renderFusedOverview():renderRail(false);}
+ wire();refreshFoot();
+}
+function syncAll(){
+ /* 草案变化 → 概览处置槽 + 速览条 + 底栏全部联动。
+    若当前在草案页，直接重挂（概览不可见无所谓）；在概览页则不动 DOM 结构只改文字也行——
+    原型简化：整体重挂当前页 */
+ mount();
+}
+function refreshFoot(){
+ const f=panel.querySelector('.panel-foot');
+ if(f&&cur!=='B')f.outerHTML=footHTML();
+ const cb=document.getElementById('confirmBtn');if(cb)cb.onclick=execute;
+}
+function execute(){
+ phase='executing';mount();
+ setTimeout(()=>{
+  phase='done';
+  inv.forEach(e=>{const d=draft.find(x=>x.id===e.id);if(!d||!d.sel)return;
+   if(e.kind==='light')e.on=true;if(e.id==='ac1')e.state=`制冷 · ${d.temp}° · ${d.fan}`;});
+  mount();
+ },1400);
+}
+/* 重播提案到达：先落概览 600ms → 自动切草案（演示 auto-switch） */
+document.getElementById('replay').onclick=()=>{
+ reset();tab='overview';mount();
+ const seg=document.getElementById('seg');if(seg)seg.classList.add('pulse');
+ setTimeout(()=>{tab='draft';mount();const s2=document.getElementById('seg');if(s2)s2.classList.add('pulse')},650);
+};
+/* 变体切换 */
+const order=['A','B','C'],lb=document.getElementById('vlabel');
+function show(k){cur=k;reset();ovOpen=false;mount();lb.innerHTML=`<b>${k}</b> — ${variants[k].label.split('· ')[1]}`;history.replaceState(null,'','?v='+k)}
+document.getElementById('prev').onclick=()=>show(order[(order.indexOf(cur)+2)%3]);
+document.getElementById('next').onclick=()=>show(order[(order.indexOf(cur)+1)%3]);
+addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName))return;if(e.key==='ArrowLeft')document.getElementById('prev').click();if(e.key==='ArrowRight')document.getElementById('next').click()});
+/* 旧正文对照 */
+let slim=true;
+const slimTxt='共触及 7 台设备，拟执行 5 项操作；可在下方草案中调整。';
+const fatTxt='拟操作范围如下：将空调-26办公区（机房前）的设定温度调整为27度，该空调当前处于开机状态（制冷、低风速），本次只改温度，不改变其他设置。打开26楼办公区的全部4盏照明：1回路过道射灯、2回路格栅灯、3回路格栅灯、2回路过道格栅灯，这4盏目前均为关闭状态。如需保留或排除其中某几盏灯，可在草案中调整选择。';
+document.getElementById('leadToggle').onclick=()=>{slim=!slim;document.getElementById('lead').textContent=slim?slimTxt:fatTxt;document.getElementById('leadToggle').textContent=slim?'对照：瘦身前正文 ›':'对照：瘦身后正文 ›'};
+cur=new URLSearchParams(location.search).get('v')||'A';if(!variants[cur])cur='A';
+show(cur);
+</script>
+</body>
+</html>

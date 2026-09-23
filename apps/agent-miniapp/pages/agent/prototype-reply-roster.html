@@ -1,0 +1,185 @@
+<!doctype html>
+<!-- PROTOTYPE — 回答「结构化正文怎么呈现才不闷」：同一轮回复的 4 种排版变体，?v= 或底部条切换。
+     数据取自真实产出：找到 7 盏灯（2 区域 / 3 已亮 / 4 拟打开）。评完即弃，不进产物。 -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>回复正文原型 · 物联 Agent</title>
+<style>
+:root{--ink:#1e2f26;--sub:#5f6e66;--faint:#8b9991;--line:#e2e8e3;--card:#f4f7f4;--green:#176b54;--green-soft:#e4efe9;--amber:#8a6410;--amber-soft:#f7efdc}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#dfe4e0;font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;color:var(--ink);display:flex;justify-content:center;padding:28px 12px 96px}
+.phone{width:392px;max-width:100%;background:#f8faf8;border-radius:28px;box-shadow:0 24px 60px rgba(24,44,34,.22);overflow:hidden}
+.chat{padding:18px 14px 26px;min-height:640px}
+.bubble{margin-left:auto;max-width:80%;width:fit-content;background:linear-gradient(155deg,#247b62,#145b46);color:#fff;padding:11px 15px;border-radius:15px 15px 4px 15px;font-size:15px;line-height:1.6}
+.reply{margin-top:18px}
+.identity{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.avatar{width:28px;height:28px;border-radius:8px;background:linear-gradient(155deg,#247b62,#145b46);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center}
+.name{font-size:14px;font-weight:650}
+.meta{font-size:12px;color:var(--faint)}
+.lead{font-size:15px;line-height:1.75;margin-bottom:12px}
+.draft{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.draft-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--sub)}
+.draft-note{font-size:12px;color:var(--faint);margin-top:4px}
+.draft-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.btn-quiet{padding:9px 14px;border-radius:9px;font-size:12px;color:#718078}
+.btn-primary{padding:9px 18px;border-radius:9px;font-size:12.5px;font-weight:600;background:var(--green);color:#fff}
+/* 变体通用 */
+.roster{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px}
+.zone{margin-top:8px}
+.zone:first-child{margin-top:0}
+.zone-name{font-size:11px;color:var(--sub);font-weight:600;letter-spacing:.2px;margin-bottom:4px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px dashed #e7ece8}
+.zone .row:first-of-type{border-top:0}
+.row-name{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{flex-shrink:0;font-size:11px;padding:2px 8px;border-radius:20px}
+.pill-on{background:var(--green-soft);color:var(--green)}
+.pill-off{background:#eceeeb;color:#6b7770}
+.act-tag{flex-shrink:0;font-size:11px;color:var(--green);font-weight:600}
+.switcher{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:#12251d;color:#fff;padding:9px 16px;border-radius:99px;font-size:13px;box-shadow:0 10px 28px rgba(10,25,18,.4);z-index:9;white-space:nowrap}
+.switcher button{background:none;border:0;color:#9fd4bf;font-size:16px;cursor:pointer;padding:0 6px}
+.switcher .vlabel{min-width:190px;text-align:center;color:#dcebe3}
+.switcher .vlabel b{color:#fff}
+/* variant B chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 9px;border-radius:8px;background:#fff;border:1px solid var(--line);margin:0 5px 5px 0}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-on{background:#2e9c74}.dot-off{background:#b9c2bc}
+.chip.act{border-color:#7fb8a2;background:var(--green-soft)}
+/* variant C — Apple inset-grouped + 轻拟物 */
+.stat-strip{display:flex;border-radius:15px;margin-bottom:12px;background:linear-gradient(#fdfefd,#f3f6f2);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(26,55,43,.10),0 1px 2px rgba(28,57,42,.07),0 10px 24px rgba(28,57,42,.07);padding:2px 0}
+.stat{flex:1;text-align:center;padding:11px 4px 10px;position:relative}
+.stat+.stat::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:.5px;background:#dbe2dc}
+.stat b{display:block;font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.3px;color:var(--ink);line-height:1.15}
+.stat span{display:block;font-size:10.5px;color:var(--faint);margin-top:2px}
+.stat.g b{color:var(--green)}
+.stat.amber b{color:#8a6410}
+/* inset grouped list：每个区域一张圆角卡，hairline 从左侧内缩 */
+.igroup{background:linear-gradient(#fff,#fbfcfa);border-radius:14px;box-shadow:inset 0 0 0 .5px rgba(26,55,43,.10),inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.06),0 8px 20px rgba(28,57,42,.05);overflow:hidden}
+.igroup + .igroup{margin-top:12px}
+.igroup-head{padding:8px 14px 6px;font-size:11px;font-weight:600;letter-spacing:.4px;color:var(--sub);display:flex;justify-content:space-between;align-items:baseline}
+.igroup-head em{font-style:normal;font-weight:400;color:var(--faint);letter-spacing:0}
+.irow{display:flex;align-items:center;gap:8px;padding:9px 14px;position:relative;min-height:38px}
+.irow+.irow::before{content:'';position:absolute;left:14px;right:0;top:0;height:.5px;background:#e7ebe7}
+.irow-name{flex:1;min-width:0;font-size:13px;color:#263a30;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ipill{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-size:10.5px;line-height:1;padding:4px 8px;border-radius:20px;box-shadow:inset 0 0 0 .5px rgba(26,55,43,.08),inset 0 1px 0 rgba(255,255,255,.6)}
+.ipill i{width:5px;height:5px;border-radius:50%;display:block}
+.ipill-on{background:linear-gradient(#fbf6e7,#f6eed6);color:#77530f}.ipill-on i{background:#c08c1d}
+.ipill-off{background:linear-gradient(#f2f4f1,#e9ede9);color:#67736b}.ipill-off i{background:#a9b4ad}
+.iact{flex-shrink:0;font-size:11.5px;font-weight:650;color:var(--green);display:inline-flex;align-items:center;gap:2px}
+.iact::after{content:'›';font-weight:500;opacity:.7}
+.irow-skip .iact{color:#a8b3ac;font-weight:400}.irow-skip .iact::after{content:''}
+.irow-skip .irow-name{color:#7d8a82}
+/* variant D — 混合设备类：类型小图标 + 空调摘要态 + 门禁无状态 */
+.ikind{width:14px;height:14px;flex-shrink:0;opacity:.55;display:flex;align-items:center}
+.ikind svg{width:14px;height:14px;display:block}
+.istate{flex-shrink:0;font-size:11px;color:#67736b;white-space:nowrap}
+.irow-skip .istate{color:#a8b3ac}
+/* 现状 variant: prose wall */
+.prose p{font-size:15px;line-height:1.8;margin-bottom:10px}
+.prose ul{margin:8px 0 12px;padding-left:20px;font-size:15px;line-height:1.8}
+.proto-tag{position:fixed;top:14px;left:14px;font-size:11px;color:#7b887f;background:#fff;border:1px solid var(--line);padding:4px 10px;border-radius:99px;z-index:9}
+</style>
+</head>
+<body>
+<div class="proto-tag">PROTOTYPE · 回复正文排版 · ← → 切换</div>
+<div class="phone">
+ <div class="chat">
+  <div class="bubble">把没亮的灯都打开</div>
+  <div class="reply">
+   <div class="identity"><div class="avatar">灵</div><span class="name">物联 Agent</span><span class="meta">✓ 已思考 46 秒</span></div>
+   <div id="variant"></div>
+   <div class="draft">
+    <div class="draft-head"><span><b style="color:var(--ink)">操作草案</b> · 4 台设备</span><span>4/4 已选</span></div>
+    <div class="draft-note">26楼运营办公区 1 盏 · 杨国英办公室 3 盏 —— 点卡片可取消单台</div>
+    <div class="draft-actions"><span class="btn-quiet">取消</span><span class="btn-primary">确认执行 · 4</span></div>
+   </div>
+  </div>
+ </div>
+</div>
+<div class="switcher">
+ <button id="prev">←</button><div class="vlabel" id="vlabel"></div><button id="next">→</button>
+</div>
+<script>
+const zones=[
+ {name:'26楼运营办公区',items:[
+  {name:'1回路过道射灯',on:false,act:true},
+  {name:'2回路格栅灯',on:true},
+  {name:'3回路格栅灯',on:true},
+  {name:'2回路过道格栅灯',on:true}]},
+ {name:'杨国英办公室',items:[
+  {name:'1回路栅格灯',on:false,act:true},
+  {name:'2回路栅格灯',on:false,act:true},
+  {name:'3回路窗帘灯带',on:false,act:true}]},
+];
+const lead='找到 7 盏灯，其中 3 盏已亮、4 盏熄灭。拟打开熄灭的 4 盏：';
+const draftHint='<p class="lead" style="margin:12px 0 0">如果只想开某一区域，可在下方草案中取消不需要的对象。</p>';
+
+const variants={
+now:{label:'现状 · 散文播报',html:`
+ <div class="prose">
+  <p>找到 7 盏灯，分在两个区域：26楼运营办公区 4 盏、杨国英办公室 3 盏。当前 26楼运营区有 3 盏已亮，杨国英办公室 3 盏和运营区过道射灯为关闭状态。拟打开当前关闭的 4 盏灯：</p>
+  <ul><li>打开 26楼运营办公区过道 1回路过道射灯</li><li>打开杨国英办公室的 1回路栅格灯、2回路栅格灯、3回路窗帘灯带</li></ul>
+  <p>运营办公区的过道 2回路格栅灯、3回路格栅灯和 2回路过道格栅灯当前已亮，无需操作。</p>
+  <p>如果只想开某一区域的灯，可在草案中取消不需要的对象。</p>
+ </div>`},
+A:{label:'A · 分区状态清单',html:`
+ <p class="lead">${lead}</p>
+ <div class="roster">${zones.map(z=>`
+  <div class="zone"><div class="zone-name">${z.name}</div>
+   ${z.items.map(d=>`<div class="row"><span class="row-name">${d.name}</span>
+    ${d.act?'<span class="act-tag">将打开 ←</span>':''}
+    <span class="pill ${d.on?'pill-on':'pill-off'}">${d.on?'已点亮':'已关闭'}</span></div>`).join('')}
+  </div>`).join('')}
+ </div>${draftHint}`},
+B:{label:'B · 分区 chips',html:`
+ <p class="lead">${lead}</p>
+ <div class="roster">${zones.map(z=>`
+  <div class="zone"><div class="zone-name">${z.name} · ${z.items.length} 盏 · ${z.items.filter(d=>d.on).length} 已亮</div>
+   ${z.items.map(d=>`<span class="chip${d.act?' act':''}"><i class="dot ${d.on?'dot-on':'dot-off'}"></i>${d.name}</span>`).join('')}
+  </div>`).join('')}
+ </div>${draftHint}`},
+C:{label:'C · 速览条 + 分组清单',html:`
+ <p class="lead">${lead}</p>
+ <div class="stat-strip">
+  <div class="stat"><b>7</b><span>共找到</span></div>
+  <div class="stat amber"><b>3</b><span>已点亮</span></div>
+  <div class="stat g"><b>4</b><span>拟打开</span></div>
+ </div>
+ ${zones.map(z=>`
+ <div class="igroup"><div class="igroup-head">${z.name}<em>${z.items.filter(d=>d.on).length}/${z.items.length} 已亮</em></div>
+  ${z.items.map(d=>`<div class="irow${d.act?'':' irow-skip'}"><span class="irow-name">${d.name}</span>
+   <span class="ipill ${d.on?'ipill-on':'ipill-off'}"><i></i>${d.on?'已点亮':'已关闭'}</span>
+   <span class="iact">${d.act?'将打开':'不动'}</span></div>`).join('')}
+ </div>`).join('')}${draftHint}`}
+};
+const kindIcon={light:'<svg viewBox="0 0 24 24" fill="none" stroke="%23566" stroke-width="1.7" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.3 2.2h4.6c.2-.9.6-1.6 1.3-2.2A6 6 0 0 0 12 3z"/></svg>',ac:'<svg viewBox="0 0 24 24" fill="none" stroke="%23566" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9M12 3l-2 2.5M12 3l2 2.5M12 21l-2-2.5M12 21l2-2.5"/></svg>',door:'<svg viewBox="0 0 24 24" fill="none" stroke="%23566" stroke-width="1.7" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><circle cx="15" cy="12" r="1" fill="%23566"/></svg>'};
+const zonesMixed=[
+ {name:'杨国英办公室',items:[
+  {kind:'light',name:'1回路栅格灯',state:'off',pill:'已关闭',act:'将打开'},
+  {kind:'light',name:'2回路栅格灯',state:'on',pill:'已点亮'},
+  {kind:'ac',name:'中央空调',state:'关机',act:'→ 制冷 26°·低风'}]},
+ {name:'26楼运营办公区',items:[
+  {kind:'light',name:'1回路过道射灯',state:'off',pill:'已关闭',act:'将打开'},
+  {kind:'door',name:'大门门禁',state:'—',act:'开门 ×1'},
+  {kind:'ac',name:'茶水间空调',state:'制冷 25°·低风'}]},
+];
+variants.D={label:'D · 混合设备清单',html:`
+ <p class="lead">杨国英办公室和运营办公区共 6 台设备，拟执行 4 项操作：</p>
+ ${zonesMixed.map(z=>`
+ <div class="igroup"><div class="igroup-head">${z.name}<em>${z.items.filter(d=>d.act).length} 项拟执行</em></div>
+  ${z.items.map(d=>`<div class="irow${d.act?'':' irow-skip'}"><span class="ikind">${kindIcon[d.kind]}</span><span class="irow-name">${d.name}</span>
+   ${d.pill?`<span class="ipill ${d.state==='on'?'ipill-on':'ipill-off'}"><i></i>${d.pill}</span>`:`<span class="istate">${d.state}</span>`}
+   <span class="iact">${d.act||'不动'}</span></div>`).join('')}
+ </div>`).join('')}${draftHint}`};
+const order=['now','A','B','C','D'];
+const el=document.getElementById('variant'),lb=document.getElementById('vlabel');
+function show(k){location.hash='';el.innerHTML=variants[k].html;lb.innerHTML=`<b>${k==='now'?'现状':k}</b> — ${variants[k].label.split('· ')[1]||''}`;history.replaceState(null,'','?v='+k)}
+let cur=new URLSearchParams(location.search).get('v')||'now';if(!variants[cur])cur='now';
+show(cur);
+document.getElementById('prev').onclick=()=>{cur=order[(order.indexOf(cur)+order.length-1)%order.length];show(cur)};
+document.getElementById('next').onclick=()=>{cur=order[(order.indexOf(cur)+1)%order.length];show(cur)};
+addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName))return;if(e.key==='ArrowLeft')document.getElementById('prev').click();if(e.key==='ArrowRight')document.getElementById('next').click()});
+</script>
+</body>
+</html>

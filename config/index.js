@@ -42,6 +42,8 @@ const getFileBaseUrl = () => {
 }
 
 const getAgentBaseUrl = () => {
+	// 客户登录、园区和物联接口始终走客户公网；开发阶段仅把 Agent Runtime 留在本机。
+	// 本机 3200 是唯一 Runtime 实例：直连真实客户网关的真实物联后端，不存在模拟数据源。
 	return isDev ? 'http://127.0.0.1:3200/api' : getGatewayBaseUrl() + '/api/ai'
 }
 

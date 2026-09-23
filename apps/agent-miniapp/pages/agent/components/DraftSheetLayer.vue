@@ -21,15 +21,15 @@
      </view>
     </view>
     <view class="device-scroll-shell"><scroll-view scroll-y class="device-list" :scroll-top="scrollCtrl" scroll-with-animation @scroll="onListScroll"><view v-for="group in groups" :key="group.key" class="group" :style="{ width: grid.trackWidth + 'px' }"><text class="group-title">{{ group.label }} · {{ group.items.length }}</text><view class="grid"><DeviceActionCard v-for="item in group.items" :key="item.action.id" :action="item.action" :index="item.index" :selected="selected.includes(item.action.id)" :readonly="!pending" :disabled="busy" :phase="phase(item.action)" :current-state="states[item.action.deviceId] ?? null" :operation="operationLabel(item.action)" :outcome-label="outcome(item.action)" :highlight="search" @toggle="toggle(item.action.id)" @configure="configure(item.action)" /></view></view><text v-if="!groups.length" class="note">没有匹配的设备</text><view class="list-tail" /></scroll-view><view class="scroll-fade" :class="{ off: !remainingBelow }" /><view class="cue-float" :class="{ off: !remainingBelow }" role="button" hover-class="cue-float--pressed" @tap="scrollNext"><image class="cue-icon" src="/static/chevron-down.svg" /><text class="cue-text">还有 {{ remainingBelow }} 台设备</text></view></view>
-    <view class="confirm-float"><button class="confirm-btn" :disabled="busy || !pending || !selected.length" hover-class="confirm-btn--pressed" @tap="emit('close'); emit('confirm')"><text class="confirm-btn-text">确认草案 · {{ selected.length }}</text></button><text class="confirm-caption">已选择 {{ selected.length }} 台设备</text></view>
+    <view class="confirm-float"><button class="confirm-btn" :disabled="busy || !pending || !selected.length" hover-class="confirm-btn--pressed" @tap="emit('confirm'); emit('close')"><text class="confirm-btn-text">确认草案 · {{ selected.length }}</text></button><text class="confirm-caption">已选择 {{ selected.length }} 台设备</text></view>
    </view>
    <view class="surface editor-surface">
     <button v-if="current" class="back" hover-class="back--pressed" @tap="page = editorBack"><image class="back-icon" src="/static/back.svg" /><text>{{ current.deviceName }}</text></button>
-    <view v-if="current && !pending" class="stale-note"><text>{{ staleText }}</text><button v-if="draft.status === 'EXPIRED'" class="stale-revalidate" :disabled="busy" hover-class="stale-revalidate--pressed" @tap="emit('revalidate')">重新核验</button></view>
-    <ParameterEditor v-if="current && pending" embedded :key="current.id" :action="current" :actions="draft.actions" :states="states" :busy="busy" :error="parameterError" @save="save" />
+    <view v-if="current && !pending" class="stale-note"><text>{{ staleText }}</text><button v-if="renderDraft.status === 'EXPIRED'" class="stale-revalidate" :disabled="busy" hover-class="stale-revalidate--pressed" @tap="emit('revalidate')">重新核验</button></view>
+    <ParameterEditor v-if="current && pending" embedded :key="current.id" :action="current" :actions="renderDraft.actions" :states="states" :busy="busy" :error="parameterError" @save="save" />
    </view>
   </view>
-  <ParameterEditor v-else-if="current" :key="current.id" :action="current" :actions="draft.actions" :states="states" :busy="busy" :error="parameterError" @save="save" />
+  <ParameterEditor v-else-if="current" :key="current.id" :action="current" :actions="renderDraft.actions" :states="states" :busy="busy" :error="parameterError" @save="save" />
  </DeviceSheet>
 </template>
 <script setup>
@@ -38,6 +38,7 @@ import { readDeviceStates, updateParameters } from '@/apis/agent'
 import { operationLabel } from '../ac-draft.js'
 import { mergeObservedStates, receiptPhase } from '../device-card-state.js'
 import { computeDeviceGrid, createDraftGroups, draftBaselineChanged, firstRowBelowFold, remainingBelowFold } from '../action-draft-presentation.js'
+import { createViewportMeasurer } from '../list-viewport.mjs'
 import { receiptText } from '../conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
 import DeviceSheet from './DeviceSheet.vue'
@@ -52,23 +53,35 @@ const groupModes = [{ label: '区域', by: 'location' }, { label: '类型', by: 
 const grid = computed(() => computeDeviceGrid(windowWidth.value))
 function selectGroup(index) { groupIndex.value = index }
 const open = computed(() => Boolean(props.draft))
-const pending = computed(() => props.draft?.status === 'PENDING_CONFIRMATION')
-const staleText = computed(() => ({ EXPIRED: '核验已过期，未执行。重新核验后可继续调整。', CANCELLED: '操作已取消，未执行。发送新指令可重新下达。' }[props.draft?.status] || ''))
-const selected = computed(() => props.draft?.selectedActionIds || [])
-const allSelected = computed(() => Boolean(props.draft?.actions.length) && selected.value.length === props.draft.actions.length)
+// 关闭动画期间冻结渲染：emit('close') 同帧父级就清空 draftId，但 uni-popup 还有 300ms 下滑动画。
+// 渲染一律读最后一次非空的草案/回执/基线快照，否则标题与编辑器在动画开始前就卸载——「瞬间消失+一闪」。
+const renderDraft = ref(null), renderResult = ref(null), renderBaseline = ref(null)
+// 换草案时三个快照同步切换（新轮次的回执/基线可能为 null，须覆盖旧值防串稿）；
+// draft→null 的关闭路径刻意跳过，让快照留到收起动画播完。
+watch(() => props.draft, value => {
+ if (!value) return
+ renderDraft.value = value
+ renderResult.value = props.result
+ renderBaseline.value = props.baseline
+}, { immediate: true })
+watch(() => props.baseline, value => { if (value) renderBaseline.value = value }, { immediate: true })
+const pending = computed(() => renderDraft.value?.status === 'PENDING_CONFIRMATION')
+const staleText = computed(() => ({ EXPIRED: '核验已过期，未执行。重新核验后可继续调整。', CANCELLED: '操作已取消，未执行。发送新指令可重新下达。', INTERRUPTED: '执行中断，部分指令可能已下发，以设备实际状态为准。' }[renderDraft.value?.status] || ''))
+const selected = computed(() => renderDraft.value?.selectedActionIds || [])
+const allSelected = computed(() => Boolean(renderDraft.value?.actions.length) && selected.value.length === renderDraft.value.actions.length)
 // 「还原」仅在有改动时出现：草案与发布基线一致时它是纯噪声；过期/终态只读不显示。
-const dirty = computed(() => pending.value && draftBaselineChanged(props.draft, props.baseline))
-const current = computed(() => props.draft?.actions.find(action => action.id === currentId.value) ?? null)
+const dirty = computed(() => pending.value && draftBaselineChanged(renderDraft.value, renderBaseline.value))
+const current = computed(() => renderDraft.value?.actions.find(action => action.id === currentId.value) ?? null)
 const browserEditor = computed(() => props.browser && page.value === 2)
-const sheetTitle = computed(() => browserEditor.value ? current.value?.kind === 'ac' ? '空调调节' : '开门设置' : props.browser ? '全部设备' : current.value?.kind === 'ac' ? '空调调节' : '开门设置')
-const sheetMeta = computed(() => props.browser && !browserEditor.value ? `${props.draft?.actions.length || 0} 台设备` : '')
+const sheetTitle = computed(() => browserEditor.value ? '空调调节' : props.browser ? '全部设备' : '空调调节')
+const sheetMeta = computed(() => props.browser && !browserEditor.value ? `${renderDraft.value?.actions.length || 0} 台设备` : '')
 const sheetSubtitle = computed(() => browserEditor.value || !props.browser ? current.value?.deviceName || '' : '')
 const kindSearchNames = { lighting: '照明 灯 灯具', ac: '空调 中央空调', access: '门禁 电动门 门' }
 const filteredActions = computed(() => {
- if (!props.draft) return []
+ if (!renderDraft.value) return []
  const query = search.value.trim().toLocaleLowerCase()
- if (!query) return props.draft.actions
- return props.draft.actions.filter(action => [action.deviceName, action.location, kindSearchNames[action.kind], action.kind].filter(Boolean).join(' ').toLocaleLowerCase().includes(query))
+ if (!query) return renderDraft.value.actions
+ return renderDraft.value.actions.filter(action => [action.deviceName, action.location, kindSearchNames[action.kind], action.kind].filter(Boolean).join(' ').toLocaleLowerCase().includes(query))
 })
 const groups = computed(() => createDraftGroups(filteredActions.value, selected.value, { groupBy: groupModes[groupIndex.value].by }))
 // 滚动浮标：scrollY 由 @scroll 逐帧同步，remaining 用确定性几何纯算（行距 192），不在回调里查 DOM。
@@ -80,21 +93,28 @@ function scrollNext() {
  if (top != null) scrollCtrl.value = Math.max(0, top - 8)
 }
 const instance = getCurrentInstance()
-function measureListViewport() {
- uni.createSelectorQuery().in(instance?.proxy).select('.device-list').boundingClientRect(rect => { if (rect?.height) listViewportH.value = rect.height }).exec()
-}
+// .device-list 在 uni-popup 的 v-if 子树内，open 置真后还要等 popup 自己的 nextTick 才挂载；
+// 单次测量会拿到空 rect 让浮标计数恒为 0。打开/resize 时做有界重试直到量到非零高度。
+const listMeasurer = createViewportMeasurer({
+ query: cb => uni.createSelectorQuery().in(instance?.proxy).select('.device-list').boundingClientRect(cb).exec(),
+ apply: height => { listViewportH.value = height },
+ active: () => open.value && props.browser,
+})
 watch(() => props.currentActionId, value => { currentId.value = value }, { immediate: true })
-watch(() => props.draft?.draftId, () => { page.value = 0; search.value = ''; searchMounted.value = false; searchFocused.value = false; groupIndex.value = 0; parameterError.value = '' })
+// 每次显式打开（openRequest 递增）或换到新草案时回到列表页并清搜索；关闭（draft→null）不重置，
+// 否则 300ms 收起动画期间 surface 会中途滑位。同一草案重开也经 openRequest 覆盖到。
+watch(() => [props.draft?.draftId, props.openRequest], () => { if (!props.draft) return; page.value = 0; search.value = ''; searchMounted.value = false; searchFocused.value = false; groupIndex.value = 0; parameterError.value = ''; if (props.browser) listMeasurer.schedule() })
 // 面板内三页导航：0 全部设备 / 1 搜索 / 2 参数编辑；返回列表页即清过滤，列表始终是全量。
 watch(page, value => { if (value === 0) search.value = '' })
-watch(open, value => { if (value) { refresh(); scrollY.value = 0; nextTick(measureListViewport) } })
+watch(open, value => { if (value) { refresh(); scrollY.value = 0; if (props.browser) listMeasurer.schedule() } })
 // 与 ActionDraftCard 一致：result 落地先合入回读权威状态再补查，否则面板内徽标停在指令前。
-watch(() => props.result, result => { states.value = mergeObservedStates(states.value, result?.observedStates); refresh() })
-function updateWindowWidth(event) { windowWidth.value = event?.size?.windowWidth || event?.windowWidth || uni.getWindowInfo?.().windowWidth || windowWidth.value; nextTick(measureListViewport) }
+watch(() => props.result, result => { if (result) renderResult.value = result; states.value = mergeObservedStates(states.value, result?.observedStates); refresh() })
+function updateWindowWidth(event) { windowWidth.value = event?.size?.windowWidth || event?.windowWidth || uni.getWindowInfo?.().windowWidth || windowWidth.value; listMeasurer.schedule() }
 onMounted(() => uni.onWindowResize?.(updateWindowWidth))
-onBeforeUnmount(() => { clearTimeout(focusTimer); clearTimeout(searchTimer); uni.offWindowResize?.(updateWindowWidth) })
-function toggle(id) { if (!pending.value || props.busy) return; emit('select', selected.value.includes(id) ? selected.value.filter(item => item !== id) : [...selected.value, id]) }
-function toggleAll() { if (!pending.value || props.busy) return; emit('select', allSelected.value ? [] : props.draft.actions.map(action => action.id)) }
+onBeforeUnmount(() => { clearTimeout(focusTimer); clearTimeout(searchTimer); listMeasurer.dispose(); uni.offWindowResize?.(updateWindowWidth) })
+// 交互动作以 open 为门：收起动画那 300ms 里渲染快照仍非空，但面板已关，不允许再发操作。
+function toggle(id) { if (!open.value || !pending.value || props.busy) return; emit('select', selected.value.includes(id) ? selected.value.filter(item => item !== id) : [...selected.value, id]) }
+function toggleAll() { if (!open.value || !pending.value || props.busy) return; emit('select', allSelected.value ? [] : renderDraft.value.actions.map(action => action.id)) }
 function openSearch() {
  clearTimeout(focusTimer); clearTimeout(searchTimer)
  searchMounted.value = true
@@ -106,12 +126,13 @@ function closeSearch() {
  page.value = 0
  searchTimer = setTimeout(() => { searchMounted.value = false }, 280)
 }
-function configure(action) { if (props.busy || !pending.value) return; currentId.value = action.id; parameterError.value = ''; if (props.browser) { editorBack.value = page.value; page.value = 2 } }
-function receipt(action) { return props.result?.receipts?.find(item => item.actionId === action.id) }
+// 参数编辑页只服务空调：门禁无参数可配（一次执行即开一次门），卡片侧已不 emit configure，这里兜底拦截
+function configure(action) { if (!open.value || props.busy || !pending.value || action.kind !== 'ac') return; currentId.value = action.id; parameterError.value = ''; if (props.browser) { editorBack.value = page.value; page.value = 2 } }
+function receipt(action) { return renderResult.value?.receipts?.find(item => item.actionId === action.id) }
 function outcome(action) { return receiptText(receipt(action)) }
 function phase(action) {
- if (props.result) return receiptPhase(action, receipt(action)?.outcome ?? (selected.value.includes(action.id) ? props.result.status : 'UNSELECTED'), states.value[action.deviceId])
- return props.draft.status === 'CANCELLED' ? 'cancelled' : props.draft.status === 'EXPIRED' ? 'expired' : 'pending'
+ if (renderResult.value) return receiptPhase(action, receipt(action)?.outcome ?? (selected.value.includes(action.id) ? renderResult.value.status : 'UNSELECTED'), states.value[action.deviceId])
+ return renderDraft.value?.status === 'CANCELLED' ? 'cancelled' : renderDraft.value?.status === 'EXPIRED' ? 'expired' : 'pending'
 }
 async function refresh() {
  if (!props.draft) return
@@ -119,7 +140,7 @@ async function refresh() {
  catch { states.value = {} }
 }
 async function save(changes) {
- if (props.busy || !pending.value) return
+ if (!open.value || props.busy || !pending.value) return
  emit('editing', true)
  parameterError.value = ''
  // 点选同步是异步串行的：先等它落地再取 revision，避免 409

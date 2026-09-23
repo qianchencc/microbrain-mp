@@ -81,12 +81,12 @@ export const useUserStore = defineStore({
 			if (!code) return
 			// #ifdef MP-WEIXIN
 			const { content } = await getWxOpenId(code)
-			const openid = content.openid
+			let openid = content.openid
 			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime() + '@WX_MP'))
 			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=thirdParty&openid=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			// #endif
 			// #ifdef APP-PLUS
-			const openid = code
+			openid = code
 			const captcha = encodeURIComponent(aesEncrypt(new Date().getTime()))
 			const url = `${globalConfig.ssoUrl}/oauth/token?grant_type=sms&mobile=${openid}&captcha=${captcha}&scope=all&client_id=2460feb0ab054e1e&client_secret=smaEMjAyMzAzMTExNTI5MzgGQd`
 			// #endif
@@ -94,29 +94,15 @@ export const useUserStore = defineStore({
 				title: '加载中...',
 				mask: false
 			});
-			uni.request({
+			const response = await uni.request({
 				url: url,
-				method: 'POST',
-				success: (res) => {
-					if (res.statusCode === 200) {
-						const {
-							access_token,
-							token_type,
-							expires_in
-						} = res.data
-						setToken(res.data)
-						this.authorized = true
-						usePermissionStoreHook().setAuthority()
-						// uni.closeAuthView()
-						uni.reLaunch({
-							url: '/pages/index/index'
-						})
-					}
-				},
-				fail(e) {
-					console.log(e);
-				}
+				method: 'POST'
 			})
+			if (response.statusCode !== 200) throw new Error('客户登录失败')
+			setToken(response.data)
+			this.authorized = true
+			await usePermissionStoreHook().setAuthority()
+			uni.reLaunch({ url: '/pages/index/index' })
 		},
 		async setDict() {
 			const res = await getAllDictMap()
@@ -133,12 +119,13 @@ export const useUserStore = defineStore({
 		},
 		async setGeospatialInfo() {
 			const { content: geospatialInfo } = await getGeospatialList({ type: 6 })
+			const currentDistrict = this.district || storageGet('district') || {}
 			const options = []
 			geospatialInfo.forEach((element, index) => {
 				const item = {
 					name: element.name,
 					id: element.code,
-					choose: !this.district.id ? index === 0 : this.district.id === element.code
+					choose: !currentDistrict.id ? index === 0 : currentDistrict.id === element.code
 				}
 				options.push(item)
 			})
@@ -150,9 +137,6 @@ export const useUserStore = defineStore({
 		},
 		// 登出 清空缓存
 		logOut() {
-			if (this.authorized || getToken()) {
-				wxLogin()
-			}
 			removeToken()
 			uni.clearStorageSync();
 			this.authorized = false

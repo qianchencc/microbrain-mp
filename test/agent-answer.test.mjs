@@ -2,19 +2,47 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { renderAnswer } from '../pages/agent/answer.mjs'
 
-test('renderAnswer 输出段落与无序列表节点，加粗转 strong', () => {
+// 微信 rich-text 节点契约：文本叶子必须是 { type: 'text', text }，元素样式只能放 attrs.style。
+function assertRichTextSchema(nodes) {
+	const walk = node => {
+		if (node.type === 'text') {
+			assert.equal(typeof node.text, 'string')
+			assert.deepEqual(Object.keys(node).sort(), ['text', 'type'])
+			return
+		}
+		assert.equal(typeof node.name, 'string')
+		assert.notEqual(node.name, '#text')
+		assert.equal(node.style, undefined, '元素样式必须放在 attrs.style，不允许顶层 style')
+		assert.ok(Array.isArray(node.children))
+		if (node.attrs) assert.deepEqual(Object.keys(node.attrs), ['style'])
+		node.children.forEach(walk)
+	}
+	nodes.forEach(walk)
+}
+
+test('renderAnswer 输出符合微信 rich-text 契约的段落与列表节点', () => {
 	const nodes = renderAnswer('拟关闭以下照明设备：\n\n- 26楼东区 · **照明开关-01**\n- 26楼东区 · 照明开关-02\n\n走廊灯已是关闭状态。')
+	assertRichTextSchema(nodes)
 	assert.deepEqual(nodes.map(node => node.name), ['p', 'ul', 'p'])
-	assert.deepEqual(nodes[0].children.map(node => node.text), ['拟关闭以下照明设备：'])
+	assert.deepEqual(nodes[0].children, [{ type: 'text', text: '拟关闭以下照明设备：' }])
 	assert.equal(nodes[1].children.length, 2)
-	assert.equal(nodes[1].children[0].children[0].name, '#text')
-	assert.equal(nodes[1].children[0].children[0].text, '26楼东区 · ')
-	assert.equal(nodes[1].children[0].children[1].name, 'strong')
-	assert.equal(nodes[1].children[0].children[1].children[0].text, '照明开关-01')
-	assert.deepEqual(nodes[2].children.map(node => node.text), ['走廊灯已是关闭状态。'])
+	const firstItem = nodes[1].children[0]
+	assert.equal(firstItem.name, 'li')
+	assert.deepEqual(firstItem.children[0], { type: 'text', text: '26楼东区 · ' })
+	assert.deepEqual(firstItem.children[1], { name: 'strong', children: [{ type: 'text', text: '照明开关-01' }] })
+	assert.deepEqual(nodes[2].children, [{ type: 'text', text: '走廊灯已是关闭状态。' }])
+	assert.equal(nodes[0].attrs.style, 'margin:0 0 10px;line-height:1.8;')
+	assert.equal(nodes[1].attrs.style, 'margin:0 0 10px;padding-left:22px;line-height:1.8;')
+	assert.equal(firstItem.attrs.style, 'margin:4px 0;')
 })
 
 test('renderAnswer 对空文本与未收束列表保持安全', () => {
-	assert.equal(renderAnswer('').length, 1)
-	assert.equal(renderAnswer('回复：\n- 半截列表项')[1].children.length, 1)
+	const empty = renderAnswer('')
+	assertRichTextSchema(empty)
+	assert.equal(empty.length, 1)
+	assert.equal(empty[0].name, 'p')
+	assert.deepEqual(empty[0].children, [{ type: 'text', text: ' ' }])
+	const partial = renderAnswer('回复：\n- 半截列表项')
+	assertRichTextSchema(partial)
+	assert.equal(partial[1].children.length, 1)
 })

@@ -1,4 +1,10 @@
 {
+	"easycom": {
+		"autoscan": true,
+		"custom": {
+			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+		}
+	},
 	"pages": [
 		//pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
 		{
@@ -13,9 +19,11 @@
 		{
 			"path": "pages/agent/index",
 			"style": {
-				"navigationBarTitleText": "物联助手",
-				"navigationBarTextStyle": "white",
-				"navigationBarBackgroundColor": "#0E2117",
+				"navigationBarTitleText": "物联 Agent",
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black",
+				"navigationBarBackgroundColor": "#fafcfb",
+				"disableScroll": true,
 				"enablePullDownRefresh": false
 			}
 		},

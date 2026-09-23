@@ -1,6 +1,7 @@
 import { useUserStoreHook } from '@/store/modules/user'
 import { storageGet, storageSet, storageRemove } from '@/utils/storage'
 const TokenKey = 'authorized-token'
+const TokenExpiresKey = 'authorized-token-expires-at'
 // 获取token
 export function getToken() {
 	return uni.getStorageSync(TokenKey)
@@ -18,6 +19,19 @@ export function setToken(data) {
 	useUserStoreHook().SET_TOKEN(dataString)
 	storageSet(TokenKey, dataString)
 	uni.setStorageSync('authorized-token', dataString)
+	if (Number.isFinite(Number(expires_in)) && Number(expires_in) > 0) {
+		storageSet(TokenExpiresKey, Date.now() + Number(expires_in) * 1000)
+	}
+}
+
+export function getTokenExpiresAt() {
+	const value = storageGet(TokenExpiresKey)
+	return Number.isFinite(Number(value)) ? Number(value) : 0
+}
+
+export function isTokenExpired() {
+	const expiresAt = getTokenExpiresAt()
+	return Boolean(expiresAt && expiresAt <= Date.now())
 }
 
 export function getTokenId() {
@@ -27,6 +41,7 @@ export function getTokenId() {
 // 删除token
 export function removeToken() {
 	storageRemove(TokenKey)
+	storageRemove(TokenExpiresKey)
 }
 
 export function checkToken() {

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeObservedStates, receiptPhase, reduceCardHold, stateText } from '../pages/agent/device-card-state.js'
-import { commonSetting, editSettings } from '../pages/agent/ac-draft.js'
+import { cardConfigurable, mergeObservedStates, receiptPhase, reduceCardHold, stateText } from '../pages/agent/device-card-state.js'
+import { acTemperatureStep, commonSetting, editSettings, operationLabel } from '../pages/agent/ac-draft.js'
 import { computeDeviceGrid, createDraftRailItems, createDraftGroups, firstRowBelowFold, remainingBelowFold } from '../pages/agent/action-draft-presentation.js'
 import { deviceLocationLabel, resolveDeviceArtwork } from '../pages/agent/device-art/catalog.js'
 import { createFieldEchoGuard } from '../pages/agent/field-echo-guard.mjs'
@@ -23,10 +23,26 @@ test('批量编辑保留未修改参数，关闭目标清除运行参数修改',
  assert.deepEqual(edits,{a:{temperature:25},b:{temperature:25}})
  assert.deepEqual(editSettings(edits,actions,'power','off',states),{a:{power:'off'},b:{power:'off'}})
 })
-test('门禁默认一次，显式次数保持，只有不同次数的批量目标显示多种', () => {
- const actions = [{id:'a',kind:'access',command:{}},{id:'b',kind:'access',command:{count:1}}]
- assert.equal(commonSetting(actions,{}, {},'count'),'')
- assert.deepEqual(editSettings({},actions,'count',2),{a:{count:2},b:{count:2}})
+test('门禁无参数可配：一次执行即开一次门，operation 文案固定', () => {
+ assert.equal(operationLabel({kind:'access',command:{controlType:2}}),'开门一次')
+ // count 残留不复活：服务端不接受门禁参数修改，文案不展示次数
+ assert.equal(operationLabel({kind:'access',command:{controlType:2,count:3}}),'开门一次')
+})
+test('长按配置只服务空调：门禁卡在待确认相位也不可配置', () => {
+ const access = {kind:'access',command:{controlType:2}}
+ const ac = {kind:'ac',command:{temperature:25}}
+ assert.equal(cardConfigurable(access,'pending'),false)
+ assert.equal(cardConfigurable(ac,'pending'),true)
+ assert.equal(cardConfigurable(ac,'complete'),false)
+ assert.equal(cardConfigurable(ac,'pending',{readonly:true}),false)
+ assert.equal(cardConfigurable(ac,'pending',{disabled:true}),false)
+})
+test('空调温度步长恒为整数：服务端下发或旧草案残留的半步参数一律按 1 取整', () => {
+ assert.equal(acTemperatureStep([{parameters:{temperature:{min:16,max:30,step:1}}}]),1)
+ assert.equal(acTemperatureStep([{parameters:{temperature:{min:16,max:30,step:0.5}}}]),1)
+ assert.equal(acTemperatureStep([{}]),1)
+ // 多台空调取最大步长，仍不小于 1
+ assert.equal(acTemperatureStep([{parameters:{temperature:{step:1}}},{parameters:{temperature:{step:2}}}]),2)
 })
 test('超过四张保留三张及全部入口，分组不丢未选设备', () => {
  const actions = Array.from({length:7},(_,i) => ({id:String(i),kind:'lighting',location:'会议室'}))
@@ -97,15 +113,46 @@ test('回声守卫 plan：目标值恰等于已写入值时两步强制写，否
  guard.track('xyz')
  assert.deepEqual(guard.plan('xyz', ''), [])
 })
-test('原生长按一旦提交，随后的 touchcancel 不得撤销配置', () => {
+test('长按完成只提交意图，触摸序列结束后才允许打开面板', () => {
  let state = reduceCardHold('idle','start')
  state = reduceCardHold(state,'complete')
- state = reduceCardHold(state,'cancel')
- assert.equal(state,'committed')
- assert.equal(reduceCardHold(state,'complete'),'committed')
+ assert.equal(state,'committed', '手指仍按住时不得打开 popup')
+ assert.equal(reduceCardHold(state,'complete'),'committed', '定时器与原生 longpress 重复完成必须幂等')
+ assert.equal(reduceCardHold(state,'end'),'released', '正常抬手后才允许打开')
+ assert.equal(reduceCardHold(state,'cancel'),'released', '已提交后的系统 touchcancel 也必须兑现，而非撤销')
  assert.equal(reduceCardHold('tracking','cancel'),'cancelled')
  assert.equal(reduceCardHold('cancelled','complete'),'cancelled')
 })
+test('视口测量在节点尚未挂载时有界重试，量到非零高度即落值', async () => {
+ const { createViewportMeasurer } = await import('../pages/agent/list-viewport.mjs')
+ let calls = 0, applied = 0
+ // 前三次查询模拟 popup 子树尚未挂载（rect 为 null/0），第四次才返回真实高度
+ const measurer = createViewportMeasurer({
+  query: cb => cb(++calls >= 4 ? { height: 560 } : null),
+  apply: h => { applied = h },
+  active: () => true,
+  delay: 1,
+ })
+ measurer.schedule()
+ await new Promise(resolve => setTimeout(resolve, 30))
+ assert.equal(applied, 560, 'popup 挂载完成前测量为空不得放弃——否则浮标计数恒为 0 永远不显示')
+ assert.ok(calls >= 4)
+
+ // 面板已关（active=false）时应停止重试，不再空转
+ calls = 0; applied = 0
+ const inactive = createViewportMeasurer({
+  query: cb => { calls++; cb(null) },
+  apply: h => { applied = h },
+  active: () => false,
+  delay: 1,
+ })
+ inactive.schedule()
+ await new Promise(resolve => setTimeout(resolve, 30))
+ assert.equal(applied, 0)
+ assert.equal(calls, 1, '非激活态下不得继续重试')
+ inactive.dispose()
+})
+
 test('键盘停靠归一化：duration 跨端单位统一为毫秒并封顶', () => {
  assert.deepEqual(resolveKeyboardDock({ detail: { height: 291, duration: 0.25 } }), { height: 291, durationMs: 250 })
  assert.deepEqual(resolveKeyboardDock({ detail: { height: 291, duration: 250 } }), { height: 291, durationMs: 250 })

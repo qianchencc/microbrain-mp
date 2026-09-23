@@ -1,8 +1,10 @@
 # Native Verification Handoff
 
+> Historical standalone-shell acceptance ledger. Current customer integration and pending acceptance are indexed in [`docs/README.md`](../docs/README.md). Do not treat old login, simulator, IP, or device blockers below as current project status.
+
 > **2026-09-14 current status:** Desktop WeChat Developer Tools are available and can be used for the next acceptance pass. Older notes below about unavailable/login-blocked developer tools or requiring a physical phone are historical observations, not current blockers. The active desktop acceptance checklist is maintained in `../iot-agent-runtime/.scratch/office-device-scope-registry/issues/08-native-miniapp-end-to-end-acceptance.md`; physical-phone-only gestures are outside that ticket.
 
-The full parity goal remains active. Scope and evidence: [002-native-visual-parity.md](002-native-visual-parity.md). Do not equate successful compilation with full parity.
+The former standalone parity scope and evidence are recorded in [002-native-visual-parity.md](002-native-visual-parity.md). Successful standalone compilation is still not evidence of customer-mainline or real-device acceptance.
 
 ## Working Native Automation
 

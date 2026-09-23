@@ -7,14 +7,14 @@
 		onLaunch: function() {
 			initNfc()
 		},
-		onShow: function() {
+		onShow: async function() {
 			if (getToken()) {
-				usePermissionStoreHook().setAuthority()
+				await usePermissionStoreHook().setAuthority()
 			} else {
 				wx.login({
 					provider: 'weixin',
-					success: res => {
-						useUserStoreHook().thirdLogin(res.code)
+					success: async res => {
+						await useUserStoreHook().thirdLogin(res.code)
 					}
 				});
 			}

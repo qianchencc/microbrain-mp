@@ -7,5 +7,7 @@ export const EvnIP = {
 	develop: 'https://ncim.577119.com', //（开发版）
 }
 
-export const DOMAIN = EvnIP[__wxConfig.envVersion]
-export const isDev = __wxConfig.envVersion !== 'release'
+export const envVersion = __wxConfig.envVersion || 'develop'
+export const DOMAIN = EvnIP[envVersion]
+export const isDev = envVersion === 'develop'
+export const isTrial = envVersion === 'trial'

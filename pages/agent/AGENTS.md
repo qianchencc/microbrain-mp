@@ -5,10 +5,15 @@
 - `tool.progress` 原位更新运行中步骤摘要（0 命中重试聚合为“正在修正检索范围…”）；`run.*` 收尾必须同时清 `running` 与 `streaming`，光标不得滞留。
 - 失败轮的恢复入口是最近用户气泡的重试/编辑与错误卡片：重试沿用 `turn.content` 重发，失败轮本就未入服务端会话，无需新接口。
 - Android 优先消费 `onChunkReceived`，其他平台保留完整 response 回退，两条路径必须产生相同业务事件。
-- 开发凭据和生产登录态只在 `apis/agent/index.js` 组装，页面与组件不接触 header。
+- 客户身份只通过 `utils/agent-session.js` 提供，`apis/agent/index.js` 只消费统一 header；页面与组件不接触 Token、Authorization 或 tenantCode。
 - `ACCEPTED` 表示上游受理，界面保留“暂无物理状态回执”说明；只有待确认卡片可发起真实控制。
 - 恢复会话时以服务端 `draft/result` 为准；历史事件只恢复轨迹和正文，不能把已执行草案重放成待确认。
 - 选项更新和确认携带最新 revision；执行结果的 summary 由服务端生成，重试回答不得重发设备控制。
-- 原生迁移范围和验收状态见 `plan/001-native-agent-migration.md`；H5 预览不是小程序验收。
+- 当前生产范围和验收状态见 `plan/2026-09-18-customer-miniapp-canonical-agent-migration.md`；H5 预览和独立回归壳都不能替代客户小程序验收。
 - 视觉为拟物材质体系（呢面/纸材/黄铜/玉漆），只用渐变+阴影实现，不引入 backdrop-filter；`prefers-reduced-motion` 下停用闪烁与脉冲。
-
+- Agent 头像（`AgentAvatar.vue` + `avatar.js`）使用固定预计算 SVG body/eyes 分层，不按会话随机；保留扫视、眨眼、运行呼吸和 reduced-motion 完整行为；不得降级为通用图标方块，也不得重新引入 blobatar 依赖。
+- 草案面板沿用 `DraftSheetLayer` + `DeviceSheet` + vendored `uni-popup`/`uni-transition` 底座；`uni-transition` 的入场不得恢复 `setTimeout` 延迟提交，否则遮罩先出、内容层停在 `translateY(100%)` 屏外。升级 `uni_modules` 后必须重新核对 `test/agent-sheet-runtime.test.mjs`。
+- 客户小程序是生产 Agent 主线；本目录必须复用客户会话，不得恢复独立 miniapp 的固定 `local-development`/`LOCAL` 身份。
+- 开发阶段客户登录、用户、园区和物联网接口继续走客户公网；仅 Agent Runtime 指向本机 `127.0.0.1:3200`——它是唯一 Runtime 实例，直连真实客户网关，不存在模拟数据源。`trial/release` 不得依赖本机地址。
+- Agent 页面进入前等待 `utils/agent-session.js` 的会话与园区上下文；页面和组件不得自行拼接 Authorization 或 tenantCode。
+- 本目录已是生产 Agent 页面；新业务只在客户主线实现。独立 miniapp 仅用于复现问题，回补时只同步能够证明必要的最小修复。

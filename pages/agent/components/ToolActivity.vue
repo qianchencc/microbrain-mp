@@ -2,14 +2,20 @@
 	<view v-if="items.length" class="activity" aria-label="Agent 处理进度">
 		<view v-for="(item, index) in items" :key="item.id" class="activity__item">
 			<view class="activity__rail">
-				<view :class="['activity__dot', `activity__dot--${item.status}`]">
-					<uni-icons v-if="item.status === 'completed'" type="checkmarkempty" size="13" color="#ffffff" />
-					<uni-icons v-else-if="item.status === 'failed' || item.status === 'skipped'" type="info" size="13" color="#7a5a17" />
+				<view class="activity__marker">
+					<view v-if="item.status === 'completed'" class="activity__badge activity__badge--done"><view class="activity__check" /></view>
+					<view v-else-if="item.status === 'failed'" class="activity__badge activity__badge--failed"><view class="activity__cross" /></view>
+					<view v-else-if="isActive(item)" class="activity__pulse" />
+					<view v-else-if="item.status === 'skipped'" class="activity__muted" />
+					<view v-else class="activity__idle" />
 				</view>
 				<view v-if="index < items.length - 1" class="activity__line" />
 			</view>
 			<view class="activity__content">
-				<view class="activity__title">{{ item.label || labels[item.tool] || '处理设备请求' }}</view>
+				<view class="activity__title">
+					<text>{{ item.label || labels[item.tool] || '处理设备请求' }}</text>
+					<text v-if="stateWord(item)" class="activity__state" :class="'activity__state--' + item.status">{{ stateWord(item) }}</text>
+				</view>
 				<view v-if="item.summary" class="activity__summary">{{ item.summary }}</view>
 			</view>
 		</view>
@@ -30,95 +36,165 @@
 		read_device_states: '查询设备状态',
 		propose_action_draft: '生成操作草案'
 	}
+
+	const isActive = item => ['running', 'searching'].includes(item.status)
+	const stateWord = item => isActive(item) ? '进行中' : item.status === 'failed' ? '失败' : item.status === 'skipped' ? '已跳过' : ''
 </script>
 
 <style lang="scss" scoped>
 .activity {
-	margin: 20rpx 0 26rpx;
-	padding: 18rpx 20rpx;
-	border-radius: 14rpx;
-	background: rgba(23, 107, 84, 0.05);
-	border: 1rpx solid rgba(23, 107, 84, 0.12);
-	box-shadow: inset 0 2rpx 6rpx rgba(84, 68, 32, 0.07);
+	margin: 28rpx 0 32rpx;
 
 	&__item {
 		display: flex;
-		min-height: 84rpx;
 	}
 
+	// 标记列：图标占固定格，连线 flex:1 随内容高度拉伸，天然连到下一节点。
 	&__rail {
-		position: relative;
-		width: 44rpx;
-		flex: 0 0 44rpx;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 40rpx;
+		flex: 0 0 40rpx;
 	}
 
-	&__dot {
-		position: relative;
-		z-index: 1;
-		width: 30rpx;
-		height: 30rpx;
+	&__marker {
+		width: 40rpx;
+		height: 40rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	&__badge {
+		width: 32rpx;
+		height: 32rpx;
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: radial-gradient(circle at 34% 30%, #fffdf4, #d8ccab 70%, #b3a582);
-		border: 2rpx solid #a4966f;
-		box-shadow: inset 0 -2rpx 4rpx rgba(90, 70, 30, 0.28), 0 2rpx 4rpx rgba(84, 68, 32, 0.22);
+		animation: activity-pop 200ms cubic-bezier(.23,1,.32,1) both;
 
-		&--completed {
-			background: radial-gradient(circle at 34% 30%, #9fe0be, #2f8f6b 60%, #17513c);
-			border-color: #124634;
-			box-shadow: inset 0 2rpx 2rpx rgba(255, 255, 255, 0.35), inset 0 -3rpx 5rpx rgba(0, 0, 0, 0.25), 0 3rpx 6rpx rgba(15, 63, 45, 0.35);
-			animation: dot-pop 200ms ease-out;
-		}
+		&--done { background: rgba(23,107,84,.13); }
+		&--failed { background: rgba(176,77,59,.13); }
+	}
 
-		&--running {
-			background: radial-gradient(circle at 34% 30%, #fff3d6, #e3b96a 55%, #a8792f);
-			border-color: #8a6428;
-			box-shadow: inset 0 -2rpx 4rpx rgba(90, 60, 20, 0.4), 0 0 10rpx rgba(227, 185, 106, 0.5);
-			animation: dot-pulse 1.4s ease-in-out infinite;
+	&__check {
+		width: 10rpx;
+		height: 6rpx;
+		border-left: 3rpx solid #176b54;
+		border-bottom: 3rpx solid #176b54;
+		transform: translateY(-1rpx) rotate(-45deg);
+	}
+
+	&__cross {
+		position: relative;
+		width: 12rpx;
+		height: 12rpx;
+
+		&::before,
+		&::after {
+			content: '';
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 3rpx;
+			height: 12rpx;
+			border-radius: 2rpx;
+			background: #a2493d;
 		}
+		&::before { transform: translate(-50%,-50%) rotate(45deg); }
+		&::after { transform: translate(-50%,-50%) rotate(-45deg); }
+	}
+
+	&__pulse {
+		width: 14rpx;
+		height: 14rpx;
+		border-radius: 50%;
+		background: #176b54;
+		animation: activity-pulse 1.6s ease-in-out infinite;
+	}
+
+	&__muted {
+		width: 14rpx;
+		height: 14rpx;
+		border-radius: 50%;
+		background: #b7c3bb;
+	}
+
+	&__idle {
+		width: 14rpx;
+		height: 14rpx;
+		box-sizing: border-box;
+		border-radius: 50%;
+		border: 2rpx dashed #b7c3bb;
 	}
 
 	&__line {
-		position: absolute;
-		top: 32rpx;
-		left: 20rpx;
-		width: 0;
-		height: 52rpx;
-		border-left: 2rpx dashed rgba(23, 107, 84, 0.28);
+		flex: 1;
+		width: 2rpx;
+		min-height: 10rpx;
+		background: rgba(29,53,42,.08);
 	}
 
 	&__content {
-		flex: 1;
 		min-width: 0;
-		padding: 0 0 20rpx 10rpx;
+		flex: 1;
+		padding: 0 0 26rpx 12rpx;
+	}
+
+	&__item:last-child &__content {
+		padding-bottom: 2rpx;
 	}
 
 	&__title {
+		display: flex;
+		align-items: center;
+		gap: 10rpx;
+		min-height: 40rpx;
 		font-size: 26rpx;
 		font-weight: 600;
-		color: #2a3f33;
+		line-height: 40rpx;
+		color: #1d2923;
 	}
 
+	&__state {
+		font-size: 20rpx;
+		font-weight: 400;
+		letter-spacing: 1rpx;
+		color: #176b54;
+
+		&--failed { color: #a2493d; }
+		&--skipped { color: #8a948e; }
+	}
+
+	// 结果收进浅色 chip，而不是裸露的第二行文字。
 	&__summary {
-		margin-top: 8rpx;
+		margin-top: 10rpx;
+		padding: 12rpx 16rpx;
+		border-radius: 14rpx;
+		background: rgba(29,53,42,.05);
 		font-size: 23rpx;
-		color: #6d7d71;
+		line-height: 1.6;
+		color: #5d6a62;
 	}
 }
 
-@keyframes dot-pop {
-	from { transform: scale(0.7); }
-	to { transform: scale(1); }
+@keyframes activity-pop {
+	0% { opacity: 0; transform: scale(.85); }
+	100% { opacity: 1; transform: none; }
 }
 
-@keyframes dot-pulse {
-	0%, 100% { transform: scale(1); }
-	50% { transform: scale(0.82); }
+@keyframes activity-pulse {
+	0%, 100% { opacity: 1; transform: scale(1); }
+	50% { opacity: .45; transform: scale(.82); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.activity__dot { animation: none; }
+	.activity__badge,
+	.activity__pulse {
+		animation: none;
+	}
 }
 </style>

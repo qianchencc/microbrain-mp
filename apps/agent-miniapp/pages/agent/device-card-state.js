@@ -16,8 +16,14 @@ export function mergeObservedStates(states, observedStates) {
   return merged
 }
 
+// 只有空调有可编辑参数（温度/模式/风速）；门禁一次执行即开一次门，无参数可配，长按不激活面板。
+export function cardConfigurable(action, phase, { readonly = false, disabled = false } = {}) {
+  return !readonly && !disabled && phase === 'pending' && action.kind === 'ac';
+}
+
 export function reduceCardHold(state, event) {
-  if (state === 'committed' || state === 'cancelled') return event === 'start' ? 'tracking' : state;
+  if (state === 'committed') return event === 'end' || event === 'cancel' ? 'released' : state;
+  if (state === 'released' || state === 'cancelled') return event === 'start' ? 'tracking' : state;
   if (event === 'complete') return 'committed';
   if (event === 'start') return 'tracking';
   if (event === 'cancel') return 'cancelled';

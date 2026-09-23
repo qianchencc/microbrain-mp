@@ -24,8 +24,7 @@
 <script>
 import {goPage} from '@/utils/tools'
 
-const plugin = requirePlugin("WechatSI");
-let manager = plugin.getRecordRecognitionManager();
+let manager
 
 export default {
 	name: "InputCom",
@@ -40,9 +39,15 @@ export default {
 		}
 	},
 	mounted() {
-		manager.onStart = this.voiceStart
-		manager.onStop = this.voiceStop
-		manager.onError = this.voiceError
+		try {
+			const plugin = requirePlugin("WechatSI")
+			manager = plugin.getRecordRecognitionManager()
+			manager.onStart = this.voiceStart
+			manager.onStop = this.voiceStop
+			manager.onError = this.voiceError
+		} catch {
+			manager = null
+		}
 	},
 	data(){
 		return {
@@ -62,12 +67,17 @@ export default {
 		},
 		// 语音发送
 		startVoice() {
+			if (!manager) {
+				uni.showToast({ title: '当前版本暂未开通语音输入', icon: 'none' })
+				return
+			}
 			manager.start();
 			uni.showLoading({
 				title: '正在录音'
 			})
 		},
 		endVoice(res) {
+			if (!manager) return
 			manager.stop();
 			uni.hideLoading()
 		},

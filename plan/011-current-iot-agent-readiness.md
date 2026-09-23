@@ -2,6 +2,8 @@
 
 日期：2026-09-14
 
+> 历史快照。文件名中的“当前”只代表 2026-09-14；现行生产主线与待办从 [`docs/README.md`](../docs/README.md) 进入。
+
 ## 已冻结事实
 
 - Agent 使用客户小程序当前登录用户的身份和 token。
@@ -47,4 +49,3 @@
 - 鉴权口径：两个网关统一用裸 uuid（带 `bearer ` 前缀对 sso-api 401）；owner H5 的 `owner-mp-token` 存裸 uuid，此前部分「未授权」现象是双重前缀存储问题，不是权限结论。
 - scoped 路由族完整清单与逐类型粗状态字段见 `docs/research/2026-09-15-normal-user-state-read-verification.md`。
 - 剩余不阻塞开工的待验证项：~~`MODE`/`F` 枚举语义、回读延迟分布~~（2026-09-15 授权控制实测已破译：MODE 2送风/3制冷/4制热/5除湿/7自动，F 15低/75高/101自动且中档模板被上游 207 拒绝；回读延迟 tT≤2.4s、模式/风速≤4s，见 `docs/research/2026-09-15-ac-mode-fan-enum-and-readback-latency.md`）、离线设备详情形态、门禁状态动作有无、照明权威读的回路参数与 scoped 开关状态同步时效。
-

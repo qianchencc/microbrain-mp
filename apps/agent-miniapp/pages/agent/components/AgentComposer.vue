@@ -3,16 +3,20 @@
   <view class="voice-feedback" :class="{ visible: phase !== 'idle', cancel: cancelling }" aria-live="polite">
    <view class="voice-light" :class="{ pulsing: phase === 'recording' && !cancelling }" /><text>{{ feedback }}</text>
   </view>
-  <view class="composer" :class="{ focused, voice: voiceMode, held: phase === 'recording', cancel: cancelling }">
-   <button class="mode-button" :disabled="disabled || running || phase !== 'idle'" :aria-label="voiceMode ? '切换文字输入' : '切换语音输入'" hover-class="pressed" @tap="toggleMode">
+  <view v-if="editing" class="edit-strip">
+   <image class="edit-strip__icon" src="/static/compose.svg" /><text class="edit-strip__label">正在编辑消息</text>
+   <button class="edit-strip__cancel" aria-label="取消编辑" hover-class="pressed" @tap="$emit('cancel-edit')"><image class="edit-strip__cancel-icon" src="/static/close.svg" /></button>
+  </view>
+  <view class="composer" :class="{ focused, voice: voiceMode, held: phase === 'recording', cancel: cancelling, editing }">
+   <button class="mode-button" :disabled="disabled || running || editing || phase !== 'idle'" :aria-label="voiceMode ? '切换文字输入' : '切换语音输入'" hover-class="pressed" @tap="toggleMode">
     <image class="mode-icon" :src="voiceMode ? '/static/compose.svg' : '/static/mic.svg'" />
    </button>
    <view class="input-area">
-    <textarea v-show="!voiceMode" class="composer-input" :value="fieldValue" :disabled="disabled"
+    <textarea v-show="!voiceMode" class="composer-input" :value="fieldValue" :disabled="disabled" :focus="focusRequest"
      :auto-height="true" :adjust-position="false" :disable-default-padding="true"
      :hold-keyboard="true" :show-confirm-bar="false"
-     confirm-type="send" :confirm-hold="true" :maxlength="200" placeholder="想查看或调整什么设备？" placeholder-class="composer-placeholder"
-     @focus="focused = true" @blur="focused = false" @keyboardheightchange="onKeyboard"
+     confirm-type="send" :confirm-hold="true" :maxlength="200" :placeholder="editing ? '编辑这条消息' : '想查看或调整什么设备？'" placeholder-class="composer-placeholder"
+     @focus="onFocus" @blur="focused = false" @keyboardheightchange="onKeyboard"
      @input="onInput" @confirm="onConfirm" />
     <view v-if="voiceMode" class="hold-input" role="button" aria-label="按住说话，上滑取消"
      @touchstart.stop="startVoice" @touchmove.stop.prevent="moveVoice" @touchend.stop="endVoice" @touchcancel.stop="interrupt">
@@ -20,7 +24,7 @@
     </view>
    </view>
    <button v-show="!voiceMode || running" class="send-button" :class="{ ready: running || modelValue.trim() }"
-    :disabled="!running && (disabled || !modelValue.trim())" :aria-label="running ? '停止回答' : '发送'" hover-class="pressed" @tap="running ? $emit('stop') : send()">
+    :disabled="!running && (disabled || !modelValue.trim())" :aria-label="running ? '停止回答' : (editing ? '重新发送' : '发送')" hover-class="pressed" @tap="running ? $emit('stop') : send()">
     <view v-if="running" class="stop-mark" /><image v-else class="send-icon" src="/static/send.svg" />
    </button>
   </view>
@@ -31,9 +35,9 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { createVoiceInput } from '../voice-input.mjs'
 import { createFieldEchoGuard } from '../field-echo-guard.mjs'
 import { resolveKeyboardDock } from '../keyboard-dock.mjs'
-const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean })
-const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice', 'keyboard'])
-const focused = ref(false), voiceMode = ref(false), phase = ref('idle'), cancelling = ref(false)
+const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean, editing: Boolean })
+const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice', 'keyboard', 'cancel-edit'])
+const focused = ref(false), voiceMode = ref(false), phase = ref('idle'), cancelling = ref(false), focusRequest = ref(false)
 // 字段非受控：打字（含拼音组合中态）不写回 :value，只向上同步；
 // 仅程序性改写（发送后清空等）经回声判定后落原生层，否则 IME 会被强制提交。
 const fieldValue = ref(props.modelValue)
@@ -51,6 +55,16 @@ function onInput(event) { echoGuard.track(event.detail.value); emit('update:mode
 function onConfirm(event) { onInput(event); send() }
 // adjust-position=false：页面不平移，键盘高度交给父级做 composer-shell 底部停靠
 function onKeyboard(event) { emit('keyboard', resolveKeyboardDock(event)) }
+function onFocus() { focused.value = true }
+// focusRequest 是随编辑态生命周期的粘性属性：编辑期间恒 true（字段本就该聚焦），
+// 退出编辑才释放收键盘。禁止在 onFocus 里复位——程序化聚焦被 iOS 静默忽略时
+// focusRequest 滞留 true，用户手动点焦触发的 @focus 若复位它，attr true→false
+// 会主动 blur 掉刚聚焦的字段，输入框永远点不进去（2026-09-17 真机根因）。
+watch(() => props.editing, value => {
+ interrupt()
+ if (value) { voiceMode.value = false; focusRequest.value = true }
+ else focusRequest.value = false
+})
 // 程序性改写经 plan() 取步骤：目标值恰等于 fieldValue 时原生层仍显示回声文本，
 // 需先写显示值制造 diff 再 nextTick 写目标值，否则发送后清空的 '' 写不进去。
 watch(() => props.modelValue, value => {
@@ -100,12 +114,21 @@ defineExpose({ interrupt })
 .send-button[disabled] { background:#edf2ee; box-shadow:none; }
 .stop-mark { width:12px; height:12px; border-radius:3px; background:#fff; }
 .hold-input { height:36px; display:flex; align-items:center; justify-content:center; padding-right:36px; font-size:13px; font-weight:500; color:#486555; user-select:none; }
+.composer.editing { border-color:#78a28b; }
 .composer.voice { background:linear-gradient(160deg,#f9fbf9,#eaf1eb); }
+/* 编辑态上下文静带：贴着胶囊上沿常驻，✕ 是唯一退出编辑的出口（不放 disabled） */
+.edit-strip { display:flex; align-items:center; gap:6px; margin:0 6px 6px; padding:6px 8px 6px 12px; border:1px solid #dfe8e1; border-radius:14px; background:#f4f8f4; box-shadow:0 1px 3px rgba(28,57,42,.06); animation:message-in 160ms cubic-bezier(.23,1,.32,1); }
+.edit-strip__icon { width:13px; height:13px; opacity:.55; }
+.edit-strip__label { flex:1; font-size:12px; color:#55705f; }
+.edit-strip__cancel { display:flex; align-items:center; justify-content:center; width:26px; height:26px; margin:0; padding:0; border-radius:7px; background:transparent; }
+.edit-strip__cancel::after { border:0; }
+.edit-strip__cancel-icon { width:12px; height:12px; opacity:.6; }
+@keyframes message-in { from { opacity:0; transform:translateY(3px); } }
 .composer.held { border-color:#94b4a0; background:#e5eee7; box-shadow:inset 0 2px 5px rgba(30,69,44,.07); }
 .composer.cancel { border-color:#c6b1a6; background:#f4ede8; }.composer.cancel .hold-input { color:#9b6251; }
 .voice-feedback { position:absolute; bottom:calc(100% + 12px); left:50%; transform:translate(-50%,5px); opacity:0; pointer-events:none; display:flex; align-items:center; gap:8px; white-space:nowrap; padding:11px 16px; border:1px solid #dce5dd; border-radius:18px; background:#fafcf9; box-shadow:0 6px 24px rgba(30,59,40,.08),inset 0 1px 0 white; font-size:12px; color:#456350; transition:opacity 160ms ease,transform 180ms cubic-bezier(.23,1,.32,1); }
 .voice-feedback.visible { opacity:1; transform:translate(-50%,0); }.voice-feedback.cancel { color:#9b6251; }
 .voice-light { width:6px; height:6px; border-radius:50%; background:currentColor; }.voice-light.pulsing { animation:record-pulse 1s ease-in-out infinite alternate; }
 @keyframes record-pulse { to { opacity:.35; } }
-@media(prefers-reduced-motion:reduce) { .composer,.voice-feedback,.mode-button,.send-button { transition:none; }.voice-light.pulsing { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .composer,.voice-feedback,.mode-button,.send-button { transition:none; }.edit-strip { animation:none; }.voice-light.pulsing { animation:none; } }
 </style>

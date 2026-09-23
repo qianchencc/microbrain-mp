@@ -2,6 +2,8 @@
 
 日期：2026-09-15
 
+状态：历史研究，生产决策已由[客户小程序生产主线](../../plan/2026-09-18-customer-miniapp-canonical-agent-migration.md)执行。下文“当前”描述只代表 2026-09-15 的调查快照；现状请从 [`docs/README.md`](../README.md) 进入。
+
 ## 结论先行
 
 当前 `apps/agent-miniapp` 已经是可运行的独立原生页面，但它的定位应当是：

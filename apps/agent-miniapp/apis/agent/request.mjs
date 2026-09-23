@@ -1,9 +1,10 @@
-export function requestJson(url, method, data, header) {
+export function requestJson(url, method, data, header, timeout) {
  // WeChat defaults to application/json, including bodyless POST/DELETE requests.
  const payload = data ?? (['POST', 'DELETE', 'PATCH', 'PUT'].includes(method) ? {} : undefined)
  return new Promise((resolve, reject) => {
   uni.request({
    url, method, data: payload,
+   ...(timeout ? { timeout } : {}),
    header: payload === undefined ? header : {...header, 'content-type':'application/json'},
    success: response => {
     if (response.statusCode >= 200 && response.statusCode < 300) resolve(response.data)

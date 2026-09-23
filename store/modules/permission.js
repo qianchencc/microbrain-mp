@@ -98,9 +98,12 @@ export const usePermissionStore = defineStore({
 			const { permissionBtns, permissionIds } = generateBtns(data)
 			this.accessBtns = permissionBtns
 			this.permissionIds = permissionIds
-			useUserStoreHook().setGeospatialInfo()
-			useUserStoreHook().setUserInfo()
-			useUserStoreHook().setDict()
+			const userStore = useUserStoreHook()
+			await Promise.all([
+				userStore.setGeospatialInfo(),
+				userStore.setUserInfo(),
+				userStore.setDict()
+			])
 			// #ifdef APP-PLUS
 			appPush()
 			// #endif

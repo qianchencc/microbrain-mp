@@ -26,7 +26,7 @@ test('恢复以持久化草案和收尾为准，同一草案修订只出现一�
 
 test('操作文案按真实命令展示，不固定为打开照明', () => {
 	assert.equal(operationText({ kind: 'lighting', command: { closeOrOpen: 0 } }), '关闭')
-	assert.equal(operationText({ kind: 'access', command: { controlType: 2, count: 3 } }), '开门 3 次')
+	assert.equal(operationText({ kind: 'access', command: { controlType: 2, count: 3 } }), '开门一次')
 	assert.equal(operationText({ kind: 'ac', command: { temperature: 25 } }), '25°C')
 	assert.equal(receiptText({ outcome: 'ACCEPTED' }), '指令已受理')
 })
@@ -50,7 +50,7 @@ test('tool.progress 原位更新运行中步骤的过渡摘要', () => {
 	const turn = createTurn('turn', '开灯')
 	applyEvent(turn, { type: 'tool.started', tool: 'find_device_candidates' })
 	applyEvent(turn, { type: 'tool.progress', tool: 'find_device_candidates', summary: '正在修正检索范围…' })
-	assert.equal(turn.activities[0].status, 'running')
+	assert.equal(turn.activities[0].status, 'searching')
 	assert.equal(turn.activities[0].summary, '正在修正检索范围…')
 	applyEvent(turn, { type: 'tool.completed', tool: 'find_device_candidates', status: 'completed', summary: '找到 5 个设备候选 · 2 次尝试' })
 	assert.equal(turn.activities[0].summary, '找到 5 个设备候选 · 2 次尝试')
@@ -74,6 +74,6 @@ test('run 收尾同时清除流式标记，恢复重放后不残留光标', () =
 test('friendlyError 将底层错误映射为一句人话', () => {
 	assert.equal(friendlyError('request:fail TypeError: network error'), '网络连接中断，本次回答未完成')
 	assert.equal(friendlyError('请求处理失败'), '服务暂时不可用，本次回答未完成')
-	assert.equal(friendlyError('会话已过期或不可用'), '会话已过期，请清除后重新开始')
+	assert.equal(friendlyError('会话已过期或不可用'), '会话已过期，请重新登录')
 	assert.equal(friendlyError(''), '本次回答未完成')
 })

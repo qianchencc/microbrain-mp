@@ -84,7 +84,13 @@ function createDeviceSheet(clock, popup, onClose) {
       sheet.stopReopen()
       if (!sheet.props.open) return
       popup.open('bottom')
-      sheet.reopenTimer = clock.setTimeout(() => { if (sheet.props.open && !sheet.visible) sheet.ensureOpen() }, 350)
+      sheet.reopenTimer = clock.setTimeout(() => {
+        if (!sheet.props.open || sheet.visible) return
+        // 按真实 popup 状态对账：物理仍在展示（showPopup && showTrans）说明影子状态失真，
+        // 校正 visible；仅 showPopup 为真是 300ms 关闭动画未播完，继续重试等销毁。
+        if (popup.showPopup && popup.showTrans) { sheet.visible = true; return }
+        sheet.ensureOpen()
+      }, 350)
     },
     stopReopen() { clock.clearTimeout(sheet.reopenTimer) },
     onPopupChange(event) {
@@ -92,8 +98,8 @@ function createDeviceSheet(clock, popup, onClose) {
       if (event.show) { sheet.stopReopen(); return }
       if (sheet.props.open && !sheet.requestedClose) { sheet.requestedClose = true; onClose() }
     },
-    dismissFromHandle() {                                            // WXS callMethod 入口
-      if (!sheet.props.open || sheet.requestedClose) return
+    // 拖拽发生时面板必然可见：close 幂等，不得用 open/requestedClose 早退（失配时早退会把面板永久留在半空）
+    dismissFromHandle() {
       sheet.requestedClose = true
       sheet.stopReopen()
       popup.close()
@@ -173,6 +179,36 @@ test('打开后立刻要求关闭：不残留重开定时器，面板保持关�
   await sheet.setOpen(true); await clock.flush()
   await sheet.setOpen(false); await clock.flush(); clock.advance(1000)
   assert.equal(popup.showPopup && popup.showTrans, false, '不应重新打开')
+})
+
+test('失配状态下拖拽收起仍必须关闭（open=false/requestedClose=true 不得早退）', async () => {
+  const clock = createClock()
+  const popup = createUniPopup(clock)
+  let closes = 0
+  const sheet = createDeviceSheet(clock, popup, () => { closes++ })
+  // 模拟真机失配：物理层仍在展示，但逻辑侧 open=false、requestedClose=true
+  //（uni-popup 静默 no-op / 状态不同步窗口期的遗留态）
+  popup.showPopup = true; popup.showTrans = true
+  sheet.props.open = false; sheet.requestedClose = true
+  sheet.dismissFromHandle()
+  await clock.flush(); clock.advance(400)
+  assert.equal(closes, 1, '必须向父级发出 close')
+  assert.equal(popup.showPopup, false, '物理面板必须被关闭，不能悬停在半空')
+})
+
+test('物理开着但影子为关时，重试按真实状态校正 visible 而非空转', async () => {
+  const clock = createClock()
+  const popup = createUniPopup(clock)
+  let openCalls = 0
+  const realOpen = popup.open
+  popup.open = direction => { openCalls++; realOpen.call(popup, direction) }
+  const sheet = createDeviceSheet(clock, popup, () => {})
+  // 物理层已展示但 change{show:true} 丢失：visible=false，open() 因 showPopup 为真永远静默 no-op
+  popup.showPopup = true; popup.showTrans = true
+  await sheet.setOpen(true); await clock.flush()
+  clock.advance(1200)
+  assert.equal(sheet.visible, true, '应通过 showPopup&&showTrans 对账校正影子状态')
+  assert.ok(openCalls <= 3, '对账后应停止空转重试')
 })
 
 test('重开确认（change show:true）后不再重复调用 open', async () => {

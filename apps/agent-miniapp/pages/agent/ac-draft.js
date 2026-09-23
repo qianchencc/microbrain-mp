@@ -8,8 +8,14 @@ export function acSummary(command = {}) {
 }
 
 export function operationLabel(action) {
-  if (action.kind === "access") return `开门 ${action.command.count ?? 1} 次`;
+  if (action.kind === "access") return "开门一次";
   return action.kind === "ac" ? acSummary(action.command) : action.command.closeOrOpen === 1 ? "开启" : "关闭";
+}
+
+// 步长不细于 1°C（2026-09-17 实测：网关受理 24.5 但物理设备只落整数）；
+// 旧草案 parameters 残留 0.5/0.1 时同样按整数网格编辑，与服务端整数校验一致。
+export function acTemperatureStep(actions) {
+  return Math.max(1, ...actions.map(a => a.parameters?.temperature.step ?? 1));
 }
 
 export function effectiveSettings(action, states, edits = {}) {

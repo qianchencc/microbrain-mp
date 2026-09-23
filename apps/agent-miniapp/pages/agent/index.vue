@@ -8,7 +8,7 @@
    <view class="conversation__inner">
     <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
-     <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" @retry="retryTurn(turn)" @edit="editTurn(turn, $event)" /></view>
+     <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
      <AgentReplySurface :turn="turn" :busy="busy"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
@@ -20,7 +20,7 @@
    </view>
   </scroll-view>
   </view>
-  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" @send="sendMessage" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" /></view>
+  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
   <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
    :settle-selection="settleSelection"
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
@@ -62,7 +62,7 @@ const sheetDraft = computed(() => sheetTurn.value?.draft ?? null)
 const draftBaselines = new Map()
 const sheetBaseline = computed(() => sheetTurn.value?.draft ? draftBaselines.get(sheetTurn.value.draft.draftId) ?? null : null)
 function openSheetEditor(turn, action) {
- if (!action || !turn.draft) return
+ if (!action || action.kind !== 'ac' || !turn.draft) return
  sheetDraftId.value = turn.draft.draftId
  sheetBrowser.value = false
  sheetActionId.value = action.id
@@ -81,6 +81,11 @@ function openSheetBrowser(turn) {
 function closeSheet() { sheetDraftId.value = '' }
 let activeRequest, presentation, pollTimer, expiryTimer
 let disposed = false, visible = true, restoring = false, sequence = 0
+// 确认在途的 draftId 集合 + 纪元计数：确认请求本身即执行结果的权威通路，
+// 期间 restore 整表回读会让路（服务端 EXECUTING 提交前的快照仍是待确认，
+// 回读会把界面冻结成"幻觉待确认"）；纪元用于丢弃跨越确认起点的在途 restore 快照。
+const confirming = new Set()
+let confirmEpoch = 0
 // 键盘停靠：adjust-position=false 页面不平移，键盘高度转为 composer-shell 底 padding
 //（键盘高 + 8px 缝），对话区 flex 自动收缩；弹起时仅当用户本在底部才跟到底部锚点。
 const kbHeight = ref(0), kbMs = ref(0)
@@ -107,12 +112,16 @@ function schedule() {
 watch(mutating, schedule)
 watch(() => turns.value.map(turn => turn.draft ? turn.draft.draftId + turn.draft.status + turn.draft.expiresAt : '').join('|'), () => schedule())
 async function restore() {
- if (restoring || activeRequest || disposed) return
+ if (restoring || activeRequest || confirming.size || disposed) return
  restoring = true
+ const epoch = confirmEpoch
  try {
   const restored = await restoreConversation()
   const conversation = restored.conversation || await createConversation()
   if (disposed) return
+  // 快照可能取于确认请求到达服务端之前（EXECUTING 提交前的待确认旧态）：
+  // 跨越确认起点的快照整表丢弃，由确认结果写回或下一轮轮询收口。
+  if (epoch !== confirmEpoch) { schedule(); return }
   conversationId.value = conversation.id
   phase.value = conversation.phase || 'idle'
   turns.value = restoreTurns(conversation.turns)
@@ -129,6 +138,39 @@ async function restore() {
  } catch (error) { if (!disposed) { errorMessage.value = error.message; schedule() } }
  finally { restoring = false }
 }
+// 消息编辑收编进主输入框（全页面单一键盘链路）：进入编辑暂存 composer 草稿并预填原文，
+// 取消/提交后还原草稿；编辑期间轮次被整表回读替换或失格时自动退出编辑态。
+const editingTurn = ref(null)
+let composerStash = ''
+function beginEdit(turn) {
+ if (busy.value || !canRecoverTurn(turn, turns.value.at(-1) === turn)) return
+ composerStash = input.value
+ editingTurn.value = turn
+ input.value = turn.content
+}
+function cancelEdit() {
+ if (!editingTurn.value) return
+ editingTurn.value = null
+ input.value = composerStash
+ composerStash = ''
+}
+function onComposerSend() {
+ const turn = editingTurn.value
+ if (!turn) return sendMessage()
+ const content = input.value.trim()
+ editingTurn.value = null
+ input.value = composerStash
+ composerStash = ''
+ const live = turns.value.find(item => item.id === turn.id)
+ if (content && live && canRecoverTurn(live, turns.value.at(-1) === live)) return editTurn(live, content)
+}
+watch(turns, () => {
+ const turn = editingTurn.value
+ if (!turn) return
+ const live = turns.value.find(item => item.id === turn.id)
+ if (!live || !canRecoverTurn(live, turns.value.at(-1) === live)) return cancelEdit()
+ editingTurn.value = live // 整表回读后重新钉到活对象，气泡高亮才不丢
+})
 async function sendMessage(voiceText) {
  const content = (typeof voiceText === 'string' ? voiceText : input.value).trim()
  if (!content || busy.value || !conversationId.value) return
@@ -198,85 +240,118 @@ const selectionDesired = new Map(), selectionSynced = new Map(), selectionInflig
 const sameIds = (a, b) => a.length === b.length && a.every(id => b.includes(id))
 const settleSelection = draftId => selectionInflight.get(draftId) ?? Promise.resolve()
 function selectDraft(turn, selected) {
- if (busy.value || turn.draft?.status !== 'PENDING_CONFIRMATION') return
- if (Date.parse(turn.draft.expiresAt) <= Date.now()) {
-  turn.draft.status = 'EXPIRED'
+ // tap 事件携带的是渲染时刻的轮次对象；整表回读后它可能已成孤儿，先按 draftId 解析活对象。
+ const live = liveDraftTurn(turn.draft?.draftId) ?? turn
+ if (busy.value || live.draft?.status !== 'PENDING_CONFIRMATION') return
+ if (Date.parse(live.draft.expiresAt) <= Date.now()) {
+  live.draft.status = 'EXPIRED'
   uni.showToast({ title: '草案已过期，请重新核验', icon: 'none' })
   schedule()
   return
  }
- const draftId = turn.draft.draftId
- turn.draft.selectedActionIds = selected
+ const draftId = live.draft.draftId
+ live.draft.selectedActionIds = selected
  selectionDesired.set(draftId, selected)
  if (selectionInflight.has(draftId)) return
  selectionInflight.set(draftId, (async () => {
   try {
    while (selectionDesired.has(draftId)) {
-    if (turn.draft?.draftId !== draftId) break
+    const live = liveDraftTurn(draftId)
+    if (!live) break
     const desired = selectionDesired.get(draftId)
     selectionDesired.delete(draftId)
     if (sameIds(desired, selectionSynced.get(draftId) ?? [])) continue
     try {
-     Object.assign(turn.draft, await updateSelection(draftId, turn.draft.revision, desired))
+     Object.assign(live.draft, await updateSelection(draftId, live.draft.revision, desired))
      selectionSynced.set(draftId, desired)
     } catch (error) {
      const synced = selectionSynced.get(draftId)
-     if (synced && turn.draft?.draftId === draftId) turn.draft.selectedActionIds = synced
+     const failed = liveDraftTurn(draftId)
+     if (synced && failed) failed.draft.selectedActionIds = synced
      uni.showToast({ title: String(error.data?.message || error.message || '选择未保存').slice(0, 24), icon: 'none' })
      selectionDesired.delete(draftId)
-     if (!activeRequest && !disposed) await restore()
+     if (!activeRequest && !confirming.size && !disposed) await restore()
      break
     }
    }
   } finally { selectionInflight.delete(draftId); schedule() }
  })())
 }
+// 草案写回纪律：await 之后轮次可能已被整表回读替换，必须按 draftId 重解析活对象。
+const liveDraftTurn = draftId => turns.value.find(item => item.draft?.draftId === draftId)
 async function restoreDraft(turn) {
  if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
  mutating.value = true
- await settleSelection(turn.draft.draftId)
- try { Object.assign(turn.draft, await restoreAction(turn.draft.draftId, turn.draft.revision)) }
- catch (error) {
+ const draftId = turn.draft.draftId
+ await settleSelection(draftId)
+ try {
+  const updated = await restoreAction(draftId, (liveDraftTurn(draftId) ?? turn).draft?.revision ?? turn.draft.revision)
+  const live = liveDraftTurn(draftId) ?? turn
+  if (live.draft) Object.assign(live.draft, updated)
+ } catch (error) {
   uni.showToast({ title: String(error.data?.message || error.message || '还原失败').slice(0, 24), icon: 'none' })
-  if (!activeRequest && !disposed) await restore()
+  if (!activeRequest && !confirming.size && !disposed) await restore()
  }
  finally { mutating.value = false; schedule() }
 }
 async function confirmDraft(turn) {
- if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
+ if (busy.value || turn.draft?.status !== 'PENDING_CONFIRMATION') return
+ const draftId = turn.draft.draftId
  mutating.value = true
  // 等选区同步落地再读 revision，避免确认到旧勾选
- await settleSelection(turn.draft.draftId)
- if (turn.draft.status !== 'PENDING_CONFIRMATION' || !turn.draft.selectedActionIds.length) { mutating.value = false; return }
+ await settleSelection(draftId)
+ // settle 期间可能发生过整表回读：重新按 draftId 解析活轮次，不写闭包里的孤儿对象
+ const current = turns.value.find(item => item.draft?.draftId === draftId) ?? turn
+ if (current.draft?.status !== 'PENDING_CONFIRMATION' || !current.draft.selectedActionIds.length) { mutating.value = false; return }
  clearTimeout(expiryTimer)
- turn.draft.status = 'EXECUTING'
- try { turn.result = await confirmAction(turn.draft.draftId, turn.draft.revision); turn.draft.status = turn.result.status }
- catch (error) {
-  if (error.data?.status === 'REJECTED') { turn.result = error.data; turn.draft.status = 'REJECTED' }
-  else { errorMessage.value = error.message; await restore() }
- } finally { mutating.value = false; schedule(); follow() }
+ current.draft.status = 'EXECUTING'
+ confirming.add(draftId)
+ confirmEpoch++
+ let resync = false
+ try {
+  const result = await confirmAction(draftId, current.draft.revision)
+  const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
+  live.result = result
+  live.draft.status = result.status
+ } catch (error) {
+  const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
+  if (['REJECTED', 'INTERRUPTED'].includes(error.data?.status)) { live.result = error.data; live.draft.status = error.data.status }
+  else { errorMessage.value = error.message; resync = true }
+ } finally { confirming.delete(draftId); mutating.value = false; schedule(); follow() }
+ if (resync && !disposed) await restore()
 }
 async function cancelDraft(turn) {
  if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
  mutating.value = true
- await settleSelection(turn.draft.draftId)
- try { turn.draft.status = (await cancelAction(turn.draft.draftId)).status }
- catch (error) { errorMessage.value = error.message }
+ const draftId = turn.draft.draftId
+ await settleSelection(draftId)
+ try {
+  const cancelled = await cancelAction(draftId)
+  const live = liveDraftTurn(draftId) ?? turn
+  if (live.draft) live.draft.status = cancelled.status
+ } catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }
 async function revalidateDraft(turn) {
  if (busy.value || !turn.draft) return
  mutating.value = true
- await settleSelection(turn.draft.draftId)
- try { Object.assign(turn.draft, await revalidateAction(turn.draft.draftId, turn.draft.revision)) }
- catch (error) { errorMessage.value = error.message }
+ const draftId = turn.draft.draftId
+ await settleSelection(draftId)
+ try {
+  const live = liveDraftTurn(draftId) ?? turn
+  if (live.draft) Object.assign(live.draft, await revalidateAction(draftId, live.draft.revision))
+ } catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }
 async function retryAnswer(turn) {
- if (busy.value) return
+ if (busy.value || !turn.draft) return
  mutating.value = true
- try { turn.result.summary = await retrySummary(turn.draft.draftId) }
- catch (error) { errorMessage.value = error.message }
+ const draftId = turn.draft.draftId
+ try {
+  const summary = await retrySummary(draftId)
+  const live = liveDraftTurn(draftId) ?? turn
+  if (live.result) live.result.summary = summary
+ } catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }
 async function stopRun() {

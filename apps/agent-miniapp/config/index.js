@@ -1,7 +1,7 @@
 // Local development only. Production identity must come from an authenticated session.
-// 真实网关联调（手机预览可用；开发者工具模拟器同样可达）：指向本机局域网地址的 3201 实例
-// （IOT_BASE_URL=https://ncim.577119.com，已绑 0.0.0.0）。IP 变了要同步改这里。
-export const agentUrl = 'http://192.168.30.63:3201/api'
+// 真实网关联调（手机预览可用；开发者工具模拟器同样可达）：指向本机局域网地址的 3200 实例——
+// 唯一 Runtime（IOT_BASE_URL=https://ncim.577119.com，已绑 0.0.0.0）。IP 变了要同步改这里。
+export const agentUrl = 'http://192.168.102.15:3200/api'
 
 export function getAgentHeaders() {
   const version = uni.getAccountInfoSync().miniProgram.envVersion
@@ -13,7 +13,7 @@ export function getAgentHeaders() {
       if (auth.authorization && auth.tenantcode) return { Authorization: auth.authorization, Tenantcode: auth.tenantcode }
     } catch { /* 存了坏值，走回落 */ }
   }
-  // 3201 开发实例已配置 AGENT_DEV_IDENTITY：服务端会把 local-development 假身份替换为真实身份，
+  // 本机 3200 唯一真实网关实例已配置 AGENT_DEV_IDENTITY：服务端会把 local-development 假身份替换为真实身份，
   // 前端无需任何注入即可用真实物联网。若撤掉服务端替换，缺身份会表现为生产网关 401 的瞬间失败。
   return { Authorization: 'Bearer local-development', Tenantcode: 'LOCAL' }
 }

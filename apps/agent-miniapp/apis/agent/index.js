@@ -15,7 +15,7 @@ const getHeaders = (includeJson = false) => {
 	return headers
 }
 
-const request = (url, method, data) => requestJson(agentUrl + url, method, data, getHeaders())
+const request = (url, method, data, timeout) => requestJson(agentUrl + url, method, data, getHeaders(), timeout)
 
 // 消息接口的 409 等错误体是 arraybuffer（dataType text + responseType arraybuffer），复用解码器还原契约字段。
 // 带契约 message 的错误（相位门等）原样透传；解析不出 message 的错误体按传输层失败消毒。
@@ -30,7 +30,10 @@ export const createConversation = () => request('/agent/conversations', 'POST')
 export const restoreConversation = () => request('/agent/conversations/current', 'GET')
 export const clearConversation = id => request(`/agent/conversations/${id}`, 'DELETE')
 export const discardTurn = (conversationId, turnId) => request(`/agent/conversations/${conversationId}/turns/${turnId}`, 'DELETE')
-export const confirmAction = (draftId, revision) => request(`/agent/action-drafts/${draftId}/confirm`, 'POST', { revision })
+// 确认请求内含服务端串行执行 + 回读：真实网关单条照明指令 ~10.5s 回包（2026-09-16 实测），
+// 多项草案远超 60s 默认值；超时兜底由 finally 后的 restore 重同步收口（执行结果仍会落库）。
+const CONFIRM_REQUEST_TIMEOUT_MS = 180000
+export const confirmAction = (draftId, revision) => request(`/agent/action-drafts/${draftId}/confirm`, 'POST', { revision }, CONFIRM_REQUEST_TIMEOUT_MS)
 export const updateSelection = (draftId, revision, selectedActionIds) => request(`/agent/action-drafts/${draftId}/selection`, 'PATCH', { revision, selectedActionIds })
 export const retrySummary = draftId => request(`/agent/action-drafts/${draftId}/summary`, 'POST')
 export const readDeviceStates = draftId => request(`/agent/action-drafts/${draftId}/device-states`, 'GET')

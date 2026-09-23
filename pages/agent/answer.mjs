@@ -1,8 +1,16 @@
 // 回复正文的轻量渲染：段落 / 无序列表 / 加粗。流式期间前端只展示纯文本，
 // 完成后才切换到这里的 rich-text 节点，避免流中反复重排。
+// 微信 rich-text 契约：文本叶子必须是 { type: 'text', text }，元素样式只能放 attrs.style。
 const paragraphStyle = 'margin:0 0 10px;line-height:1.8;'
 const listStyle = 'margin:0 0 10px;padding-left:22px;line-height:1.8;'
 const itemStyle = 'margin:4px 0;'
+
+const textNode = text => ({ type: 'text', text })
+const elementNode = (name, style, children) => ({
+	name,
+	...(style ? { attrs: { style } } : {}),
+	children,
+})
 
 export function renderAnswer(text) {
 	const blocks = []
@@ -13,16 +21,16 @@ export function renderAnswer(text) {
 	for (const line of String(text || '').split('\n')) {
 		const bullet = /^\s*(?:[-*•])\s+(.*)$/.exec(line)
 		if (bullet) {
-			list ??= { name: 'ul', style: listStyle, children: [] }
-			list.children.push({ name: 'li', style: itemStyle, children: inline(bullet[1]) })
+			list ??= elementNode('ul', listStyle, [])
+			list.children.push(elementNode('li', itemStyle, inline(bullet[1])))
 			continue
 		}
 		if (!line.trim()) { closeList(); continue }
 		closeList()
-		blocks.push({ name: 'p', style: paragraphStyle, children: inline(line) })
+		blocks.push(elementNode('p', paragraphStyle, inline(line)))
 	}
 	closeList()
-	if (!blocks.length) blocks.push({ name: 'p', style: paragraphStyle, children: [{ name: '#text', text: ' ' }] })
+	if (!blocks.length) blocks.push(elementNode('p', paragraphStyle, [textNode(' ')]))
 	return blocks
 }
 
@@ -32,10 +40,10 @@ function inline(text) {
 	let last = 0
 	let match
 	while ((match = pattern.exec(text))) {
-		if (match.index > last) parts.push({ name: '#text', text: text.slice(last, match.index) })
-		parts.push({ name: 'strong', children: [{ name: '#text', text: match[1] }] })
+		if (match.index > last) parts.push(textNode(text.slice(last, match.index)))
+		parts.push(elementNode('strong', '', [textNode(match[1])]))
 		last = match.index + match[0].length
 	}
-	if (last < text.length) parts.push({ name: '#text', text: text.slice(last) })
-	return parts.length ? parts : [{ name: '#text', text }]
+	if (last < text.length) parts.push(textNode(text.slice(last)))
+	return parts.length ? parts : [textNode(text)]
 }
