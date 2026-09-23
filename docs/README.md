@@ -6,7 +6,7 @@
 
 - 客户小程序根目录是 Agent 唯一生产开发主线；`apps/agent-miniapp` 只保留为回归、演示和故障复现壳。
 - 本机只有单一 Runtime 实例：`127.0.0.1:3200` 直连真实客户网关；Iotfake 与 `3201`/`3100` 已于 2026-09-23 退役，不应再有进程监听这些端口。
-- 下一项工程验收是 `.scratch/customer-agent-migration/issues/03-local-real-gateway-acceptance.md`：客户开发版连接唯一 `3200` 真实网关 Runtime，先完成真实只读查询，再在明确授权下完成一条低风险设备动作。
+- 2026-09-23 已完成 `.scratch/customer-agent-migration/issues/03-local-real-gateway-acceptance.md`：唯一 `3200` 真实网关上的只读查询完整收尾，低风险照明操作完成草案→确认→受理→回读闭环，重复 confirm 只回放结果不重复执行（审计仅一次 `ACTION_DRAFT_ACCEPTED`）；票 04 随之关闭，独立 miniapp 正式定位为回归壳。
 - 体验版/正式版 HTTPS 网关、稳定用户主体契约、更多设备、记忆、日程、自动化和告警仍未进入完成状态。
 
 ## 按任务进入
@@ -31,7 +31,6 @@
 
 ## 尚未关闭
 
-- 唯一 `3200` 真实客户网关 Runtime 的只读验收和经授权低风险设备动作验收；
 - `trial/release` HTTPS、合法域名和 NDJSON 代理验收；
 - 客户稳定 `principalId/workspaceId`、Token 刷新/撤销和后台运行契约；
 - 客户 AppID 的 `WechatSI` 插件授权；
