@@ -85,7 +85,7 @@ test('恢复以持久化草案和收尾为准，同一草案修订只出现一�
 
 test('操作文案按真实命令展示，不固定为打开照明', () => {
 	assert.equal(operationText({ kind: 'lighting', command: { closeOrOpen: 0 } }), '关闭')
-	assert.equal(operationText({ kind: 'access', command: { controlType: 2 } }), '开门一次')
+	assert.equal(operationText({ kind: 'access', command: { controlType: 2, count: 3 } }), '开门 3 次')
 	assert.equal(operationText({ kind: 'ac', command: { temperature: 25 } }), '25°C')
 	assert.equal(receiptText({ outcome: 'ACCEPTED' }), '指令已受理')
 })

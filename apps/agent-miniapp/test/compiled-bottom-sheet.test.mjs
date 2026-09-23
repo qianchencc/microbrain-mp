@@ -4,21 +4,18 @@ import test from 'node:test'
 
 const dist = new URL('../unpackage/dist/build/mp-weixin/pages/agent/components/', import.meta.url)
 const uniPopupDist = new URL('../unpackage/dist/build/mp-weixin/node-modules/@dcloudio/uni-ui/lib/uni-popup/', import.meta.url)
-const uniTransitionDist = new URL('../unpackage/dist/build/mp-weixin/node-modules/@dcloudio/uni-ui/lib/uni-transition/', import.meta.url)
 
 test('微信构建使用 uni-popup 承担遮罩与过渡，仅在横杆保留渲染层手势', async () => {
-	const [wxml, json, js, popupJson, transitionJs] = await Promise.all([
+	const [wxml, json, js, popupJson] = await Promise.all([
 		readFile(new URL('DeviceSheet.wxml', dist), 'utf8'),
 		readFile(new URL('DeviceSheet.json', dist), 'utf8'),
 		readFile(new URL('DeviceSheet.js', dist), 'utf8'),
 		readFile(new URL('uni-popup.json', uniPopupDist), 'utf8'),
-		readFile(new URL('uni-transition.js', uniTransitionDist), 'utf8'),
 	])
 	assert.match(json, /uni-popup/)
 	assert.match(wxml, /<uni-popup/)
 	assert.match(js, /"is-mask-click":!0/)
 	assert.match(popupJson, /uni-transition/)
-	assert.doesNotMatch(transitionJs, /setTimeout/, '真机调试会延迟 transition 的 80ms 入场 timer，面板会卡在屏外直到下一次点击')
 	assert.match(wxml, /module="sheetGesture"/)
 	assert.doesNotMatch(wxml, /sheetGesture\.maskStart/)
 	assert.match(wxml, /catchtouchstart="\{\{sheetGesture\.handleStart\}\}"/)
@@ -28,16 +25,9 @@ test('微信构建使用 uni-popup 承担遮罩与过渡，仅在横杆保留渲
 	// ensureOpen/stopReopen 是 setup 内部函数名，会被压缩改名；断言压缩后仍稳定的特征：
 	// JS 层调用 popup.open('bottom')、350ms 未可见则重试的定时器、以及取消重试的 clearTimeout。
 	assert.match(js, /open\("bottom"\)/)
-	assert.match(js, /setTimeout\([\s\S]{0,300},350\)/)
+	assert.match(js, /setTimeout\([\s\S]{0,120},350\)/)
 	assert.match(js, /clearTimeout/)
-	// 重试按真实 popup 状态对账：showPopup && showTrans 均为真才视为物理层仍在展示并校正影子态
-	assert.match(js, /showPopup[\s\S]{0,60}showTrans/)
-	// 拖拽收起保留松手位移交给外层 slide-bottom（先回写 translateY(0) 会叠出「上窜再收起」的反向运动）；
-	// 位移随 popup 子树 v-if 卸载消失，无需复位。resetHandle 只保留在未达阈值的回弹分支。
-	assert.match(wxml, /if \(dismiss\)\s*\{[^}]*callMethod\('dismissFromHandle'\)[^}]*\}\s*else resetHandle\(ownerInstance\)/)
-	assert.doesNotMatch(wxml, /if \(dismiss\)\s*\{[^}]*resetHandle/)
-	// 底部锚定面板只允许下拉；上拉必须保持 translateY(0)，不得抬起底缘漏出背景
-	assert.match(wxml, /handleOffset\s*=\s*delta\s*>\s*0\s*\?\s*Math\.round\(delta\)\s*:\s*0/)
+	assert.match(wxml, /if \(dismiss\)[\s\S]*resetHandle\(ownerInstance\)[\s\S]*callMethod\('dismissFromHandle'\)/)
 })
 
 test('微信构建保留每次菜单点击独立触发的重开请求', async () => {
@@ -57,17 +47,13 @@ test('全部设备面板保持确定高度链，不把可交互内容压成零�
 	assert.match(wxss, /\.pages[^}]*height:auto/)
 })
 
-test('可配置设备卡保留滚动取消，且长按等原触摸序列结束后才打开面板', async () => {
-	const [wxml, js] = await Promise.all([
-		readFile(new URL('DeviceActionCard.wxml', dist), 'utf8'),
-		readFile(new URL('DeviceActionCard.js', dist), 'utf8'),
-	])
+test('可配置设备卡保留滚动取消，并由原生长按可靠完成参数配置', async () => {
+	const wxml = await readFile(new URL('DeviceActionCard.wxml', dist), 'utf8')
 	assert.match(wxml, /bindtouchstart=/)
 	assert.match(wxml, /bindtouchmove=/)
 	assert.match(wxml, /bindtouchend=/)
 	assert.match(wxml, /bindlongpress=/)
 	assert.doesNotMatch(wxml, /catchtouch(?:start|move|end)=/)
-	assert.match(js, /"released"===\w+[\s\S]{0,80}"configure"/, 'configure 必须由 released terminal 状态触发，不得在手指仍按住时挂载 popup')
 })
 
 test('全部设备使用单一固定规格网格，并以页面轨道进入参数编辑器', async () => {

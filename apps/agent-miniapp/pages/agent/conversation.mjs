@@ -1,7 +1,7 @@
 import { fieldLabels } from './ac-draft.js'
 
 export function createTurn(id, content) {
-	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], draft: null, roster: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
+	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', activities: [], draft: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
 }
 
 export function canRecoverTurn(turn, isLatest) {
@@ -16,7 +16,6 @@ export function restartTurn(turn, content = turn.content) {
 		text: '',
 		activities: [],
 		draft: null,
-		roster: null,
 		result: null,
 		running: true,
 		traceOpen: true,
@@ -30,7 +29,6 @@ export function restartTurn(turn, content = turn.content) {
 export function applyEvent(turn, event) {
 	if (event.type === 'run.started' && event.turnId) turn.serverId = event.turnId
 	if (event.type === 'tool.started') {
-		if (turn.streaming && turn.text) { turn.text = ''; turn.streaming = false }
 		const previous = turn.activities.at(-1)
 		if (event.tool === 'find_device_candidates' && previous?.tool === event.tool && previous.status === 'searching') {
 			previous.attempts = (previous.attempts || 1) + 1
@@ -54,11 +52,10 @@ export function applyEvent(turn, event) {
 		const item = [...turn.activities].reverse().find(activity => activity.tool === event.tool && ['running', 'searching'].includes(activity.status))
 		if (item) Object.assign(item, { status: event.tool === 'find_device_candidates' ? 'searching' : item.status, summary: event.summary || item.summary })
 	}
-	if (event.type === 'message.delta') { turn.streaming = true; turn.text += event.content || ''; turn.traceOpen = false }
-	if (event.type === 'message.completed') { turn.text = event.content || turn.text; turn.streaming = false }
-	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.roster = event.inventory || null; turn.traceOpen = false }
+	if (event.type === 'message.delta') { turn.text += event.content || ''; turn.traceOpen = false }
+	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.traceOpen = false }
 	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
-	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.streaming = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
+	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
 	if (event.type === 'run.failed') {
 		turn.error = event.message || '本次回答未完成'
 		for (const item of turn.activities) if (item.status === 'running') item.status = 'failed'
@@ -67,14 +64,6 @@ export function applyEvent(turn, event) {
 		turn.error = event.message || '本次回答已停止'
 		for (const item of turn.activities) if (['running', 'searching'].includes(item.status)) item.status = 'skipped'
 	}
-}
-
-export function friendlyError(message) {
-	const text = String(message || '')
-	if (/request:fail|network|timeout|超时/i.test(text)) return '网络连接中断，本次回答未完成'
-	if (/请求处理失败|502|503|504|Service/i.test(text)) return '服务暂时不可用，本次回答未完成'
-	if (/会话已过期|客户登录已失效/i.test(text)) return '会话已过期，请重新登录'
-	return text || '本次回答未完成'
 }
 
 export function restoreTurns(savedTurns = []) {
@@ -100,7 +89,7 @@ export function restoreTurns(savedTurns = []) {
 
 export function operationText(action) {
 	const command = action.command || {}
-	if (action.kind === 'access') return '开门一次'
+	if (action.kind === 'access') return `开门 ${command.count || 1} 次`
 	if (action.kind === 'lighting') return command.closeOrOpen === 1 ? '开启' : '关闭'
 	const modes = { auto: '自动', cool: '制冷', heat: '制热', dry: '除湿', fan: '送风' }
 	const fans = { low: '低风', middle: '中风', high: '高风' }
@@ -113,5 +102,5 @@ export function receiptText(receipt) {
 	if (receipt.attempts) return `${receipt.attempts.filter(item => item.outcome === 'ACCEPTED').length}/${receipt.attempts.length} 次已受理`
 	const rejected = receipt.fields?.filter(field => field.outcome === 'REJECTED').map(field => fieldLabels[field.field] || field.field)
 	if (rejected?.length) return `未受理：${rejected.join('、')}`
-	return { ACCEPTED: '指令已受理', REJECTED: '未受理', PARTIALLY_ACCEPTED: '部分受理', ALREADY_SATISFIED: '已达到目标，无需操作', DISPATCHED_UNKNOWN: '已下发，待核实', NOT_DISPATCHED: '未执行' }[receipt.outcome] || '结果待核实'
+	return { ACCEPTED: '指令已受理', REJECTED: '未受理', PARTIALLY_ACCEPTED: '部分受理', ALREADY_SATISFIED: '已达到目标，无需操作' }[receipt.outcome] || '结果待核实'
 }
