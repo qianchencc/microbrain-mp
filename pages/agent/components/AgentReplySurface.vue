@@ -18,7 +18,7 @@
    </view>
 
    <AssistantMarkdown v-if="turn.text" :content="turn.text" />
-   <ActionPanel v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
+   <ActionDraftCard v-if="turn.draft" :draft="turn.draft" :result="turn.result" :busy="busy"
     @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
     @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
     @configure="$emit('configure', $event)" @browse="$emit('browse')" />
@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import ActionPanel from './ActionPanel.vue'
+import ActionDraftCard from './ActionDraftCard.vue'
 import AgentAvatar from './AgentAvatar.vue'
 import AssistantMarkdown from './AssistantMarkdown.vue'
 import ThinkingOrb from './ThinkingOrb.vue'
