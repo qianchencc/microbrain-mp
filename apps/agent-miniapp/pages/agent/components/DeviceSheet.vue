@@ -1,6 +1,6 @@
 <template>
  <uni-popup ref="popup" type="bottom" :is-mask-click="true" :safe-area="false" background-color="transparent" mask-background-color="rgba(20,35,28,.32)" @change="onPopupChange">
-  <view class="sheet" :class="{ tall }">
+  <view class="sheet" :class="{ tall }" :surface-reset="surfaceReset" :change:surface-reset="sheetGesture.resetSurface">
    <view class="handle-zone" :data-threshold="dismissThreshold" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="sheetGesture.handleStart" @touchmove.stop.prevent="sheetGesture.handleMove" @touchend.stop="sheetGesture.handleEnd" @touchcancel.stop="sheetGesture.handleCancel"><view class="handle" /></view>
    <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /></view>
    <view class="header-slot"><slot name="header" /></view>
@@ -9,12 +9,14 @@
  </uni-popup>
 </template>
 <script setup>
-import UniPopup from '@dcloudio/uni-ui/lib/uni-popup/uni-popup.vue'
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 const props = defineProps({ open: Boolean, openRequest: { type: Number, default: 0 }, title: String, subtitle: String, meta: String, tall: Boolean, busy: Boolean })
 const emit = defineEmits(['close'])
 const popup = ref(null)
 const visible = ref(false)
+// WXS setStyle 写入的拖拽位移不受 Vue 虚拟 DOM 管理；uni-popup 会复用槽位节点。
+// 每次打开前递增渲染层 prop，由 WXS 自己清除残留 translateY，避免只剩遮罩。
+const surfaceReset = ref(0)
 const windowHeight = uni.getSystemInfoSync().windowHeight || 600
 const dismissThreshold = Math.round(windowHeight * 0.78 * 0.25)
 let reopenTimer
@@ -23,6 +25,7 @@ watch(() => [props.open, props.openRequest], async ([value, request], [oldValue,
  if (value) {
   requestedClose = false
   if (oldValue && request !== oldRequest) visible.value = false
+  surfaceReset.value++
   await nextTick()
   if (props.open) ensureOpen()
  } else if (visible.value) {
@@ -38,7 +41,14 @@ function ensureOpen() {
  stopReopen()
  if (!props.open) return
  popup.value?.open('bottom')
- reopenTimer = setTimeout(() => { if (props.open && !visible.value) ensureOpen() }, 350)
+ reopenTimer = setTimeout(() => {
+  if (!props.open || visible.value) return
+  // 重试时按真实 popup 状态对账：showPopup && showTrans 才代表物理层确实在展示
+  // （仅 showPopup 为真可能只是 300ms 关闭动画未播完，须继续重试等它销毁）。
+  // 影子状态失真时校正 visible 而不是无限重试——这也让之后的 props.open→false 关闭路径重新可用。
+  if (popup.value?.showPopup && popup.value?.showTrans) { visible.value = true; return }
+  ensureOpen()
+ }, 350)
 }
 function stopReopen() { clearTimeout(reopenTimer) }
 function onPopupChange(event) {
@@ -46,8 +56,9 @@ function onPopupChange(event) {
  if (event.show) { stopReopen(); return }
  if (props.open && !requestedClose) { requestedClose = true; emit('close') }
 }
+// 拖拽既然发生了面板必然可见：close() 幂等（重复调用仅重发 change 并重置 300ms 计时），
+// 不允许用 open/requestedClose 早退——状态失配时早退会把面板连位移永久留在半空。
 function dismissFromHandle() {
- if (!props.open || requestedClose) return
  requestedClose = true
  stopReopen()
  popup.value?.close()
@@ -96,16 +107,26 @@ function handleMove(event, ownerInstance) {
  handleLastY = point.clientY
  handleLastTime = now
  var delta = point.clientY - handleStartY
- handleOffset = delta > 0 ? Math.round(delta) : Math.round(delta / 3)
+ // 面板锚定屏底：只允许下拉 1:1 跟随，上拉保持原位，禁止负位移抬起底缘漏出背景。
+ handleOffset = delta > 0 ? Math.round(delta) : 0
  setSheetStyle(ownerInstance, { transition: 'none', transform: 'translateY(' + handleOffset + 'px)' })
  return false
 }
 
-function resetHandle(ownerInstance) {
- setSheetStyle(ownerInstance, { transition: 'transform 300ms cubic-bezier(.32,.72,0,1)', transform: 'translateY(0px)' })
+function clearHandle(ownerInstance, transition) {
+ setSheetStyle(ownerInstance, { transition: transition, transform: 'translateY(0px)' })
  handleActive = false
  handleOffset = 0
  handleVelocity = 0
+}
+
+function resetHandle(ownerInstance) {
+ clearHandle(ownerInstance, 'transform 300ms cubic-bezier(.32,.72,0,1)')
+}
+
+// 逻辑层每次打开前递增 surface-reset；由写入位移的同一 WXS 层同步清理 inline style。
+function resetSurface(newValue, oldValue, ownerInstance) {
+ if (newValue !== oldValue) clearHandle(ownerInstance, 'none')
 }
 
 function handleEnd(event, ownerInstance) {
@@ -114,9 +135,9 @@ function handleEnd(event, ownerInstance) {
  var dismiss = handleOffset > threshold || (handleVelocity > 0.5 && handleOffset > 8)
  handleActive = false
  if (dismiss) {
-  // 清除跟随拖拽留下的位移，再交给 uni-popup 播放关闭动画。
-  // 否则 popup 复用同一实例再次打开时，视觉位置与命中区域可能仍处于旧偏移。
-  resetHandle(ownerInstance)
+  // 收起时保留松手位置的位移：uni-popup 的 slide-bottom 会从当前位置继续把面板带下屏。
+  // 若先写回 translateY(0)，内层 300ms 回弹与外层下滑叠加成「先上窜再收起」的反向运动。
+  // 下次打开前由 surface-reset 的 WXS observer 清零；禁止依赖 uni-popup 是否卸载槽位节点。
   ownerInstance.callMethod('dismissFromHandle')
  }
  else resetHandle(ownerInstance)
@@ -132,7 +153,8 @@ module.exports = {
  handleStart: handleStart,
  handleMove: handleMove,
  handleEnd: handleEnd,
- handleCancel: handleCancel
+ handleCancel: handleCancel,
+ resetSurface: resetSurface
 }
 </script>
 <style scoped>

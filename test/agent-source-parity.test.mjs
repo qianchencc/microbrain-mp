@@ -4,22 +4,18 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
+// fileURLToPath 解码中文路径；URL.pathname 会留下 %E6%96%B0… 导致 readdir ENOENT。
 const sourceRoot = fileURLToPath(new URL('../apps/agent-miniapp/pages/agent/', import.meta.url))
 const targetRoot = fileURLToPath(new URL('../pages/agent/', import.meta.url))
 
-// 客户入口、Markdown 和下面四个生产适配点保留客户差异；其余共享 Agent
-// 运行实现必须从独立回归壳单向同步，不能反向改写独立壳来满足 parity。
+// 这些差异不是迁移遗漏：index.vue 只保留客户会话接入点；AssistantMarkdown/answer.mjs
+// 是客户版为避免新增 markdown-it 依赖的轻量渲染器；AGENTS.md 记录各自仓库边界。
 const allowedDifferent = new Set([
 	'AGENTS.md',
-	'avatar.js',
 	'components/AssistantMarkdown.vue',
-	'components/ActionDraftCard.vue',
-	'components/DeviceSheet.vue',
-	'conversation.mjs',
 	'index.vue',
 ])
 const allowedSourceOnly = new Set([
-	'AGENTS.md',
 	'markdown.mjs',
 	'proto-art/access-sliding-door.png',
 	'proto-art/central-ac-cassette.png',
@@ -28,7 +24,11 @@ const allowedSourceOnly = new Set([
 	'prototype-action-panel.html',
 	'prototype-reply-roster.html',
 ])
-const allowedTargetOnly = new Set(['answer.mjs'])
+const allowedTargetOnly = new Set([
+	'answer.mjs',
+	// 客户侧视频回放跳转探索原型（与基线 prototype-*.html 同类，非共享实现）。
+	'proto-playback-jump.html',
+])
 
 function files(root, prefix = '') {
 	return readdirSync(root).flatMap(name => {
@@ -38,7 +38,7 @@ function files(root, prefix = '') {
 	}).sort()
 }
 
-test('客户版 Agent 共享实现单向跟随原项目基线', () => {
+test('客户版 Agent 与原项目的共享实现保持逐字节一致', () => {
 	const sourceFiles = files(sourceRoot)
 	const targetFiles = files(targetRoot)
 	const sourceOnly = sourceFiles.filter(file => !targetFiles.includes(file))
