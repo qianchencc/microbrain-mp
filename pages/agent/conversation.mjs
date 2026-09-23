@@ -1,7 +1,7 @@
 import { fieldLabels } from './ac-draft.js'
 
 export function createTurn(id, content) {
-	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], draft: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
+	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], draft: null, roster: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
 }
 
 export function canRecoverTurn(turn, isLatest) {
@@ -16,6 +16,7 @@ export function restartTurn(turn, content = turn.content) {
 		text: '',
 		activities: [],
 		draft: null,
+		roster: null,
 		result: null,
 		running: true,
 		traceOpen: true,
@@ -55,7 +56,7 @@ export function applyEvent(turn, event) {
 	}
 	if (event.type === 'message.delta') { turn.streaming = true; turn.text += event.content || ''; turn.traceOpen = false }
 	if (event.type === 'message.completed') { turn.text = event.content || turn.text; turn.streaming = false }
-	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.traceOpen = false }
+	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.roster = event.inventory || null; turn.traceOpen = false }
 	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
 	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.streaming = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
 	if (event.type === 'run.failed') {
