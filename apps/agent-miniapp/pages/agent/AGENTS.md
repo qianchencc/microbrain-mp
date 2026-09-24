@@ -1,5 +1,6 @@
 # Agent Page Notes
 
+- 组件必须对宿主全局样式中立（2026-09-23 根因）：组件代码会被原样迁入客户小程序，而客户 `app.wxss` 继承 uni-app 模板 `view{font-size:28rpx;line-height:1.8}` 与 `input,text{font-size:30rpx}`——元素自身命中的规则优先于继承，会把组件内所有不带字号类的 `text`/`input` 撑成 15px；每个组件 scoped 样式首行固定 `view, text, input { font-size: inherit; line-height: inherit; }`，禁止删除。scroll-view 隐藏滚动条必须用 `enhanced :show-scrollbar="false"`，非 enhanced 时该属性不生效——本壳靠全局 `::-webkit-scrollbar{display:none}` 掩盖，客户壳没有这条全局规则会露滚动条。
 - 会话相位（2026-09-16 定稿，零滞留）：待确认草案期间可以继续发消息，但下一条消息会把旧草案退役为已取消（跨轮 `action.resolved` 即时转只读），模型总是重新起草；只有执行中/运行中会被服务端 409（`CONVERSATION_AWAITING_CONFIRMATION`，前端撤回乐观轮次并 toast）。不要按"有待确认草案就禁用输入栏"，也不要复活非末轮的过期草案。
 - 微信分块事件的 `data` 是 `ArrayBuffer`，中文 UTF-8 字节可能跨 chunk；所有 NDJSON 解析继续复用 `apis/agent/ndjson.mjs`。
 - Android 优先消费 `onChunkReceived`，其他平台保留完整 response 回退，两条路径必须产生相同业务事件。

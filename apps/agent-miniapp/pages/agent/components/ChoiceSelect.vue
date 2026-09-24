@@ -7,5 +7,11 @@ const open = ref(false)
 function select(index) { emit('update:modelValue',index); open.value = false }
 </script>
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 .choice { position:relative; }.trigger { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 12px; margin:0; min-height:42px; line-height:42px; border:1px solid #d5dfd8; border-radius:6px; background:#fcfdfc; font-size:13px; color:#304c3e; }.dismiss { position:fixed; inset:0; z-index:31; }.menu { padding:4px; border:1px solid #dae3dc; border-radius:8px; background:#fff; box-shadow:0 6px 24px #183b2426; }.menu button { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0; padding:0 10px; line-height:44px; min-height:44px; border-radius:4px; background:white; color:#536b5b; font-size:13px; text-align:left; }.menu button.active { background:#edf4ef; color:#176b54; }button::after { border:0; }
 </style>

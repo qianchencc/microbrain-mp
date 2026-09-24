@@ -14,7 +14,7 @@
   </view>
   <view class="panel-body">
    <DeviceRoster v-show="tab === 'overview'" class="panel-pane" :entries="roster" :draft="draft" :observed="result?.observedStates" :active="tab === 'overview'" />
-   <scroll-view v-show="tab === 'draft'" scroll-y :show-scrollbar="false" class="panel-pane panel-pane--draft">
+   <scroll-view v-show="tab === 'draft'" scroll-y enhanced :show-scrollbar="false" class="panel-pane panel-pane--draft">
     <ActionDraftCard embedded :draft="draft" :result="result" :busy="busy"
      @select="emit('select', $event)" @configure="emit('configure', $event)" @browse="emit('browse')"
      @updated="emit('updated', $event)" @editing="emit('editing', $event)" />
@@ -66,6 +66,12 @@ const selectedCount = computed(() => props.draft.selectedActionIds?.length ?? 0)
 </script>
 
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 /* 操作面板 = 概览+草案一体卡：外卡 chrome + 固定体高 + 常驻底栏。
    铁律：切页签只 v-show 不 v-if（保住草案卡 states 缓存与滚动位）；
    body 固定 300px，两页各自内部滚动，外卡高度不随页签/内容变化。 */

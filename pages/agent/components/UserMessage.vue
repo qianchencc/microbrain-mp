@@ -21,6 +21,12 @@ defineEmits(['retry', 'begin-edit'])
 </script>
 
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 /* 布局不依赖 fit-content 测量：宿主由父级定宽（.user-row .um-host{width:100%}），
    wrap 定宽块级 + text-align:right，气泡 inline-block 收缩包裹——短消息不再被
    嵌套 intrinsic sizing 塌成一列（2026-09-16 三次实测根因）；font-size:0 消行盒

@@ -48,6 +48,12 @@ watch(pending, value => { if (value) refresh() })
 onMounted(refresh)
 </script>
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 .spinning { animation:spin 900ms linear infinite; }@keyframes spin { to { transform:rotate(360deg); } }
 .draft { margin-top:12px; padding-top:12px; border-top:1px solid #dbe3dd; }
 /* 面板内嵌模式：外卡 chrome（头部/底栏/边距）由 ActionPanel 统一供给。 */

@@ -121,6 +121,12 @@ function onToggle() {
 onBeforeUnmount(stopHold)
 </script>
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 .device-card { white-space:normal; position:relative; width:119px; height:180px; flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; border-radius:6px; background:#f2f5f1; color:#17251f; box-shadow:0 9px 14px -12px #1e352b47; transition:box-shadow 180ms ease,opacity 180ms ease,transform 120ms ease; }
 /* 浏览网格只计算列数与轨道宽度，卡片本体在所有表面保持 119×180px。 */
 .device-card--pressed { transform:scale(.98); }

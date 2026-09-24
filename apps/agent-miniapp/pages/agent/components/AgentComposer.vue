@@ -100,6 +100,12 @@ onBeforeUnmount(() => voice.dispose())
 defineExpose({ interrupt })
 </script>
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 .composer-wrap { position:relative; width:100%; max-width:480px; margin:0 auto; }
 .composer { display:flex; align-items:flex-end; gap:3px; padding:5px; min-height:46px; box-sizing:border-box; border:1px solid #cbd9d0; border-radius:24px; background:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.10),0 7px 22px rgba(28,57,42,.12); transition:border-color 160ms ease,box-shadow 160ms ease,transform 160ms cubic-bezier(.23,1,.32,1); }
 .composer.focused { border-color:#78a28b; box-shadow:0 0 0 2px rgba(56,117,84,.07),0 2px 4px rgba(28,57,42,.10),0 9px 26px rgba(28,57,42,.14); transform:translateY(-1px); }

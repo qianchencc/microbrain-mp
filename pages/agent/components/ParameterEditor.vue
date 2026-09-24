@@ -1,7 +1,7 @@
 <template>
  <view class="editor" :class="{ embedded }">
   <view v-if="siblings.length > 1" class="scope"><view><text>应用到全部同类设备</text><text class="muted">{{ all ? `草案中 ${targets.length} 台` : '仅当前设备' }}</text></view><switch :checked="all" :disabled="busy" color="#176b54" @change="all = $event.detail.value" /></view>
-  <view class="content-shell"><scroll-view scroll-y class="content">
+  <view class="content-shell"><scroll-view scroll-y enhanced :show-scrollbar="false" class="content">
    <image class="product" src="/static/device-art/central-ac-cassette.png" mode="aspectFit" />
    <text class="current">{{ currentSummary }}</text>
    <text class="caption">目标温度</text>
@@ -57,6 +57,12 @@ function step(direction) {
 watch(() => props.action.id, () => { all.value = false; fields.value = {} })
 </script>
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 .step-icon { display:block; width:20px; height:20px; }
 .comparison text { word-break:keep-all; }
 .editor { min-height:0; }.editor.embedded { height:0; flex:1; }.scope { flex-shrink:0; }

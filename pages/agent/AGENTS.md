@@ -11,6 +11,7 @@
 - 选项更新和确认携带最新 revision；执行结果的 summary 由服务端生成，重试回答不得重发设备控制。
 - 当前生产范围和验收状态见 `plan/2026-09-18-customer-miniapp-canonical-agent-migration.md`；H5 预览和独立回归壳都不能替代客户小程序验收。
 - 视觉为拟物材质体系（呢面/纸材/黄铜/玉漆），只用渐变+阴影实现，不引入 backdrop-filter；`prefers-reduced-motion` 下停用闪烁与脉冲。
+- 组件必须对宿主全局样式中立（2026-09-23 根因）：客户 `app.wxss` 继承 uni-app 模板 `view{font-size:28rpx;line-height:1.8}` 与 `input,text{font-size:30rpx}`——元素自身命中的规则优先于继承，会把组件内所有不带字号类的 `text`/`input`（highlightParts 循环子元素、`.from/.to`、裸文本）撑成 15px；每个 Agent 组件 scoped 样式首行固定 `view, text, input { font-size: inherit; line-height: inherit; }`，禁止删除。同理，scroll-view 隐藏滚动条必须用 `enhanced :show-scrollbar="false"`（同 .rail/.conversation 约定），非 enhanced 时该属性不生效——独立壳靠全局 `::-webkit-scrollbar{display:none}` 掩盖，客户壳没有这个全局规则会露滚动条。
 - Agent 头像（`AgentAvatar.vue` + `avatar.js`）使用固定预计算 SVG body/eyes 分层，不按会话随机；保留扫视、眨眼、运行呼吸和 reduced-motion 完整行为；不得降级为通用图标方块，也不得重新引入 blobatar 依赖。
 - 草案面板沿用 `DraftSheetLayer` + `DeviceSheet` + vendored `uni-popup`/`uni-transition` 底座；`uni-transition` 的入场不得恢复 `setTimeout` 延迟提交，否则遮罩先出、内容层停在 `translateY(100%)` 屏外。升级 `uni_modules` 后必须重新核对 `test/agent-sheet-runtime.test.mjs`。
 - 客户小程序是生产 Agent 主线；本目录必须复用客户会话，不得恢复独立 miniapp 的固定 `local-development`/`LOCAL` 身份。

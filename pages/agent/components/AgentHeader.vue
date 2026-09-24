@@ -28,6 +28,12 @@ function openMenu() {
 }
 </script>
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 .header { flex-shrink:0; background:linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom:1px solid rgba(44,75,58,.05); }
 .native-bar { display:flex; align-items:center; padding-left:16px; box-sizing:border-box; min-height:44px; }
 .identity { display:flex; align-items:center; gap:8px; min-height:44px; padding:0; margin:0; background:transparent; line-height:1.2; border-radius:12px; text-align:left; transition:opacity 140ms ease; }

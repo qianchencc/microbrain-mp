@@ -1,6 +1,6 @@
 <template>
  <view class="roster-shell">
-  <scroll-view scroll-y :show-scrollbar="false" class="roster" :class="{ 'roster--mask-top': !atTop, 'roster--mask-bottom': hasMore }" :scroll-top="scrollCtrl" scroll-with-animation @scroll="onScroll">
+  <scroll-view scroll-y enhanced :show-scrollbar="false" class="roster" :class="{ 'roster--mask-top': !atTop, 'roster--mask-bottom': hasMore }" :scroll-top="scrollCtrl" scroll-with-animation @scroll="onScroll">
    <view class="roster-inner">
     <view v-for="group in groups" :key="group.location" class="roster-group">
      <view class="roster-group__head"><text class="roster-group__name">{{ group.location }}</text><text v-if="group.operateCount" class="roster-group__meta">{{ group.operateCount }} 项拟执行</text></view>
@@ -64,6 +64,12 @@ watch(() => props.entries, () => nextTick(measure))
 </script>
 
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 /* 面板内嵌概览页：高度完全由 ActionPanel 固定体高供给，本组件不自带外边距。
    边缘渐隐用 scroll-view 自身 mask（禁色带覆盖层，同 .rail 铁律）；
    v 游标视觉沿用 DraftSheetLayer cue-float 的浮动胶囊语言，图标化、只判到底。 */

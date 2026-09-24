@@ -26,5 +26,11 @@ function end(e) {
 }
 </script>
 <style scoped>
+
+/* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
+   view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
+   元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
+   组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
+view, text, input { font-size: inherit; line-height: inherit; }
 .segments { position:relative; display:flex; padding:3px; border-radius:6px; background:#edf1ee; min-height:36px; box-sizing:border-box; }.thumb { position:absolute; top:3px; bottom:3px; left:0; border:3px solid #edf1ee; border-top:0; border-bottom:0; border-radius:6px; box-sizing:border-box; background:#176b54; box-shadow:0 1px 4px #20382d15; transition:transform 220ms cubic-bezier(.23,1,.32,1); }.segment { position:relative; z-index:1; flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:6px 0; font-size:11px; color:#6d8173; }.active { color:white; }.blue { background:transparent; }.blue .thumb { background:#e8effb; border-color:#fcfdfc; box-shadow:inset 0 0 0 1px #bfd4fa; }.blue .active { color:#387ec4; }.disabled { opacity:.45; }@media(prefers-reduced-motion:reduce) { .thumb { transition:none; } }
 </style>
