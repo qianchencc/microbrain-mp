@@ -1,7 +1,7 @@
 // Local development only. Production identity must come from an authenticated session.
 // 真实网关联调（手机预览可用；开发者工具模拟器同样可达）：指向本机局域网地址的 3200 实例——
 // 唯一 Runtime（IOT_BASE_URL=https://ncim.577119.com，已绑 0.0.0.0）。IP 变了要同步改这里。
-export const agentUrl = 'http://192.168.102.15:3200/api'
+export const agentUrl = 'http://10.223.7.61:3200/api'
 
 export function getAgentHeaders() {
   const version = uni.getAccountInfoSync().miniProgram.envVersion
