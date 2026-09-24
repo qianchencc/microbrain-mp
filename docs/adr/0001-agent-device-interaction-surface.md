@@ -2,7 +2,7 @@
 
 - 日期：2026-09-15
 - 状态：已采纳
-- 范围：`apps/agent-miniapp/pages/agent`
+- 范围：`apps/agent-miniapp/pages/agent`（成文时路径；该目录 2026-09-24 已迁出为同级仓库 `agent-miniapp`，同等实现位于本仓库 `pages/agent`）
 
 ## 决策
 
