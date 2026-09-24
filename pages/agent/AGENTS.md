@@ -13,7 +13,7 @@
 - 视觉为拟物材质体系（呢面/纸材/黄铜/玉漆），只用渐变+阴影实现，不引入 backdrop-filter；`prefers-reduced-motion` 下停用闪烁与脉冲。
 - 组件必须对宿主全局样式中立（2026-09-23 根因）：客户 `app.wxss` 继承 uni-app 模板 `view{font-size:28rpx;line-height:1.8}` 与 `input,text{font-size:30rpx}`——元素自身命中的规则优先于继承，会把组件内所有不带字号类的 `text`/`input`（highlightParts 循环子元素、`.from/.to`、裸文本）撑成 15px；每个 Agent 组件 scoped 样式首行固定 `view, text, input { font-size: inherit; line-height: inherit; }`，禁止删除。同理，scroll-view 隐藏滚动条必须用 `enhanced :show-scrollbar="false"`（同 .rail/.conversation 约定），非 enhanced 时该属性不生效——独立壳靠全局 `::-webkit-scrollbar{display:none}` 掩盖，客户壳没有这个全局规则会露滚动条。
 - Agent 头像（`AgentAvatar.vue` + `avatar.js`）使用固定预计算 SVG body/eyes 分层，不按会话随机；保留扫视、眨眼、运行呼吸和 reduced-motion 完整行为；不得降级为通用图标方块，也不得重新引入 blobatar 依赖。
-- 草案面板沿用 `DraftSheetLayer` + `DeviceSheet` + vendored `uni-popup`/`uni-transition` 底座；`uni-transition` 的入场不得恢复 `setTimeout` 延迟提交，否则遮罩先出、内容层停在 `translateY(100%)` 屏外。升级 `uni_modules` 后必须重新核对 `test/agent-sheet-runtime.test.mjs`。
+- 草案面板沿用 `DraftSheetLayer` + `DeviceSheet` 的本地三层 Sheet 底座：根节点常驻但关闭态 `pointer-events:none`，遮罩与外层进退场动画同源，内层 surface 只负责 WXS 拖拽位移。当前 Agent Sheet 禁止重新接入 `uni-popup`/`uni-transition`，也禁止添加 popup 卸载或重开定时器；这类异步生命周期会在快速拖拽/重开时留下孤立遮罩。每次打开仍通过 `surfaceReset` + `change:surface-reset` 由同一 WXS 层清掉旧位移。升级或改动面板后必须重新核对 `test/agent-sheet-runtime.test.mjs`。
 - 客户小程序是生产 Agent 主线；本目录必须复用客户会话，不得恢复独立 miniapp 的固定 `local-development`/`LOCAL` 身份。
 - 开发阶段客户登录、用户、园区和物联网接口继续走客户公网；仅 Agent Runtime 指向本机 `127.0.0.1:3200`——它是唯一 Runtime 实例，直连真实客户网关，不存在模拟数据源。`trial/release` 不得依赖本机地址。
 - Agent 页面进入前等待 `utils/agent-session.js` 的会话与园区上下文；页面和组件不得自行拼接 Authorization 或 tenantCode。

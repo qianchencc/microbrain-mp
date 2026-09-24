@@ -53,8 +53,8 @@ const groupModes = [{ label: '区域', by: 'location' }, { label: '类型', by: 
 const grid = computed(() => computeDeviceGrid(windowWidth.value))
 function selectGroup(index) { groupIndex.value = index }
 const open = computed(() => Boolean(props.draft))
-// 关闭动画期间冻结渲染：emit('close') 同帧父级就清空 draftId，但 uni-popup 还有 300ms 下滑动画。
-// 渲染一律读最后一次非空的草案/回执/基线快照，否则标题与编辑器在动画开始前就卸载——「瞬间消失+一闪」。
+// 关闭动画期间冻结渲染：emit('close') 同帧父级就清空 draftId，但 sheet 仍需完成退场过渡。
+// 渲染一律读最后一次非空的草案/回执/基线快照，否则标题与编辑器会在退场开始前卸载——「瞬间消失+一闪」。
 const renderDraft = ref(null), renderResult = ref(null), renderBaseline = ref(null)
 // 换草案时三个快照同步切换（新轮次的回执/基线可能为 null，须覆盖旧值防串稿）；
 // draft→null 的关闭路径刻意跳过，让快照留到收起动画播完。
@@ -93,8 +93,8 @@ function scrollNext() {
  if (top != null) scrollCtrl.value = Math.max(0, top - 8)
 }
 const instance = getCurrentInstance()
-// .device-list 在 uni-popup 的 v-if 子树内，open 置真后还要等 popup 自己的 nextTick 才挂载；
-// 单次测量会拿到空 rect 让浮标计数恒为 0。打开/resize 时做有界重试直到量到非零高度。
+// 面板内容首次打开或重排时可能尚未完成布局；单次测量会拿到空 rect 让浮标计数恒为 0。
+// 打开/resize 时做有界重试直到量到非零高度。
 const listMeasurer = createViewportMeasurer({
  query: cb => uni.createSelectorQuery().in(instance?.proxy).select('.device-list').boundingClientRect(cb).exec(),
  apply: height => { listViewportH.value = height },
@@ -102,7 +102,7 @@ const listMeasurer = createViewportMeasurer({
 })
 watch(() => props.currentActionId, value => { currentId.value = value }, { immediate: true })
 // 每次显式打开（openRequest 递增）或换到新草案时回到列表页并清搜索；关闭（draft→null）不重置，
-// 否则 300ms 收起动画期间 surface 会中途滑位。同一草案重开也经 openRequest 覆盖到。
+// 否则退场动画期间 surface 会中途滑位。同一草案重开也经 openRequest 覆盖到。
 watch(() => [props.draft?.draftId, props.openRequest], () => { if (!props.draft) return; page.value = 0; search.value = ''; searchMounted.value = false; searchFocused.value = false; groupIndex.value = 0; parameterError.value = ''; if (props.browser) listMeasurer.schedule() })
 // 面板内三页导航：0 全部设备 / 1 搜索 / 2 参数编辑；返回列表页即清过滤，列表始终是全量。
 watch(page, value => { if (value === 0) search.value = '' })
