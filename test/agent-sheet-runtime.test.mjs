@@ -13,16 +13,16 @@ test('项目通用 uni-transition 入场不依赖会被开发者工具延迟的�
 	assert.match(open, /animation\.run\([\s\S]*?this\.transform = ''/, 'animationData 接管动画时，声明式样式必须已回到最终帧')
 })
 
-test('Agent 面板不再把 uni-popup 生命周期与拖拽状态耦合', () => {
-	assert.doesNotMatch(sheetSource, /<uni-popup\b|showPopup|showTrans|reopenTimer|ensureOpen|open\('bottom'\)/)
-	for (const marker of ['sheet-root', 'sheet-mask', 'sheet-motion', 'sheet-surface', 'surfaceReset', 'change:surface-reset']) {
-		assert.ok(sheetSource.includes(marker), `DeviceSheet.vue 缺少 ${marker}`)
-	}
-	assert.match(sheetSource, /\.sheet-root\s*\{[\s\S]*?pointer-events:none/)
-	assert.match(sheetSource, /\.sheet-root--open \.sheet-mask\s*\{[\s\S]*?pointer-events:auto/)
-	assert.match(sheetSource, /\.sheet-motion\s*\{[\s\S]*?transform:translateY\(100%\)/)
-	assert.match(sheetSource, /\.sheet-root--open \.sheet-motion\s*\{[\s\S]*?transform:translateY\(0\)/)
-	assert.match(sheetSource, /setSheetStyle\(ownerInstance, \{ transition: 'none', transform: 'translateY\(0px\)' \}\)/)
+test('Agent 面板进退场、横杆拖拽和遮罩由同一组件控制', () => {
+ assert.doesNotMatch(sheetSource, /<uni-popup\b|lang="wxs"|ownerInstance|change:surface-reset/)
+ assert.match(sheetSource, /@touchstart\.stop="onTouchStart"/)
+ assert.match(sheetSource, /@touchmove\.stop\.prevent="onTouchMove"/)
+ assert.match(sheetSource, /@touchend\.stop="onTouchEnd"/)
+ assert.match(sheetSource, /@tap\.stop="dismissFromMask"/)
+ assert.match(sheetSource, /transform: open\.value \? `translateY\(\$\{dragY\.value\}px\)` : 'translateY\(100%\)'/)
+ assert.match(sheetSource, /opacity: open\.value \? Math\.max\(0, 1 - dragY\.value \/ 500\) : 0/)
+ assert.match(sheetSource, /\.sheet-root\s*\{[^}]*pointer-events:none/)
+ assert.match(sheetSource, /\.sheet-root--open \.sheet-mask\s*\{[^}]*pointer-events:auto/)
 })
 
 test('操作草案不再携带已退役的模拟数据源文案', () => {
