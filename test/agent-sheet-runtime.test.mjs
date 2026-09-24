@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const transitionSource = readFileSync(new URL('../uni_modules/uni-transition/components/uni-transition/uni-transition.vue', import.meta.url), 'utf8')
 const sheetSource = readFileSync(new URL('../pages/agent/components/DeviceSheet.vue', import.meta.url), 'utf8')
+const draftSheetSource = readFileSync(new URL('../pages/agent/components/DraftSheetLayer.vue', import.meta.url), 'utf8')
 const draftCardSource = readFileSync(new URL('../pages/agent/components/ActionDraftCard.vue', import.meta.url), 'utf8')
 
 test('项目通用 uni-transition 入场不依赖会被开发者工具延迟的定时器', () => {
@@ -27,4 +28,8 @@ test('Agent 面板进退场、横杆拖拽和遮罩由同一组件控制', () =>
 
 test('操作草案不再携带已退役的模拟数据源文案', () => {
 	assert.doesNotMatch(draftCardSource, /simulation|模拟状态/)
+})
+
+test('设备面板确认浮层不重复占用底部安全区', () => {
+	assert.match(draftSheetSource, /\.confirm-float \{ padding:14px 20px 10px; background:linear-gradient\(to bottom, rgba\(252,253,252,0\), #fcfdfc 42%\); \}/)
 })

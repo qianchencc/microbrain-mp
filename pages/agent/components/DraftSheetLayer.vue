@@ -191,4 +191,6 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .title-restore--pressed { transform:scale(.96); opacity:.75; }
 .title-restore[disabled] { opacity:.4; }
 @media(prefers-reduced-motion:reduce){.header-viewport,.header-viewport .controls,.search-controls,.search-back,.search-field,.surface,.title-restore{transition:none;}.pages.editing .devices-surface{transform:translateX(0);opacity:0}.editor-surface{transform:translateX(0);opacity:0}.pages.editing .editor-surface{opacity:1}}
+/* DeviceSheet owns the safe-area inset; the action dock must not add it a second time. */
+.confirm-float { padding:14px 20px 10px; background:linear-gradient(to bottom, rgba(252,253,252,0), #fcfdfc 42%); }
 </style>
