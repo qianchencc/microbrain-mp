@@ -17,6 +17,8 @@
 | 登录态、Token、园区和 Agent session | [登录与接入调查](./research/2026-09-18-customer-miniapp-login-and-agent-integration.md) |
 | 长期用户隔离、记忆/规则 owner | [真实 MP 身份边界](./research/2026-09-18-real-mp-identity-boundary.md) |
 | 设备扩展、自动化、日程/会议、告警和富操作面 | [业务探索地图](./research/2026-09-18-agent-business-opportunity-map.md) |
+| 系统对象、会话、持久化、配置、记忆和路线总览 | [Agent 系统全景地图](./research/2026-09-24-agent-system-map.md) |
+| 统一任务模型、任务阶段与富面边界 | [统一任务模型 ADR](./adr/0004-unified-task-model-and-phase-execution.md) |
 | 向客户索取新增设备接口与验收材料 | [设备接入支持包](./research/2026-09-18-customer-device-expansion-support-package.md) 与 [客户请求清单](../plan/2026-09-18-customer-device-support-request.md) |
 | 合同范围和业务能力缺口 | [合同能力审查](./research/2026-09-11-contract-device-capability-audit.md) |
 | 当前客户 Agent 页面实现约束 | [页面维护说明](../pages/agent/AGENTS.md) |
