@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE — throwaway, do not ship.
+  Question: 统一 Task 模型下，区域「自动化」面的信息架构是否成立？
+  Two swipeable pages: 自动化(收缩日历 + 时间比例曲线时间轴) / 设备(设备时间轴下钻).
+  - 无角色视角：任务只分「我创建的」和「别人创建的」，操作权跟随创建者
+  - 冲突在任务创建期解决，面板上不存在冲突态（本例中「下班关灯」创建时已避让西区）
+  - 时间轴按真实时间比例(34px/h)；B4 用独立的连续曲线，以「现在」为进度前缘
+  - B4 区间是曲线右侧的实体叶片，以当前时间切分已过和未过材质，不画空心进度槽
+  - B5 沿用 B4 几何，只整理时间刻度、节点角色和相邻时刻的排版
+  - 色彩分级：已完成淡 / 部分完成黄铜 / 执行中活节点 / 计划空心 / 已取消最淡
+  ?page= shareable. Open: open pages/agent/proto-region-panel.html
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>区域面板 · Task 模型 Prototype</title>
+<style>
+  :root {
+    --paper: #f4f7f5;
+    --ink: #24382d;
+    --ink-2: #253b30;
+    --muted: #738278;
+    --muted-2: #87958d;
+    --jade: #176b54;
+    --jade-deep: #11553f;
+    --jade-soft: #e4eee8;
+    --brass: #a66a13;
+    --brass-soft: #f4eadc;
+    --hairline: #e0e7e2;
+    --hairline-2: #dbe3dd;
+    --ease-out: cubic-bezier(.23,1,.32,1);
+    --ease-drawer: cubic-bezier(.32,.72,0,1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+    background: #e8ecea;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .phone {
+    width: min(375px, calc(100vw - 20px)); height: min(780px, calc(100dvh - 96px));
+    border-radius: 44px; background: #0e1512; padding: 10px;
+    box-shadow: 0 30px 80px rgba(20,40,30,.28), 0 4px 16px rgba(20,40,30,.14);
+  }
+  .screen {
+    width: 100%; height: 100%; border-radius: 36px; overflow: hidden;
+    display: flex; flex-direction: column;
+    background:
+      radial-gradient(120% 60% at 50% -10%, #fbfdfc 0%, transparent 60%),
+      repeating-linear-gradient(0deg, rgba(36,56,45,.012) 0 1px, transparent 1px 3px),
+      var(--paper);
+    position: relative;
+  }
+
+  .statusbar {
+    height: 30px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px; font-size: 11px; font-weight: 600; color: var(--ink-2);
+  }
+  .statusbar .sicons { display: flex; gap: 5px; align-items: center; opacity: .75; font-size: 10px; letter-spacing: .5px; }
+  .navbar {
+    height: 46px; flex-shrink: 0; display: flex; align-items: center;
+    padding: 0 16px; position: relative; z-index: 6;
+    border-bottom: 1px solid rgba(44,75,58,.05);
+    background: linear-gradient(180deg, #fcfdfc, #f4f7f5);
+  }
+  .navbar .back { font-size: 17px; color: var(--ink-2); width: 30px; }
+  .navbar .title { flex: 1; text-align: center; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+  .capsule {
+    width: 74px; height: 28px; border-radius: 14px;
+    border: 1px solid rgba(36,56,45,.14);
+    display: flex; align-items: center; justify-content: space-evenly;
+    color: var(--ink-2); font-size: 13px; background: rgba(255,255,255,.5);
+  }
+  .capsule .sep { width: 1px; height: 16px; background: rgba(36,56,45,.12); }
+
+  .pageslider {
+    flex-shrink: 0; display: flex; position: relative;
+    margin: 4px 16px 0;
+    border-bottom: 1px solid var(--hairline); z-index: 6;
+  }
+  .pageslider .thumb {
+    position: absolute; bottom: -1px; left: 0; height: 2px;
+    width: 50%;
+    background: var(--jade); border-radius: 1px;
+    transition: transform .28s var(--ease-out);
+  }
+  .pageslider .seg {
+    flex: 1; position: relative; z-index: 1;
+    text-align: center; font-size: 14px; font-weight: 550;
+    padding: 8px 0 11px; color: var(--muted-2); cursor: pointer;
+    transition: color .2s; border: 0; background: none; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    letter-spacing: .04em;
+  }
+  .pageslider .seg.on { color: var(--ink-2); font-weight: 650; }
+  .pageslider .seg .bdg {
+    font-size: 9.5px; font-weight: 700; line-height: 1;
+    background: var(--brass); color: #fff; border-radius: 8px; padding: 2.5px 5px;
+  }
+
+  .pager { flex: 1; overflow: hidden; position: relative; touch-action: pan-y; }
+  .track { display: flex; height: 100%; width: 200%; transition: transform .3s var(--ease-out); }
+  .track.drag { transition: none; }
+  .page { width: 50%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  .page.plain { overflow-y: auto; padding: 12px 16px 76px; scrollbar-width: none; }
+  .page.plain::-webkit-scrollbar { display: none; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10.5px; font-weight: 600; line-height: 1;
+    padding: 4px 8px; border-radius: 20px; white-space: nowrap;
+  }
+  .chip.green { background: var(--jade-soft); color: var(--jade-deep); }
+  .chip.brass { background: var(--brass-soft); color: var(--brass); }
+  .chip.grey  { background: #eef1ef; color: var(--muted); }
+  .chip.ink   { background: var(--ink-2); color: #fff; }
+  .btn {
+    border: 0; font-family: inherit; cursor: pointer;
+    font-size: 12px; font-weight: 600; padding: 7px 14px;
+    border-radius: 9px; line-height: 1.2;
+    transition: transform 160ms var(--ease-out);
+  }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--jade); color: #fff; box-shadow: 0 3px 8px rgba(23,107,84,.18); }
+  .btn.quiet { background: transparent; color: var(--jade); border: 1px solid rgba(23,107,84,.25); }
+  .btn.ghost { background: transparent; color: var(--muted); }
+  .btn.brassb { background: transparent; color: var(--brass); border: 1px solid rgba(166,106,19,.35); }
+
+  /* ================= 自动化 page ================= */
+  .cal { flex-shrink: 0; padding: 10px 16px 6px; position: relative; z-index: 5; }
+  .cal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2px 8px; cursor: pointer; user-select: none;
+  }
+  .cal-head .cm { font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+  .cal-head .ct { font-size: 10.5px; color: var(--muted); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-d {
+    text-align: center; padding: 5px 0 6px; border-radius: 9px;
+    font-size: 11px; color: var(--ink-2); cursor: pointer; position: relative;
+    font-weight: 500; transition: transform 160ms var(--ease-out);
+  }
+  .cal-d:active { transform: scale(.95); }
+  .cal-d .wd { display: block; font-size: 9px; color: var(--muted-2); font-weight: 400; margin-bottom: 1px; }
+  .cal-d.other { color: #b9c4bd; }
+  .cal-d .has { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); width: 3px; height: 3px; border-radius: 50%; background: var(--jade); }
+  .cal-d.today { color: var(--jade-deep); font-weight: 700; }
+  .cal-d.sel { box-shadow: inset 0 0 0 1.5px var(--jade); color: var(--jade-deep); font-weight: 700; }
+  .cal-grip { width: 34px; height: 3px; border-radius: 2px; background: #d3dcd6; margin: 7px auto 0; }
+
+  /* proportional timeline */
+  .tlscroll { flex: 1; overflow-y: auto; position: relative; scrollbar-width: none; }
+  .tlscroll::-webkit-scrollbar { display: none; }
+  .tlwrap { position: relative; }
+  .tlwrap svg.rail { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 0; }
+  .progress-demo {
+    display: none; align-items: center; gap: 9px; flex-shrink: 0;
+    padding: 5px 16px 7px; color: var(--muted); font-size: 10px;
+  }
+  .progress-demo.visible { display: flex; }
+  .progress-demo label { white-space: nowrap; }
+  .progress-demo input { flex: 1; min-width: 0; accent-color: var(--jade); }
+  .progress-demo output { width: 35px; text-align: right; font-variant-numeric: tabular-nums; color: var(--jade-deep); font-weight: 700; }
+
+  .glab {
+    position: absolute; left: 0; width: 46px; text-align: right;
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    transform: translateY(-50%); line-height: 1.2; z-index: 1;
+  }
+  .glab.tick { font-size: 9px; font-weight: 500; color: #b2beb6; }
+  .glab.tick.past { color: #ccd5cf; }
+  .glab .sub { display: block; font-size: 8.5px; font-weight: 400; color: var(--muted-2); }
+  .tlwrap:is(.b5,.b6) .glab { width: 36px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+  .tlwrap:is(.b5,.b6) .glab.event { color: #45564d; font-size: 11px; font-weight: 620; }
+  .tlwrap:is(.b5,.b6) .glab.tick { color: #aab7ae; font-size: 9px; font-weight: 450; }
+  .tlwrap:is(.b5,.b6) .glab.tick.past { color: #bcc8bf; }
+  .tlwrap:is(.b5,.b6) .glab.now { color: #99651b; line-height: 1.12; }
+  .tlwrap:is(.b5,.b6) .glab.now .caption { display: block; font-size: 9.5px; font-weight: 650; }
+  .tlwrap:is(.b5,.b6) .glab.now .clock { display: block; font-size: 12px; font-weight: 750; }
+
+  .cnode {
+    position: absolute; width: 8px; height: 8px; border-radius: 50%;
+    z-index: 2; transform: translate(-50%,-50%);
+  }
+  .cnode.done    { background: #93aca0; }
+  .cnode.partial { background: #b57932; }
+  .cnode.plan    { background: #fff; border: 2px solid #aebab3; }
+  .cnode.cancel  { background: #fff; border: 1.5px dashed #b2beb6; }
+  .cnode.live    { background: var(--jade); border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(23,107,84,.2); }
+  .cnode.live::after {
+    content: ""; position: absolute; inset: -5px; border-radius: 50%;
+    border: 1.5px solid rgba(23,107,84,.4); animation: pulse 1.6s ease-out infinite;
+  }
+  .cnode.endcap { width: 5px; height: 5px; background: #fff; border: 1.5px solid #8fae9f; }
+  .cnode.interval-start, .cnode.interval-end { width: 10px; height: 10px; }
+  .cnode.interval-start.elapsed, .cnode.interval-end.elapsed {
+    background: var(--jade); border: 2px solid #fff; box-shadow: 0 0 0 1.5px var(--jade);
+  }
+  .cnode.interval-start.pending, .cnode.interval-end.pending {
+    background: #f5faf6; border: 2px solid #a7c7b4;
+  }
+  .cnode.interval-start::after { display: none; }
+  @keyframes pulse { 0% { transform: scale(.7); opacity: 1 } 100% { transform: scale(1.9); opacity: 0 } }
+  @media (prefers-reduced-motion: reduce) { .cnode.live::after { animation: none } .nowmark .nm-dot::after { animation: none } .rail .flowdot { display: none } .rail .ribflow { animation: none } .rail .segtick { animation: none } .tcard { animation: none } }
+
+  .tcard {
+    position: absolute; left: 84px; right: 14px; z-index: 1;
+    background: #fdfefd; border: 1px solid var(--hairline); border-radius: 10px;
+    padding: 10px 13px 9px; box-shadow: 0 1px 1px rgba(36,56,45,.025);
+    cursor: pointer; transition: transform 140ms var(--ease-out), opacity .2s;
+  }
+  .tlwrap:is(.b5,.b6).overlap .tcard { left: 112px; }
+  .tcard:active { transform: scale(.985); }
+  .tcard { animation: cardIn .4s var(--ease-out) backwards; }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+  @keyframes ribflow { to { stroke-dashoffset: -11.5; } }
+  .rail .ribflow { animation: ribflow 1.2s linear infinite; }
+  @keyframes segwave { 0%, 100% { opacity: .3 } 50% { opacity: 1 } }
+  .rail .segtick { animation: segwave 1.8s ease-in-out infinite; }
+  .tcard.past { opacity: .55; }
+  .tcard.cancelled { opacity: .4; }
+  .tcard.exec { border-color: rgba(23,107,84,.28); }
+  .tcard .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .tcard .tname { font-size: 13px; font-weight: 600; color: var(--ink-2); line-height: 1.35; letter-spacing: .01em; }
+  .tcard .hline { height: 1px; background: var(--hairline); margin: 7px 0 6px; }
+  .tcard .detail { font-size: 11px; color: var(--muted); line-height: 1.5; font-weight: 400; }
+  .tcard .me {
+    font-size: 9px; font-weight: 700; color: var(--jade-deep);
+    border: 1px solid rgba(23,107,84,.3); border-radius: 5px; padding: 1px 4px;
+    vertical-align: 1px; margin-left: 2px;
+  }
+  /* prototype variant switcher — chrome, not product UI */
+  .varsw {
+    position: fixed; left: 50%; bottom: 12px; z-index: 20;
+    transform: translateX(-50%);
+    display: flex; gap: 2px; padding: 3px;
+    max-width: calc(100vw - 12px); overflow-x: auto; scrollbar-width: none;
+    background: rgba(255,255,255,.92); border: 1px dashed #b8c4bd; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(36,56,45,.08);
+    white-space: nowrap;
+  }
+  .varsw::-webkit-scrollbar { display: none; }
+  .varsw button { flex-shrink: 0; }
+  .varsw button {
+    border: 0; background: none; font-family: inherit; cursor: pointer;
+    font-size: 10px; font-weight: 600; color: var(--muted); padding: 4px 8px; border-radius: 7px;
+  }
+  .varsw button.on { background: var(--ink-2); color: #fff; }
+  .stext { font-size: 11px; font-weight: 500; color: #a9b6ae; flex-shrink: 0; }
+  .stext.exec { color: var(--jade-deep); font-weight: 650; background: var(--jade-soft); padding: 3px 8px; border-radius: 8px; }
+  .stext.brass { color: var(--brass); font-weight: 600; }
+
+  .nowmark { position: absolute; left: 0; right: 14px; z-index: 3; height: 0; pointer-events: none; }
+  .nowmark .nm-time {
+    position: absolute; left: 0; width: 46px; text-align: right;
+    font-size: 9.5px; font-weight: 700; color: var(--brass);
+    transform: translateY(-50%); line-height: 1.25;
+  }
+  .nowmark .nm-dot {
+    position: absolute; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--brass); transform: translate(-50%,-50%);
+    box-shadow: 0 0 0 3px rgba(166,106,19,.14);
+  }
+  .nowmark .nm-dot::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 1.5px solid rgba(166,106,19,.45); animation: pulse 2s ease-out infinite;
+  }
+  .nowmark .nm-line {
+    position: absolute; right: 0; top: 0; height: 1px;
+    background: repeating-linear-gradient(90deg, var(--brass) 0 5px, transparent 5px 9px);
+    opacity: .5;
+  }
+  .nowmark.progress .nm-dot {
+    width: 10px; height: 10px; border: 2px solid #fff;
+    box-shadow: 0 0 0 1.5px var(--brass), 0 2px 5px rgba(83,75,42,.18);
+  }
+  .nowmark.progress .nm-dot::after { display: none; }
+  .nowmark.progress .nm-time { color: #916018; }
+  .nowmark.progress .nm-line { display: none; }
+
+  .daytick {
+    position: absolute; left: 84px; right: 14px; z-index: 1;
+    font-size: 10px; font-weight: 600; letter-spacing: .12em;
+    color: #a9b6ae; display: flex; align-items: center; gap: 10px;
+    transform: translateY(-50%); justify-content: center;
+  }
+  .daytick::before, .daytick::after { content: ""; flex: 1; height: 1px; background: var(--hairline); opacity: .8; }
+
+  .datefloat {
+    position: absolute; top: 12px; right: 12px; z-index: 7;
+    background: rgba(23,107,84,.92); color: #fff;
+    font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(17,85,63,.28);
+    pointer-events: none; transition: opacity .2s;
+  }
+
+  /* task detail sheet */
+  .sheet-back {
+    position: absolute; inset: 0; z-index: 9;
+    background: rgba(20,35,28,.34); opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+  }
+  .sheet-back.open { opacity: 1; pointer-events: auto; }
+  .tsheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 10;
+    max-height: 78%; display: flex; flex-direction: column;
+    background: var(--paper);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -12px 40px rgba(20,40,30,.25);
+    transform: translateY(104%); transition: transform .32s var(--ease-drawer);
+  }
+  .tsheet.open { transform: translateY(0); }
+  .tsheet .grip { width: 36px; height: 4px; border-radius: 2px; background: #cfdbd4; margin: 9px auto 4px; flex-shrink: 0; }
+  .tsheet .sbody { overflow-y: auto; padding: 6px 18px 30px; scrollbar-width: none; }
+  .tsheet .sbody::-webkit-scrollbar { display: none; }
+  .tsheet .shead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .tsheet .sname { font-size: 17px; font-weight: 700; color: var(--ink-2); line-height: 1.35; }
+  .tsheet .smeta { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+  .tsheet .kicker { font-size: 10.5px; letter-spacing: .14em; color: var(--muted); font-weight: 700; margin: 16px 0 6px; }
+  .phaserow {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: #fff; border: 1px solid var(--hairline); border-radius: 11px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .phaserow .pt { font-size: 11px; font-weight: 700; color: var(--muted); width: 38px; flex-shrink: 0; padding-top: 2px; }
+  .phaserow .pm { flex: 1; min-width: 0; }
+  .phaserow .ptarget { font-size: 12.5px; font-weight: 600; color: var(--ink-2); line-height: 1.4; }
+  .phaserow .pmeta { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .phaserow .psteps { display: flex; gap: 5px; align-items: center; margin-top: 6px; font-size: 10px; color: var(--muted); }
+  .phaserow .psteps .st { padding: 3px 7px; border-radius: 8px; background: #f1f4f2; }
+  .phaserow .psteps .st.done { background: var(--jade-soft); color: var(--jade-deep); font-weight: 600; }
+  .phaserow .psteps .st.doing { background: var(--jade); color: #fff; font-weight: 600; }
+  .rep-row { display: flex; gap: 8px; font-size: 11.5px; color: var(--muted); padding: 5px 0; line-height: 1.5; }
+  .rep-row .rk { color: var(--ink-2); font-weight: 600; flex-shrink: 0; }
+  .sacts { display: flex; gap: 8px; margin-top: 16px; }
+  .sacts .btn { flex: 1; padding: 11px 0; font-size: 13px; }
+
+  /* fixed todo bar */
+  .todobar {
+    position: absolute; left: 14px; right: 14px; bottom: 16px; z-index: 5;
+    display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(145deg, #308b70, var(--jade-deep));
+    color: #fff; border-radius: 13px; padding: 12px 14px;
+    font-size: 12.5px; font-weight: 600;
+    box-shadow: 0 10px 24px rgba(17,85,63,.3); cursor: pointer;
+  }
+  .todobar .pill { background: rgba(255,255,255,.16); border-radius: 10px; padding: 2px 8px; font-size: 10.5px; }
+
+  /* 设备 page */
+  .devstrip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin: 0 -2px; }
+  .devstrip::-webkit-scrollbar { display: none; }
+  .fchip {
+    flex-shrink: 0; font-size: 11.5px; font-weight: 550;
+    padding: 6px 12px; border-radius: 16px; cursor: pointer;
+    background: #fff; border: 1px solid var(--hairline); color: var(--muted); font-family: inherit;
+  }
+  .fchip.on { background: var(--ink-2); border-color: var(--ink-2); color: #fff; }
+  .devgroup { background: #fff; border: 1px solid var(--hairline); border-radius: 14px; padding: 2px 14px; margin-top: 10px; }
+  .devgroup .ghead { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 0 6px; border-bottom: 1px solid var(--hairline); }
+  .devgroup .ghead .gt { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  .devgroup .ghead .gn { font-size: 10.5px; color: var(--muted); }
+  .devrow { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--hairline); cursor: pointer; transition: transform 140ms var(--ease-out); }
+  .devrow:active { transform: scale(.98); }
+  .devrow:last-child { border-bottom: 0; }
+  .devrow .dmain { flex: 1; min-width: 0; }
+  .devrow .dname { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+  .devrow .dsub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .devrow .chev { color: var(--muted-2); font-size: 13px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.green { background: #31866a; box-shadow: 0 0 0 2px var(--jade-soft); }
+  .dot.brass { background: #b57932; box-shadow: 0 0 0 2px var(--brass-soft); }
+  .dot.grey  { background: #aebab3; box-shadow: 0 0 0 2px #edf1ee; }
+  .devnote { font-size: 10.5px; color: var(--muted-2); text-align: center; margin-top: 14px; }
+
+  .devpanel {
+    position: absolute; inset: 0; z-index: 8; background: var(--paper);
+    display: flex; flex-direction: column;
+    transform: translateX(102%); transition: transform .3s var(--ease-drawer);
+  }
+  .devpanel.open { transform: translateX(0); }
+  .devpanel .dhead { flex-shrink: 0; padding: 10px 16px; background: linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom: 1px solid rgba(44,75,58,.05); }
+  .devpanel .dhead .back2 { font-size: 15px; color: var(--ink-2); cursor: pointer; font-weight: 600; }
+  .devpanel .dhead .dtitle { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .devpanel .dhead .dtitle .n { font-size: 16px; font-weight: 700; color: var(--ink-2); }
+  .devpanel .dhead .dmeta { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .devpanel .dbody { flex: 1; overflow-y: auto; padding: 12px 16px 80px; scrollbar-width: none; }
+  .devpanel .dbody::-webkit-scrollbar { display: none; }
+  .dtl { position: relative; padding-left: 50px; }
+  .dtl::before { content: ""; position: absolute; left: 42px; top: 6px; bottom: 6px; width: 1px; background: var(--hairline-2); }
+  .dtl-item { position: relative; padding: 5px 0; }
+  .dtl-item .dtime { position: absolute; left: -50px; top: 15px; width: 38px; font-size: 10px; font-weight: 600; color: var(--muted); text-align: right; line-height: 1.35; }
+  .dtl-item .dnode { position: absolute; left: -11.5px; top: 18px; width: 6px; height: 6px; border-radius: 50%; background: #fff; border: 2px solid #31866a; }
+  .dtl-item .dnode.brass { border-color: #b57932; }
+  .dtl-item .dnode.ink { border-color: var(--ink-2); }
+  .dentry { background: #fff; border: 1px solid var(--hairline); border-radius: 11px; padding: 10px 12px; font-size: 12px; }
+  .dentry .esrc { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--jade); }
+  .dentry .esrc.human { color: var(--ink-2); }
+  .dentry .esrc.draft { color: var(--muted); }
+  .dentry .etarget { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-top: 4px; }
+  .dentry .eres { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 10.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="phone"><div class="screen">
+  <div class="statusbar"><span id="statusClock">15:42</span><span class="sicons">5G ▂▄▆ 100%</span></div>
+  <div class="navbar">
+    <span class="back">‹</span>
+    <span class="title">26F 办公区</span>
+    <span class="capsule">···<span class="sep"></span>⊙</span>
+  </div>
+
+  <div class="pageslider">
+    <div class="thumb" id="thumb"></div>
+    <button class="seg" data-p="0">自动化<span class="bdg">1</span></button>
+    <button class="seg" data-p="1">设备</button>
+  </div>
+
+  <div class="pager" id="pager">
+    <div class="track" id="track">
+      <div class="page">
+        <div class="cal" id="cal"></div>
+        <div class="progress-demo" id="progressDemo">
+          <label for="demoTime">演示时刻</label>
+          <input id="demoTime" type="range" min="810" max="960" value="942" step="1">
+          <output id="demoClock" for="demoTime">15:42</output>
+        </div>
+        <div class="tlscroll" id="tlscroll"><div class="tlwrap" id="tlwrap"></div></div>
+        <div class="datefloat" id="datefloat">今天 9/24</div>
+      </div>
+      <div class="page plain" id="page1"></div>
+    </div>
+  </div>
+
+  <div class="sheet-back" id="sheetBack" onclick="closeSheet()"></div>
+  <div class="tsheet" id="tsheet"><div class="grip"></div><div class="sbody" id="tsbody"></div></div>
+
+  <div class="devpanel" id="devpanel">
+    <div class="dhead">
+      <span class="back2" onclick="closeDev()">‹ 设备列表</span>
+      <div class="dtitle"><span class="n" id="dpName"></span><span id="dpChip"></span></div>
+      <div class="dmeta" id="dpMeta"></div>
+    </div>
+    <div class="dbody" id="dpBody"></div>
+  </div>
+
+  <div class="todobar">1 项需要你处理 <span class="pill">接管 1</span><span style="margin-left:auto">›</span></div>
+</div></div>
+<div class="varsw" id="varsw">
+    <button data-v="b1">B1·缎带</button>
+    <button data-v="b2">B2·轨道</button>
+    <button data-v="b3">B3·刻度段</button>
+    <button data-v="b4">B4·进度曲线</button>
+    <button data-v="b5">B5·时刻语言</button>
+    <button data-v="b6">B6·时刻与区间</button>
+  </div>
+
+<script>
+/* ================= data — Task 投影 =================
+   now = 2026-09-24 15:42 (周四). 我 = 张明。
+   冲突在创建期已解决：「下班关灯」创建时避让了西区加班保留范围。 */
+const ME = '张明';
+const TODAY_D = '2026-09-24';
+let NOW_MIN = 15 * 60 + 42;
+
+const TASKS = [
+  { id:'t1', date:'2026-09-23', at:'08:30', name:'晨间准备', by:'张明',
+    chip:['已完成','green'], node:'done', past:true,
+    detail:'空调开机 · 制冷 26° · 9 台',
+    phases:[{at:'08:30', target:'空调开机 · 制冷 26°', devs:'9 台设备', state:['已完成','green']}],
+    report:[['阶段 08:30','9/9 达标 · 全部回读 ✓'],['用时','41 秒']] },
+  { id:'t2', date:'2026-09-23', at:'14:30', name:'调低会议区温度', by:'李雯',
+    chip:['已取消','grey'], node:'cancel', cancelled:true, past:true,
+    detail:'首个阶段执行前取消',
+    phases:[{at:'14:30', target:'会议区空调 24°', devs:'4 台设备', state:['已取消','grey']}] },
+  { id:'t3', date:'2026-09-23', at:'19:00', name:'下班关灯', by:'张明',
+    chip:['已完成','green'], node:'done', past:true,
+    detail:'本区照明全关 · 24 台',
+    phases:[{at:'19:00', target:'照明全关', devs:'24 台设备', state:['已完成','green']}],
+    report:[['阶段 19:00','24/24 达标 · 2 台已满足无需调用 · 回读 ✓']] },
+  { id:'t4', date:'2026-09-24', at:'08:30', name:'晨间准备', by:'张明',
+    chip:['部分完成','brass'], node:'partial', past:true,
+    detail:'空调开机 · 制冷 26° · 8/9 达标 · K-26-09 离线',
+    phases:[{at:'08:30', target:'空调开机 · 制冷 26°', devs:'9 台设备', state:['部分完成 8/9','brass']}],
+    report:[['阶段 08:30','4 已满足 · 4 调用回读 ✓ · 1 失败'],['异常','K-26-09 离线，等待人工接管'],['期间人工操作','13:20 王工手动开西区灯 — 不视为异常']] },
+  { id:'t5', date:'2026-09-24', at:'12:00', name:'午间巡检', by:'系统模板',
+    chip:['已完成','green'], node:'done', past:true,
+    detail:'只读巡检 · 全部正常 24/24 · 简报已归档',
+    phases:[{at:'12:00', target:'只读巡检 · 状态汇总', devs:'24 台设备', state:['已完成','green']}],
+    report:[['阶段 12:00','24 台读取成功 · 无异常'],['产物','值班简报 #R-0912']] },
+  { id:'t6', date:'2026-09-24', s:'14:00', e:'15:30', name:'客户会议 · 会议室B', by:'李雯',
+    chip:['执行中','ink'], node:'live', exec:true,
+    detail:'2 个阶段 · 12 台设备 · 阶段2 执行中',
+    previewDetail:'2 个阶段 · 12 台设备',
+    phases:[
+      {at:'14:00', target:'阶段1 · 空调 26° · 灯全开', devs:'12 台设备', state:['已完成','green'], meta:'10 调用回读 · 2 已满足'},
+      {at:'15:00', target:'阶段2 · 全部关闭', devs:'12 台设备', state:['执行中','ink'], steps:[['读取','done'],['调用 5/8','doing'],['回读','']]},
+    ] },
+  { id:'t7', date:'2026-09-24', at:'19:00', name:'下班关灯', by:'张明',
+    chip:['计划','grey'], node:'plan',
+    detail:'照明全关 · 16 台 · 创建时已避让西区加班保留范围',
+    phases:[{at:'19:00', target:'照明全关(除西区保留)', devs:'16 台设备', state:['待执行','grey']}] },
+  { id:'t8', date:'2026-09-24', s:'19:00', e:'22:00', name:'加班保留照明', by:'王工',
+    chip:['计划','grey'], node:'plan',
+    detail:'西区照明 19:00 保持 → 22:00 关闭 · 8 台',
+    phases:[
+      {at:'19:00', target:'阶段1 · 西区照明保持开启', devs:'8 台设备', state:['待执行','grey']},
+      {at:'22:00', target:'阶段2 · 西区照明关闭', devs:'8 台设备', state:['待执行','grey']},
+    ] },
+  { id:'t9', date:'2026-09-25', at:'08:45', name:'明早会议前准备', by:'李雯',
+    chip:['计划','grey'], node:'plan',
+    detail:'会议室B · 空调+灯 · 6 台',
+    phases:[{at:'08:45', target:'空调 25° · 灯全开', devs:'6 台设备', state:['待执行','grey']}] },
+  { id:'t10', date:'2026-09-25', at:'19:00', name:'下班关灯', by:'张明',
+    chip:['计划','grey'], node:'plan',
+    detail:'本区照明全关 · 24 台',
+    phases:[{at:'19:00', target:'照明全关', devs:'24 台设备', state:['待执行','grey']}] },
+];
+const B5_DEMO_INTERVAL = { id: 'parallel', date: TODAY_D, s: '14:20', e: '15:10' };
+
+const DEVICES = [
+  { g: '照明', n: 24, items: [
+    { id: 'light-e', name: '东区照明回路 ×8', sub: '办公东区 · 全部在线', st: 'green', t: '在线' },
+    { id: 'light-w', name: '西区照明回路 ×8', sub: '办公西区 · 全部在线', st: 'green', t: '在线' },
+    { id: 'light-m', name: '会议区照明回路 ×4', sub: '3 间会议室 · 全部在线', st: 'green', t: '在线' },
+    { id: 'light-c', name: '走廊照明回路 ×4', sub: '公共走廊 · 全部在线', st: 'green', t: '在线' },
+  ]},
+  { g: '空调', n: 9, items: [
+    { id: 'ac-01', name: 'K-26-01', sub: '东区 · 制冷 26℃', st: 'green', t: '运行' },
+    { id: 'ac-09', name: 'K-26-09', sub: '会议区 · 最后在线 07:58', st: 'brass', t: '离线' },
+    { id: 'ac-x', name: '其余 7 台', sub: '运行/待机 · 全部在线', st: 'green', t: '在线' },
+  ]},
+  { g: '门禁', n: 2, items: [
+    { id: 'door-e', name: '东侧通道门', sub: '今日开闸 41 次', st: 'green', t: '在线' },
+    { id: 'door-w', name: '西侧通道门', sub: '今日开闸 28 次', st: 'green', t: '在线' },
+  ]},
+  { g: '传感器', n: 2, items: [
+    { id: 'ws-2603', name: '茶水间水浸 WS-2603', sub: '14:05 触发 · 未处置', st: 'brass', t: '告警' },
+    { id: 'sa-2601', name: '烟感 SA-2601', sub: '走廊 · 正常', st: 'green', t: '在线' },
+  ]},
+];
+
+const DEV_TL = {
+  'ac-09': { meta: '会议区 · 目标 制冷26° · 最后在线 07:58', chip: '<span class="chip brass">离线</span>', items: [
+    { t: '今天\n08:30', src: '任务 · 晨间准备 · 阶段1', cls: '', target: '制冷 26°', res: ['brass', '调用失败 · 设备离线'], rb: '无法回读' },
+    { t: '昨天\n18:02', src: '人工 · 张明', cls: 'human', target: '关机', res: ['green', '已执行'], rb: '回读 ✓' },
+    { t: '昨天\n08:30', src: '任务 · 晨间准备 · 阶段1', cls: '', target: '制冷 26°', res: ['green', '已满足 · 无需调用'], rb: '回读 ✓' },
+  ]},
+  'light-e': { meta: '办公东区 · 8 回路 · 全部在线', chip: '<span class="chip green">在线</span>', items: [
+    { t: '今天\n13:20', src: '人工 · 王工', cls: 'human', target: '开启', res: ['green', '已执行'], rb: '回读 ✓' },
+    { t: '昨天\n19:00', src: '任务 · 下班关灯', cls: '', target: '关闭', res: ['green', '已满足 · 无需调用'], rb: '回读 ✓' },
+    { t: '前天\n14:32', src: '操作草案 · 李雯确认', cls: 'draft', target: '关闭', res: ['green', '已执行'], rb: '回读 ✓' },
+  ]},
+  'door-e': { meta: '东侧通道 · 今日开闸 41 次', chip: '<span class="chip green">在线</span>', items: [
+    { t: '今天\n12:44', src: '人工 · 访客通行', cls: 'human', target: '开闸', res: ['green', '已执行'], rb: '回读 ✓' },
+    { t: '今天\n09:05', src: '操作草案 · 张明确认', cls: 'draft', target: '一次开门', res: ['green', '已执行'], rb: '回读 ✓' },
+  ]},
+  'ws-2603': { meta: '茶水间 · 14:05 触发', chip: '<span class="chip brass">告警</span>', items: [
+    { t: '今天\n14:05', src: '设备事件 · 水浸告警', cls: '', target: '—', res: ['brass', '告警 · 未处置'], rb: '责任人未确认' },
+    { t: '周一\n11:20', src: '人工 · 巡检确认', cls: 'human', target: '状态正常', res: ['green', '已记录'], rb: '—' },
+  ]},
+};
+const DEV_TL_GENERIC = (name, sub) => ({ meta: sub, chip: '<span class="chip green">在线</span>', items: [
+  { t: '今天\n12:00', src: '任务 · 午间巡检', cls: '', target: '状态读取', res: ['green', '正常'], rb: '回读 ✓' },
+]});
+
+/* ================= date helpers ================= */
+const WD = ['日','一','二','三','四','五','六'];
+const d2 = s => new Date(s + 'T00:00:00');
+const fmtMD = ds => `${+ds.slice(5,7)}/${+ds.slice(8)}`;
+function dateLabel(ds) {
+  const day = Math.round((d2(ds) - d2(TODAY_D)) / 864e5);
+  if (day === 0) return `今天 ${fmtMD(ds)}`;
+  if (day === -1) return `昨天 ${fmtMD(ds)}`;
+  if (day === 1) return `明天 ${fmtMD(ds)}`;
+  return `周${WD[d2(ds).getDay()]} ${fmtMD(ds)}`;
+}
+const DAYS = [...new Set(TASKS.map(t => t.date))].sort();
+const taskDays = new Set(DAYS);
+
+/* ================= proportional layout =================
+   34px/h · ticks every 3h · b4=实体区间上的时间进度 */
+let VARIANT = new URLSearchParams(location.search).get('variant') || 'b6';
+const B5_OVERLAP = new URLSearchParams(location.search).get('case') === 'overlap';
+const HOUR_PX = 34, DAY_GAP = 44;
+const minOf = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const clockText = mins => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+
+const dayStart = {}; let accY = DAY_GAP;
+DAYS.forEach(d => { dayStart[d] = accY; accY += 24 * HOUR_PX + DAY_GAP; });
+const TOTAL_H = accY;
+const yOf = (d, t) => dayStart[d] + minOf(t) / 60 * HOUR_PX;
+const b6DayStart = {};
+const b6Origin = dayStart[TODAY_D] - DAYS.indexOf(TODAY_D) * 24 * HOUR_PX;
+DAYS.forEach((d, i) => { b6DayStart[d] = b6Origin + i * 24 * HOUR_PX; });
+const b6TotalH = b6Origin + DAYS.length * 24 * HOUR_PX + DAY_GAP;
+const timelineYOf = (d, t) => VARIANT === 'b6'
+  ? b6DayStart[d] + minOf(t) / 60 * HOUR_PX : yOf(d, t);
+const timelineDayStart = d => VARIANT === 'b6' ? b6DayStart[d] : dayStart[d];
+const timelineTotalH = () => VARIANT === 'b6' ? b6TotalH : TOTAL_H;
+const RAIL_PEAK_Y = yOf(TODAY_D, '10:30');
+const RAIL_CENTER_X = 55.5, RAIL_AMPLITUDE = 8.5, RAIL_WAVELENGTH = 221;
+const railX = y => RAIL_CENTER_X
+  + RAIL_AMPLITUDE * Math.cos(2 * Math.PI * (y - RAIL_PEAK_Y) / RAIL_WAVELENGTH);
+const axisX = railX;
+let nowY = timelineYOf(TODAY_D, clockText(NOW_MIN));
+
+function b6VisibleTicks() {
+  const intervals = [...TASKS.filter(t => t.e), ...(B5_OVERLAP ? [B5_DEMO_INTERVAL] : [])];
+  const anchors = TASKS.flatMap(t => [timelineYOf(t.date, t.s || t.at), ...(t.e ? [timelineYOf(t.date, t.e)] : [])]);
+  if (B5_OVERLAP) anchors.push(timelineYOf(TODAY_D, B5_DEMO_INTERVAL.s), timelineYOf(TODAY_D, B5_DEMO_INTERVAL.e));
+  anchors.push(nowY);
+  const ticks = [];
+  DAYS.forEach(d => {
+    for (let h = 0; h < 24; h += 3) {
+      const y = timelineYOf(d, clockText(h * 60));
+      if (intervals.some(t => t.date === d && y >= timelineYOf(d, t.s) && y <= timelineYOf(d, t.e))) continue;
+      if (anchors.some(anchor => Math.abs(anchor - y) < 14)) continue;
+      ticks.push({ y, h, d });
+    }
+  });
+  return ticks;
+}
+
+function renderTimeline() {
+  const wrap = document.getElementById('tlwrap');
+  wrap.style.height = timelineTotalH() + 'px';
+  const b5 = VARIANT === 'b5';
+  const b6 = VARIANT === 'b6';
+  const rich = b5 || b6;
+  wrap.classList.toggle('b5', b5);
+  wrap.classList.toggle('b6', b6);
+  wrap.classList.toggle('overlap', rich && B5_OVERLAP);
+
+  /* gutter labels: task times at true Y + 3h ticks */
+  const labels = [];
+  TASKS.forEach(t => {
+    const y = timelineYOf(t.date, t.s || t.at);
+    labels.push({ y, html: rich ? (t.s || t.at) : `${t.s || t.at}${t.e ? `<span class="sub">– ${t.e}</span>` : ''}`, cls: rich ? 'event' : '', pri: 2 });
+    if (rich && t.e) labels.push({ y: timelineYOf(t.date, t.e), html: t.e, cls: 'event', pri: 2 });
+  });
+  if (rich && B5_OVERLAP) {
+    labels.push({ y: timelineYOf(TODAY_D, B5_DEMO_INTERVAL.s), html: B5_DEMO_INTERVAL.s, cls: 'event', pri: 2 });
+    labels.push({ y: timelineYOf(TODAY_D, B5_DEMO_INTERVAL.e), html: B5_DEMO_INTERVAL.e, cls: 'event', pri: 2 });
+  }
+  if (b6) b6VisibleTicks().forEach(({ y, h, d }) => {
+    const past = d < TODAY_D || (d === TODAY_D && h * 60 < NOW_MIN);
+    labels.push({ y, html: `${String(h).padStart(2, '0')}:00`, cls: 'tick' + (past ? ' past' : ''), pri: 1 });
+  });
+  else DAYS.forEach(d => {
+    for (let h = 0; h <= 24; h += 3) {
+      const y = timelineYOf(d, clockText(h * 60));
+      const past = d < TODAY_D || (d === TODAY_D && h * 60 < NOW_MIN);
+      labels.push({ y, html: `${String(h).padStart(2, '0')}:00`, cls: 'tick' + (past ? ' past' : ''), pri: 1 });
+    }
+  });
+  let html;
+  if (rich) {
+    if (b5) labels.push({ y: nowY, html: `<span class="caption">现在</span><span class="clock">${clockText(NOW_MIN)}</span>`, cls: 'now', pri: 3, height: 24 });
+    const exact = labels.filter(l => l.pri > 1).map(l => l.y);
+    const placed = labels.filter((l, i) =>
+      (l.pri > 1 || exact.every(y => Math.abs(y - l.y) >= 18))
+      && (b6 || l.pri !== 2 || Math.abs(l.y - nowY) >= 3)
+      && (l.pri === 1 || labels.findIndex(other => other.pri === l.pri && other.y === l.y) === i))
+      .sort((a, b) => a.y - b.y)
+      .map(l => ({ ...l, displayY: l.y, height: l.height || 14 }));
+    for (let pass = 0; pass < 3; pass++) {
+      for (let i = 1; i < placed.length; i++) {
+        const a = placed[i - 1], b = placed[i];
+        const overlap = (a.height + b.height) / 2 + 4 - (b.displayY - a.displayY);
+        if (overlap > 0) { a.displayY -= overlap / 2; b.displayY += overlap / 2; }
+      }
+    }
+    html = placed.map(l => `<span class="glab ${l.cls}${Math.abs(l.displayY - l.y) > 2 ? ' shifted' : ''}"
+      data-anchor-y="${l.y}" data-label-y="${l.displayY}" style="top:${l.displayY}px">${l.html}</span>`).join('');
+    if (b6) html += `<span class="glab now" style="top:${nowY}px;visibility:hidden">
+      <span class="caption">现在</span><span class="clock">${clockText(NOW_MIN)}</span></span>`;
+  } else {
+    /* B4 label layout remains frozen. */
+    labels.sort((a, b) => a.y - b.y);
+    const kept = [];
+    labels.forEach(l => {
+      if (l.pri === 1 && kept.some(k => Math.abs(k.y - l.y) < 16)) return;
+      kept.push(l);
+    });
+    html = kept.map(l => `<span class="glab ${l.cls}" style="top:${l.y}px">${l.html}</span>`).join('');
+  }
+
+  /* day ticks */
+  DAYS.forEach(d => {
+    const y = b6 ? timelineDayStart(d) : dayStart[d] - DAY_GAP / 2;
+    html += `<div class="daytick" style="top:${y}px">${dateLabel(d)}</div>`;
+  });
+
+  /* task cards (top set after measure) */
+  TASKS.forEach(t => {
+    const y = timelineYOf(t.date, t.s || t.at);
+    const awaitingStart = rich && t.exec && t.e && nowY < y;
+    const stCls = awaitingStart ? '' : t.chip[1] === 'ink' ? 'exec' : t.chip[1] === 'brass' ? 'brass' : '';
+    html += `<div class="tcard ${t.past ? 'past' : ''} ${t.cancelled ? 'cancelled' : ''} ${t.exec && !awaitingStart ? 'exec' : ''}"
+      data-id="${t.id}" data-y="${y}" style="top:${y}px" onclick="openTask('${t.id}')">
+      <div class="head"><span class="tname">${t.name}</span><span class="stext ${stCls}">${awaitingStart ? '计划' : t.chip[0]}</span></div>
+      <div class="hline"></div>
+      <div class="detail">${t.e ? t.s + '–' + t.e + ' · ' : ''}${rich && t.previewDetail ? t.previewDetail : t.detail} · ${t.by === ME ? '<span class="me">我</span>' : t.by}</div>
+    </div>`;
+  });
+
+  /* now marker — label in gutter, dot on the curve, hairline to the right */
+  const nx = axisX(nowY);
+  if (!rich) html += `<div class="nowmark ${VARIANT === 'b4' ? 'progress' : ''}" style="top:${nowY}px">
+    <span class="nm-time">${VARIANT === 'b4' ? '现在<br>' : '现在 '}${clockText(NOW_MIN)}</span>
+    <span class="nm-dot" style="left:${nx}px"></span>
+    <span class="nm-line" style="left:${nx + 9}px"></span></div>`;
+
+  wrap.innerHTML = html;
+  requestAnimationFrame(layoutRail);
+}
+
+/* collision resolve + rail/svg overlays */
+function layoutRail() {
+  const wrap = document.getElementById('tlwrap');
+  wrap.querySelectorAll('svg.rail, .cnode').forEach(e => e.remove());
+  if (VARIANT === 'b6') {
+    const nowLabel = wrap.querySelector('.glab.now');
+    const nowRect = nowLabel.getBoundingClientRect();
+    const textCollision = [...wrap.querySelectorAll('.glab:not(.now)')].some(label => {
+      const rect = label.getBoundingClientRect();
+      return nowRect.top < rect.bottom + 3 && nowRect.bottom > rect.top - 3;
+    });
+    nowLabel.style.visibility = textCollision ? 'hidden' : 'visible';
+  }
+  /* push overlapping cards down, keep order */
+  const cards = [...wrap.querySelectorAll('.tcard')].sort((a, b) => +a.dataset.y - +b.dataset.y);
+  let prevBottom = -1;
+  cards.forEach(c => {
+    let top = Math.max(+c.dataset.y - 14, prevBottom);
+    c.style.top = top + 'px';
+    prevBottom = top + c.offsetHeight + 10;
+  });
+
+  /* svg: base rail (two-tone at now) + 3h ticks + intervals + leader lines */
+  const railPath = (y1, y2, step = 3, off = 0) => {
+    let p = `M ${(axisX(y1) + off).toFixed(1)} ${y1}`;
+    for (let y = y1 + step; y <= y2; y += step) p += ` L ${(axisX(y) + off).toFixed(1)} ${y}`;
+    if (y2 - y1 > 0 && (y2 - y1) % step) p += ` L ${(axisX(y2) + off).toFixed(1)} ${y2}`;
+    return p;
+  };
+  const ribbonPoint = (y, y1, y2, lane = 0) => {
+    const slope = (axisX(y + 1) - axisX(y - 1)) / 2;
+    const nx = 1 / Math.hypot(1, slope), ny = -slope * nx;
+    const u = (y - y1) / (y2 - y1);
+    const width = 1.5 + 9.5 * Math.pow(Math.sin(Math.PI * u), 1.4);
+    const offset = lane * 18 * nx;
+    return {
+      left: [axisX(y) + offset, y],
+      right: [axisX(y) + offset + width * nx, y + width * ny]
+    };
+  };
+  const ribbonPath = (y1, y2, fromY = y1, toY = y2, lane = 0) => {
+    const points = [];
+    for (let y = fromY; y < toY; y += 2) points.push(ribbonPoint(y, y1, y2, lane));
+    points.push(ribbonPoint(toY, y1, y2, lane));
+    const pair = p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+    return `M ${pair(points[0].left)} `
+      + points.slice(1).map(p => `L ${pair(p.left)}`).join(' ')
+      + ' ' + points.reverse().map(p => `L ${pair(p.right)}`).join(' ') + ' Z';
+  };
+  const progressCurve = VARIANT === 'b4' || VARIANT === 'b5' || VARIANT === 'b6';
+  const d = railPath(0, timelineTotalH(), progressCurve ? 2 : 3);
+  const railWidth = progressCurve ? wrap.clientWidth : 84;
+  let svg = `<svg class="rail" width="${railWidth}" height="${timelineTotalH()}" viewBox="0 0 ${railWidth} ${timelineTotalH()}">`;
+  if (progressCurve) {
+    svg += `<defs>
+      <linearGradient id="intervalFuture" gradientUnits="userSpaceOnUse" x1="46" x2="74"><stop stop-color="#b4d3c1"/><stop offset="1" stop-color="#d9e9dd"/></linearGradient>
+      <linearGradient id="intervalElapsed" gradientUnits="userSpaceOnUse" x1="46" x2="74"><stop stop-color="#126448"/><stop offset="1" stop-color="#258767"/></linearGradient>
+      <clipPath id="axisProgressClip"><rect width="${railWidth}" height="${nowY}"/></clipPath>
+    </defs>`;
+    svg += `<path d="${d}" fill="none" stroke="#b9c8be" stroke-width="1.6"/>`;
+    svg += `<path d="${d}" fill="none" stroke="#81958a" stroke-width="1.6" clip-path="url(#axisProgressClip)"/>`;
+  } else {
+    svg += `<path d="${d}" fill="none" stroke="#cbd6cf" stroke-width="1.5" stroke-linejoin="round"/>`;
+    svg += `<path d="${railPath(0, nowY)}" fill="none" stroke="#e4eae6" stroke-width="1.5" stroke-linejoin="round"/>`;
+  }
+
+  /* B6 tick visibility is shared by its glyph and time label. */
+  if (VARIANT === 'b6') b6VisibleTicks().forEach(({ y }) => {
+    const x = axisX(y);
+    const fill = y < nowY ? '#a5bbae' : '#bfcec4';
+    svg += `<rect x="${(x - 5).toFixed(1)}" y="${(y - 3.2).toFixed(1)}"
+      width="10" height="6.4" rx="3.2" fill="#fff"/>`;
+    svg += `<rect x="${(x - 3.2).toFixed(1)}" y="${(y - 1.7).toFixed(1)}"
+      width="6.4" height="3.4" rx="1.7" fill="${fill}"/>`;
+  });
+  else DAYS.forEach(dd => {
+    for (let h = 0; h <= 24; h += 3) {
+      const y = timelineYOf(dd, clockText(h * 60)), x = axisX(y);
+      const tick = progressCurve && y < nowY ? '#5c9b7e' : '#bcc9c1';
+      if (VARIANT === 'b5') {
+        const slope = (axisX(y + 1) - axisX(y - 1)) / 2;
+        const nx = 1 / Math.hypot(1, slope), ny = -slope * nx;
+        svg += `<line x1="${(x - 3.5 * nx).toFixed(1)}" y1="${(y - 3.5 * ny).toFixed(1)}"
+          x2="${(x + 3.5 * nx).toFixed(1)}" y2="${(y + 3.5 * ny).toFixed(1)}"
+          stroke="${tick}" stroke-width="1.1" stroke-linecap="round"/>`;
+      } else {
+        svg += `<line x1="${x - 4}" y1="${y}" x2="${x + 4}" y2="${y}" stroke="${tick}" stroke-width="1.25"/>`;
+      }
+    }
+  });
+
+  if (VARIANT === 'b5' || VARIANT === 'b6') {
+    wrap.querySelectorAll('.glab.shifted').forEach(label => {
+      const anchorY = +label.dataset.anchorY, labelY = +label.dataset.labelY;
+      const color = label.classList.contains('now') ? '#b9862b' : '#a9b9ae';
+      svg += `<path d="M 38 ${labelY.toFixed(1)} L ${(axisX(anchorY) - 8).toFixed(1)} ${anchorY}"
+        fill="none" stroke="${color}" stroke-width=".9" stroke-linecap="round"/>`;
+    });
+  }
+
+  /* interval + point anchors: nodeAt = status node pos, leadAt = leader attach */
+  const nodeAt = {}, leadAt = {}, endAt = {}, b5Drawn = [];
+  TASKS.forEach(t => {
+    if (!t.e) {
+      const y = timelineYOf(t.date, t.at);
+      nodeAt[t.id] = leadAt[t.id] = { x: axisX(y), y };
+      return;
+    }
+    const y1 = timelineYOf(t.date, t.s), y2 = timelineYOf(t.date, t.e), ym = (y1 + y2) / 2, xm = axisX(ym);
+    const db = railPath(y1, y2);
+    if (VARIANT === 'b5' || VARIANT === 'b6') {
+      // Rich variants draw intervals together after stable lane assignment.
+    } else if (progressCurve) {
+      const shape = ribbonPath(y1, y2);
+      svg += `<path class="interval-shape future" d="${shape}" fill="url(#intervalFuture)"/>`;
+      if (nowY > y1) {
+        svg += `<path class="interval-shape elapsed" d="${ribbonPath(y1, y2, y1, Math.min(nowY, y2))}" fill="url(#intervalElapsed)"/>`;
+      }
+      if (nowY > y1 && nowY < y2) {
+        const front = ribbonPoint(nowY, y1, y2);
+        svg += `<path class="interval-front" d="M ${front.left.join(' ')} L ${front.right.join(' ')}"
+          fill="none" stroke="#e6ba65" stroke-width="1.4" stroke-linecap="round"/>`;
+      }
+    } else if (VARIANT === 'b1') {
+      /* 缎带 — crisp solid ribbon; exec carries a traveling sheen, plan is dashed */
+      if (t.exec) {
+        svg += `<path d="${db}" fill="none" stroke="#176b54" stroke-width="5" stroke-linecap="round"/>`;
+        svg += `<path class="ribflow" d="${db}" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2" stroke-linecap="round" stroke-dasharray="1.5 10"/>`;
+      } else {
+        svg += `<path d="${db}" fill="none" stroke="#8fae9f" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="7 4.5" opacity=".7"/>`;
+      }
+    } else if (VARIANT === 'b2') {
+      /* 轨道 — the rail sidings into a capsule track; exec sends a traveler down it */
+      const cr = 4.5, col = t.exec ? '#176b54' : '#a7b8af';
+      if (t.exec) svg += `<path d="${db}" fill="none" stroke="rgba(23,107,84,.07)" stroke-width="9" stroke-linecap="round"/>`;
+      svg += `<path d="${railPath(y1, y2, 3, -cr)}" fill="none" stroke="${col}" stroke-width="1.4" opacity="${t.exec ? .95 : .6}"/>`;
+      svg += `<path d="${railPath(y1, y2, 3, cr)}" fill="none" stroke="${col}" stroke-width="1.4" opacity="${t.exec ? .95 : .6}"/>`;
+      svg += `<path d="M ${axisX(y1) - cr} ${y1} A ${cr} ${cr} 0 0 1 ${axisX(y1) + cr} ${y1}" fill="none" stroke="${col}" stroke-width="1.4" opacity="${t.exec ? .95 : .6}"/>`;
+      svg += `<path d="M ${axisX(y2) - cr} ${y2} A ${cr} ${cr} 0 0 0 ${axisX(y2) + cr} ${y2}" fill="none" stroke="${col}" stroke-width="1.4" opacity="${t.exec ? .95 : .6}"/>`;
+      if (t.exec) svg += `<circle class="flowdot" r="2.6" fill="#176b54"><animateMotion dur="4s" repeatCount="indefinite" path="${db}"/></circle>`;
+    } else {
+      /* 刻度段 — measured ticks along the rail; exec ticks pulse in a traveling wave */
+      const col = t.exec ? '#176b54' : '#9db4a8';
+      let i = 0;
+      for (let y = y1; y <= y2; y += 11, i++) {
+        const x = axisX(y), end = y === y1 || y + 11 > y2;
+        svg += `<line ${t.exec ? `class="segtick" style="animation-delay:${i * 110}ms"` : ''}
+          x1="${(x - (end ? 7 : 5)).toFixed(1)}" y1="${y}" x2="${(x + (end ? 7 : 5)).toFixed(1)}" y2="${y}"
+          stroke="${col}" stroke-width="${end ? 2.2 : 1.4}" stroke-linecap="round"/>`;
+      }
+    }
+    nodeAt[t.id] = { x: axisX(y1), y: y1 };
+    endAt[t.id] = { x: axisX(y2), y: y2 };
+    leadAt[t.id] = { x: xm, y: ym };
+  });
+
+  if (VARIANT === 'b5' || VARIANT === 'b6') {
+    const intervals = [...TASKS.filter(t => t.e), ...(B5_OVERLAP ? [B5_DEMO_INTERVAL] : [])]
+      .sort((a, b) => timelineYOf(a.date, a.s) - timelineYOf(b.date, b.s));
+    const laneEnds = [-Infinity, -Infinity];
+    intervals.forEach(t => {
+      const y1 = timelineYOf(t.date, t.s), y2 = timelineYOf(t.date, t.e);
+      const lane = laneEnds.findIndex(end => end <= y1);
+      if (lane < 0) return;
+      laneEnds[lane] = y2;
+      b5Drawn.push({ t, y1, y2, lane });
+      const shape = ribbonPath(y1, y2, y1, y2, lane);
+      svg += `<path class="interval-shape future" d="${shape}" fill="url(#intervalFuture)"/>`;
+      if (nowY > y1) svg += `<path class="interval-shape elapsed"
+        d="${VARIANT === 'b6' ? shape : ribbonPath(y1, y2, y1, Math.min(nowY, y2), lane)}"
+        fill="url(#intervalElapsed)"${VARIANT === 'b6' && nowY < y2 ? ' clip-path="url(#axisProgressClip)"' : ''}/>`;
+      if (VARIANT === 'b5' && nowY > y1 && nowY < y2) {
+        const front = ribbonPoint(nowY, y1, y2, lane);
+        svg += `<path d="M ${front.left.join(' ')} L ${front.right.join(' ')}"
+          fill="none" stroke="#d9ae69" stroke-width="1.15" stroke-linecap="round"/>`;
+      }
+      if (lane) {
+        [y1, y2].forEach(y => {
+          const x = ribbonPoint(y, y1, y2, lane).left[0];
+          svg += `<path d="M ${axisX(y)} ${y} H ${x.toFixed(1)}" fill="none"
+            stroke="#f4f7f5" stroke-width="3.5" stroke-linecap="round"/>`;
+          svg += `<path d="M ${axisX(y)} ${y} H ${x.toFixed(1)}" fill="none"
+            stroke="#7aa28b" stroke-width="1.2" stroke-linecap="round"/>`;
+        });
+      }
+      nodeAt[t.id] = { x: ribbonPoint(y1, y1, y2, lane).left[0], y: y1 };
+      endAt[t.id] = { x: ribbonPoint(y2, y1, y2, lane).left[0], y: y2 };
+    });
+  }
+
+  /* leader lines — hairline elbow from anchor to card's left edge */
+  TASKS.forEach(t => {
+    const card = wrap.querySelector(`.tcard[data-id="${t.id}"]`);
+    if (!card) return;
+    const cy = card.offsetTop + Math.min(26, card.offsetHeight / 2);
+    const n = leadAt[t.id];
+    const x2 = (VARIANT === 'b5' || VARIANT === 'b6') && B5_OVERLAP ? 110 : 82;
+    const x1 = Math.min(n.x + (t.e ? (progressCurve ? 13 : VARIANT === 'b1' ? 7 : 9) : 5), x2 - 4);
+    const col = t.past || t.cancelled ? '#dde4df' : '#c3cfc8';
+    svg += `<path d="M ${x1} ${n.y} C ${x1 + 12} ${n.y}, ${x2 - 12} ${cy}, ${x2} ${cy}"
+      fill="none" stroke="${col}" stroke-width="1"/>`;
+  });
+  if (progressCurve) {
+    const activeB5 = b5Drawn.filter(item => item.y1 <= nowY && nowY < item.y2);
+    const interval = TASKS.find(t => t.e && t.date === TODAY_D
+      && timelineYOf(t.date, t.s) <= nowY && nowY < timelineYOf(t.date, t.e));
+    const lineStart = VARIANT === 'b5' || VARIANT === 'b6'
+      ? Math.max(axisX(nowY) + 9, ...activeB5.map(item =>
+        ribbonPoint(nowY, item.y1, item.y2, item.lane).right[0] + 4))
+      : interval ? ribbonPoint(nowY, timelineYOf(interval.date, interval.s), timelineYOf(interval.date, interval.e)).right[0] + 4
+        : axisX(nowY) + 9;
+    svg += `<path d="M ${lineStart} ${nowY} H ${railWidth - 14}" fill="none"
+      stroke="#b9862b" stroke-width="1" stroke-dasharray="4 5" opacity=".68"/>`;
+  }
+  if (VARIANT === 'b5' || VARIANT === 'b6') {
+    const white = '#fff', jade = '#176b54', amber = '#ad711b';
+    const currentX = axisX(nowY), collisionGap = 15;
+    const disk = (x, y, outer, inner, fill) => {
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y}" r="${outer}" fill="${white}"/>`;
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y}" r="${inner}" fill="${fill}"/>`;
+    };
+    const ring = (x, y, color) => {
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y}" r="7" fill="${white}"/>`;
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y}" r="5.1" fill="${white}"
+        stroke="${color}" stroke-width="2"/>`;
+    };
+    const pointRing = (x, y) => {
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y}" r="5.8" fill="${white}"/>`;
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y}" r="3.9" fill="${white}"
+        stroke="#87998e" stroke-width="1.6"/>`;
+    };
+    const clearCurrent = (x, y) => {
+      if (VARIANT === 'b6') return x;
+      const dy = Math.abs(y - nowY);
+      if (dy >= collisionGap || Math.hypot(x - currentX, dy) >= collisionGap) return x;
+      const displaced = Math.max(x, currentX + Math.sqrt(collisionGap**2 - dy**2));
+      svg += `<path d="M ${x.toFixed(1)} ${y} H ${(displaced - 6).toFixed(1)}"
+        fill="none" stroke="#83ac93" stroke-width="1.2" stroke-linecap="round"/>`;
+      return displaced;
+    };
+    const starts = new Set(b5Drawn.map(item => item.y1));
+    TASKS.filter(t => !t.e).forEach(t => {
+      const p = nodeAt[t.id];
+      if (starts.has(p.y)) return;
+      if (p.y <= nowY) disk(p.x, p.y, 5.8, 3.9, '#83958a');
+      else pointRing(p.x, p.y);
+    });
+    b5Drawn.forEach(({ t, y1, y2 }) => {
+      const start = nodeAt[t.id], end = endAt[t.id];
+      disk(clearCurrent(start.x, y1), y1, 7.1, 5.2, y1 <= nowY ? jade : '#a6c9b3');
+      ring(clearCurrent(end.x, y2), y2, y2 <= nowY ? jade : '#98b9a5');
+    });
+    disk(currentX, nowY, 7.5, 5.2, amber);
+  }
+  svg += '</svg>';
+  wrap.insertAdjacentHTML('afterbegin', svg);
+
+  /* nodes stay at the true time coordinates, including both interval ends */
+  let nodes = '';
+  if (VARIANT !== 'b5' && VARIANT !== 'b6') TASKS.forEach(t => {
+    const n = nodeAt[t.id];
+    const intervalState = VARIANT === 'b4' && t.e ? (n.y <= nowY ? 'elapsed' : 'pending') : '';
+    const startClass = VARIANT === 'b5'
+      ? `${t.e ? 'boundary-start' : 'point'} ${n.y <= nowY ? 'elapsed' : 'pending'}`
+      : `${t.node} ${intervalState ? 'interval-start ' + intervalState : ''}`;
+    nodes += `<span class="cnode ${startClass}" style="left:${n.x}px;top:${n.y}px"></span>`;
+    if (endAt[t.id]) {
+      const endState = VARIANT === 'b4' ? 'interval-end ' + (endAt[t.id].y <= nowY ? 'elapsed' : 'pending') : '';
+      const endClass = VARIANT === 'b5'
+        ? `boundary-end ${endAt[t.id].y <= nowY ? 'elapsed' : 'pending'}${Math.abs(endAt[t.id].y - nowY) < 15 ? ' near-now' : ''}`
+        : `endcap ${endState}`;
+      nodes += `<span class="cnode ${endClass}" style="left:${endAt[t.id].x}px;top:${endAt[t.id].y}px"></span>`;
+    }
+  });
+  wrap.insertAdjacentHTML('beforeend', nodes);
+}
+
+/* floating date badge follows scroll */
+document.getElementById('tlscroll').addEventListener('scroll', () => {
+  const sc = document.getElementById('tlscroll').scrollTop;
+  let cur = DAYS[0];
+  DAYS.forEach(d => { if (timelineDayStart(d) - (VARIANT === 'b6' ? 60 : DAY_GAP + 60) <= sc) cur = d; });
+  const lbl = dateLabel(cur);
+  const df = document.getElementById('datefloat');
+  if (df.textContent !== lbl) df.textContent = lbl;
+  if (cur !== focusDate) { focusDate = cur; renderCal(); }
+}, { passive: true });
+
+/* ================= calendar ================= */
+let calOpen = false;
+let focusDate = TODAY_D;
+function renderCal() {
+  const fd = d2(focusDate);
+  let cells = '';
+  if (!calOpen) {
+    const mon = new Date(fd); mon.setDate(fd.getDate() - ((fd.getDay() + 6) % 7));
+    for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); cells += calCell(d); }
+  } else {
+    const y = fd.getFullYear(), m = fd.getMonth();
+    const lead = (new Date(y, m, 1).getDay() + 6) % 7;
+    const start = new Date(y, m, 1 - lead);
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      cells += calCell(d, d.getMonth() !== m);
+      if (d.getDay() === 0 && d.getMonth() !== m && i > 27) break;
+    }
+  }
+  document.getElementById('cal').innerHTML = `
+    <div class="cal-head" onclick="calOpen=!calOpen;renderCal()">
+      <span class="cm">${fd.getFullYear()} 年 ${fd.getMonth() + 1} 月</span>
+      <span class="ct">${calOpen ? '收起 ▴' : '展开 ▾'}</span>
+    </div>
+    <div class="cal-grid">${cells}</div><div class="cal-grip"></div>`;
+}
+function calCell(d, other = false) {
+  const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const cls = ['cal-d', other ? 'other' : '', ds === TODAY_D ? 'today' : '', ds === focusDate ? 'sel' : ''].join(' ');
+  return `<div class="${cls}" onclick="pickDate('${ds}')"><span class="wd">${WD[d.getDay()]}</span>${d.getDate()}${taskDays.has(ds) ? '<span class="has"></span>' : ''}</div>`;
+}
+function pickDate(ds) {
+  focusDate = ds; renderCal();
+  if (dayStart[ds] !== undefined)
+    document.getElementById('tlscroll').scrollTo({ top: timelineDayStart(ds) - (VARIANT === 'b6' ? 0 : DAY_GAP) + 4, behavior: 'smooth' });
+}
+
+/* ================= task detail sheet ================= */
+function openTask(id) {
+  const t = TASKS.find(x => x.id === id);
+  const mine = t.by === ME;
+  const schedule = t.s ? `区间任务 · ${dateLabel(t.date)} ${t.s}–${t.e}` : `${dateLabel(t.date)} ${t.at}`;
+  document.getElementById('tsbody').innerHTML = `
+    <div class="shead"><div class="sname">${t.name}</div><span class="chip ${t.chip[1]}">${t.chip[0]}</span></div>
+    <div class="smeta">${schedule}<br>区域 · 26F 办公区 · ${mine ? '<b>我</b>' : t.by} 创建 · 来源 Agent 对话</div>
+    <div class="kicker">阶段 · ${t.phases.length}</div>
+    ${t.phases.map(p => `<div class="phaserow"><span class="pt">${p.at}</span><div class="pm">
+      <div class="ptarget">${p.target}</div><div class="pmeta">${p.devs}${p.meta ? ' · ' + p.meta : ''}</div>
+      ${p.steps ? `<div class="psteps">${p.steps.map(s => `<span class="st ${s[1]}">${s[0]}</span>`).join('<span style="color:var(--hairline-2)">→</span>')}</div>` : ''}
+      </div><span class="chip ${p.state[1]}">${p.state[0]}</span></div>`).join('')}
+    ${t.report ? `<div class="kicker">任务报告</div>${t.report.map(r => `<div class="rep-row"><span class="rk">${r[0]}</span><span>${r[1]}</span></div>`).join('')}` : ''}
+    <div class="sacts">
+      ${mine && t.chip[0] === '计划' ? '<button class="btn ghost">取消任务</button><button class="btn quiet" style="flex:2">编辑</button>' : ''}
+      ${!mine && t.chip[0] === '计划' ? '<button class="btn quiet" style="flex:2">查看来源对话</button>' : ''}
+      ${t.report ? '<button class="btn quiet" style="flex:2">完整报告</button>' : ''}
+      ${t.exec ? '<button class="btn quiet" style="flex:2">查看来源对话</button>' : ''}
+    </div>`;
+  document.getElementById('sheetBack').classList.add('open');
+  document.getElementById('tsheet').classList.add('open');
+}
+function closeSheet() {
+  document.getElementById('sheetBack').classList.remove('open');
+  document.getElementById('tsheet').classList.remove('open');
+}
+
+/* ================= 设备 page ================= */
+let devFilter = '全部';
+function renderDevices() {
+  const chips = ['全部', ...DEVICES.map(g => g.g)]
+    .map(f => `<button class="fchip ${f === devFilter ? 'on' : ''}" onclick="setFilter('${f}')">${f}${f === '全部' ? '' : ' ' + DEVICES.find(g => g.g === f).n}</button>`).join('');
+  const groups = DEVICES.filter(g => devFilter === '全部' || g.g === devFilter)
+    .map(g => `<div class="devgroup">
+      <div class="ghead"><span class="gt">${g.g}</span><span class="gn">${g.n} 台</span></div>
+      ${g.items.map(d => `<div class="devrow" onclick="openDev('${d.id}')"><span class="dot ${d.st}"></span>
+        <div class="dmain"><div class="dname">${d.name}</div><div class="dsub">${d.sub}</div></div>
+        <span class="chip ${d.st === 'green' ? 'green' : 'brass'}">${d.t}</span><span class="chev">›</span>
+      </div>`).join('')}
+    </div>`).join('');
+  document.getElementById('page1').innerHTML = `<div class="devstrip" style="margin-top:2px">${chips}</div>${groups}
+    <div class="devnote">点击设备查看时间轴 · 任务 / 人工 / 草案操作同源记录</div>`;
+}
+function setFilter(f) { devFilter = f; renderDevices(); }
+function openDev(id) {
+  const dev = DEVICES.flatMap(g => g.items).find(d => d.id === id);
+  const tl = DEV_TL[id] || DEV_TL_GENERIC(dev.name, dev.sub);
+  document.getElementById('dpName').textContent = dev.name;
+  document.getElementById('dpChip').innerHTML = tl.chip;
+  document.getElementById('dpMeta').textContent = tl.meta;
+  document.getElementById('dpBody').innerHTML = `<div class="dtl">` + tl.items.map(e => `
+    <div class="dtl-item"><span class="dtime">${e.t.replace('\n', '<br>')}</span><span class="dnode ${e.res[0] === 'brass' ? 'brass' : e.cls === 'human' ? 'ink' : ''}"></span>
+      <div class="dentry">
+        <div class="esrc ${e.cls}">${e.src}</div>
+        <div class="etarget">目标 · ${e.target}</div>
+        <div class="eres"><span class="chip ${e.res[0] === 'brass' ? 'brass' : 'green'}">${e.res[1]}</span><span>${e.rb}</span></div>
+      </div>
+    </div>`).join('') + `</div>
+    <div class="devnote">记录来自任务执行与设备操作审计 · 与区域时间轴共享 taskId</div>`;
+  document.getElementById('devpanel').classList.add('open');
+}
+function closeDev() { document.getElementById('devpanel').classList.remove('open'); }
+
+/* ================= pager ================= */
+let page = 0;
+function goTo(p, animate = true) {
+  page = Math.max(0, Math.min(1, p));
+  const track = document.getElementById('track');
+  if (!animate) track.classList.add('drag');
+  track.style.transform = `translateX(${-page * 50}%)`;
+  if (!animate) requestAnimationFrame(() => track.classList.remove('drag'));
+  document.getElementById('thumb').style.transform = `translateX(${page * 100}%)`;
+  document.querySelectorAll('.seg').forEach((s, i) => s.classList.toggle('on', i === page));
+  const u = new URL(location); u.searchParams.set('page', page); history.replaceState(null, '', u);
+}
+(() => {
+  const pager = document.getElementById('pager'), track = document.getElementById('track');
+  let sx = 0, sy = 0, dx = 0, mode = null;
+  pager.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; dx = 0; mode = null; });
+  pager.addEventListener('pointermove', e => {
+    if (!sx || e.buttons === 0) { sx = 0; return; }
+    if (mode === null) {
+      const ax = Math.abs(e.clientX - sx), ay = Math.abs(e.clientY - sy);
+      if (ax < 6 && ay < 6) return;
+      mode = ax > ay ? 'h' : 'v';
+      if (mode === 'h') { pager.setPointerCapture(e.pointerId); track.classList.add('drag'); } else return;
+    }
+    if (mode !== 'h') return;
+    dx = e.clientX - sx;
+    track.style.transform = `translateX(calc(${-page * 50}% + ${dx}px))`;
+  });
+  const end = () => {
+    if (mode === 'h') { track.classList.remove('drag'); goTo(Math.abs(dx) > 50 ? page + (dx < 0 ? 1 : -1) : page); }
+    sx = 0; mode = null;
+  };
+  pager.addEventListener('pointerup', end);
+  pager.addEventListener('pointercancel', end);
+})();
+document.querySelectorAll('.seg').forEach(s => s.onclick = () => goTo(+s.dataset.p));
+addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.key === 'ArrowLeft') goTo(page - 1);
+  if (e.key === 'ArrowRight') goTo(page + 1);
+  if (e.key === 'Escape') { closeSheet(); closeDev(); }
+});
+
+/* ================= variant switcher (prototype chrome) ================= */
+{
+  const btns = [...document.querySelectorAll('#varsw button')];
+  const sync = () => {
+    btns.forEach(b => b.classList.toggle('on', b.dataset.v === VARIANT));
+    btns.find(b => b.dataset.v === VARIANT)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    document.getElementById('progressDemo').classList.toggle('visible', VARIANT === 'b4' || VARIANT === 'b5' || VARIANT === 'b6');
+  };
+  btns.forEach(b => b.onclick = () => {
+    VARIANT = b.dataset.v;
+    nowY = timelineYOf(TODAY_D, clockText(NOW_MIN));
+    const u = new URL(location); u.searchParams.set('variant', VARIANT); history.replaceState(null, '', u);
+    sync(); renderTimeline();
+    document.getElementById('tlscroll').scrollTop = Math.max(0, nowY - 260);
+  });
+  sync();
+}
+document.getElementById('demoTime').addEventListener('input', e => {
+  NOW_MIN = Number(e.target.value);
+  nowY = timelineYOf(TODAY_D, clockText(NOW_MIN));
+  const time = clockText(NOW_MIN);
+  document.getElementById('demoClock').textContent = time;
+  document.getElementById('statusClock').textContent = time;
+  renderTimeline();
+});
+
+const q = new URLSearchParams(location.search);
+renderCal(); renderTimeline(); renderDevices();
+goTo(+(q.get('page') || 0), false);
+/* open at "现在" */
+setTimeout(() => {
+  layoutRail();
+  document.getElementById('tlscroll').scrollTop = Math.max(0, nowY - 260);
+}, 60);
+</script>
+</body>
+</html>

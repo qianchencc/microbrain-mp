@@ -18,3 +18,4 @@
 - 开发阶段客户登录、用户、园区和物联网接口继续走客户公网；仅 Agent Runtime 指向本机 `127.0.0.1:3200`——它是唯一 Runtime 实例，直连真实客户网关，不存在模拟数据源。`trial/release` 不得依赖本机地址。
 - Agent 页面进入前等待 `utils/agent-session.js` 的会话与园区上下文；页面和组件不得自行拼接 Authorization 或 tenantCode。
 - 本目录已是生产 Agent 页面；新业务只在客户主线实现。独立 miniapp 已于 2026-09-24 迁出为同级仓库 `agent-miniapp`，仅用于复现问题，回补时只同步能够证明必要的最小修复。
+- 修改独立的区域时间轴原型 `proto-region-panel.html` 时，先读 `docs/research/proto-region-panel/b6-timeline-design.md`：它记录唯一设计稿、B4 冻结边界及 B6 的区间、节点、刻痕和时间文字契约。原型不是生产区域面板，多区间重叠仍属探索状态。
