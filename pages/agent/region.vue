@@ -4,13 +4,19 @@
   <view class="day-heading"><text class="day-title">今天</text><text>{{ date.slice(5).replace('-', '月') }}日 · {{ tasks.length }} 条记录</text></view>
   <view v-if="loading || error" class="notice"><text>{{ loading ? '正在读取任务记录' : error }}</text><button v-if="error" @tap="load">重新加载</button></view>
   <view v-else class="timeline-body">
-   <view v-if="!items.length" class="empty"><text>此区域暂无任务记录</text><text>在 Agent 中确认的设备操作会显示在这里</text></view>
-   <RegionTimeline :items="items" :date="date" :now="now" :interactive="false">
+   <view v-if="!items.length" class="empty">
+    <image class="empty-art" :src="emptyArt" mode="aspectFit" />
+    <text class="empty-title">今天还没有任务记录</text>
+    <text>在物联 Agent 中确认设备操作后，</text><text>结果会显示在这里。</text>
+   </view>
+   <RegionTimeline v-else :items="items" :date="date" :now="now" :interactive="false">
     <template #card="{ item }">
+     <view class="task-row">
      <view class="avatars"><view v-for="avatar in item.avatars" :key="avatar.id" class="device-avatar"><image v-if="avatar.src" :src="avatar.src" mode="aspectFit" /><uni-icons v-else type="gear" size="13" color="#7c8d82" /></view><text v-if="item.more" class="more">+{{ item.more }}</text></view>
      <text class="task-label">{{ item.label }}</text>
      <text v-if="!item.faded" class="task-state" :class="item.status">{{ item.statusText }}</text>
      <text class="creator">{{ item.creatorName }}</text>
+     </view>
     </template>
    </RegionTimeline>
   </view>
@@ -26,6 +32,7 @@ import RegionTimeline from './components/RegionTimeline.vue'
 import { focusRegionId, loadRegionFocus, selectFocusRegion } from './region-focus.js'
 import { localDate } from './timeline-geometry.mjs'
 import { regionTimelineItems } from './region-timeline.mjs'
+const emptyArt = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80"><path d="M30 2c-9 12 9 22 0 38s9 26 0 38" fill="none" stroke="#c9d6ce" stroke-width="1.6"/><circle cx="31" cy="40" r="6" fill="#fff"/><circle cx="31" cy="40" r="4" fill="#ad711b"/></svg>')
 const error = ref(''), loading = ref(true), tasks = ref([])
 const now = ref(new Date().toISOString()), date = computed(() => localDate(now.value))
 const items = computed(() => regionTimelineItems(tasks.value))
@@ -59,13 +66,15 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .region-page { height:100vh; box-sizing:border-box; padding-top:14px; background:#f4f7f5; color:#526759; display:flex; flex-direction:column; }
 .day-heading { padding:18px 23px 12px; display:flex; align-items:baseline; gap:9px; color:#89958e; font-size:11px; }
 .day-title { color:#45564d; font-size:20px; font-weight:600; }
-.timeline-body { position:relative; flex:1; min-height:0; margin:0 16px; }
-.empty { position:absolute; top:35%; left:90px; right:14px; z-index:1; pointer-events:none; font-size:12px; line-height:1.7; color:#7c8d82; }
+.timeline-body { position:relative; flex:1; min-height:0; margin:0 16px; overflow:hidden; }
+.empty { padding:70px 24px 0; text-align:center; font-size:12px; line-height:1.8; color:#89958e; }
+.empty-art { display:block; width:60px; height:80px; margin:0 auto 14px; }
 .empty text { display:block; }
-.empty text + text { font-size:10px; color:#a0aea5; }
+.empty-title { color:#526759; font-size:14px; font-weight:600; margin-bottom:5px; }
 .notice { padding:70px 24px; text-align:center; font-size:13px; color:#89958e; }
 .notice button { margin-top:18px; background:transparent; font-size:13px; color:#176b54; }
 .notice button::after { border:0; }
+.task-row { display:flex; align-items:center; gap:6px; height:32px; min-width:0; }
 .avatars { display:flex; align-items:center; flex-shrink:0; }
 .device-avatar { width:21px; height:21px; margin-left:-7px; border:1px solid #fff; border-radius:50%; background:#edf2ee; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .device-avatar image { width:21px; height:21px; }

@@ -27,7 +27,7 @@
 				"enablePullDownRefresh": false
 			}
 		},
-		{"path":"pages/agent/region","style":{"navigationBarTitleText":"区域工作台","navigationBarBackgroundColor":"#f4f7f5","disableScroll":true}},
+		{"path":"pages/agent/region","style":{"navigationBarTitleText":"区域工作台","navigationBarTextStyle":"black","navigationBarBackgroundColor":"#f4f7f5","disableScroll":true}},
 		{
 			"path": "pages/news/newList",
 			"style": {

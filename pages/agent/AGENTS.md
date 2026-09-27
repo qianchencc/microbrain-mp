@@ -21,4 +21,4 @@
 - 修改独立的区域时间轴原型 `proto-region-panel.html` 时，先读 `docs/research/proto-region-panel/b6-timeline-design.md`：它记录唯一设计稿、B4 冻结边界及 B6 的区间、节点、刻痕和时间文字契约。原型不是生产区域面板，多区间重叠仍属探索状态。
 - `proto-region-workbench.html`（C1）以 B6 为起点探索入口、区域切换、细任务卡、抽屉、设备列表、设备时间轴、日历归属与区域提示；改动前先读 `docs/research/proto-region-panel/c1-workbench-exploration.md`。其中时间轴组件是 B6 分支的移植，几何参数随 B6 契约冻结，只允许替换卡片内容；`proto-region-panel.html` 保持冻结作对照。
 - 区域工作台接线与验收状态见 `plan/2026-09-27-region-workbench-first-loop-handoff.md`。消息发送/重试/编辑应在修改原轮前固定本次关注区域；本地选区按统一 session 的不可逆身份键分区，区域仅是默认上下文。
-- B6 生产几何共用 `timeline-geometry.mjs`；时间节点不承载任务完成状态。微信 Canvas/SVG 最终选型尚待开发者工具登录，先读 `docs/research/proto-region-panel/2026-09-27-native-renderer-status.md`；不要将浏览器截图或微信编译当作原生视觉验收。
+- B6 生产几何共用 `timeline-geometry.mjs`；时间节点不承载任务完成状态。微信开发者工具已选 SVG 图片承载图形，普通视图承载时间字与卡片；Canvas 原生图层曾越过滚动裁切边界。空区域按 P2 原型显示局部符号。见 `docs/research/proto-region-panel/2026-09-27-native-renderer-status.md`；实际任务回读仍需真实操作验收。
