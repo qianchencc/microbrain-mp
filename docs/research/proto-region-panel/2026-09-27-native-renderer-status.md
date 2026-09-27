@@ -22,6 +22,8 @@
 
 样例验证了 14:45 区间分界、00:00 单刻度、普通视图卡片点击和窄屏卡片内容；正式空区域按 P2 原型使用局部时间轴符号，避免无任务时铺满整日曲线。真实任务记录仍需经用户确认的一次设备操作验收，样例页不是实际业务数据。
 
+这些截图支持原生图层裁切选型，不构成与冻结 P2 原型的保真度验收。已有 P2 截图为 14:52，微信图为 14:45 的临时样例页，视口、任务内容和页面结构并不一致。后续应在相同视口、时刻与任务数据下对照曲线、缎带、刻度、节点和卡片位置，再关闭票 02。
+
 ## 组件复用
 
 按项目顺序查看过 [Animate UI Sheet](https://animate-ui.com/docs/components/radix/sheet)、[Radio Group](https://animate-ui.com/docs/components/radix/radio-group)，[ReUI Sheet](https://reui.io/components/sheet)、[Timeline](https://reui.io/components/timeline)，以及 [shadcn Sheet](https://ui.shadcn.com/docs/components/base/sheet)、[Radio Group](https://ui.shadcn.com/docs/components/base/radio-group)。这些是 Web/React 控件，ReUI 的直线时间轴也不能保持冻结的 B6 几何。
