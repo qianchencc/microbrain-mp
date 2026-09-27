@@ -13,6 +13,7 @@ const request = (url, method, data, timeout) => requestJson(globalConfig.agentUr
 
 export const createConversation = () => request('/agent/conversations', 'POST')
 export const listRegions = () => request('/agent/regions', 'GET')
+export const listRegionTimeline = (regionId, date) => request(`/agent/regions/${encodeURIComponent(regionId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 export const restoreConversation = () => request('/agent/conversations/current', 'GET')
 export const clearConversation = id => request(`/agent/conversations/${id}`, 'DELETE')
 export const discardTurn = (conversationId, turnId) => request(`/agent/conversations/${conversationId}/turns/${turnId}`, 'DELETE')
