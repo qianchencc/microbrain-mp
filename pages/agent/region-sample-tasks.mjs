@@ -9,6 +9,11 @@ export function regionSampleTasks(date, regionId) {
   source: { type: 'sample' }, canCancel: false,
  })
  return [
+  { ...task('meeting-window', '会议室空调时段', '09:00', 'completed', [device('ac-window', 'ac', '会议室空调', 'verified')]),
+   phases: [
+    { id: 'sample-phase-window-start', at: at('09:00'), status: 'verified', devices: [{ ...device('ac-window', 'ac', '会议室空调', 'verified'), target: { power: 'on', temperature: 26 } }] },
+    { id: 'sample-phase-window-end', at: at('14:00'), status: 'verified', devices: [{ ...device('ac-window', 'ac', '会议室空调', 'verified'), target: { power: 'off' } }] },
+   ] },
   task('morning-ac', '晨间空调开启', '08:30', 'completed', [
    device('ac-east', 'ac', '东区空调', 'verified'), device('ac-west', 'ac', '西区空调', 'satisfied'),
   ]),
@@ -28,4 +33,10 @@ export function regionSampleTasks(date, regionId) {
    device('light-office', 'lighting', '办公区格栅灯', 'unconfirmed'),
   ]),
  ]
+}
+
+export function regionSampleTaskDetail(task) {
+ const target = task.label.includes('关闭') ? { power: 'off' } : task.label.includes('调温') ? { temperature: 26 } : { power: 'on' }
+ return { ...task, createdAt: task.phases[0].at, phases: task.phases.map(phase => ({ ...phase,
+  devices: (phase.devices || task.devices.map(device => ({ ...device, target }))).map(device => ({ ...device, details: null })) })) }
 }

@@ -1,5 +1,5 @@
 export const modeLabels = { auto: "自动", cool: "制冷", heat: "制热", dry: "除湿", fan: "送风" };
-export const fanLabels = { low: "低风", high: "高风", auto: "自动风" };
+export const fanLabels = { low: "低风", middle: "中风", high: "高风", auto: "自动风" };
 export const fieldLabels = { power: "电源", temperature: "设定温度", mode: "模式", fanSpeed: "风速" };
 
 export function acSummary(command = {}) {

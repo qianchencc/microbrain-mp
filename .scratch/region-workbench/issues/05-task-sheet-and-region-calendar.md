@@ -7,11 +7,15 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** implemented — 真实 Task 详情现场验收待票 04
 
-- [ ] `GET /api/agent/tasks/:id` 返回逐阶段逐设备的目标与结果、来源；可见性同时间轴
-- [ ] `GET /api/agent/regions/:regionId/calendar?from=&to=` 返回有任务的日期与有异常的日期
-- [ ] 任务抽屉复用 `DeviceSheet` 底座，保持根节点常驻、关闭禁用指针、拖拽跟手与回弹
-- [ ] 抽屉为只读（删除见 08）；阶段视图与结果文案由视图模型产出，在微信操作流程中验收
-- [ ] 日历属于区域时间轴组件而非页面；前向上限 7 天
-- [ ] 页面参数中的日期被尊重，便于后续从对话与设备时间轴跳入
+- [x] `GET /api/agent/tasks/:id` 返回逐阶段逐设备的目标与结果、来源；可见性同时间轴
+- [x] `GET /api/agent/regions/:regionId/calendar?from=&to=` 返回有任务的日期与有异常的日期
+- [x] 任务抽屉复用 `DeviceSheet` 底座，保持根节点常驻、关闭禁用指针、拖拽跟手与回弹
+- [x] 抽屉为只读（删除见 08）；阶段视图与结果文案由视图模型产出，在微信模拟器操作流程中验收
+- [x] 日历属于区域时间轴组件而非页面；前向上限 7 天
+- [x] 页面参数中的日期被尊重，便于后续从对话与设备时间轴跳入
+
+## Comments
+
+2026-09-27：Runtime 复用 Task 三表提供详情/上海日期标记，HTTP 场景验证跨用户设备裁剪与来源 ID 隐藏。微信模拟器验证日历与本地双阶段样例详情；真实区域当前没有新 Task，现场端到端详情和真机拖拽仍待验证。交接见 `plan/2026-09-27-region-task-browse-handoff.md`。
