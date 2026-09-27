@@ -13,7 +13,7 @@
 - 视觉为拟物材质体系（呢面/纸材/黄铜/玉漆），只用渐变+阴影实现，不引入 backdrop-filter；`prefers-reduced-motion` 下停用闪烁与脉冲。
 - 组件必须对宿主全局样式中立（2026-09-23 根因）：客户 `app.wxss` 继承 uni-app 模板 `view{font-size:28rpx;line-height:1.8}` 与 `input,text{font-size:30rpx}`——元素自身命中的规则优先于继承，会把组件内所有不带字号类的 `text`/`input`（highlightParts 循环子元素、`.from/.to`、裸文本）撑成 15px；每个 Agent 组件 scoped 样式首行固定 `view, text, input { font-size: inherit; line-height: inherit; }`，禁止删除。同理，scroll-view 隐藏滚动条必须用 `enhanced :show-scrollbar="false"`（同 .rail/.conversation 约定），非 enhanced 时该属性不生效——独立壳靠全局 `::-webkit-scrollbar{display:none}` 掩盖，客户壳没有这个全局规则会露滚动条。
 - Agent 头像（`AgentAvatar.vue` + `avatar.js`）使用固定预计算 SVG body/eyes 分层，不按会话随机；保留扫视、眨眼、运行呼吸和 reduced-motion 完整行为；不得降级为通用图标方块，也不得重新引入 blobatar 依赖。
-- 草案面板沿用 `DraftSheetLayer` + `DeviceSheet` 的本地 Sheet 底座：根节点常驻但关闭态 `pointer-events:none`，面板 `transform` 与遮罩 `opacity` 都由 Vue 的 `open/dragY` 状态驱动；横杆只在触摸期间直接跟手，松手后回弹或退场。不要重新接入 `uni-popup`/`uni-transition` 或 WXS `callMethod` 桥接；此前的异步生命周期和双层位移曾造成孤立遮罩及横杆失效。改动后核对 `test/agent-sheet-runtime.test.mjs` 与微信编译产物。
+- 草案面板沿用 `DraftSheetLayer` + `DeviceSheet` 的本地 Sheet 底座：根节点常驻但关闭态 `pointer-events:none`，面板 `transform` 与遮罩 `opacity` 都由 Vue 的 `open/dragY` 状态驱动；横杆只在触摸期间直接跟手，松手后回弹或退场。不要重新接入 `uni-popup`/`uni-transition` 或 WXS `callMethod` 桥接；此前的异步生命周期和双层位移曾造成孤立遮罩及横杆失效。改动后在客户微信环境核对连续开合、横杆拖拽、遮罩同步与底部安全区；不以源码正则断言替代交互验收。
 - 客户小程序是生产 Agent 主线；本目录必须复用客户会话，不得恢复独立 miniapp 的固定 `local-development`/`LOCAL` 身份。
 - 开发阶段客户登录、用户、园区和物联网接口继续走客户公网；仅 Agent Runtime 指向本机 `127.0.0.1:3200`——它是唯一 Runtime 实例，直连真实客户网关，不存在模拟数据源。`trial/release` 不得依赖本机地址。
 - Agent 页面进入前等待 `utils/agent-session.js` 的会话与园区上下文；页面和组件不得自行拼接 Authorization 或 tenantCode。

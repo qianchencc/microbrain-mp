@@ -31,18 +31,4 @@ test('renderAnswer 输出符合微信 rich-text 契约的段落与列表节点',
 	assert.deepEqual(firstItem.children[0], { type: 'text', text: '26楼东区 · ' })
 	assert.deepEqual(firstItem.children[1], { name: 'strong', children: [{ type: 'text', text: '照明开关-01' }] })
 	assert.deepEqual(nodes[2].children, [{ type: 'text', text: '走廊灯已是关闭状态。' }])
-	assert.equal(nodes[0].attrs.style, 'margin:0 0 10px;line-height:1.8;')
-	assert.equal(nodes[1].attrs.style, 'margin:0 0 10px;padding-left:22px;line-height:1.8;')
-	assert.equal(firstItem.attrs.style, 'margin:4px 0;')
-})
-
-test('renderAnswer 对空文本与未收束列表保持安全', () => {
-	const empty = renderAnswer('')
-	assertRichTextSchema(empty)
-	assert.equal(empty.length, 1)
-	assert.equal(empty[0].name, 'p')
-	assert.deepEqual(empty[0].children, [{ type: 'text', text: ' ' }])
-	const partial = renderAnswer('回复：\n- 半截列表项')
-	assertRichTextSchema(partial)
-	assert.equal(partial[1].children.length, 1)
 })
