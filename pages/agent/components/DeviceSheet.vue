@@ -2,7 +2,7 @@
  <view class="sheet-root" :class="{ 'sheet-root--open': open }">
   <view class="sheet-mask" :style="maskStyle" @tap.stop="dismissFromMask" @touchmove.stop.prevent="blockMaskMove" />
   <view class="sheet-motion" :style="motionStyle">
-   <view class="sheet-surface" :class="{ tall }">
+   <view class="sheet-surface" :class="{ tall, expanded, 'compact-header': compactHeader }">
     <view class="handle-zone" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="onTouchStart" @touchmove.stop.prevent="onTouchMove" @touchend.stop="onTouchEnd" @touchcancel.stop="onTouchCancel"><view class="handle" /></view>
     <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /></view>
     <view class="header-slot"><slot name="header" /></view>
@@ -14,7 +14,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
-const props = defineProps({ open: Boolean, openRequest: { type: Number, default: 0 }, title: String, subtitle: String, meta: String, tall: Boolean, busy: Boolean })
+const props = defineProps({ open: Boolean, openRequest: { type: Number, default: 0 }, title: String, subtitle: String, meta: String, tall: Boolean, expanded: Boolean, compactHeader: Boolean, busy: Boolean })
 const emit = defineEmits(['close'])
 const open = computed(() => Boolean(props.open))
 const windowHeight = uni.getSystemInfoSync().windowHeight || 600
@@ -164,6 +164,8 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .sheet-root--open .sheet-motion { pointer-events:auto; }
 .sheet-surface { width:100vw; max-height:92vh; display:flex; flex-direction:column; background:#fcfdfc; border-radius:16px 16px 0 0; overflow:hidden; padding-bottom:env(safe-area-inset-bottom); box-shadow:0 -8px 32px #16372814; }
 .sheet-surface.tall { height:78vh; }
+.sheet-surface.expanded { height:90vh; }
+.sheet-surface.compact-header .title { font-size:15px; }
 .sheet-body { display:flex; flex-direction:column; min-height:0; flex:1; overflow:hidden; }
 .handle-zone { height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 120ms ease; }
 .handle-zone--pressed { background:rgba(23,107,84,.04); }

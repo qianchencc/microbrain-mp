@@ -21,6 +21,8 @@
     </template>
    </RegionTimeline>
   </view>
+  <view class="device-dock"><button class="device-entry" hover-class="device-entry--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button></view>
+  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" @close="deviceDrawerOpen = false" @count="deviceCount = $event" />
  </view>
 </template>
 <script setup>
@@ -31,12 +33,14 @@ import { isDev } from '@/config/settings'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionChip from './components/RegionChip.vue'
 import RegionTimeline from './components/RegionTimeline.vue'
-import { focusRegionId, loadRegionFocus, selectFocusRegion } from './region-focus.js'
+import RegionDeviceDrawer from './components/RegionDeviceDrawer.vue'
+import { focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion } from './region-focus.js'
 import { localDate } from './timeline-geometry.mjs'
 import { regionTimelineItems } from './region-timeline.mjs'
 import { regionSampleTasks } from './region-sample-tasks.mjs'
 const emptyArt = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80"><path d="M30 2c-9 12 9 22 0 38s9 26 0 38" fill="none" stroke="#c9d6ce" stroke-width="1.6"/><circle cx="31" cy="40" r="6" fill="#fff"/><circle cx="31" cy="40" r="4" fill="#ad711b"/></svg>')
 const error = ref(''), loading = ref(true), tasks = ref([]), sampleMode = ref(false)
+const deviceDrawerOpen = ref(false), deviceCount = ref(null)
 const now = ref(new Date().toISOString()), date = computed(() => localDate(now.value))
 const displayNow = computed(() => sampleMode.value ? `${date.value}T14:45:00+08:00` : now.value)
 const items = computed(() => regionTimelineItems(tasks.value))
@@ -62,10 +66,10 @@ async function load() {
  catch (cause) { if (currentLoad === loadId) { error.value = cause.message || '区域暂不可用'; loading.value = false } }
  finally { if (currentLoad === loadId) loadingDirectory = false }
 }
-watch(focusRegionId, () => { if (visible && !loadingDirectory) loadTimeline() })
+watch(focusRegionId, () => { deviceCount.value = null; if (visible && !loadingDirectory) loadTimeline() })
 onShow(() => { visible = true; load() })
-onHide(() => { visible = false; ++requestId; ++loadId })
-onUnload(() => { visible = false; ++requestId; ++loadId })
+onHide(() => { visible = false; deviceDrawerOpen.value = false; ++requestId; ++loadId })
+onUnload(() => { visible = false; deviceDrawerOpen.value = false; ++requestId; ++loadId })
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
@@ -94,4 +98,9 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-state { flex-shrink:0; font-size:8px; color:#9e742f; }
 .task-state::before { content:""; display:inline-block; width:4px; height:4px; margin:0 3px 1px 0; border-radius:50%; background:currentColor; }
 .task-state.failed { color:#a76950; }
+.device-dock { flex-shrink:0; height:70px; display:flex; align-items:center; justify-content:center; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
+.device-entry { height:44px; min-width:130px; margin:0; padding:0 20px; border:1px solid #dce5dd; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#fff,#f2f6f1); box-shadow:0 5px 18px #233a2d1c; color:#315846; font-size:13px; font-weight:600; }
+.device-entry::after { border:0; }
+.device-entry--pressed { transform:scale(.97); }
+.device-count { font-size:11px; color:#7b8d80; }
 </style>

@@ -23,3 +23,4 @@
 - 区域工作台接线与验收状态见 `plan/2026-09-27-region-workbench-first-loop-handoff.md`。消息发送/重试/编辑应在修改原轮前固定本次关注区域；本地选区按统一 session 的不可逆身份键分区，区域仅是默认上下文。
 - B6 生产几何共用 `timeline-geometry.mjs`；时间节点不承载任务完成状态。微信开发者工具已选 SVG 图片承载图形，普通视图承载时间字与卡片；Canvas 原生图层曾越过滚动裁切边界。空区域按 P2 原型显示局部符号。见 `docs/research/proto-region-panel/2026-09-27-native-renderer-status.md`；实际任务回读仍需真实操作验收。
 - 区域工作台的 `region-sample-tasks.mjs` 仅供开发版“查看样例”预览，不能写入 Runtime 数据库，也不能当作真实任务验收；从样例返回时必须重新请求真实时间轴。
+- 区域设备抽屉见 `plan/2026-09-27-region-device-browser-handoff.md`：每次打开重读授权目录，目录先于状态显示；状态失败清空旧读数但保留目录。类型/位置/状态是互斥分组，搜索才过滤；设备卡进入时间轴要等票 11 接通后再开放点击。
