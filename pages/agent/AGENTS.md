@@ -19,3 +19,4 @@
 - Agent 页面进入前等待 `utils/agent-session.js` 的会话与园区上下文；页面和组件不得自行拼接 Authorization 或 tenantCode。
 - 本目录已是生产 Agent 页面；新业务只在客户主线实现。独立 miniapp 已于 2026-09-24 迁出为同级仓库 `agent-miniapp`，仅用于复现问题，回补时只同步能够证明必要的最小修复。
 - 修改独立的区域时间轴原型 `proto-region-panel.html` 时，先读 `docs/research/proto-region-panel/b6-timeline-design.md`：它记录唯一设计稿、B4 冻结边界及 B6 的区间、节点、刻痕和时间文字契约。原型不是生产区域面板，多区间重叠仍属探索状态。
+- `proto-region-workbench.html`（C1）以 B6 为起点探索入口、区域切换、细任务卡、抽屉、设备列表、设备时间轴、日历归属与区域提示；改动前先读 `docs/research/proto-region-panel/c1-workbench-exploration.md`。其中时间轴组件是 B6 分支的移植，几何参数随 B6 契约冻结，只允许替换卡片内容；`proto-region-panel.html` 保持冻结作对照。
