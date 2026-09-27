@@ -12,6 +12,7 @@ const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 const request = (url, method, data, timeout) => requestJson(globalConfig.agentUrl + url, method, data, getAgentHeaders(), timeout)
 
 export const createConversation = () => request('/agent/conversations', 'POST')
+export const listRegions = () => request('/agent/regions', 'GET')
 export const restoreConversation = () => request('/agent/conversations/current', 'GET')
 export const clearConversation = id => request(`/agent/conversations/${id}`, 'DELETE')
 export const discardTurn = (conversationId, turnId) => request(`/agent/conversations/${conversationId}/turns/${turnId}`, 'DELETE')
@@ -25,7 +26,7 @@ export const restoreAction = (draftId, revision) => request(`/agent/action-draft
 export const cancelAction = draftId => request(`/agent/action-drafts/${draftId}/cancel`, 'POST')
 export const cancelRun = conversationId => request(`/agent/conversations/${conversationId}/runs/cancel`, 'POST')
 
-export const streamMessage = (conversationId, content, onEvent) => {
+export const streamMessage = (conversationId, content, onEvent, focusRegionId) => {
 	let task, watchdog, receivedChunk = false
 	const terminal = createTerminalTracker()
 	const decoder = createNdjsonStreamDecoder(event => {
@@ -36,7 +37,7 @@ export const streamMessage = (conversationId, content, onEvent) => {
 		const options = {
 			url: `${globalConfig.agentUrl}/agent/conversations/${conversationId}/messages`,
 			method: 'POST',
-			data: { content },
+			data: { content, ...(focusRegionId ? { focusRegionId } : {}) },
 			dataType: 'text',
 			responseType: 'arraybuffer',
 			header: getAgentHeaders(true),

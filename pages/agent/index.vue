@@ -3,11 +3,14 @@
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
   <AgentHeader :status="statusText" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" />
+  <RegionChip @open="openRegion" />
   <view class="conversation-shell">
    <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
     <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
+     <view v-for="change in regionChanges.filter(change => change.before === turnIndex)" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
+     <view v-if="!regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
      <AgentReplySurface :turn="turn" :busy="busy"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
@@ -15,6 +18,7 @@
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
       @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)" />
     </view>
+    <view v-for="change in regionChanges.filter(change => change.before === turns.length)" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
     <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
     <view id="agent-bottom" class="anchor" />
    </view>
@@ -41,6 +45,9 @@ import AgentHeader from './components/AgentHeader.vue'
 import AgentReplySurface from './components/AgentReplySurface.vue'
 import DraftSheetLayer from './components/DraftSheetLayer.vue'
 import UserMessage from './components/UserMessage.vue'
+import RegionChip from './components/RegionChip.vue'
+import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus } from './region-focus.js'
+function openRegion(region) { uni.navigateTo({ url: '/pages/agent/region?regionId=' + encodeURIComponent(region.id) }) }
 const conversationId = ref('')
 const input = ref('')
 const composer = ref(null)
@@ -173,11 +180,22 @@ watch(turns, () => {
  if (!live || !canRecoverTurn(live, turns.value.at(-1) === live)) return cancelEdit()
  editingTurn.value = live // 整表回读后重新钉到活对象，气泡高亮才不丢
 })
+function readyRegion() {
+ if (regionsLoading.value || !focusRegion.value) { uni.showToast({ title: regionsLoading.value ? '正在读取区域' : '请先选择可用区域', icon: 'none' }); return null }
+ return { ...focusRegion.value }
+}
+const regionChanges = ref([])
+watch(focusRegionId, (id, previous) => {
+ if (id && previous && id !== previous && focusRegion.value) regionChanges.value.push({ id: Date.now() + '-' + sequence++, before: turns.value.length, name: focusRegion.value.name })
+})
 async function sendMessage(voiceText) {
  const content = (typeof voiceText === 'string' ? voiceText : input.value).trim()
  if (!content || busy.value || !conversationId.value) return
+ const region = readyRegion()
+ if (!region) return
  turns.value.push(createTurn('local-' + Date.now() + '-' + sequence++, content))
  const current = turns.value[turns.value.length - 1]
+ current.focusRegion = region
  if (typeof voiceText !== 'string') input.value = ''
  await runTurn(current, content)
 }
@@ -196,7 +214,7 @@ async function runTurn(current, content) {
   if (event.type === 'action.resolved') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) previous.draft.status = event.status
   follow()
  })
- const request = streamMessage(conversationId.value, content, event => presentation.push(event))
+ const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion.id)
  activeRequest = request
  let transportInterrupted = false
  try { await request.promise; await presentation.settle() }
@@ -224,6 +242,8 @@ async function runTurn(current, content) {
 }
 async function recoverTurn(turn, content) {
  if (busy.value || !canRecoverTurn(turn, turns.value.at(-1) === turn)) return
+ const region = readyRegion()
+ if (!region) return
  mutating.value = true
  // 未达服务端的失败轮没有 serverId，也没有可退役的服务端条目，直接重发即可。
  if (turn.serverId) {
@@ -232,6 +252,7 @@ async function recoverTurn(turn, content) {
  }
  mutating.value = false
  restartTurn(turn, content)
+ turn.focusRegion = region
  await runTurn(turn, content)
 }
 function retryTurn(turn) { return recoverTurn(turn, turn.content) }
@@ -382,6 +403,7 @@ function clearHistory() {
    const fresh = await createConversation()
    conversationId.value = fresh.id
    turns.value = []
+   regionChanges.value = []
    draftBaselines.clear()
    errorMessage.value = ''
    follow(true)
@@ -391,7 +413,7 @@ function clearHistory() {
  } })
 }
 onLoad(() => { restore() })
-onShow(() => { visible = true; if (!activeRequest) restore() })
+onShow(() => { visible = true; loadRegionFocus().catch(() => {}); if (!activeRequest) restore() })
 onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer) })
 onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
@@ -411,6 +433,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .conversation-shell { flex:1; min-height:0; overflow:hidden; }
 .conversation { height:100%; }.conversation__inner { padding:24px 16px 32px; }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
+.region-divider { margin:12px 0 22px; text-align:center; font-size:11px; color:#839186; }
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
 /* 宿主必须定宽：组件宿主是 flex item、宽度靠内容反推，会让整条 fit-content 链塌到
    min-content（短消息每行一字）；定宽后气泡用 inline-block 收缩即可安全测量。 */

@@ -1,5 +1,6 @@
 import { getToken, isTokenExpired } from '@/utils/auth'
 import { useUserStoreHook } from '@/store/modules/user'
+import CryptoJS from 'crypto-js'
 
 const POLL_MS = 50
 const DEFAULT_TIMEOUT_MS = 15000
@@ -35,6 +36,12 @@ export function getAgentHeaders(includeJson = false) {
 	}
 	if (includeJson) headers['content-type'] = 'application/json'
 	return headers
+}
+
+// 页面只获得不含凭据的存储分区；换账号、Token 或园区都重新校验区域。
+export function getAgentStorageScope() {
+	const session = getAgentSession()
+	return CryptoJS.SHA256(JSON.stringify([session.tenantCode, session.authorization])).toString()
 }
 
 export async function waitForAgentSession(timeout = DEFAULT_TIMEOUT_MS) {

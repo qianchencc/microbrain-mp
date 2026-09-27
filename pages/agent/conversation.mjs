@@ -28,6 +28,7 @@ export function restartTurn(turn, content = turn.content) {
 }
 
 export function applyEvent(turn, event) {
+	if (event.type === 'run.started' && event.focusRegion) turn.focusRegion = event.focusRegion
 	if (event.type === 'run.started' && event.turnId) turn.serverId = event.turnId
 	if (event.type === 'tool.started') {
 		if (turn.streaming && turn.text) { turn.text = ''; turn.streaming = false }
