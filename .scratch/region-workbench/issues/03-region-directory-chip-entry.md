@@ -1,0 +1,19 @@
+# 03 — 区域目录、区域芯片与工作台入口
+
+**Spec:** `.scratch/region-workbench/spec.md`（“Runtime：区域目录”“小程序：页面与组件”）
+**领域:** `CONTEXT.md` 区域、范围选择
+**仓库:** iot-agent-runtime + mp
+
+**What to build:** 用户在物联 Agent 顶部看到当前关注区域芯片，可从自己所属的区域中单选切换；选择被记住，切换后对话中出现“关注区域切换为 X”分隔，会话不切换。之后发送的消息携带当前关注区域，Agent 把它当作未指明地点时的默认值。点芯片进入区域工作台页面（此时是只有顶部同一区域芯片的空壳）。
+
+**Blocked by:** None — can start immediately
+
+**Status:** ready-for-agent
+
+- [ ] 适配器装配授权设备范围时保留每台设备所属办公室的 id 与名称作为区域归属（多办公室为集合），不影响现有位置文本与候选检索
+- [ ] `GET /api/agent/regions` 返回当前用户所属区域 `{ id, name, attention }`（本票 `attention` 恒为 false），跨用户隔离
+- [ ] 消息体可携带 `focusRegionId`；不属于当前用户的区域被拒绝；模型输入包含关注区域名称，提示词只声明“默认值而非权限”
+- [ ] 区域芯片与选择浮层为 Agent 页与工作台共用的组件；关注区域存于本地存储，两页读写同一份，首次默认第一个区域，始终选中一个
+- [ ] 切换区域在对话中插入分隔，不新建会话
+- [ ] 新页面注册到客户小程序并可由芯片 `navigateTo` 进入，页面参数携带区域 id
+- [ ] 请求全部经 `utils/agent-session.js`；Runtime 测试走 `buildApp` + `inject` + 网关夹具；小程序纯逻辑用 `node --test`

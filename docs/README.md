@@ -1,6 +1,6 @@
 # 项目文档入口
 
-更新：2026-09-23
+更新：2026-09-27
 
 ## 当前状态
 
@@ -18,6 +18,7 @@
 | 长期用户隔离、记忆/规则 owner | [真实 MP 身份边界](./research/2026-09-18-real-mp-identity-boundary.md) |
 | 设备扩展、自动化、日程/会议、告警和富操作面 | [业务探索地图](./research/2026-09-18-agent-business-opportunity-map.md) |
 | 系统对象、会话、持久化、配置、记忆和路线总览 | [Agent 系统全景地图](./research/2026-09-24-agent-system-map.md) |
+| 区域工作台实施顺序、精简测试基线与下一张票 | [实施准备交接](../plan/2026-09-27-region-workbench-readiness-handoff.md)与[冻结规格](../.scratch/region-workbench/spec.md) |
 | 统一任务模型、任务阶段与富面边界 | [统一任务模型 ADR](./adr/0004-unified-task-model-and-phase-execution.md) |
 | 区域时间轴原型、区间与时刻的组件设计语言 | [B6 时间轴设计](./research/proto-region-panel/b6-timeline-design.md)（非生产实现） |
 | 自动化设计盘点、区域工作台入口/区域切换/任务卡/设备时间轴/日历/通知探索 | [C1 区域工作台探索](./research/proto-region-panel/c1-workbench-exploration.md)（含待拍板决策，非生产实现） |
@@ -38,4 +39,4 @@
 - `trial/release` HTTPS、合法域名和 NDJSON 代理验收；
 - 客户稳定 `principalId/workspaceId`、Token 刷新/撤销和后台运行契约；
 - 客户 AppID 的 `WechatSI` 插件授权；
-- 从业务探索地图中选择下一条单业务闭环，再进入规格与实现。
+- 区域工作台规格与 14 张票据已冻结；下一步从票 01 开始，以票 01–04 的“即时操作进入区域时间轴”作为首条业务闭环。

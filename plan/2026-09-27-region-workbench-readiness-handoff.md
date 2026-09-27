@@ -1,20 +1,20 @@
 # 区域工作台实施准备交接
 
-日期：2026-09-27。状态：准备核对完成，生产实现尚未开始。本文件记录开工顺序与现场差异；业务规格仍以原规格和 ADR 为准。
+日期：2026-09-27。状态：测试精简与开工准备完成，生产实现尚未开始。本文件记录开工顺序与现场差异；业务规格仍以原规格和 ADR 为准。
 
 ## 工作目录与权威入口
 
-- 客户生产小程序：`/Users/qianchen/works/新发展/mp`，分支 `新世纪办公室`，核对基线 `1c84e08`。
-- Runtime：`/Users/qianchen/works/新发展/iot-agent-runtime`，分支 `codex/multi-candidate-lighting-draft`，核对基线 `f1e00a6`。不要切到旧 `main`。
+- 客户生产小程序：`/Users/qianchen/works/新发展/mp`，分支 `新世纪办公室`；设计基线 `1c84e08`，测试精简提交 `20190d3`。
+- Runtime：`/Users/qianchen/works/新发展/iot-agent-runtime`，分支 `codex/multi-candidate-lighting-draft`；测试精简提交 `e002202`。不要切到旧 `main`。
 - 规格：[region-workbench/spec.md](../.scratch/region-workbench/spec.md)。14 张票据位于同目录 `issues/`；01–13 为 ready-for-agent，14 为 ready-for-human，是否可开工仍取决于 Blocked by。
 - 领域：[CONTEXT.md](../CONTEXT.md)、[ADR 0003](../docs/adr/0003-shared-space-automation-boundary.md)、[ADR 0004](../docs/adr/0004-unified-task-model-and-phase-execution.md)。两份 ADR 已接受。
 - 设计：[P2 选择记录](../docs/research/proto-region-panel/c1-workbench-exploration.md)、[B6 几何合同](../docs/research/proto-region-panel/b6-timeline-design.md)。两个 HTML 原型保持冻结。
 
-**跨目录读取注意**：规格、票据、CONTEXT.md 与 ADR 被 mp 的 `.git/info/exclude` 忽略，存在于当前工作目录但不在提交内。Runtime 会话应通过上述 mp 绝对路径读取；新 worktree/另一台机器不会自动获得这些文件。此次没有修改排除规则或把它们强制纳入提交。
+**跨目录读取注意**：本轮将规格、14 张票据、CONTEXT.md 与 ADR 0003/0004 按精确路径纳入版本控制；原 `.git/info/exclude` 保持不变，但不再影响这些已跟踪文件。Runtime 会话仍通过上面的 mp 绝对路径读取规格；新 worktree 可以随提交获得这些实施材料。
 
 ## 已核实的现场
 
-- 两仓已跟踪文件均无未提交修改。mp 有 6 个旧图像探索文件未跟踪（prompt/brief/correction 与 gen.py），保持原状；不混入业务提交。
+- 本轮开始时两仓已跟踪文件均无未提交修改；各建立 `wip/test-pruning-20260927` 回退分支。mp 的 6 个旧图像探索文件（prompt/brief/correction 与 gen.py）保持未跟踪，不混入业务提交。
 - Runtime 仍由 `src/app.ts` 的即时草案确认路由完成读状态、比较、控制和回读。当前没有区域工作台的 Task 持久化、调度和查询实现。
 - 客户小程序是唯一新业务落点。同级 `agent-miniapp` 是回归壳，不属于这批票的同步范围。
 - 默认终端 Node 为 26.8.1；Runtime 要求 22.x。本机可用 `/opt/homebrew/opt/node@22/bin/node`（22.23.2），执行 Runtime 命令时在当前命令前设置 `PATH=/opt/homebrew/opt/node@22/bin:$PATH`。
@@ -33,17 +33,11 @@
 
 06 明确只保存任务，07 才执行；两票之间不能对用户发布“已安排即可自动运行”的完整能力。05 在 07 前完成，可提供 07 验收所需的任务抽屉。
 
-## 下一次实施：先恢复测试基线，再进入票 01
+## 下一次实施：票 01
 
-Node 22 下当前全量测试退出码为 1：102 项中 80 通过、22 cancelled（fail 计数为 0 不表示成功）。首个取消出现在 `test/adapter.test.ts:306` 的照明超时用例；`test/conversation.test.ts:1775` 的控制超时用例也发生取消并影响后续用例。错误为 `Promise resolution is still pending but the event loop has already resolved`。原因尚未诊断。
+测试基线阻断已在本轮收口。Runtime 从 102 项精简为 27 项，小程序从 16 项精简为 5 项，共删除 86/118 项（约 73%）。取舍及夹具修复见 [Runtime 测试精简记录](../../iot-agent-runtime/plan/2026-09-27-test-pruning.md)。后续不以修复所有历史测试为开工前提。
 
-在 Runtime 根目录可独立复现，约 0.2 秒退出：
-
-```sh
-PATH=/opt/homebrew/opt/node@22/bin:$PATH node_modules/.bin/tsx --test --test-name-pattern='照明控制窗口内无裁决返回 timeout' test/adapter.test.ts
-```
-
-先按这条最窄反馈修复已有基线，并恢复 Node 22 全量通过；该修复是票 01 的验收前提，单独记录，不扩成测试设施重写。本轮只确认复现，没有修改 Runtime。修复基线后再执行以下票 01 范围。
+保留范围为真实控制、授权/幂等/回读，以及必要的流式恢复与平台输出契约。删除源码/CSS/头像锁定、重复检索、观测内部和辅助 Web 展示测试；视觉验收回到客户微信操作。测试规范记录在两仓 `test/AGENTS.md`，规格与相关票据同步改为少量风险驱动测试。
 
 执行 `/implement`，输入票据绝对路径：
 
@@ -69,14 +63,13 @@ PATH=/opt/homebrew/opt/node@22/bin:$PATH node_modules/.bin/tsx --test --test-nam
 
 ## 本轮验证
 
-- 客户小程序 `npm run test:agent`：16/16 通过。
-- Runtime Node 22.23.2：`npm run typecheck` 通过；`npm test` 为 80 通过、22 cancelled，退出码 1；最窄用例复现为 1 cancelled、退出码 1。
-- 先前在默认 Node 26 误启动的测试未正常结束，已精确停止本轮启动的测试进程；不作为有效基线证据。
-- 未重建微信产物，未验证真机或运行中的 3200。
+- 客户小程序 `npm run test:agent`：5/5 通过。
+- Runtime Node 22.23.2：`npm test` 27/27，0 cancelled；`npm run typecheck` 与 `npm run build` 通过。
+- 超时与取消的 3 个定向用例通过；修正的都是测试夹具，没有修改生产逻辑。
+- 两仓 `git diff --check` 通过。未重建微信产物，未验证真机或运行中的 3200。
 
 ## Suggested skills
 
 - `implement`：按票执行，并遵循它的测试与收口流程。
-- `diagnosing-bugs`：先处理上面的既有超时测试取消问题，以已确认复现命令为入口。
 - `handoff`：跨 mp/Runtime 目录交接；按项目约定记录于 `plan/`。
 - 02/03 等前端票再按实际需要读取设计技能与页面维护说明；本轮没有重新设计原型。
