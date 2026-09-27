@@ -40,3 +40,16 @@ export function regionSampleTaskDetail(task) {
  return { ...task, createdAt: task.phases[0].at, phases: task.phases.map(phase => ({ ...phase,
   devices: (phase.devices || task.devices.map(device => ({ ...device, target }))).map(device => ({ ...device, details: null })) })) }
 }
+
+export function deviceSampleTask(device, date) {
+ if (!['lighting', 'ac'].includes(device.kind)) return null
+ const at = time => `${date}T${time}:00+08:00`
+ const id = `sample-device-${device.id}`
+ const phase = (suffix, time, target) => ({ id: `${id}-${suffix}`, at: at(time), status: 'verified',
+  devices: [{ id: device.id, kind: device.kind, name: device.name, target, outcome: 'verified', details: null }] })
+ const phases = device.kind === 'ac'
+  ? [phase('start', '09:00', { power: 'on', temperature: 26 }), phase('end', '14:00', { power: 'off' })]
+  : [phase('point', '10:30', { closeOrOpen: 1 })]
+ return { id, label: device.kind === 'ac' ? '空调时段演示' : '照明操作演示', status: 'completed',
+  createdAt: phases[0].at, creator: { displayName: '演示成员' }, source: { type: 'sample' }, phases }
+}

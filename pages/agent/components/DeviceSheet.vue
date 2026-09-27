@@ -4,7 +4,7 @@
   <view class="sheet-motion" :style="motionStyle">
    <view class="sheet-surface" :class="{ tall, expanded, 'compact-header': compactHeader }">
     <view class="handle-zone" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="onTouchStart" @touchmove.stop.prevent="onTouchMove" @touchend.stop="onTouchEnd" @touchcancel.stop="onTouchCancel"><view class="handle" /></view>
-    <view class="header-top"><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /></view>
+    <view class="header-top"><slot name="header-left" /><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /></view>
     <view class="header-slot"><slot name="header" /></view>
     <view class="sheet-body"><slot /></view>
    </view>
@@ -173,9 +173,9 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .handle-zone--pressed .handle { width:44px; background:#9eafa5; transform:scaleY(1.15); }
 .header-slot { position:relative; z-index:2; border-bottom:1px solid #e3e8e4; overflow:visible; }
 .header-top { display:flex; align-items:center; padding:2px 20px 8px; }
-.header-copy { flex:1; min-width:0; }
+.header-copy { flex:1; min-width:0; overflow:hidden; }
 .title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
-.title { display:block; font-size:19px; font-weight:600; color:#24382d; flex-shrink:0; }
+.title { display:block; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:19px; font-weight:600; color:#24382d; }
 .meta { display:block; font-size:12px; color:#78877e; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media(prefers-reduced-motion:reduce) { .sheet-mask,.sheet-motion { transition:none!important; } }

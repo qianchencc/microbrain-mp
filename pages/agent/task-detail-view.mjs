@@ -9,7 +9,7 @@ export function taskTime(instant) {
  return `${local.slice(0, 10)} ${local.slice(11, 16)}`
 }
 
-function targetText(kind, target) {
+export function targetText(kind, target) {
  if (!target || typeof target !== 'object') return '目标未指定'
  const parts = []
  if (typeof target.closeOrOpen === 'number') parts.push(target.closeOrOpen === 1 ? '开启' : '关闭')
@@ -21,7 +21,7 @@ function targetText(kind, target) {
  return parts.join(' · ') || '目标未指定'
 }
 
-function resultText(device) {
+export function resultText(device) {
  const rejected = (device.details?.fields || []).filter(field => field.outcome === 'REJECTED')
   .map(field => fieldLabels[field.field] || field.field)
  if (device.details?.receipt === 'PARTIALLY_ACCEPTED') return `部分受理：${rejected.join('、')}被拒绝，设备未核验`

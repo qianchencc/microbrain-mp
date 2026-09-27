@@ -20,7 +20,7 @@
    </RegionTimeline>
   </view>
   <view class="device-dock"><button class="device-entry" hover-class="device-entry--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button></view>
-  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" @close="deviceDrawerOpen = false" @count="deviceCount = $event" />
+  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
   <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" />
  </view>
 </template>
@@ -76,6 +76,7 @@ function openTask(item) {
  selectedTaskId.value = item.id
  sampleDetail.value = sampleMode.value ? regionSampleTaskDetail(tasks.value.find(task => task.id === item.id)) : null
 }
+function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId; sampleDetail.value = sampleTask || null }
 function toggleSample() { sampleMode.value = !sampleMode.value; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; loadTimeline(); loadCalendar() }
 async function load() {
  const currentLoad = ++loadId

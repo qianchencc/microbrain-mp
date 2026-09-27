@@ -25,3 +25,4 @@
 - 区域工作台的 `region-sample-tasks.mjs` 仅供开发版“查看样例”预览，不能写入 Runtime 数据库，也不能当作真实任务验收；从样例返回时必须重新请求真实时间轴。
 - 区域设备抽屉见 `plan/2026-09-27-region-device-browser-handoff.md`：每次打开重读授权目录，目录先于状态显示；状态失败清空旧读数但保留目录。类型/位置/状态是互斥分组，搜索才过滤；设备卡进入时间轴要等票 11 接通后再开放点击。
 - 区域时间轴日历与任务详情见 `plan/2026-09-27-region-task-browse-handoff.md`：空日期仍保留日历，月标记失败单独提示；Task 详情的 `details.receipt/fields/timedOut` 必须参与结果文案，不能仅看总体 outcome。开发版双阶段样例不属于真实任务。
+- 设备时间轴见 `plan/2026-09-27-device-timeline-handoff.md`：`DeviceTimelineView` 必须包在 `DeviceSheet` 的 flex 子容器中，并保持 `timeline-area` 的 `height:0; flex:1; min-height:0`，否则微信 `scroll-view` 高度会等于全部内容，定位记录失效。设备选择只保存 ID，详情始终从最新读数派生；真实与本地演示记录严格分开。

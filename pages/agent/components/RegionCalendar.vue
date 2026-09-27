@@ -1,5 +1,5 @@
 <template>
- <view class="calendar">
+ <view class="calendar" :class="{ compact }">
   <view class="calendar-head">
    <button class="month-arrow" aria-label="上个月" title="上个月" @tap="moveMonth(-1)"><uni-icons type="left" size="14" color="#586d60" /></button>
    <button class="month-title" @tap="expanded = !expanded"><text>{{ month.slice(0, 4) }} 年 {{ Number(month.slice(5)) }} 月</text><uni-icons :type="expanded ? 'up' : 'down'" size="12" color="#71877a" /></button>
@@ -18,7 +18,7 @@
 import { computed, ref, watch } from 'vue'
 import { calendarDates, shiftDate } from '../region-calendar.mjs'
 
-const props = defineProps({ date: String, today: String, maxDate: String, error: Boolean, marks: { type: Array, default: () => [] } })
+const props = defineProps({ date: String, today: String, maxDate: String, error: Boolean, compact: Boolean, marks: { type: Array, default: () => [] } })
 const emit = defineEmits(['select', 'month-change'])
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 const month = ref(props.date.slice(0, 7)), expanded = ref(false)
@@ -52,4 +52,6 @@ button::after { border:0; }
 .day-mark { position:absolute; bottom:2px; width:4px; height:4px; border-radius:50%; background:#176b54; }
 .day-mark.abnormal { background:#b57932; }
 .calendar-error { margin:5px auto 0; color:#986b2d; font-size:10px; }
+.calendar.compact { margin:0 14px 8px; padding:4px 9px 7px; border:1px solid #e1e9e2; border-radius:8px; background:#f8faf8; }
+.calendar.compact .day { height:38px; }
 </style>

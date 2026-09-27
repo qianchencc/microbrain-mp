@@ -1,8 +1,9 @@
 <template>
- <DeviceSheet :open="open" expanded compact-header title="设备" @close="$emit('close')">
-  <template #header-right><text class="sheet-meta">{{ regionName }} · {{ devices.length }} 台</text></template>
+ <DeviceSheet :open="open" expanded compact-header :title="activeDevice?.name || '设备'" @close="$emit('close')">
+  <template v-if="activeDevice" #header-left><button class="back-button" aria-label="返回设备列表" @tap="activeDeviceId = ''"><uni-icons type="left" size="17" color="#315846" /></button></template>
+  <template #header-right><text class="sheet-meta">{{ activeDevice ? regionName : regionName + ' · ' + devices.length + ' 台' }}</text></template>
   <template #header>
-   <view class="filter-header" :class="{ searching }">
+   <view v-if="!activeDevice" class="filter-header" :class="{ searching }">
     <view class="group-controls">
      <button v-for="mode in modes" :key="mode.key" class="group-mode" :class="{ active: groupBy === mode.key }" hover-class="group-mode--pressed" @tap="groupBy = mode.key">{{ mode.label }}</button>
      <button class="icon-button" aria-label="搜索设备" hover-class="icon-button--pressed" @tap="openSearch"><image src="/static/search.svg" /></button>
@@ -14,7 +15,8 @@
     </view>
    </view>
   </template>
-  <view class="drawer-content">
+  <view v-if="activeDevice" class="drawer-content"><DeviceTimelineView class="device-timeline-host" :device="activeDevice" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" @task="emit('task', $event)" /></view>
+  <view v-else class="drawer-content">
    <view v-if="stateError && devices.length" class="state-warning"><text>状态暂不可用，设备目录仍可查看</text><button @tap="loadStates">重试</button></view>
    <scroll-view class="device-scroll" scroll-y enhanced :show-scrollbar="false">
     <view v-if="!regionId" class="empty">{{ regionError || '正在读取关注区域' }}</view>
@@ -25,7 +27,7 @@
     <view v-for="group in groups" :key="group.label" class="group">
      <text class="group-title">{{ group.label }} · {{ group.items.length }}</text>
      <view class="device-grid">
-      <view v-for="device in group.items" :key="device.id" class="device-card">
+      <view v-for="device in group.items" :key="device.id" class="device-card" role="button" @tap="activeDeviceId = device.id">
        <view class="device-art"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="28" color="#8b9a91" /><view class="state-lamp" :class="device.status" /></view>
        <view class="device-copy">
         <text class="device-name"><text v-for="(part, index) in device.nameParts" :key="index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
@@ -46,19 +48,25 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { listRegionDevices, listRegionDeviceStates } from '@/apis/agent'
 import DeviceSheet from './DeviceSheet.vue'
+import DeviceTimelineView from './DeviceTimelineView.vue'
 import { regionDeviceGroups } from '../region-device-view.mjs'
 
-const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String })
-const emit = defineEmits(['close', 'count'])
+const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, sampleMode: Boolean, sampleDate: String })
+const emit = defineEmits(['close', 'count', 'task'])
 const modes = [{ key: 'kind', label: '类型' }, { key: 'location', label: '位置' }, { key: 'status', label: '状态' }]
 const devices = ref([]), readings = ref({}), loading = ref(false), stateLoading = ref(false)
 const error = ref(''), stateError = ref(''), groupBy = ref('kind'), query = ref(''), searching = ref(false), searchFocused = ref(false)
 const observedNow = ref(Date.now())
+const activeDeviceId = ref('')
 const groups = computed(() => regionDeviceGroups(devices.value, readings.value, groupBy.value, query.value, observedNow.value))
+const activeDevice = computed(() => activeDeviceId.value
+ ? regionDeviceGroups(devices.value, readings.value, 'kind', '', observedNow.value)
+  .flatMap(group => group.items).find(device => device.id === activeDeviceId.value) || null : null)
 let directoryRequest = 0, stateRequest = 0, focusTimer
 
 async function loadDirectory() {
  const current = ++directoryRequest, regionId = props.regionId
+ activeDeviceId.value = ''
  ++stateRequest; devices.value = []; readings.value = {}; stateLoading.value = false; error.value = ''; stateError.value = ''; emit('count', null)
  if (!regionId) return
  loading.value = true
@@ -94,7 +102,7 @@ function closeSearch() { clearTimeout(focusTimer); searchFocused.value = false; 
 
 watch(() => props.regionId, loadDirectory, { immediate: true })
 watch(() => props.open, value => {
- if (value) { if (!loading.value) loadDirectory() }
+ if (value) { activeDeviceId.value = ''; if (!loading.value) loadDirectory() }
  else { ++stateRequest; stateLoading.value = false; closeSearch(); groupBy.value = 'kind' }
 })
 onBeforeUnmount(() => { ++directoryRequest; ++stateRequest; clearTimeout(focusTimer) })
@@ -106,6 +114,7 @@ button { margin:0; padding:0; border:0; background:transparent; line-height:1.2;
 button::after { border:0; }
 .filter-header { position:relative; height:50px; border-top:1px solid #edf0ed; overflow:hidden; }
 .sheet-meta { max-width:230px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#78877e; font-size:11px; }
+.back-button { width:30px; height:30px; margin-right:8px; border-radius:15px; background:#eef2ef; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .group-controls,.search-controls { position:absolute; inset:0; padding:0 16px; display:flex; align-items:center; gap:8px; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
 .search-controls { opacity:0; transform:translateX(22px); pointer-events:none; }
 .filter-header.searching .group-controls { opacity:0; transform:translateX(-22px); pointer-events:none; }
@@ -120,6 +129,7 @@ button::after { border:0; }
 .search-field image { width:14px; height:14px; flex-shrink:0; }
 .search-field input { flex:1; min-width:0; height:100%; font-size:13px; color:#24382d; }
 .drawer-content { min-height:0; flex:1; display:flex; flex-direction:column; }
+.device-timeline-host { height:0; min-height:0; flex:1; overflow:hidden; }
 .state-warning { margin:6px 16px 0; padding:7px 10px; background:#fbf4e5; color:#896529; font-size:11px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .state-warning button { color:#176b54; font-size:11px; }
 .device-scroll { flex:1; min-height:0; height:0; box-sizing:border-box; padding:0 16px; }

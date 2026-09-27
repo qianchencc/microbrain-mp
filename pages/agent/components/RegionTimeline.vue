@@ -1,14 +1,14 @@
 <template>
  <view class="timeline-shell">
- <RegionCalendar v-if="calendar" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" @select="$emit('date-change', $event)" @month-change="$emit('calendar-month', $event)" />
+ <RegionCalendar v-if="calendar" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" :compact="compactCalendar" @select="$emit('date-change', $event)" @month-change="$emit('calendar-month', $event)" />
  <view v-if="!items.length" class="timeline-empty"><slot name="empty" /></view>
- <scroll-view v-else class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" :scroll-top="scrollTop">
+ <scroll-view v-else class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" :scroll-top="scrollTop" :scroll-into-view="focusId">
   <view class="timeline" :style="{ height: scene.height + 'px' }">
    <image class="timeline-art" :src="svgImage" mode="scaleToFill" :style="{ width: width + 'px', height: scene.height + 'px' }" @error="renderError = '时间轴暂未加载，请重新进入'" />
    <text v-for="(label, index) in scene.labels" :key="'label-' + index" class="time-label" :class="label.kind" :style="{ top: label.displayY + 'px' }">{{ label.text }}</text>
    <view v-if="scene.showNowLabel" class="time-label now" :style="{ top: scene.nowY + 'px' }"><text>现在</text><text>{{ scene.nowText }}</text></view>
    <text v-for="day in scene.dates" :key="day.date" class="date-label" :style="{ top: day.y + 'px' }">{{ day.date.slice(5).replace('-', ' / ') }}</text>
-   <view v-for="item in scene.cards" :key="item.id" class="card-target" :style="{ top: item.top - 6 + 'px' }" @tap="interactive && $emit('select', item)">
+   <view v-for="item in scene.cards" :id="'timeline-card-' + item.id" :key="item.id" class="card-target" :style="{ top: item.top - 6 + 'px' }" @tap="interactive && $emit('select', item)">
     <view class="timeline-card" :class="{ faded: item.faded }" :hover-class="interactive ? 'timeline-card--pressed' : 'none'"><slot name="card" :item="item"><text class="card-label">{{ item.label }}</text></slot></view>
    </view>
    <text v-if="renderError" class="render-error">{{ renderError }}</text>
@@ -23,11 +23,12 @@ import { createTimeline, localDate } from '../timeline-geometry.mjs'
 import { timelineSvg } from '../timeline-svg.mjs'
 import RegionCalendar from './RegionCalendar.vue'
 
-const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, calendarMarks: { type: Array, default: () => [] }, calendarError: Boolean, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, days: { type: Number, default: 1 } })
+const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, calendarMarks: { type: Array, default: () => [] }, calendarError: Boolean, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, days: { type: Number, default: 1 } })
 defineEmits(['select', 'date-change', 'calendar-month'])
 const instance = getCurrentInstance()
 const width = ref(uni.getSystemInfoSync().windowWidth - 32)
 const scrollTop = ref(0)
+const focusId = ref('')
 const renderError = ref('')
 const scene = computed(() => createTimeline({ date: props.date, items: props.items, now: props.now, width: width.value, days: props.days }))
 const svgImage = computed(() => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(timelineSvg(scene.value)))
@@ -36,14 +37,23 @@ function measure() {
   if (result?.width) width.value = result.width
  }).exec()
 }
-function focusDate() { scrollTop.value = localDate(props.now) === props.date ? Math.max(0, Math.min(scene.value.height - 400, scene.value.nowY - 220)) : 0 }
+function focusDate() {
+ if (props.focusItems && scene.value.cards.length) {
+  const cards = [...scene.value.cards].sort((a, b) => a.top - b.top)
+  const target = cards.filter(card => card.top <= scene.value.nowY).at(-1) || cards[0]
+  focusId.value = 'timeline-card-' + target.id
+  return
+ }
+ scrollTop.value = localDate(props.now) === props.date ? Math.max(0, Math.min(scene.value.height - 400, scene.value.nowY - 220)) : 0
+}
 onMounted(async () => { await nextTick(); measure(); focusDate() })
 watch(() => props.date, focusDate)
+watch(() => props.items.length, (length, previous) => { if (length && !previous) nextTick(focusDate) })
 </script>
 
 <style scoped>
 view, text, input { font-size: inherit; line-height: inherit; }
-.timeline-scroll { height:100%; width:100%; position:relative; overflow:hidden; }
+.timeline-scroll { height:0; width:100%; position:relative; overflow:hidden; }
 .timeline-shell { height:100%; min-height:0; display:flex; flex-direction:column; }
 .timeline-scroll { flex:1; min-height:0; }
 .timeline-empty { flex:1; min-height:0; }
