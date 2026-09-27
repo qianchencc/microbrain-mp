@@ -7,14 +7,16 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] 确认路由通过新模块完成执行，HTTP 响应、流事件、审计与回执形状不变
-- [ ] 保留全部既有语义：控制复用已校验目录不二次加载；回读只认晚于指令开始时刻的上报；门禁非幂等；抛出时区分已记账、在途未知与未下发（INTERRUPTED 语义不变）
-- [ ] 模块不依赖 Fastify、数据库或会话状态，只依赖物联适配器
-- [ ] 现有全量测试（`npm test`）与 `npm run typecheck` 通过，不为模块新增内部测试
-- [ ] 提交前 `git branch -v` 确认落在 codex 主线
+- [x] 确认路由通过新模块完成执行，HTTP 响应、流事件、审计与回执形状不变
+- [x] 保留全部既有语义：控制复用已校验目录不二次加载；回读只认晚于指令开始时刻的上报；门禁非幂等；抛出时区分已记账、在途未知与未下发（INTERRUPTED 语义不变）
+- [x] 模块不依赖 Fastify、数据库或会话状态，只依赖物联适配器
+- [x] 现有全量测试（`npm test`）与 `npm run typecheck` 通过，不为模块新增内部测试
+- [x] 提交前 `git branch -v` 确认落在 codex 主线
 
 ## Comments
 
 - 2026-09-27：已按用户要求精简测试，Runtime 基线 `e002202`（Node 22，27/27、typecheck/build 通过）。以现有控制用例保护抽取，不恢复已删除的内部/重复测试。取舍与夹具说明见 Runtime `plan/2026-09-27-test-pruning.md`；开工范围见 mp `plan/2026-09-27-region-workbench-readiness-handoff.md`。本票尚未实施。
+
+- 2026-09-27：完成，Runtime 提交 `d3d62a4`，模块为 `src/iot/execute-devices.ts`。27/27 既有用例、typecheck/build 通过；两轴审查后补齐最后下发后的中止检查。回读时间沿用原有循环结束时点，历史文字差异见 Runtime `plan/2026-09-27-shared-device-execution.md`。
