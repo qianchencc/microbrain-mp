@@ -6,7 +6,6 @@
    <text class="task-name">{{ detail.label }}</text>
    <text class="task-when">{{ detail.whenText }}</text>
    <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ detail.creator.displayName }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
-   <view v-if="detail.summary" class="summary warning">{{ detail.summary }}</view>
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
    <text v-if="currentError" class="current-error">状态暂不可用</text>
    <text v-if="actionError" class="action-error">{{ actionError }}</text>
@@ -148,8 +147,6 @@ button::after { border:0; }
 .state-tag.partial,.state-tag.unconfirmed { color:#936827; background:#f9f0df; }
 .state-tag.failed,.state-tag.interrupted,.state-tag.missed { color:#a15343; background:#f2e3e0; }
 .state-tag.cancelled { color:#7a7f76; background:#eef1ef; }
-.summary { margin-top:14px; padding:10px 12px; background:#f4f8f4; border:1px solid #e0e9e1; border-radius:8px; color:#456052; font-size:12px; }
-.summary.warning { color:#8d672d; background:#fbf5e9; border-color:#edddbf; }
 .current-observation { min-height:32px; margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:#4a6654; font-size:11px; }
 .current-observation button { width:32px; height:32px; margin:0; display:flex; align-items:center; justify-content:center; }
 .current-observation button[disabled] { opacity:.5; }

@@ -65,10 +65,8 @@ export function taskDetailView(task) {
    resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device),
    resultTone: phase.status === 'cancelled' ? 'wait' : executionResult(device) === '明确报错' ? 'fail' : executionResult(device) === '未执行' ? 'wait' : 'ok' })),
  }))
- const problemCount = phases.flatMap(phase => phase.devices).filter(device => executionResult(device) === '明确报错').length
- const summary = problemCount ? `${problemCount} 项明确报错` : ''
  const whenText = phases.length > 1 && phases[0].time.slice(0, 10) === phases.at(-1).time.slice(0, 10)
   ? `${phases[0].time} 至 ${phases.at(-1).clock}` : phases.map(phase => phase.time).join(' 至 ')
  return { ...task, phases, whenText, createdText: taskTime(task.createdAt), statusText: statusText[task.status] || task.status,
-  summary, sourceText: task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? 'Agent 即时操作' : 'Agent 定时任务' }
+  sourceText: task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? 'Agent 即时操作' : 'Agent 定时任务' }
 }
