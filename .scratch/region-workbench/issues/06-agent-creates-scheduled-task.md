@@ -8,7 +8,7 @@
 
 **Blocked by:** 04
 
-**Status:** implemented — pending user miniapp acceptance and trace inspection
+**Status:** implemented — pending user miniapp acceptance
 
 - [x] Pi 工具 `propose_task`：名称 ≤12 字、1–2 个阶段、`candidateSetIds` 引用候选集，校验与草案一致（能力已检查、名称位置由目录回填）；拒绝 >2 阶段、首阶段晚于 7 天、未来阶段含门禁、首阶段早于“现在 − 10 分钟”，并给模型可读原因
 - [x] 流事件 `task.proposed` 与 `task.resolved` 随 events_json 持久化、恢复重放；零滞留：下一条消息退役待确认任务提案；TTL 与草案一致
@@ -18,9 +18,11 @@
 - [x] 对话事件归约支持 `task.*` 事件并可恢复重放，`node --test` 覆盖
 - [x] 即时“关灯”仍走原草案链路，既有测试不回归
 - [x] Runtime 公开行为测试覆盖零滞留退役、确认、超窗 409、版本冲突、缺密钥拒绝启动与响应不含凭据；其余拒绝条件由服务端校验，未逐分支建测试矩阵
-- [ ] 在实际观测轨迹中核对凭据不出现在 span 属性或事件载荷；不得为核对打印凭据
+- [x] 只读抽查实际任务提案观测，并结合追踪源码核对凭据隔离；不输出凭据或完整轨迹
 - [ ] 用户在客户微信小程序验收提案卡、确认、实时状态及工作台跳转
 
 ## Comments
 
 2026-09-28：实现与证据见 `plan/2026-09-28-scheduled-task-creation-handoff.md`、Runtime `test/scheduled-task.test.ts` 和 `test/runtime-config.test.ts`。真实设备执行属于票 07/14。凭据持久化与终态删除由票 07 的同一公开流程补充验证；Langfuse 轨迹逐字段不作为本票自动化测试。
+
+2026-09-28 只读实测：唯一 3200 以现有开发身份和真实授权目录生成一阶段照明任务提案，NDJSON 返回 `task.proposed`、`run.awaiting_confirmation`；随后主动放弃提案并清除测试会话，没有调用确认或设备控制。Langfuse v4 观测只读接口在该时间窗返回 6 条 `agent-run`、`find_device_candidates`、`model-turn`、`propose_task` 观测；仅在本地进程中比较敏感字段标记和开发身份的原始 token，命中数均为 0，未回显轨迹载荷或凭据。追踪器只接收用户内容/模型消息/工具摘要，任务扫描器不向追踪器传递解密身份。该结论限于可读样本与当前源码；此自托管实例历史上存在异步丢行，不能推断全部历史轨迹完整。
