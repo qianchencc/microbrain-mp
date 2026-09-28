@@ -90,7 +90,7 @@ button::after { border:0; }
 .record-target { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#45564d; font-size:11px; font-weight:600; }
 .record-task { margin-left:5px; color:#95a49a; font-size:9px; font-weight:400; }
 .record-result { flex-shrink:0; font-size:9px; }
-.record-result.ok { color:#408064; }.record-result.warn { color:#a76e27; }.record-result.wait { color:#839189; }.record-result.fail { color:#a15343; }
+.record-result.ok,.record-result.active { color:#408064; }.record-result.warn { color:#a76e27; }.record-result.wait { color:#839189; }.record-result.fail { color:#a15343; }
 .creator { width:18px; height:18px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#497b66; color:#fff; font-size:9px; }
 .empty { padding:70px 20px; text-align:center; color:#86978a; font-size:12px; }
 .empty text { display:block; margin-bottom:5px; }

@@ -48,28 +48,28 @@ const now = ref(new Date().toISOString()), today = computed(() => localDate(now.
 const maxDate = computed(() => shiftDate(today.value, 7))
 const displayNow = computed(() => sampleMode.value ? `${date.value}T14:45:00+08:00` : now.value)
 const items = computed(() => regionTimelineItems(tasks.value))
-let initialRegion = '', initialDate = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false
+let initialRegion = '', initialDate = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer
 onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || '' })
-async function loadTimeline() {
+async function loadTimeline(silent = false) {
  const current = ++requestId, region = focusRegionId.value, scope = getAgentStorageScope()
- tasks.value = []; error.value = ''; loading.value = true
+ if (!silent) { tasks.value = []; error.value = ''; loading.value = true }
  try {
   if (!region) return
   if (sampleMode.value) { tasks.value = date.value === sampleDate.value ? regionSampleTasks(sampleDate.value, region) : []; return }
   const result = await listRegionTimeline(region, date.value)
   if (current === requestId && scope === getAgentStorageScope()) tasks.value = result.tasks || []
- } catch (cause) { if (current === requestId && scope === getAgentStorageScope()) error.value = cause.message || '任务记录暂不可用' }
- finally { if (current === requestId) loading.value = false }
+ } catch (cause) { if (!silent && current === requestId && scope === getAgentStorageScope()) error.value = cause.message || '任务记录暂不可用' }
+ finally { if (!silent && current === requestId) loading.value = false }
 }
-function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7)) {
+function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7), silent = false) {
  const current = ++calendarRequest, region = focusRegionId.value, scope = getAgentStorageScope()
- calendarMarks.value = []; calendarError.value = false
+ if (!silent) { calendarMarks.value = []; calendarError.value = false }
  if (!region) return
  const { from, to } = calendarWindow(month)
  if (sampleMode.value) { calendarMarks.value = sampleDate.value >= from && sampleDate.value <= to ? [{ date: sampleDate.value, abnormal: true }] : []; return }
  listRegionCalendar(region, from, to).then(result => {
   if (current === calendarRequest && region === focusRegionId.value && scope === getAgentStorageScope()) calendarMarks.value = result.days || []
- }).catch(() => { if (current === calendarRequest) { calendarMarks.value = []; calendarError.value = true } })
+ }).catch(() => { if (!silent && current === calendarRequest) { calendarMarks.value = []; calendarError.value = true } })
 }
 function onCalendarMonth(month) { calendarMonth.value = month; if (visible && !loadingDirectory) loadCalendar(month) }
 function openTask(item) {
@@ -88,9 +88,16 @@ async function load() {
 }
 watch(focusRegionId, () => { deviceCount.value = null; selectedTaskId.value = ''; if (visible && !loadingDirectory) { loadTimeline(); loadCalendar() } })
 watch(date, () => { selectedTaskId.value = ''; if (visible && !loadingDirectory) loadTimeline() })
-onShow(() => { visible = true; load() })
-onHide(() => { visible = false; deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
-onUnload(() => { visible = false; deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
+onShow(() => {
+ visible = true; clearInterval(refreshTimer); load()
+ refreshTimer = setInterval(() => {
+  if (!visible || sampleMode.value || loadingDirectory) return
+  now.value = new Date().toISOString()
+  loadTimeline(true); loadCalendar(calendarMonth.value || date.value.slice(0, 7), true)
+ }, 15000)
+})
+onHide(() => { visible = false; clearInterval(refreshTimer); deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
+onUnload(() => { visible = false; clearInterval(refreshTimer); deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
@@ -119,6 +126,8 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-state { flex-shrink:0; font-size:8px; color:#9e742f; }
 .task-state::before { content:""; display:inline-block; width:4px; height:4px; margin:0 3px 1px 0; border-radius:50%; background:currentColor; }
 .task-state.failed { color:#a76950; }
+.task-state.executing { color:#176b54; }
+.task-state.missed,.task-state.interrupted { color:#a76950; }
 .device-dock { flex-shrink:0; height:70px; display:flex; align-items:center; justify-content:center; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
 .device-entry { height:44px; min-width:130px; margin:0; padding:0 20px; border:1px solid #dce5dd; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#fff,#f2f6f1); box-shadow:0 5px 18px #233a2d1c; color:#315846; font-size:13px; font-weight:600; }
 .device-entry::after { border:0; }

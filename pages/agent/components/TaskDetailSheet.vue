@@ -3,7 +3,7 @@
   <template #header-right><text class="region-name">{{ regionName }}</text></template>
   <scroll-view class="task-scroll" scroll-y enhanced :show-scrollbar="false">
    <view v-if="loading" class="message">正在读取任务</view>
-   <view v-else-if="error" class="message"><text>{{ error }}</text><button @tap="load">重新加载</button></view>
+   <view v-else-if="error" class="message"><text>{{ error }}</text><button @tap="load()">重新加载</button></view>
    <view v-else-if="detail" class="task-detail">
     <text class="task-name">{{ detail.label }}</text>
     <text class="task-when">{{ detail.whenText }}</text>
@@ -29,7 +29,7 @@
  </DeviceSheet>
 </template>
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { getTaskDetail } from '@/apis/agent'
 import DeviceSheet from './DeviceSheet.vue'
 import { taskDetailView } from '../task-detail-view.mjs'
@@ -38,23 +38,30 @@ const props = defineProps({ open: Boolean, taskId: String, sampleTask: Object, r
 defineEmits(['close'])
 const task = ref(null), loading = ref(false), error = ref('')
 const detail = computed(() => taskDetailView(task.value))
-let requestId = 0
-async function load() {
+let requestId = 0, refreshTimer
+async function load(silent = false) {
  const current = ++requestId
  if (!props.open || !props.taskId) return
- task.value = null; error.value = ''; loading.value = false
+ if (!silent) { task.value = null; error.value = ''; loading.value = false }
  if (props.sampleTask) { task.value = props.sampleTask; return }
- loading.value = true
+ if (!silent) loading.value = true
  try {
   const result = await getTaskDetail(props.taskId)
   if (current === requestId && props.open) task.value = result.task
- } catch (cause) { if (current === requestId) error.value = cause.message || '任务暂不可用' }
- finally { if (current === requestId) loading.value = false }
+ } catch (cause) { if (!silent && current === requestId) error.value = cause.message || '任务暂不可用' }
+ finally { if (!silent && current === requestId) loading.value = false }
 }
 watch(() => [props.open, props.taskId, props.sampleTask], () => {
- if (props.open) load()
+ clearInterval(refreshTimer)
+ if (props.open) {
+  load()
+  if (!props.sampleTask) refreshTimer = setInterval(() => {
+   if (['scheduled', 'executing'].includes(task.value?.status)) load(true)
+  }, 10000)
+ }
  else { ++requestId; loading.value = false; task.value = null }
 }, { immediate: true })
+onUnmounted(() => clearInterval(refreshTimer))
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }

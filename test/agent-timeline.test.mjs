@@ -28,4 +28,5 @@ test('设备阶段卡区分待核验、进行中和部分完成', () => {
  assert.equal(deviceTimelineItems([event('only', 'unconfirmed', morning.at)])[0].resultText, '待核验')
  assert.equal(deviceTimelineItems([morning, later('pending')])[0].resultText, '进行中')
  assert.equal(deviceTimelineItems([morning, later('rejected')])[0].resultText, '部分完成')
+ assert.equal(deviceTimelineItems([{ ...morning, phaseStatus: 'executing', outcome: 'pending' }])[0].resultText, '执行中')
 })

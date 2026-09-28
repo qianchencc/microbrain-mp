@@ -35,7 +35,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-head { display:flex; justify-content:space-between; align-items:center; padding:15px 15px 0; }
 .task-kicker { color:#718579; font-size:11px; font-weight:600; }
 .task-state { color:#176b54; font-size:11px; font-weight:600; }
-.task-state.expired,.task-state.cancelled,.task-state.failed { color:#9c7040; }
+.task-state.partial,.task-state.expired,.task-state.cancelled,.task-state.failed { color:#9c7040; }
 .task-name { display:block; margin:5px 15px 12px; font-size:16px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
 .task-phases { border-top:1px solid #e6ece7; }
 .task-phase { padding:11px 15px 9px; }

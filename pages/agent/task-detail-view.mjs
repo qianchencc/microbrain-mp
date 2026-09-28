@@ -42,6 +42,7 @@ export function taskDetailView(task) {
  const count = new Set(phases.flatMap(phase => phase.devices.map(device => device.id))).size
  const problemCount = phases.flatMap(phase => phase.devices).filter(device => !['verified', 'satisfied', 'pending'].includes(device.outcome)).length
  const summary = task.status === 'scheduled' ? `${count} 台设备等待执行`
+  : task.status === 'executing' ? phases.some(phase => phase.status === 'executing') ? '正在读取并处理设备' : '等待下一阶段执行'
   : task.status === 'cancelled' ? '任务已取消，已执行的动作不会回滚'
   : task.status === 'missed' ? '任务已错过，没有自动补执行'
   : problemCount ? `${problemCount} 项结果需要关注` : `${count} 台设备目标已达成`

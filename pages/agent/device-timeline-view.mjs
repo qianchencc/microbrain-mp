@@ -5,6 +5,9 @@ const outcomeLabel = { verified: '已核验', satisfied: '已满足', unconfirme
  unreadable: '读取失败', missing: '设备缺失', not_dispatched: '未下发', pending: '待执行' }
 
 function summary(steps) {
+ if (steps.every(step => step.phaseStatus === 'missed')) return { text: '已错过', tone: 'fail' }
+ if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '执行中断', tone: 'warn' }
+ if (steps.some(step => step.phaseStatus === 'executing')) return { text: '执行中', tone: 'active' }
  if (steps.length === 1) return { text: outcomeLabel[steps[0].outcome] || '结果未知',
   tone: settled(steps[0].outcome) ? 'ok' : ['unconfirmed', 'unknown'].includes(steps[0].outcome) ? 'warn' : steps[0].outcome === 'pending' ? 'wait' : 'fail' }
  const outcomes = steps.map(step => step.outcome)
