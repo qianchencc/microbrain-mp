@@ -1,8 +1,8 @@
 <template>
- <view class="region-row">
+ <view class="region-row" :class="{ 'in-nav': nav }">
   <view class="region-chip">
-   <button class="region-name" :disabled="!focusRegion || regionsLoading" @tap="workbench ? open = true : $emit('open', focusRegion)"><text>{{ regionsLoading ? '正在读取区域' : focusRegion?.name || '暂无可用区域' }}</text><uni-icons v-if="!workbench && focusRegion" type="forward" size="12" color="#7f9287" /></button>
-   <button class="region-toggle" :disabled="!regions.length || regionsLoading" aria-label="切换关注区域" @tap="open = true"><uni-icons type="bottom" size="14" color="#536b5c" /></button>
+   <button class="region-name" :disabled="!focusRegion || regionsLoading" hover-class="region-name--pressed" @tap="workbench ? open = true : $emit('open', focusRegion)"><text>{{ regionsLoading ? '正在读取区域' : focusRegion?.name || '暂无可用区域' }}</text><uni-icons v-if="!workbench && focusRegion" type="forward" size="12" color="#7f9287" /></button>
+   <button class="region-toggle" :disabled="!regions.length || regionsLoading" hover-class="region-toggle--pressed" aria-label="切换关注区域" @tap="open = true"><uni-icons type="bottom" size="14" color="#536b5c" /></button>
    <view v-if="anyAttention" class="chip-att" aria-hidden="true" />
   </view>
  </view>
@@ -20,7 +20,7 @@
 import { computed, ref } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import { regions, focusRegion, focusRegionId, regionsLoading, regionsError, selectFocusRegion, loadRegionFocus } from '../region-focus.js'
-defineProps({ workbench: Boolean })
+defineProps({ workbench: Boolean, nav: Boolean })
 const emit = defineEmits(['open', 'change'])
 const open = ref(false)
 const anyAttention = computed(() => regions.value.some(region => region.attention))
@@ -29,17 +29,20 @@ function choose(id) { if (selectFocusRegion(id)) { open.value = false; emit('cha
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
 .region-row { padding:0 18px 10px; display:flex; }
+.region-row.in-nav { padding:0; justify-content:center; }
 .region-retry { margin:0 18px 10px; color:#ad711b; font-size:12px; text-align:left; }
 .region-chip { position:relative; display:flex; min-width:0; max-width:100%; border-radius:16px; background:linear-gradient(#fefffe,#edf2ec); box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px #29493624,0 3px 8px -6px #233a2d66; }
 .chip-att { position:absolute; top:-3px; right:-3px; width:10px; height:10px; border-radius:50%; background:#ad711b; border:2px solid #fdfcfa; box-shadow:0 1px 3px rgba(122,75,17,.35); }
 button { background:transparent; margin:0; padding:0; border-radius:0; line-height:1.2; }
 button::after { border:0; }
 button[disabled] { background:transparent; color:#89958e; }
-.region-name { display:flex; align-items:center; gap:8px; padding:0 10px 0 13px; min-height:44px; min-width:0; font-size:13px; font-weight:600; color:#3d5947; }
+.region-name { display:flex; align-items:center; gap:8px; padding:0 10px 0 13px; min-height:44px; min-width:0; font-size:13px; font-weight:600; color:#3d5947; transition:opacity 140ms ease; }
+.region-name--pressed { opacity:.6; }
 .region-name text { max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.region-toggle { width:42px; min-height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-left:1px solid #526b4c14; }
+.region-toggle { width:42px; min-height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-left:1px solid #526b4c14; transition:opacity 140ms ease; }
+.region-toggle--pressed { opacity:.6; }
 .region-options { max-height:45vh; }
-.region-option { margin:0 16px 8px; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-radius:14px; color:#405747; font-size:15px; }
+.region-option { margin:0 16px 8px; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-radius:14px; color:#405747; font-size:15px; transition:background-color 150ms ease; }
 .region-option.chosen { background:#edf3ee; }
 .option-copy { min-width:0; }
 .option-copy text { display:block; }

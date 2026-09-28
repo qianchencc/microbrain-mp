@@ -2,8 +2,7 @@
  <view class="agent-page">
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
-  <AgentHeader :status="statusText" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" />
-  <RegionChip @open="openRegion" />
+  <AgentHeader :status="statusText" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory"><RegionChip nav @open="openRegion" /></AgentHeader>
   <view class="conversation-shell">
    <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
@@ -17,7 +16,7 @@
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
       @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)"
-      @confirm-task="confirmTaskProposal(turn)" @discard-task="discardTaskProposal(turn)" @open-task="openTaskRegion(turn)" />
+      @confirm-task="confirmTaskProposal($event)" @discard-task="discardTaskProposal($event)" @open-task="openTaskRegion($event)" />
     </view>
     <view v-for="change in regionChanges.filter(change => change.before === turns.length)" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
     <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
@@ -107,34 +106,35 @@ function follow(force = false) {
  nextTick(() => { if (!disposed) scrollIntoView.value = 'agent-bottom' })
 }
 function handleScroll(event) { if (event.detail.deltaY > 5) nearBottom.value = false }
+const tasksOf = turn => turn.tasks?.length ? turn.tasks : turn.task ? [turn.task] : []
 function schedule() {
  clearTimeout(pollTimer)
  if (visible && !disposed && (hasExecution.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
  clearTimeout(taskPollTimer)
- if (visible && !disposed && turns.value.some(turn => ['scheduled', 'executing'].includes(String(turn.task?.status || '').toLowerCase()))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
+ if (visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
  clearTimeout(expiryTimer)
  const pending = turns.value.filter(turn => turn.draft?.status === 'PENDING_CONFIRMATION')
- const pendingTasks = turns.value.filter(turn => turn.task?.status === 'PENDING_CONFIRMATION')
- const deadline = Math.min(...pending.map(turn => Date.parse(turn.draft.expiresAt)), ...pendingTasks.map(turn => Date.parse(turn.task.expiresAt)))
+ const pendingTasks = turns.value.flatMap(turn => tasksOf(turn)).filter(task => task.status === 'PENDING_CONFIRMATION')
+ const deadline = Math.min(...pending.map(turn => Date.parse(turn.draft.expiresAt)), ...pendingTasks.map(task => Date.parse(task.expiresAt)))
  if (Number.isFinite(deadline)) expiryTimer = setTimeout(() => {
   if (mutating.value) return
   for (const turn of pending) if (turn.draft.status === 'PENDING_CONFIRMATION' && Date.parse(turn.draft.expiresAt) <= Date.now()) turn.draft.status = 'EXPIRED'
-  for (const turn of pendingTasks) if (turn.task.status === 'PENDING_CONFIRMATION' && Date.parse(turn.task.expiresAt) <= Date.now()) turn.task.status = 'EXPIRED'
+  for (const task of pendingTasks) if (task.status === 'PENDING_CONFIRMATION' && Date.parse(task.expiresAt) <= Date.now()) task.status = 'EXPIRED'
   schedule()
  }, Math.max(0, deadline - Date.now()))
 }
 async function refreshScheduledTasks() {
- const active = turns.value.filter(turn => ['scheduled', 'executing'].includes(String(turn.task?.status || '').toLowerCase()))
- await Promise.allSettled(active.map(async turn => {
-  const id = turn.task.taskId
+ const active = turns.value.flatMap(turn => tasksOf(turn)).filter(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase()))
+ await Promise.allSettled(active.map(async task => {
+  const id = task.taskId
   const result = await getTaskDetail(id)
-  const live = turns.value.find(item => item.task?.taskId === id)
-  if (live?.task && result.task) live.task.status = result.task.status
+  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => item.taskId === id && !item.cancellationId)
+  if (live && result.task) live.status = result.task.status
  }))
  schedule()
 }
 watch(mutating, schedule)
-watch(() => turns.value.map(turn => [turn.draft?.draftId, turn.draft?.status, turn.task?.taskId, turn.task?.status].join(':')).join('|'), () => schedule())
+watch(() => turns.value.map(turn => [turn.draft?.draftId, turn.draft?.status, ...tasksOf(turn).map(task => `${task.cancellationId || task.taskId}:${task.status}`)].join(':')).join('|'), () => schedule())
 async function restore() {
  if (restoring || activeRequest || confirming.size || disposed) return
  restoring = true
@@ -228,9 +228,11 @@ async function runTurn(current, content) {
    for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) { previous.draft = null; previous.result = null }
   }
   if (event.type === 'action.resolved') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) previous.draft.status = event.status
-  if (event.type === 'task.resolved') for (const previous of turns.value) if (previous !== current && previous.task?.taskId === event.taskId) previous.task.status = event.status
+  if (event.type === 'task.resolved') for (const previous of turns.value) if (previous !== current) {
+   for (const task of tasksOf(previous)) if (task.taskId === event.taskId && !task.cancellationId) task.status = event.status
+  }
   if (event.type === 'task.cancellation.resolved') for (const previous of turns.value) {
-   if (previous !== current && previous.task?.cancellationId === event.cancellationId) previous.task.status = event.status
+   if (previous !== current) for (const task of tasksOf(previous)) if (task.cancellationId === event.cancellationId) task.status = event.status
   }
   follow()
  })
@@ -363,36 +365,35 @@ async function confirmDraft(turn) {
  } finally { confirming.delete(draftId); mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
-async function confirmTaskProposal(turn) {
- if (busy.value || turn.task?.status !== 'PENDING_CONFIRMATION') return
- const taskId = turn.task.taskId, cancellationId = turn.task.cancellationId
+async function confirmTaskProposal(task) {
+ if (busy.value || task?.status !== 'PENDING_CONFIRMATION') return
+ const taskId = task.taskId, cancellationId = task.cancellationId
  const key = cancellationId || taskId
  mutating.value = true; confirming.add(key); confirmEpoch++
  let resync = false
  try {
-  const result = cancellationId ? await confirmTaskCancellation(cancellationId) : await confirmScheduledTask(taskId, turn.task.version)
-  const live = turns.value.find(item => (item.task?.cancellationId || item.task?.taskId) === key)
-  if (live?.task) { live.task.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId) live.task.created = true }
-  if (cancellationId) for (const previous of turns.value) if (previous.task?.taskId === taskId && !previous.task.cancellationId) previous.task.status = result.status
+  const result = cancellationId ? await confirmTaskCancellation(cancellationId) : await confirmScheduledTask(taskId, task.version)
+  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.cancellationId || item.taskId) === key)
+  if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId) live.created = true }
+  if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
  } catch (error) {
   errorMessage.value = error.data?.message || error.message
   resync = true
  } finally { confirming.delete(key); mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
-async function discardTaskProposal(turn) {
- if (busy.value || turn.task?.status !== 'PENDING_CONFIRMATION') return
- const taskId = turn.task.taskId, cancellationId = turn.task.cancellationId
+async function discardTaskProposal(task) {
+ if (busy.value || task?.status !== 'PENDING_CONFIRMATION') return
+ const taskId = task.taskId, cancellationId = task.cancellationId
  mutating.value = true
  try {
   const result = cancellationId ? await discardTaskCancellation(cancellationId) : await discardScheduledTask(taskId)
-  const live = turns.value.find(item => (item.task?.cancellationId || item.task?.taskId) === (cancellationId || taskId))
-  if (live?.task) live.task.status = result.status
+  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.cancellationId || item.taskId) === (cancellationId || taskId))
+  if (live) live.status = result.status
  } catch (error) { errorMessage.value = error.data?.message || error.message }
  finally { mutating.value = false; schedule() }
 }
-function openTaskRegion(turn) {
- const task = turn.task
+function openTaskRegion(task) {
  if (!task?.taskId || !task.regionIds?.length || !task.phases?.length) return
  const date = taskTime(task.phases[0].at).slice(0, 10)
  uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(task.regionIds[0])}&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(task.taskId)}` })

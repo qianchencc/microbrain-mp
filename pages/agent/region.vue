@@ -1,10 +1,15 @@
 <template>
  <view class="region-page">
-  <RegionChip workbench />
+  <view class="nav" :style="{ paddingTop: navTop + 'px' }">
+   <view class="nav-row" :style="{ height: navBar + 'px', paddingRight: navInset + 'px' }">
+    <button class="nav-back" aria-label="返回" hover-class="nav-back--pressed" @tap="goBack"><uni-icons type="left" size="18" color="#315846" /></button>
+    <view class="nav-chip"><RegionChip workbench nav /></view>
+   </view>
+  </view>
   <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text>{{ tasks.length }} 条记录</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
   <text v-if="sampleMode" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-body">
-   <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample-' : 'real-') + date" calendar :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :now="displayNow" @date-change="date = $event" @calendar-month="onCalendarMonth" @select="openTask">
+   <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample-' : 'real-') + date" calendar :bottom-pad="78" :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :now="displayNow" @date-change="date = $event" @calendar-month="onCalendarMonth" @select="openTask">
     <template #empty>
      <view v-if="loading || error" class="notice"><text>{{ loading ? '正在读取任务记录' : error }}</text><button v-if="error" @tap="load">重新加载</button></view>
      <view v-else class="empty"><image class="empty-art" :src="emptyArt" mode="aspectFit" /><text class="empty-title">这一天还没有任务记录</text><text>在物联 Agent 中确认设备操作后，</text><text>结果会显示在这里。</text></view>
@@ -21,7 +26,7 @@
    </RegionTimeline>
   </view>
   <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
-  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
+  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
   <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
 </template>
@@ -40,7 +45,9 @@ import { localDate } from './timeline-geometry.mjs'
 import { calendarWindow, shiftDate, validCalendarDate } from './region-calendar.mjs'
 import { regionTimelineItems } from './region-timeline.mjs'
 import { regionSampleTasks, regionSampleTaskDetail } from './region-sample-tasks.mjs'
+import { navMetrics } from './nav-metrics.js'
 const emptyArt = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80"><path d="M30 2c-9 12 9 22 0 38s9 26 0 38" fill="none" stroke="#c9d6ce" stroke-width="1.6"/><circle cx="31" cy="40" r="6" fill="#fff"/><circle cx="31" cy="40" r="4" fill="#ad711b"/></svg>')
+const { top: navTop, barHeight: navBar, rightInset: navInset } = navMetrics()
 const error = ref(''), loading = ref(true), tasks = ref([]), sampleTasks = ref([]), sampleMode = ref(false)
 const deviceDrawerOpen = ref(false), deviceCount = ref(null)
 const deviceRefreshSignal = ref(0)
@@ -55,11 +62,12 @@ const sampleCalendarMarks = computed(() => {
  return sampleTasks.value.length && sampleDate.value >= from && sampleDate.value <= to
   ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(task.status)) }] : []
 })
-let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer
+let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer, shownTimelineKey = ''
 onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || ''; initialTaskId = query.taskId || '' })
 async function loadTimeline(silent = false) {
  const current = ++requestId, region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()
- if (!silent) { tasks.value = []; error.value = ''; loading.value = true }
+ const key = `${scope}:${region}:${selectedDate}:${sampleMode.value}`
+ if (!silent) { if (key !== shownTimelineKey) tasks.value = []; error.value = ''; loading.value = true }
  try {
   if (!region) return
   if (sampleMode.value) {
@@ -68,6 +76,7 @@ async function loadTimeline(silent = false) {
    if (current === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope() && sampleMode.value) {
     sampleTasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
     tasks.value = selectedDate === sampleDate.value ? sampleTasks.value : []
+    shownTimelineKey = key
    }
    return
   }
@@ -77,6 +86,7 @@ async function loadTimeline(silent = false) {
    const next = result.tasks || []
    if (next.some(task => task.phases.some(phase => ['pending', 'executing'].includes(previous.get(phase.id)) && !['pending', 'executing'].includes(phase.status)))) deviceRefreshSignal.value++
    tasks.value = next
+   shownTimelineKey = key
    return current
   }
  } catch (cause) { if (!silent && current === requestId && scope === getAgentStorageScope()) error.value = cause.message || (sampleMode.value ? '演示设备目录暂不可用' : '任务记录暂不可用') }
@@ -109,7 +119,7 @@ function openTask(item) {
  selectedTaskId.value = item.id
  sampleDetail.value = sample
 }
-function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId; sampleDetail.value = sampleTask || null }
+function goBack() { uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pages/agent/index' }) }) }
 // 新建任务入口=回到对话：把当前区域固定为关注区域并预填含区域名的输入开头，真实创建仍走 Agent 确认流。
 function composeTask() {
  if (focusRegion.value) {
@@ -122,7 +132,7 @@ function toggleSample() { sampleMode.value = !sampleMode.value; sampleTasks.valu
 async function load() {
  const currentLoad = ++loadId
  let loadedRegion = '', loadedDate = ''
- loadingDirectory = true; loading.value = true; error.value = ''; tasks.value = []; sampleTasks.value = []; ++requestId
+ loadingDirectory = true; loading.value = !tasks.value.length; error.value = ''; sampleTasks.value = []; ++requestId
  now.value = new Date().toISOString()
  try {
   await loadRegionFocus()
@@ -179,18 +189,25 @@ onUnload(() => { visible = false; clearTimeout(refreshTimer); deviceDrawerOpen.v
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
-.region-page { height:100vh; box-sizing:border-box; padding-top:14px; background:#f4f7f5; color:#526759; display:flex; flex-direction:column; }
-.day-heading { padding:18px 23px 12px; display:flex; align-items:baseline; flex-wrap:wrap; gap:9px; color:#89958e; font-size:11px; }
+.region-page { height:100vh; box-sizing:border-box; background:#f4f7f5; color:#526759; display:flex; flex-direction:column; position:relative; }
+.nav { flex-shrink:0; background:linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom:1px solid rgba(44,75,58,.05); }
+.nav-row { display:flex; align-items:center; padding-left:10px; box-sizing:border-box; min-height:44px; }
+.nav-back { width:34px; height:34px; margin:0; padding:0; border-radius:17px; background:transparent; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:opacity 140ms ease; }
+.nav-back::after { border:0; }
+.nav-back--pressed { opacity:.6; }
+.nav-chip { flex:1; min-width:0; display:flex; justify-content:center; align-items:center; }
+.day-heading { padding:14px 23px 12px; display:flex; align-items:baseline; flex-wrap:wrap; gap:9px; color:#89958e; font-size:11px; }
 .day-title { color:#45564d; font-size:20px; font-weight:600; }
 .sample-toggle { margin:0 0 0 auto; padding:0; background:transparent; color:#176b54; font-size:11px; line-height:1.4; }
 .sample-toggle::after { border:0; }
 .sample-notice { margin:0 23px 6px; color:#ad711b; font-size:11px; }
 .timeline-body { position:relative; flex:1; min-height:0; margin:0 16px; overflow:hidden; }
-.empty { padding:70px 24px 0; text-align:center; font-size:12px; line-height:1.8; color:#89958e; }
+.empty { padding:70px 24px 0; text-align:center; font-size:12px; line-height:1.8; color:#89958e; animation:fadeIn 160ms ease-out backwards; }
+@keyframes fadeIn { from { opacity:0; } }
 .empty-art { display:block; width:60px; height:80px; margin:0 auto 14px; }
 .empty text { display:block; }
 .empty-title { color:#526759; font-size:14px; font-weight:600; margin-bottom:5px; }
-.notice { padding:70px 24px; text-align:center; font-size:13px; color:#89958e; }
+.notice { padding:70px 24px; text-align:center; font-size:13px; color:#89958e; animation:fadeIn 160ms ease-out backwards; }
 .notice button { margin-top:18px; background:transparent; font-size:13px; color:#176b54; }
 .notice button::after { border:0; }
 .task-row { display:flex; align-items:center; gap:7px; height:32px; min-width:0; }
@@ -209,12 +226,13 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .owner-mark.cv-slate { background:linear-gradient(145deg,#8fa7b8,#5d7484); }
 .owner-mark.cv-grey { background:linear-gradient(145deg,#a9b0aa,#7a817b); }
 .task-row.cancelled .task-label { text-decoration:line-through; text-decoration-color:#9caaa0; }
-.device-dock { flex-shrink:0; box-sizing:content-box; height:56px; padding-bottom:env(safe-area-inset-bottom); display:flex; align-items:center; justify-content:center; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
-.dock-bar { height:44px; padding:4px; border-radius:22px; display:flex; align-items:center; background:linear-gradient(#fefffe,#f1f5f2); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 10px 26px rgba(28,57,42,.18); }
+.device-dock { position:absolute; left:0; right:0; bottom:0; z-index:6; box-sizing:border-box; padding-top:30px; padding-bottom:calc(10px + env(safe-area-inset-bottom)); display:flex; justify-content:center; background:linear-gradient(#f4f7f500,#f4f7f5 55%); pointer-events:none; }
+.dock-bar { pointer-events:auto; height:44px; padding:4px; border-radius:22px; display:flex; align-items:center; background:linear-gradient(#fefffe,#f1f5f2); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 10px 26px rgba(28,57,42,.18); }
 .dock-seg { height:36px; margin:0; padding:0 16px; border-radius:18px; display:flex; align-items:center; justify-content:center; gap:6px; background:transparent; color:#315846; font-size:12.5px; font-weight:650; line-height:1; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
 .dock-seg::after { border:0; }
 .dock-seg.primary { background:linear-gradient(145deg,#308b70,#1d5c45); color:#fff; box-shadow:0 3px 9px rgba(23,74,55,.25),inset 0 1px 0 rgba(255,255,255,.18); }
 .dock-seg--pressed { transform:scale(.96); }
 .primary-plus { font-size:15px; font-weight:500; line-height:1; }
 .device-count { font-size:11px; color:#7b8d80; font-weight:600; }
+@media (prefers-reduced-motion:reduce) { .empty,.notice,.nav-back,.dock-seg { transition:none; animation:none; } }
 </style>

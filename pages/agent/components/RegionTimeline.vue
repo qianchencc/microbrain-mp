@@ -1,9 +1,13 @@
 <template>
  <view class="timeline-shell">
- <view v-if="calendar && compactCalendar" class="compact-date-bar"><button class="compact-date-toggle" :aria-label="calendarOpen ? '收起设备日历' : '展开设备日历'" @tap="calendarOpen = !calendarOpen"><text>{{ Number(date.slice(5, 7)) }} 月 {{ Number(date.slice(8)) }} 日</text><uni-icons :type="calendarOpen ? 'up' : 'down'" size="12" color="#fff" /></button></view>
- <RegionCalendar v-if="calendar && (!compactCalendar || calendarOpen)" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" :compact="compactCalendar" @select="selectDate" @month-change="$emit('calendar-month', $event)" />
+ <template v-if="calendar && compactCalendar">
+  <button class="datefloat" hover-class="datefloat--pressed" :aria-label="calendarOpen ? '收起设备日历' : '展开设备日历'" :aria-expanded="calendarOpen" @tap="calendarOpen = !calendarOpen"><uni-icons type="calendar" size="12" color="#5b7a68" /><text>{{ Number(date.slice(5, 7)) }}月{{ Number(date.slice(8)) }}日</text></button>
+  <view v-if="calendarOpen" class="cal-scrim" @tap="calendarOpen = false" />
+  <view v-if="calendarOpen" class="cal-float"><RegionCalendar :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" compact @select="selectDate" @month-change="$emit('calendar-month', $event)" /></view>
+ </template>
+ <RegionCalendar v-else-if="calendar" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" @select="selectDate" @month-change="$emit('calendar-month', $event)" />
  <view v-if="!items.length" class="timeline-empty"><slot name="empty" /></view>
- <scroll-view v-else class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" :scroll-top="scrollTop" :scroll-into-view="focusId">
+ <scroll-view v-else class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" scroll-with-animation :scroll-top="scrollTop" :scroll-into-view="focusId">
   <view class="timeline" :style="{ height: scene.height + 'px' }">
    <image class="timeline-art" :src="svgImage" mode="scaleToFill" :style="{ width: width + 'px', height: scene.height + 'px' }" @error="renderError = '时间轴暂未加载，请重新进入'" />
    <text v-for="(label, index) in scene.labels" :key="'label-' + index" class="time-label" :class="label.kind" :style="{ top: label.displayY + 'px' }">{{ label.text }}</text>
@@ -14,6 +18,7 @@
    </view>
    <text v-if="renderError" class="render-error">{{ renderError }}</text>
   </view>
+  <view v-if="bottomPad" class="timeline-tail" :style="{ height: bottomPad + 'px' }" />
  </scroll-view>
  </view>
 </template>
@@ -24,7 +29,7 @@ import { createTimeline, localDate } from '../timeline-geometry.mjs'
 import { timelineSvg } from '../timeline-svg.mjs'
 import RegionCalendar from './RegionCalendar.vue'
 
-const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, calendarMarks: { type: Array, default: () => [] }, calendarError: Boolean, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, days: { type: Number, default: 1 } })
+const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, bottomPad: { type: Number, default: 0 }, calendarMarks: { type: Array, default: () => [] }, calendarError: Boolean, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, days: { type: Number, default: 1 } })
 const emit = defineEmits(['select', 'date-change', 'calendar-month'])
 const instance = getCurrentInstance()
 const width = ref(uni.getSystemInfoSync().windowWidth - 32)
@@ -60,10 +65,13 @@ watch(() => props.items.length, (length, previous) => { if (length && !previous)
 <style scoped>
 view, text, input { font-size: inherit; line-height: inherit; }
 .timeline-scroll { height:0; width:100%; position:relative; overflow:hidden; }
-.timeline-shell { height:100%; min-height:0; display:flex; flex-direction:column; }
-.compact-date-bar { height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:flex-end; padding:0 12px; }
-.compact-date-toggle { min-height:30px; margin:0; padding:0 11px; border:0; border-radius:15px; display:flex; align-items:center; gap:6px; background:#176b54; color:#fff; font-size:11px; font-weight:600; line-height:1; box-shadow:0 4px 12px #11553f3d; }
-.compact-date-toggle::after { border:0; }
+.timeline-shell { height:100%; min-height:0; display:flex; flex-direction:column; position:relative; }
+.datefloat { position:absolute; top:8px; left:14px; z-index:8; margin:0; padding:0 11px; height:30px; border:0; border-radius:15px; display:flex; align-items:center; gap:6px; background:linear-gradient(#fefffe,#eef3ef); color:#37513f; font-size:11.5px; font-weight:650; line-height:1; box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 4px 12px rgba(28,57,42,.16); transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.datefloat::after { border:0; }
+.datefloat--pressed { transform:scale(.95); }
+.cal-scrim { position:absolute; top:0; right:0; bottom:0; left:0; z-index:7; }
+.cal-float { position:absolute; top:42px; left:12px; right:12px; z-index:8; border-radius:14px; background:linear-gradient(#fefffe,#f7f9f7); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),0 12px 30px rgba(28,57,42,.18); overflow:hidden; animation:calIn 180ms cubic-bezier(.23,1,.32,1) backwards; }
+@keyframes calIn { from { opacity:0; transform:translateY(-6px) scale(.98); } }
 .timeline-scroll { flex:1; min-height:0; }
 .timeline-empty { flex:1; min-height:0; }
 .timeline { position:relative; }
@@ -85,5 +93,5 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .timeline-card.executing::before { content:""; position:absolute; left:4px; top:9px; bottom:9px; width:2.5px; border-radius:2px; background:#176b54; }
 .card-label { display:block; font-size:12.5px; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .render-error { position:absolute; top:470px; left:90px; color:#a34036; font-size:13px; }
-@media (prefers-reduced-motion:reduce) { .timeline-card { transition:none; animation:none; } }
+@media (prefers-reduced-motion:reduce) { .timeline-card,.datefloat,.cal-float { transition:none; animation:none; } }
 </style>
