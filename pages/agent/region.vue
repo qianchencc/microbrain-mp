@@ -26,7 +26,7 @@
  </view>
 </template>
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { listRegionTimeline, listRegionCalendar } from '@/apis/agent'
 import { isDev } from '@/config/settings'
@@ -58,9 +58,16 @@ async function loadTimeline(silent = false) {
   if (!region) return
   if (sampleMode.value) { tasks.value = date.value === sampleDate.value ? regionSampleTasks(sampleDate.value, region) : []; return }
   const result = await listRegionTimeline(region, date.value)
-  if (current === requestId && scope === getAgentStorageScope()) tasks.value = result.tasks || []
+  if (current === requestId && scope === getAgentStorageScope()) { tasks.value = result.tasks || []; return current }
  } catch (cause) { if (!silent && current === requestId && scope === getAgentStorageScope()) error.value = cause.message || '任务记录暂不可用' }
  finally { if (!silent && current === requestId) loading.value = false }
+}
+async function loadVisibleTimeline() {
+ const region = focusRegionId.value, scope = getAgentStorageScope()
+ const loadedRequest = await loadTimeline()
+ if (!loadedRequest) return
+ await nextTick()
+ if (visible && !sampleMode.value && loadedRequest === requestId && region === focusRegionId.value && scope === getAgentStorageScope()) void acknowledgeRegion(region).catch(() => {})
 }
 function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7), silent = false) {
  const current = ++calendarRequest, region = focusRegionId.value, scope = getAgentStorageScope()
@@ -78,17 +85,17 @@ function openTask(item) {
  sampleDetail.value = sampleMode.value ? regionSampleTaskDetail(tasks.value.find(task => task.id === item.id)) : null
 }
 function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId; sampleDetail.value = sampleTask || null }
-function toggleSample() { sampleMode.value = !sampleMode.value; if (sampleMode.value) sampleDate.value = date.value; else void acknowledgeRegion(focusRegionId.value).catch(() => {}); selectedTaskId.value = ''; loadTimeline(); loadCalendar() }
+function toggleSample() { sampleMode.value = !sampleMode.value; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; void loadVisibleTimeline(); loadCalendar() }
 async function load() {
  const currentLoad = ++loadId
  loadingDirectory = true; loading.value = true; error.value = ''; tasks.value = []; ++requestId
  now.value = new Date().toISOString()
- try { await loadRegionFocus(); if (currentLoad !== loadId || !visible) return; if (initialRegion) { selectFocusRegion(initialRegion); initialRegion = '' }; if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate; initialDate = ''; if (!sampleMode.value) void acknowledgeRegion(focusRegionId.value).catch(() => {}); await loadTimeline(); loadCalendar() }
+ try { await loadRegionFocus(); if (currentLoad !== loadId || !visible) return; if (initialRegion) { selectFocusRegion(initialRegion); initialRegion = '' }; if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate; initialDate = ''; await loadVisibleTimeline(); loadCalendar() }
  catch (cause) { if (currentLoad === loadId) { error.value = cause.message || '区域暂不可用'; loading.value = false } }
  finally { if (currentLoad === loadId) loadingDirectory = false }
 }
-watch(focusRegionId, () => { deviceCount.value = null; selectedTaskId.value = ''; if (visible && !loadingDirectory) { if (!sampleMode.value) void acknowledgeRegion(focusRegionId.value).catch(() => {}); loadTimeline(); loadCalendar() } })
-watch(date, () => { selectedTaskId.value = ''; if (visible && !loadingDirectory) loadTimeline() })
+watch(focusRegionId, () => { deviceCount.value = null; selectedTaskId.value = ''; if (visible && !loadingDirectory) { void loadVisibleTimeline(); loadCalendar() } })
+watch(date, () => { selectedTaskId.value = ''; if (visible && !loadingDirectory) void loadVisibleTimeline() })
 function scheduleRefresh() {
  clearTimeout(refreshTimer)
  if (!visible) return
