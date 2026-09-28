@@ -1,9 +1,9 @@
 <template>
  <view class="timeline-shell">
  <template v-if="calendar && compactCalendar">
-  <button class="datefloat" hover-class="datefloat--pressed" :aria-label="calendarOpen ? '收起设备日历' : '展开设备日历'" :aria-expanded="calendarOpen" @tap="calendarOpen ? closeCalendar() : openCalendar()"><uni-icons type="calendar" size="12" color="#5b7a68" /><text>{{ Number(date.slice(5, 7)) }}月{{ Number(date.slice(8)) }}日</text></button>
-  <view v-if="calendarOpen || calClosing" class="cal-scrim" :class="{ 'cal-out': !calendarOpen }" @tap="closeCalendar" />
-  <view v-if="calendarOpen || calClosing" class="cal-float" :class="{ 'cal-out': !calendarOpen }"><RegionCalendar :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" compact @select="selectDate" @month-change="$emit('calendar-month', $event)" /></view>
+  <button class="datefloat" hover-class="datefloat--pressed" :aria-label="calShown ? '收起设备日历' : '展开设备日历'" :aria-expanded="calShown" @tap="calShown ? closeCalendar() : openCalendar()"><uni-icons type="calendar" size="12" color="#5b7a68" /><text>{{ Number(date.slice(5, 7)) }}月{{ Number(date.slice(8)) }}日</text></button>
+  <view v-if="calMounted" class="cal-scrim" @tap="closeCalendar" />
+  <view v-if="calMounted" class="cal-float" :class="{ 'cal-out': !calShown }"><RegionCalendar :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" compact @select="selectDate" @month-change="$emit('calendar-month', $event)" /></view>
  </template>
  <RegionCalendar v-else-if="calendar" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" @select="selectDate" @month-change="$emit('calendar-month', $event)" />
  <view v-if="!items.length" class="timeline-empty"><slot name="empty" /></view>
@@ -36,14 +36,19 @@ const width = ref(uni.getSystemInfoSync().windowWidth - 32)
 const scrollTop = ref(0)
 const focusId = ref('')
 const renderError = ref('')
-const calendarOpen = ref(false), calClosing = ref(false)
-let calCloseTimer = 0
-function openCalendar() { clearTimeout(calCloseTimer); calClosing.value = false; calendarOpen.value = true }
+// 浮层进出共用同一条 class 过渡：挂载在收起态，下一帧翻转到展开态；关闭时反向播完再卸载。
+const calMounted = ref(false), calShown = ref(false)
+let calTimer = 0
+function openCalendar() {
+ clearTimeout(calTimer)
+ calMounted.value = true; calShown.value = false
+ calTimer = setTimeout(() => { calShown.value = true }, 40)
+}
 function closeCalendar() {
- if (!calendarOpen.value) { calClosing.value = false; return }
- calendarOpen.value = false; calClosing.value = true
- clearTimeout(calCloseTimer)
- calCloseTimer = setTimeout(() => { calClosing.value = false }, 200)
+ if (!calMounted.value) return
+ calShown.value = false
+ clearTimeout(calTimer)
+ calTimer = setTimeout(() => { calMounted.value = false }, 200)
 }
 const scene = computed(() => createTimeline({ date: props.date, items: props.items, now: props.now, width: width.value, days: props.days }))
 const svgImage = computed(() => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(timelineSvg(scene.value)))
@@ -56,14 +61,19 @@ function focusDate() {
  if (props.focusItems && scene.value.cards.length) {
   const cards = [...scene.value.cards].sort((a, b) => a.top - b.top)
   const target = cards.filter(card => card.top <= scene.value.nowY).at(-1) || cards[0]
-  focusId.value = 'timeline-card-' + target.id
+  const id = 'timeline-card-' + target.id
+  if (focusId.value === id) { focusId.value = ''; nextTick(() => { focusId.value = id }) }
+  else focusId.value = id
   return
  }
- scrollTop.value = localDate(props.now) === props.date ? Math.max(0, Math.min(scene.value.height - 400, scene.value.nowY - 220)) : 0
+ const targetTop = localDate(props.now) === props.date ? Math.max(0, Math.min(scene.value.height - 400, scene.value.nowY - 220)) : 0
+ if (scrollTop.value === targetTop) { scrollTop.value = targetTop + .5; nextTick(() => { scrollTop.value = targetTop }) }
+ else scrollTop.value = targetTop
 }
 function selectDate(value) {
  if (props.compactCalendar) closeCalendar()
  emit('date-change', value)
+ nextTick(focusDate)
 }
 onMounted(async () => { await nextTick(); measure(); focusDate() })
 watch(() => props.date, focusDate)
@@ -78,9 +88,8 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .datefloat::after { border:0; }
 .datefloat--pressed { transform:scale(.95); }
 .cal-scrim { position:absolute; top:0; right:0; bottom:0; left:0; z-index:7; }
-.cal-float { position:absolute; top:42px; left:12px; right:12px; z-index:8; border-radius:14px; background:linear-gradient(#fefffe,#f7f9f7); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),0 12px 30px rgba(28,57,42,.18); overflow:hidden; animation:calIn 180ms cubic-bezier(.23,1,.32,1) backwards; transition:opacity 180ms cubic-bezier(.23,1,.32,1),transform 180ms cubic-bezier(.23,1,.32,1); }
-.cal-float.cal-out { opacity:0; transform:translateY(-5px) scale(.98); pointer-events:none; }
-@keyframes calIn { from { opacity:0; transform:translateY(-6px) scale(.98); } }
+.cal-float { position:absolute; top:42px; left:12px; right:12px; z-index:8; border-radius:14px; background:linear-gradient(#fefffe,#f7f9f7); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),0 12px 30px rgba(28,57,42,.18); overflow:hidden; transition:opacity 190ms cubic-bezier(.23,1,.32,1),transform 190ms cubic-bezier(.23,1,.32,1); }
+.cal-float.cal-out { opacity:0; transform:translateY(-6px) scale(.97); pointer-events:none; }
 .timeline-scroll { flex:1; min-height:0; }
 .timeline-empty { flex:1; min-height:0; }
 .timeline { position:relative; }
