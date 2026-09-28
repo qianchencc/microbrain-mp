@@ -1,5 +1,7 @@
 # 区域异常提示交接
 
+后续 `unconfirmed` 任务也会产生未查看提示；当前语义以 [统一任务模型](../docs/adr/0004-unified-task-model-and-phase-execution.md) 为准。本记录保留初次交付时的验证范围。
+
 日期：2026-09-28。范围：区域工作台票 12；依据 `.scratch/region-workbench/issues/12-attention-seen-refresh.md`。
 
 ## 已接通

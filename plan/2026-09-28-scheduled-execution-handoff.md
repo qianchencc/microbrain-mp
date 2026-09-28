@@ -1,5 +1,7 @@
 # 定时任务到点执行交接
 
+后续照明受理但未核验的结果归为 `unconfirmed`，不再误归 `failed`；当前状态以 [统一任务模型](../docs/adr/0004-unified-task-model-and-phase-execution.md) 为准。本记录保留初次交付时的测试证据。
+
 日期：2026-09-28。范围：区域工作台票 07；设计依据 `.scratch/region-workbench/issues/07-scheduled-execution.md` 与 ADR 0004。
 
 ## 已接通
