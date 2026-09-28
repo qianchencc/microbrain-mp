@@ -5,6 +5,7 @@ const outcomeLabel = { verified: '已核验', satisfied: '已满足', unconfirme
  unreadable: '读取失败', missing: '设备缺失', not_dispatched: '未下发', pending: '待执行' }
 
 function summary(steps) {
+ if (steps.some(step => step.phaseStatus === 'cancelled')) return { text: '已取消', tone: 'wait' }
  if (steps.every(step => step.phaseStatus === 'missed')) return { text: '已错过', tone: 'fail' }
  if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '执行中断', tone: 'warn' }
  if (steps.some(step => step.phaseStatus === 'executing')) return { text: '执行中', tone: 'active' }
@@ -36,7 +37,7 @@ export function deviceTimelineItems(events) {
    endAt: steps.length > 1 ? last.at : undefined, label: targets.join(' → '), taskLabel: first.taskLabel,
    sourceText: first.sourceType === 'sample' ? '演示' : first.sourceType === 'immediate_draft' ? '即时' : '定时',
    resultText: result.text, resultTone: result.tone, creatorName: first.creatorName,
-   faded: allSettled,
+   faded: allSettled || first.taskStatus === 'cancelled',
   }]
  })
 }

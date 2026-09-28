@@ -36,8 +36,8 @@ export function taskDetailView(task) {
   ...phase, title: task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束',
   time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusText[phase.status] || phase.status,
   devices: (phase.devices || []).map(device => ({ ...device, targetText: targetText(device.kind, device.target),
-   resultText: resultText(device),
-   resultTone: ['verified', 'satisfied'].includes(device.outcome) ? 'ok' : ['unconfirmed', 'unknown'].includes(device.outcome) ? 'warn' : device.outcome === 'pending' ? 'wait' : 'fail' })),
+   resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device),
+   resultTone: phase.status === 'cancelled' ? 'wait' : ['verified', 'satisfied'].includes(device.outcome) ? 'ok' : ['unconfirmed', 'unknown'].includes(device.outcome) ? 'warn' : device.outcome === 'pending' ? 'wait' : 'fail' })),
  }))
  const count = new Set(phases.flatMap(phase => phase.devices.map(device => device.id))).size
  const problemCount = phases.flatMap(phase => phase.devices).filter(device => !['verified', 'satisfied', 'pending'].includes(device.outcome)).length

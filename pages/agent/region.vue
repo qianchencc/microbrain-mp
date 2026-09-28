@@ -10,10 +10,10 @@
      <view v-else class="empty"><image class="empty-art" :src="emptyArt" mode="aspectFit" /><text class="empty-title">这一天还没有任务记录</text><text>在物联 Agent 中确认设备操作后，</text><text>结果会显示在这里。</text></view>
     </template>
     <template #card="{ item }">
-     <view class="task-row">
+     <view class="task-row" :class="{ cancelled: item.status === 'cancelled' }">
      <view class="avatars"><view v-for="avatar in item.avatars" :key="avatar.id" class="device-avatar"><image v-if="avatar.src" :src="avatar.src" mode="aspectFit" /><uni-icons v-else type="gear" size="13" color="#7c8d82" /></view><text v-if="item.more" class="more">+{{ item.more }}</text></view>
      <text class="task-label">{{ item.label }}</text>
-     <text v-if="!item.faded" class="task-state" :class="item.status">{{ item.statusText }}</text>
+     <text v-if="!item.faded || item.status === 'cancelled'" class="task-state" :class="item.status">{{ item.statusText }}</text>
      <text class="creator">{{ item.creatorName }}</text>
      </view>
     </template>
@@ -21,7 +21,7 @@
   </view>
   <view class="device-dock"><button class="device-entry" hover-class="device-entry--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button></view>
   <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
-  <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" />
+  <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
 </template>
 <script setup>
@@ -128,6 +128,8 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-state.failed { color:#a76950; }
 .task-state.executing { color:#176b54; }
 .task-state.missed,.task-state.interrupted { color:#a76950; }
+.task-state.cancelled { color:#7a8b80; }
+.task-row.cancelled .task-label { text-decoration:line-through; text-decoration-color:#9caaa0; }
 .device-dock { flex-shrink:0; height:70px; display:flex; align-items:center; justify-content:center; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
 .device-entry { height:44px; min-width:130px; margin:0; padding:0 20px; border:1px solid #dce5dd; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#fff,#f2f6f1); box-shadow:0 5px 18px #233a2d1c; color:#315846; font-size:13px; font-weight:600; }
 .device-entry::after { border:0; }

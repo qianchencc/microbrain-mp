@@ -9,6 +9,7 @@
     <text class="task-when">{{ detail.whenText }}</text>
     <view class="owner-line"><view class="owner-mark">{{ detail.creator.displayName.slice(0, 1) }}</view><text class="owner-name">{{ detail.creator.displayName }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
     <view class="summary" :class="{ warning: ['partial', 'failed', 'interrupted', 'missed'].includes(detail.status) }">{{ detail.summary }}</view>
+    <text v-if="actionError" class="action-error">{{ actionError }}</text>
     <text class="section-title">阶段 · {{ detail.phases.length }}</text>
     <view v-for="(phase, index) in detail.phases" :key="phase.id" class="phase">
      <view class="phase-rail"><view class="phase-node" :class="{ complete: ['verified', 'satisfied', 'completed'].includes(phase.status), ending: detail.phases.length > 1 && index === 1 }" /><view v-if="index < detail.phases.length - 1" class="phase-link" /></view>
@@ -24,19 +25,20 @@
      </view>
     </view>
     <view class="source"><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId">对话 {{ detail.source.conversationId.slice(0, 8) }}</text></view>
+    <button v-if="detail.canCancel && !sampleTask" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="deleteTask">删除任务</button>
    </view>
   </scroll-view>
  </DeviceSheet>
 </template>
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { getTaskDetail } from '@/apis/agent'
+import { cancelTask, getTaskDetail } from '@/apis/agent'
 import DeviceSheet from './DeviceSheet.vue'
 import { taskDetailView } from '../task-detail-view.mjs'
 
 const props = defineProps({ open: Boolean, taskId: String, sampleTask: Object, regionName: String })
-defineEmits(['close'])
-const task = ref(null), loading = ref(false), error = ref('')
+const emit = defineEmits(['close', 'cancelled'])
+const task = ref(null), loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
 const detail = computed(() => taskDetailView(task.value))
 let requestId = 0, refreshTimer
 async function load(silent = false) {
@@ -51,8 +53,26 @@ async function load(silent = false) {
  } catch (cause) { if (!silent && current === requestId) error.value = cause.message || '任务暂不可用' }
  finally { if (!silent && current === requestId) loading.value = false }
 }
+async function deleteTask() {
+ if (!detail.value?.canCancel || cancelling.value) return
+ const taskId = props.taskId, version = task.value.version
+ const confirmed = await new Promise(resolve => uni.showModal({ title: '删除任务',
+  content: '未执行的阶段将取消；已经执行的设备动作不会回滚。', confirmText: '删除任务', confirmColor: '#a15343',
+  success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ if (!confirmed || !props.open || props.taskId !== taskId) return
+ cancelling.value = true; actionError.value = ''
+ try {
+  await cancelTask(taskId, version)
+  await load(true)
+  emit('cancelled')
+ } catch (cause) {
+  actionError.value = cause.message || '删除失败，请刷新后重试'
+  await load(true)
+ } finally { cancelling.value = false }
+}
 watch(() => [props.open, props.taskId, props.sampleTask], () => {
  clearInterval(refreshTimer)
+ actionError.value = ''
  if (props.open) {
   load()
   if (!props.sampleTask) refreshTimer = setInterval(() => {
@@ -102,4 +122,7 @@ button::after { border:0; }
 .result.ok { color:#397b61; }.result.warn { color:#a27128; }.result.fail { color:#a15343; }.result.wait { color:#839189; }
 .no-devices { display:block; padding:12px 0; color:#839189; font-size:11px; }
 .source { display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid #e2e9e3; color:#85958a; font-size:11px; }
+.task-delete { width:100%; height:38px; margin:18px 0 0; border:1px solid #ead6d1; border-radius:8px; background:#fff; color:#9a5549; font-size:12px; line-height:36px; }
+.task-delete[disabled] { opacity:.55; }
+.action-error { display:block; margin-top:10px; color:#a15343; font-size:11px; }
 </style>
