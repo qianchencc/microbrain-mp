@@ -1,0 +1,32 @@
+<!-- 原型探针（2026-09-28 实测可播）：海康 h5player 端到端验证页。
+     用法：本地起静态服务，把客户域 /owner/static/h5player/ 资产镜像到 ./static/h5player/，
+     带 ?url=<encodeURIComponent(运行时 video-stream 返回的 wss 地址)> 打开。
+     生产页面见 docs/research/2026-09-28-camera-and-sensor-integration.md 第八节之二。 -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>h5play probe</title>
+<style>html,body{margin:0;background:#111;color:#7f7;font:12px/1.5 monospace}#playWnd{width:640px;height:360px;background:#000}#log{white-space:pre-wrap;padding:8px;max-width:640px}</style></head>
+<body><div id="playWnd"></div><pre id="log"></pre>
+<script>
+const __lines=[];
+const log=(...a)=>{const s=a.map(x=>{try{return typeof x==='object'?JSON.stringify(x):String(x)}catch(_){return'?'}}).join(' ');__lines.push(s);const el=document.getElementById('log');if(el)el.textContent=__lines.join('\n');window.__log=__lines.join('\n');};
+['log','info','warn','error','debug'].forEach(k=>{const o=console[k].bind(console);console[k]=(...a)=>{o(...a);log('[c.'+k+']',...a)}});
+window.onerror=(m,s,l,c,e)=>log('[onerror]',m,s,l,c);window.onunhandledrejection=e=>log('[rej]',e.reason&&e.reason.message||e.reason);
+window.__status='init';
+</script>
+<script src="./static/h5player/h5player.min.js"></script>
+<script>
+(function(){
+log('UA:',navigator.userAgent);
+log('JSPlugin type:',typeof JSPlugin);
+const url=new URLSearchParams(location.search).get('url');
+if(!url){window.__status='nourl';log('no url param');return}
+log('url:',url);
+try{
+ const p=new JSPlugin({szId:'playWnd',iWidth:640,iHeight:360,szBasePath:'./static/h5player/',oStyle:{border:'#343434',borderSelect:'#FFCC00',background:'#000'},openDebug:true});
+ window.__plugin=p;window.__status='plugin-ready';log('plugin created');
+ const r=p.JS_Play(url,{playURL:url,mode:0},1);
+ if(r&&r.then)r.then(x=>{window.__status='playing';log('JS_Play resolved',x)},e=>{window.__status='play-fail';log('JS_Play rejected',e)});
+ else{window.__status='called';log('JS_Play returned',typeof r,r)}
+}catch(e){window.__status='throw';log('throw',e&&e.message||e)}
+})();
+setInterval(()=>{const c=document.querySelector('#playWnd canvas');window.__canvas=!!c;},1000);
+</script></body></html>

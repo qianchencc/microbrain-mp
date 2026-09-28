@@ -107,9 +107,46 @@
 
 - **`/proxy/{dev}/openUrl/{token}` 不是面向客户端的 WS 端点**：直接 upgrade 返回 mgc 404，属预期——token 不走该路径握手。
 - **正确链路**：`wss://{外网代理}:6014/media?version=0.1&cipherSuites=0&sessionID=&proxy={dev}` 建立 WS（**不带 Sec-WebSocket-Protocol**，服务端不协商子协议）→ 服务端下发 `{"PKD","rand"}` → 客户端发 `{sequence:0,cmd:"realplay",url:"ws://{dev}/openUrl/{token}"}` → 此后应接 SDP 与媒体帧。与客户 SPA 打包代码中的 URL 变换、套接字构造、realplay 载荷完全一致。
-- **当前卡点在上游**：realplay 被受理后返回 `{"errorCode":24317633,"errorMsg":"errPlatformIp=;errPlatformName=sb68tg==","statusCode":1,"statusString":"ERROR"}`——媒体网关向上游平台建流失败（平台 IP 为空）。四种 URL/版本变体结果一致，客户端路径已排除嫌疑。可能原因：摄像头在海康媒体层当前不可流（iot-center 的 `onlineStatus` 是另一份记录）、token 与调用方会话绑定、或媒体节点不匹配。**裁决实验**：在客户"智慧监控"H5（`ncim.577119.com/owner/#/pages/monitor/index`）实际播放同一台摄像头——能播则对齐其网络轨迹，不能播则属客户侧问题。
-- **设计结论**：播放页必须内嵌海康官方 h5player SDK（wasm 解码 + 私有协议，JSPlugin 形态），自研解码器不可行；`view`→前端→JSPlugin 的"现取现返"交接模式与协议兼容；回放命令 `playback` 在同一协议内已见形态（客户依赖第 3 项不变）。
-- **客户依赖新增**：确认 `view` 颁发的 openUrl token 是否绑定调用方会话/IP——若绑定，Runtime 代取模式在浏览器侧放不了，需改由 H5 页携带用户 token 直接调用 `interactive/{hub}/{view}/down`（webView 已注入 token/tenantCode，生产下取流端点同域，无新增鉴权管线）。
+- ~~**当前卡点在上游**~~（09-28 晚间实测推翻，见下文第八节之二）：裸 `realplay`（无认证字段或字段为空）返回 `{"errorCode":24317633,"errorMsg":"errPlatformIp=;errPlatformName=sb68tg==","statusCode":1,"statusString":"ERROR"}`——该错误**不是平台路由失败，而是 realplay 认证缺失的服务端拒绝**，错误文案有误导性。
+- **设计结论**：播放页必须内嵌海康官方 h5player SDK（wasm 解码 + 私有协议 + PKD/rand 认证计算，JSPlugin 形态），自研解码器不可行；`view`→前端→JSPlugin 的"现取现返"交接模式与协议兼容；回放命令 `playback` 在同一协议内已见形态（客户依赖第 3 项不变）。
+
+## 八之二、端到端播放验证（2026-09-28 晚，自建页面实测通过）
+
+用户在客户监控 H5 实测"能播"后，用**官方 h5player 本体 + 自建最小页面**在真实浏览器（headless Chrome 154）完成端到端验证：
+
+- **播放成功**：`new JSPlugin({szId, szBasePath}).JS_Play(url, {playURL:url, mode:0}, 1)` → WS `onopen` → PKD/rand hello（`version:"2.0"`,`cipherSuite:"0"`）→ SDK 内部完成认证 → 服务端返回 `{"errorCode":0,"statusString":"OK","sdp":"v=0…"}` → IMKH 媒体头 → **首帧解码成功：H.265 640×368**，`PlayM4_Play sucessed`，JS_Play promise resolve；截图确认画面为实时视频（OSD 时间戳与当前时间一致）。
+- **裸探针失败的根因**：PKD/rand 服务端握手要求 realplay 命令携带认证字段（`key`/`authorization`/`token`，由 PKD+rand+iv 经 AES/HMAC/SHA256 派生，SDK 内部完成）。我此前探针发送空字段或缺字段 → 服务端拒绝并报 `errPlatformIp=`（误导性文案）。**认证是协议必要环节，只有官方 SDK 能做**——进一步坐实"必须嵌官方 SDK"的结论。
+- **token 无调用方绑定**：`POST /api/office/app/device/monitor/down`（`{monitorAreaDeviceId, noTip:true}`，服务端 python 调用、无浏览器 cookie）颁发的 URL 在另一浏览器上下文直接可播 → Runtime 代取模式（`video-stream` 端点）在浏览器侧可放，**不存在会话绑定问题**。
+- **SDK 资产已在客户域托管，零部署成本**：`https://ncim.577119.com/owner/static/h5player/` 全量在位——`h5player.min.js`(874KB)、`playctrl1/`、`playctrl1simd/`、`playctrl2/`、`playctrl3/`(+wasm+worker)、`talk/`、`talkW/`。自建页只要挂在 `ncim.577119.com` 任意路径（同域可加载 worker/wasm），`szBasePath:"/owner/static/h5player/"` 即可，**唯一需要新增部署的是页面 HTML 本身**（微信业务域名白名单已覆盖该域）。备选：复制该目录到播放页自身路径，解耦 owner 目录变动风险。
+- **解码路径选择**：无 SharedArrayBuffer（headless Chrome / 微信 WebView 同此特征）→ `decoder1.0`（`playctrl1simd/`，x86 simd wasm；iOS 等非 simd 走 `playctrl1/`）；有 SAB → `playctrl3/`（decoder2.0）。全部资产已托管，无需裁剪。
+- **监控设备目录补充**：`GET /app/device/monitor/devicePage` 为账号级监控设备台账（35 台），`monitor/down` 按其 `id` 取流；`监控-26楼运营走廊` 与 `监控-26楼运营走廊2` 是不同摄像头（hubDeviceId 各异）。Agent 链路继续走 Runtime `video-stream` 端点（观察范围边界更小、语义正确），`monitor/down` 仅作对照证据。
+
+**H5 播放页最小验证实现**（实测可播，供生产页面参考）：
+
+```html
+<div id="playWnd"></div>
+<script src="/owner/static/h5player/h5player.min.js"></script>
+<script>
+// url = Runtime GET /api/agent/devices/:id/video-stream 返回的 wss 地址
+var plugin = new JSPlugin({
+  szId: 'playWnd', iWidth: 640, iHeight: 360,
+  szBasePath: '/owner/static/h5player/',
+  oStyle: { border: '#343434', background: '#000' }, openDebug: false
+});
+plugin.JS_Play(url, { playURL: url, mode: 0 }, 1)
+  .then(function(){ /* playing */ })
+  .catch(function(){ /* 取流重试：重新请求 video-stream 换新 URL 再播 */ });
+// 页面关闭前：plugin.JS_Stop && plugin.JS_Stop(); 释放解码与 WS
+</script>
+```
+
+**H5 播放页生产规格（设计 agent 输入）**：
+
+- 路由入参优先 `deviceId`（不穿越长寿命凭据/URL）；页面用 webView 注入的 `token`/`tenantCode` 作 `Authorization`/`Tenantcode` 头调 `GET /api/agent/devices/:id/video-stream` 现取短时效 URL（生产下同域 `/micro-api/api/ai`，零新增鉴权）。兜底可收 `stream=` 直参（小程序侧先取流再跳转）。
+- 状态机：取流中 → SDK 初始化 → 播放中 → 断流/错误（可重试，重试必须重新取流，旧 URL 短时效）；取流 404/503 与 SDK 播放错误分开呈现，不谎报"摄像头离线"（在线态另有 `onlineStatus`）。
+- 生命周期：页面隐藏/卸载时 `JS_Stop`；`beforeunload`/`pagehide` 都要挂。
+- 能力边界：实时预览单画面（iMaxSplit=1）；无音频对讲（不加载 talk 资产）、无录像（不加载 transform 资产）、无回放（接口未暴露）。
+- 部署：页面 + 可选 SDK 目录镜像放 `ncim.577119.com` 下任一路径；微信业务域名已覆盖。
 
 ## 证据分级
 
