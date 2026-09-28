@@ -2,7 +2,6 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
-import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
 
 test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 34px', () => {
  assert.equal(timelineYOf('2026-09-25T01:00:00+08:00', '2026-09-25') - timelineYOf('2026-09-25T00:00:00+08:00', '2026-09-25'), 34)
@@ -32,11 +31,4 @@ test('设备阶段卡区分待核验、进行中和部分完成', () => {
  assert.equal(deviceTimelineItems([{ ...morning, phaseStatus: 'executing', outcome: 'pending' }])[0].resultText, '执行中')
  assert.equal(deviceTimelineItems([{ ...morning, taskStatus: 'cancelled' },
   { ...later('not_dispatched'), taskStatus: 'cancelled', phaseStatus: 'cancelled' }])[0].resultText, '已取消')
-})
-
-test('已取消任务保留在区域时间轴且显示取消状态', () => {
- const item = regionTimelineItems([{ id: 'task', status: 'cancelled', label: '会议灯光',
-  phases: [{ at: '2026-09-27T03:00:00Z' }], devices: [], creator: { displayName: '成员' } }])[0]
- assert.equal(item.faded, true)
- assert.equal(item.statusText, '已取消')
 })

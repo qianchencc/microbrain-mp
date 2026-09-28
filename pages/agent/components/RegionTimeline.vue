@@ -9,7 +9,7 @@
    <view v-if="scene.showNowLabel" class="time-label now" :style="{ top: scene.nowY + 'px' }"><text>现在</text><text>{{ scene.nowText }}</text></view>
    <text v-for="day in scene.dates" :key="day.date" class="date-label" :style="{ top: day.y + 'px' }">{{ day.date.slice(5).replace('-', ' / ') }}</text>
    <view v-for="item in scene.cards" :id="'timeline-card-' + item.id" :key="item.id" class="card-target" :style="{ top: item.top - 6 + 'px' }" @tap="interactive && $emit('select', item)">
-    <view class="timeline-card" :class="{ faded: item.faded }" :hover-class="interactive ? 'timeline-card--pressed' : 'none'"><slot name="card" :item="item"><text class="card-label">{{ item.label }}</text></slot></view>
+    <view class="timeline-card" :class="{ faded: item.faded, executing: item.status === 'executing' }" :hover-class="interactive ? 'timeline-card--pressed' : 'none'"><slot name="card" :item="item"><text class="card-label">{{ item.label }}</text></slot></view>
    </view>
    <text v-if="renderError" class="render-error">{{ renderError }}</text>
   </view>
@@ -67,9 +67,11 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .now text:first-child { font-size:8px; margin-bottom:2px; }
 .date-label { position:absolute; left:80px; right:14px; color:#a9b6ae; font-size:10px; text-align:center; transform:translateY(-50%); }
 .card-target { position:absolute; left:84px; right:14px; padding:6px 0; }
-.timeline-card { height:32px; padding:0 7px 0 11px; border-radius:10px; display:block; line-height:32px; background:linear-gradient(#fefffe,#f9fbf9); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.13), inset 0 1px 0 #fff, 0 1px 2px rgba(28,57,42,.05), 0 6px 14px -10px rgba(28,57,42,.2); transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.timeline-card { position:relative; height:32px; padding:0 7px 0 11px; border-radius:10px; display:block; line-height:32px; background:linear-gradient(#fefffe,#f9fbf9); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.13), inset 0 1px 0 #fff, 0 1px 2px rgba(28,57,42,.05), 0 6px 14px -10px rgba(28,57,42,.2); transition:transform 140ms cubic-bezier(.23,1,.32,1); }
 .timeline-card--pressed { transform:scale(.985); }
 .timeline-card.faded { opacity:.6; }
+.timeline-card.executing { box-shadow:inset 0 0 0 1px #176b5452, inset 0 1px 0 #fff, 0 6px 16px -10px #176b5473; }
+.timeline-card.executing::before { content:""; position:absolute; left:4px; top:9px; bottom:9px; width:2.5px; border-radius:2px; background:#176b54; }
 .card-label { display:block; font-size:12.5px; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .render-error { position:absolute; top:470px; left:90px; color:#a34036; font-size:13px; }
 @media (prefers-reduced-motion:reduce) { .timeline-card { transition:none; } }

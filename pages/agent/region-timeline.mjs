@@ -1,15 +1,11 @@
 import { resolveDeviceArtwork } from './device-art/catalog.js'
 
 export function regionTimelineItems(tasks) {
- return tasks.map(task => {
-  const uncertain = task.devices.some(device => ['unconfirmed', 'unknown'].includes(device.outcome))
-  const failed = task.devices.some(device => ['rejected', 'missing', 'unreadable', 'not_dispatched'].includes(device.outcome))
-  return {
+ return tasks.map(task => ({
    ...task, at: task.phases[0].at, endAt: task.phases.length > 1 ? task.phases.at(-1).at : undefined,
    faded: task.status === 'completed' || task.status === 'cancelled',
-   statusText: task.status === 'scheduled' ? '已安排' : task.status === 'executing' ? '执行中' : task.status === 'completed' ? '已完成' : task.status === 'partial' ? '部分完成' : task.status === 'cancelled' ? '已取消' : task.status === 'missed' ? '已错过' : task.status === 'interrupted' ? '执行中断' : uncertain && !failed ? '待核验' : '未完成',
+   warning: ['partial', 'failed', 'missed', 'interrupted'].includes(task.status),
    avatars: task.devices.slice(0, 3).map(device => ({ id: device.id, src: resolveDeviceArtwork({ ...device, deviceName: device.name }).src })),
    more: Math.max(0, task.devices.length - 3), creatorName: task.creator.displayName,
-  }
- })
+ }))
 }

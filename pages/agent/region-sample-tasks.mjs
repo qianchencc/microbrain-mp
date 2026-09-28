@@ -9,10 +9,10 @@ export function regionSampleTasks(date, regionId) {
   source: { type: 'sample' }, canCancel: false,
  })
  return [
-  { ...task('meeting-window', '会议室空调时段', '09:00', 'completed', [device('ac-window', 'ac', '会议室空调', 'verified')]),
+  { ...task('meeting-window', '客户会议 · 会议室B', '14:00', 'executing', [device('ac-window', 'ac', '会议室空调', 'verified')]),
    phases: [
-    { id: 'sample-phase-window-start', at: at('09:00'), status: 'verified', devices: [{ ...device('ac-window', 'ac', '会议室空调', 'verified'), target: { power: 'on', temperature: 26 } }] },
-    { id: 'sample-phase-window-end', at: at('14:00'), status: 'verified', devices: [{ ...device('ac-window', 'ac', '会议室空调', 'verified'), target: { power: 'off' } }] },
+    { id: 'sample-phase-window-start', at: at('14:00'), status: 'verified', devices: [{ ...device('ac-window', 'ac', '会议室空调', 'verified'), target: { power: 'on', temperature: 26 } }] },
+    { id: 'sample-phase-window-end', at: at('15:30'), status: 'pending', devices: [{ ...device('ac-window', 'ac', '会议室空调', 'pending'), target: { power: 'off' } }] },
    ] },
   task('morning-ac', '晨间空调开启', '08:30', 'completed', [
    device('ac-east', 'ac', '东区空调', 'verified'), device('ac-west', 'ac', '西区空调', 'satisfied'),

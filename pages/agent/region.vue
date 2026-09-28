@@ -11,10 +11,10 @@
     </template>
     <template #card="{ item }">
      <view class="task-row" :class="{ cancelled: item.status === 'cancelled' }">
+     <text class="task-label"><text v-if="item.warning" class="warning-dot" />{{ item.label }}</text>
      <view class="avatars"><view v-for="avatar in item.avatars" :key="avatar.id" class="device-avatar"><image v-if="avatar.src" :src="avatar.src" mode="aspectFit" /><uni-icons v-else type="gear" size="13" color="#7c8d82" /></view><text v-if="item.more" class="more">+{{ item.more }}</text></view>
-     <text class="task-label">{{ item.label }}</text>
-     <text v-if="!item.faded || item.status === 'cancelled'" class="task-state" :class="item.status">{{ item.statusText }}</text>
-     <text class="creator">{{ item.creatorName }}</text>
+     <view class="task-separator" />
+     <view class="owner-mark" :aria-label="item.creatorName">{{ item.creatorName.slice(0, 1) }}</view>
      </view>
     </template>
    </RegionTimeline>
@@ -46,7 +46,7 @@ const selectedTaskId = ref(''), sampleDetail = ref(null), sampleDate = ref('')
 const calendarMarks = ref([]), calendarMonth = ref(''), calendarError = ref(false)
 const now = ref(new Date().toISOString()), today = computed(() => localDate(now.value)), date = ref(localDate(now.value))
 const maxDate = computed(() => shiftDate(today.value, 7))
-const displayNow = computed(() => sampleMode.value ? `${date.value}T14:45:00+08:00` : now.value)
+const displayNow = computed(() => sampleMode.value ? `${date.value}T14:52:00+08:00` : now.value)
 const items = computed(() => regionTimelineItems(tasks.value))
 let initialRegion = '', initialDate = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer
 onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || '' })
@@ -124,20 +124,16 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .notice { padding:70px 24px; text-align:center; font-size:13px; color:#89958e; }
 .notice button { margin-top:18px; background:transparent; font-size:13px; color:#176b54; }
 .notice button::after { border:0; }
-.task-row { display:flex; align-items:center; gap:6px; height:32px; min-width:0; }
+.task-row { display:flex; align-items:center; gap:7px; height:32px; min-width:0; }
 .avatars { display:flex; align-items:center; flex-shrink:0; }
 .device-avatar { width:21px; height:21px; margin-left:-7px; border:1px solid #fff; border-radius:50%; background:#edf2ee; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .device-avatar image { width:21px; height:21px; }
 .device-avatar:first-child { margin-left:0; }
 .more { font-size:8px; margin-left:2px; color:#7a8d80; }
-.task-label { flex:1; min-width:0; font-size:11px; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.creator { flex-shrink:0; font-size:9px; color:#91a097; }
-.task-state { flex-shrink:0; font-size:8px; color:#9e742f; }
-.task-state::before { content:""; display:inline-block; width:4px; height:4px; margin:0 3px 1px 0; border-radius:50%; background:currentColor; }
-.task-state.failed { color:#a76950; }
-.task-state.executing { color:#176b54; }
-.task-state.missed,.task-state.interrupted { color:#a76950; }
-.task-state.cancelled { color:#7a8b80; }
+.task-label { flex:1; min-width:0; font-size:12px; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.warning-dot { display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:#b57932; box-shadow:0 0 0 2px #f7ecd8; vertical-align:1px; }
+.task-separator { width:1px; height:14px; flex-shrink:0; background:#e1e8e2; }
+.owner-mark { width:22px; height:22px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#3a9478,#11553f); color:#fff; font-size:9px; font-weight:700; }
 .task-row.cancelled .task-label { text-decoration:line-through; text-decoration-color:#9caaa0; }
 .device-dock { flex-shrink:0; height:70px; display:flex; align-items:center; justify-content:center; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
 .device-entry { height:44px; min-width:130px; margin:0; padding:0 20px; border:1px solid #dce5dd; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#fff,#f2f6f1); box-shadow:0 5px 18px #233a2d1c; color:#315846; font-size:13px; font-weight:600; }
