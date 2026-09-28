@@ -18,6 +18,8 @@ export const listRegionDeviceStates = regionId => request(`/agent/regions/${enco
 export const listRegionTimeline = (regionId, date) => request(`/agent/regions/${encodeURIComponent(regionId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 export const listRegionCalendar = (regionId, from, to) => request(`/agent/regions/${encodeURIComponent(regionId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getTaskDetail = taskId => request(`/agent/tasks/${encodeURIComponent(taskId)}`, 'GET')
+export const confirmTask = (taskId, version) => request(`/agent/tasks/${encodeURIComponent(taskId)}/confirm`, 'POST', { version })
+export const discardTask = taskId => request(`/agent/tasks/${encodeURIComponent(taskId)}/discard`, 'POST')
 export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${encodeURIComponent(deviceId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const restoreConversation = () => request('/agent/conversations/current', 'GET')

@@ -12,6 +12,7 @@ export const railX = (y, peakY) => 55.5 + 8.5 * Math.cos(2 * Math.PI * (y - peak
 export function createTimeline({ date, items = [], now = new Date().toISOString(), width = 340, days = 1 }) {
  const height = TOP_PAD * 2 + days * 24 * HOUR_PX
  const yOf = instant => timelineYOf(instant, date)
+ const viewportBottom = height - TOP_PAD
  const nowY = yOf(now)
  const peakY = yOf(`${localDate(now)}T10:30:00+08:00`)
  const xOf = y => railX(y, peakY)
@@ -31,9 +32,19 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
  path(rail, { stroke: '#b9c8be', lineWidth: 1.6 })
  path(rail, { stroke: '#81958a', lineWidth: 1.6, clipY: Math.max(0, nowY) })
 
- const events = items.map(item => ({ ...item, y: yOf(item.at), endY: item.endAt ? yOf(item.endAt) : null }))
+ const events = items.map(item => {
+  const rawY = yOf(item.at), rawEndY = item.endAt ? yOf(item.endAt) : null
+  const interval = rawEndY !== null && rawEndY > rawY
+  return { ...item, rawY, rawEndY, interval,
+   y: interval ? Math.max(TOP_PAD, rawY) : rawY,
+   endY: interval ? Math.min(viewportBottom, rawEndY) : null,
+   startVisible: rawY >= TOP_PAD && rawY < viewportBottom,
+   endVisible: rawEndY !== null && rawEndY >= TOP_PAD && rawEndY < viewportBottom }
+ }).filter(item => item.interval ? item.rawY < viewportBottom && item.rawEndY >= TOP_PAD : item.startVisible)
  const intervals = events.filter(item => item.endY !== null && item.endY > item.y)
- const anchors = events.flatMap(item => item.endY === null ? [item.y] : [item.y, item.endY])
+ const anchors = events.flatMap(item => [
+  ...(item.startVisible ? [item.y] : []), ...(item.endVisible ? [item.endY] : [])
+ ])
  const ticks = []
  for (let day = 0; day < days; day++) for (let hour = 0; hour < 24; hour += 3) {
   const y = TOP_PAD + (day * 24 + hour) * HOUR_PX
@@ -43,8 +54,8 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
   rect(xOf(y) - 3.2, y - 1.7, 6.4, 3.4, 1.7, y < nowY ? '#a5bbae' : '#bfcec4')
  }
  const exact = events.flatMap(item => [
-  { y: item.y, text: localTime(item.at), kind: 'event' },
-  ...(item.endY === null ? [] : [{ y: item.endY, text: localTime(item.endAt), kind: 'event' }])
+  ...(item.startVisible ? [{ y: item.y, text: localTime(item.at), kind: 'event' }] : []),
+  ...(item.endVisible ? [{ y: item.endY, text: localTime(item.endAt), kind: 'event' }] : [])
  ]).filter((item, index, all) => all.findIndex(other => other.y === item.y) === index)
  const labels = [...exact, ...ticks].sort((a, b) => a.y - b.y).map(item => ({ ...item, displayY: item.y }))
  for (let pass = 0; pass < 3; pass++) for (let i = 1; i < labels.length; i++) {
@@ -60,14 +71,15 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
   return { left: [round(xOf(y)), round(y)], right: [round(xOf(y) + width * nx), round(y + width * ny)] }
  }
  intervals.forEach(item => {
-  const points = sampled(item.y, item.endY).map(y => ribbonPoint(y, item.y, item.endY))
+  const points = sampled(item.y, item.endY).map(y => ribbonPoint(y, item.rawY, item.rawEndY))
   const commands = points.map((p, i) => [i ? 'L' : 'M', ...p.left]).concat(points.slice().reverse().map(p => ['L', ...p.right]), [['Z']])
   path(commands, { fill: 'future' })
   if (nowY > item.y) path(commands, { fill: 'elapsed', clipY: Math.max(0, nowY) })
  })
  let previousBottom = -1
  const cards = events.slice().sort((a, b) => a.y - b.y).map(item => {
-  const top = Math.max(item.y - 16, previousBottom)
+  const cardY = item.interval && !item.startVisible ? (item.y + item.endY) / 2 : item.y
+  const top = Math.max(cardY - 16, previousBottom)
   previousBottom = top + 40
   const anchorY = item.endY === null ? item.y : (item.y + item.endY) / 2
   const x1 = Math.min(xOf(anchorY) + (item.endY === null ? 5 : 13), 78)
@@ -80,15 +92,13 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
   const start = Math.max(xOf(nowY) + 9, ...edges)
   path([['M', round(start), nowY], ['L', width - 14, nowY]], { stroke: '#b9862b', lineWidth: 1, dash: [4, 5], opacity: .68 })
  }
- const starts = new Set(intervals.map(item => item.y))
+ const starts = new Set(events.filter(item => item.interval && item.startVisible).map(item => item.y))
  events.filter(item => item.endY === null && !starts.has(item.y)).forEach(item => {
   if (item.y <= nowY) disk(xOf(item.y), item.y, 5.8, 3.9, '#83958a')
   else ring(xOf(item.y), item.y, '#87998e', 5.8, 3.9, 1.6)
  })
- intervals.forEach(item => {
-  disk(xOf(item.y), item.y, 7.1, 5.2, item.y <= nowY ? '#176b54' : '#a6c9b3')
-  ring(xOf(item.endY), item.endY, item.endY <= nowY ? '#176b54' : '#98b9a5')
- })
+ events.filter(item => item.interval && item.startVisible).forEach(item => disk(xOf(item.y), item.y, 7.1, 5.2, item.y <= nowY ? '#176b54' : '#a6c9b3'))
+ events.filter(item => item.interval && item.endVisible).forEach(item => ring(xOf(item.endY), item.endY, item.endY <= nowY ? '#176b54' : '#98b9a5'))
  if (nowVisible) disk(xOf(nowY), nowY, 7.5, 5.2, '#ad711b')
  const showNowLabel = nowVisible && labels.every(label => Math.abs(label.displayY - nowY) >= 25)
  const dates = Array.from({ length: days }, (_, day) => ({ date: localDate(midnight(date) + day * DAY_MS), y: TOP_PAD + day * 24 * HOUR_PX }))

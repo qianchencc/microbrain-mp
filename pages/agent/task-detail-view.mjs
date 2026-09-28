@@ -1,6 +1,6 @@
 import { fieldLabels, fanLabels, modeLabels } from './ac-draft.js'
 
-const statusText = { scheduled: '待执行', running: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', verified: '已核验', satisfied: '已达标', pending: '待执行' }
+const statusText = { scheduled: '待执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', verified: '已核验', satisfied: '已达标', pending: '待执行' }
 const outcomeText = { satisfied: '已达标，无需下发', verified: '已下发并核验', unconfirmed: '已受理，未核验', rejected: '平台拒绝', unknown: '结果未知', not_dispatched: '未下发', unreadable: '状态读取失败', missing: '设备不可用', pending: '待执行' }
 
 export function taskTime(instant) {

@@ -16,7 +16,8 @@
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
-      @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)" />
+      @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)"
+      @confirm-task="confirmTaskProposal(turn)" @discard-task="discardTaskProposal(turn)" @open-task="openTaskRegion(turn)" />
     </view>
     <view v-for="change in regionChanges.filter(change => change.before === turns.length)" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
     <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
@@ -35,10 +36,11 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { cancelAction, cancelRun, confirmAction, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
+import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
+import { taskTime } from './task-detail-view.mjs'
 import { createPresentation } from './presentation.mjs'
 import AgentComposer from './components/AgentComposer.vue'
 import AgentHeader from './components/AgentHeader.vue'
@@ -87,7 +89,7 @@ function openSheetBrowser(turn) {
  uni.hideKeyboard()
 }
 function closeSheet() { sheetDraftId.value = '' }
-let activeRequest, presentation, pollTimer, expiryTimer
+let activeRequest, presentation, pollTimer, expiryTimer, taskPollTimer
 let disposed = false, visible = true, restoring = false, sequence = 0
 // 确认在途的 draftId 集合 + 纪元计数：确认请求本身即执行结果的权威通路，
 // 期间 restore 整表回读会让路（服务端 EXECUTING 提交前的快照仍是待确认，
@@ -108,17 +110,31 @@ function handleScroll(event) { if (event.detail.deltaY > 5) nearBottom.value = f
 function schedule() {
  clearTimeout(pollTimer)
  if (visible && !disposed && (hasExecution.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
+ clearTimeout(taskPollTimer)
+ if (visible && !disposed && turns.value.some(turn => ['scheduled', 'executing'].includes(String(turn.task?.status || '').toLowerCase()))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
  clearTimeout(expiryTimer)
  const pending = turns.value.filter(turn => turn.draft?.status === 'PENDING_CONFIRMATION')
- const deadline = Math.min(...pending.map(turn => Date.parse(turn.draft.expiresAt)))
+ const pendingTasks = turns.value.filter(turn => turn.task?.status === 'PENDING_CONFIRMATION')
+ const deadline = Math.min(...pending.map(turn => Date.parse(turn.draft.expiresAt)), ...pendingTasks.map(turn => Date.parse(turn.task.expiresAt)))
  if (Number.isFinite(deadline)) expiryTimer = setTimeout(() => {
   if (mutating.value) return
   for (const turn of pending) if (turn.draft.status === 'PENDING_CONFIRMATION' && Date.parse(turn.draft.expiresAt) <= Date.now()) turn.draft.status = 'EXPIRED'
+  for (const turn of pendingTasks) if (turn.task.status === 'PENDING_CONFIRMATION' && Date.parse(turn.task.expiresAt) <= Date.now()) turn.task.status = 'EXPIRED'
   schedule()
  }, Math.max(0, deadline - Date.now()))
 }
+async function refreshScheduledTasks() {
+ const active = turns.value.filter(turn => ['scheduled', 'executing'].includes(String(turn.task?.status || '').toLowerCase()))
+ await Promise.allSettled(active.map(async turn => {
+  const id = turn.task.taskId
+  const result = await getTaskDetail(id)
+  const live = turns.value.find(item => item.task?.taskId === id)
+  if (live?.task && result.task) live.task.status = result.task.status
+ }))
+ schedule()
+}
 watch(mutating, schedule)
-watch(() => turns.value.map(turn => turn.draft ? turn.draft.draftId + turn.draft.status + turn.draft.expiresAt : '').join('|'), () => schedule())
+watch(() => turns.value.map(turn => [turn.draft?.draftId, turn.draft?.status, turn.task?.taskId, turn.task?.status].join(':')).join('|'), () => schedule())
 async function restore() {
  if (restoring || activeRequest || confirming.size || disposed) return
  restoring = true
@@ -212,6 +228,7 @@ async function runTurn(current, content) {
    for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) { previous.draft = null; previous.result = null }
   }
   if (event.type === 'action.resolved') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) previous.draft.status = event.status
+  if (event.type === 'task.resolved') for (const previous of turns.value) if (previous !== current && previous.task?.taskId === event.taskId) previous.task.status = event.status
   follow()
  })
  const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion.id)
@@ -343,6 +360,38 @@ async function confirmDraft(turn) {
  } finally { confirming.delete(draftId); mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
+async function confirmTaskProposal(turn) {
+ if (busy.value || turn.task?.status !== 'PENDING_CONFIRMATION') return
+ const taskId = turn.task.taskId
+ mutating.value = true; confirming.add(taskId); confirmEpoch++
+ let resync = false
+ try {
+  const result = await confirmScheduledTask(taskId, turn.task.version)
+  const live = turns.value.find(item => item.task?.taskId === taskId)
+  if (live?.task) { live.task.status = result.status; live.task.created = true }
+ } catch (error) {
+  errorMessage.value = error.data?.message || error.message
+  resync = true
+ } finally { confirming.delete(taskId); mutating.value = false; schedule(); follow() }
+ if (resync && !disposed) await restore()
+}
+async function discardTaskProposal(turn) {
+ if (busy.value || turn.task?.status !== 'PENDING_CONFIRMATION') return
+ const taskId = turn.task.taskId
+ mutating.value = true
+ try {
+  const result = await discardScheduledTask(taskId)
+  const live = turns.value.find(item => item.task?.taskId === taskId)
+  if (live?.task) live.task.status = result.status
+ } catch (error) { errorMessage.value = error.data?.message || error.message }
+ finally { mutating.value = false; schedule() }
+}
+function openTaskRegion(turn) {
+ const task = turn.task
+ if (!task?.regionIds?.length || !task.phases?.length) return
+ const date = taskTime(task.phases[0].at).slice(0, 10)
+ uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(task.regionIds[0])}&date=${encodeURIComponent(date)}` })
+}
 async function cancelDraft(turn) {
  if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
  mutating.value = true
@@ -414,8 +463,8 @@ function clearHistory() {
 }
 onLoad(() => { restore() })
 onShow(() => { visible = true; loadRegionFocus().catch(() => {}); if (!activeRequest) restore() })
-onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer) })
-onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
+onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer); clearTimeout(taskPollTimer) })
+onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
 <style scoped>
 

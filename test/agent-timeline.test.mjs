@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
+import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
 
 test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 34px', () => {
@@ -8,6 +8,16 @@ test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 3
  assert.equal(timelineYOf('2026-09-25T00:00:00+08:00', '2026-09-24') - timelineYOf('2026-09-24T23:00:00+08:00', '2026-09-24'), 34)
  assert.equal(timelineYOf('2026-09-24T16:00:00Z', '2026-09-24'), timelineYOf('2026-09-25T00:00:00+08:00', '2026-09-24'))
  assert.equal(localDate('2026-09-24T16:00:00Z'), '2026-09-25')
+})
+
+test('跨日任务在中间日期保留可见缎带和卡片，不显示画面外端点', () => {
+ const scene = createTimeline({ date: '2026-09-29', now: '2026-09-29T12:00:00+08:00', items: [
+  { id: 'task', at: '2026-09-28T14:00:00+08:00', endAt: '2026-09-30T15:00:00+08:00' },
+ ] })
+ assert.equal(scene.cards.length, 1)
+ assert.ok(scene.cards[0].top > 0 && scene.cards[0].top < scene.height)
+ assert.equal(scene.labels.filter(label => label.kind === 'event').length, 0)
+ assert.ok(scene.shapes.some(shape => shape.fill === 'future'))
 })
 
 test('设备阶段卡区分待核验、进行中和部分完成', () => {

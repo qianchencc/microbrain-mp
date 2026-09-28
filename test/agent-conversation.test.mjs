@@ -42,3 +42,15 @@ test('run 收尾同时清除流式标记，恢复重放后不残留光标', () =
 	assert.equal(restored.streaming, false)
 	assert.equal(restored.running, false)
 })
+
+test('任务提案恢复后保留确认状态，已安排任务不会退化为未确认', () => {
+	const proposal = { taskId: 'task-1', label: '会议准备', status: 'PENDING_CONFIRMATION', phases: [{ at: '2026-09-28T06:00:00.000Z', actions: [] }] }
+	const turns = restoreTurns([{ id: 'turn', content: '安排会议', events: [
+		{ type: 'task.proposed', taskId: 'task-1', task: proposal },
+		{ type: 'task.resolved', taskId: 'task-1', status: 'SCHEDULED' },
+		{ type: 'run.awaiting_confirmation' },
+	], task: { ...proposal, status: 'SCHEDULED', created: true } }])
+	assert.equal(turns[0].task.status, 'SCHEDULED')
+	assert.equal(turns[0].task.created, true)
+	assert.equal(turns[0].running, false)
+})
