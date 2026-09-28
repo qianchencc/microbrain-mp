@@ -29,3 +29,4 @@
 - 定时 Task 提案在对话中使用 `TaskProposalCard`：流事件 `task.proposed/task.resolved` 和恢复快照 `turn.task` 共用 taskId；只有点击“创建任务”才调用确认接口。`scheduled/executing` 状态持续按 Task 详情轮询，终态停止；“放弃”只退役提案，不能误显示成已创建任务。跨日任务仍在每天的区域时间轴显示，绘图只裁切当前日视口，不改变原始阶段时间或同日 B6 几何。微信端验收由用户完成。
 - 到点执行后区域时间轴在页面可见时静默刷新，任务抽屉仅对 `scheduled/executing` 轮询详情；刷新不可清空旧卡片造成闪烁。阶段结果显示 `satisfied/verified/partial/failed/missed/interrupted`，401 失败原因显示“创建者登录已失效”；设备记录以每个阶段实际结果为准，不把平台受理改写成物理完成。
 - 工作台删除任务使用任务详情 `canCancel` 与 `version`，二次确认后调用取消接口；403/409 保留抽屉并刷新详情。已取消记录继续留在时间轴，淡化并显示“已取消”；未下发设备不得显示为故障。小程序交互验收由用户完成。
+- Agent `list_tasks` 只读查询授权区域的某一天；取消必须先列出准确任务，再生成独立 `task.cancellation.proposed` 卡。卡片 `cancellationId` 与目标 `taskId` 不同；会话恢复按前者去重，保留原创建收据。确认调用取消提案接口，放弃/新消息/过期只退役提案；任务状态由真实 Task 详情驱动。

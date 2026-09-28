@@ -36,7 +36,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
+import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
@@ -229,6 +229,9 @@ async function runTurn(current, content) {
   }
   if (event.type === 'action.resolved') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) previous.draft.status = event.status
   if (event.type === 'task.resolved') for (const previous of turns.value) if (previous !== current && previous.task?.taskId === event.taskId) previous.task.status = event.status
+  if (event.type === 'task.cancellation.resolved') for (const previous of turns.value) {
+   if (previous !== current && previous.task?.cancellationId === event.cancellationId) previous.task.status = event.status
+  }
   follow()
  })
  const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion.id)
@@ -362,26 +365,28 @@ async function confirmDraft(turn) {
 }
 async function confirmTaskProposal(turn) {
  if (busy.value || turn.task?.status !== 'PENDING_CONFIRMATION') return
- const taskId = turn.task.taskId
- mutating.value = true; confirming.add(taskId); confirmEpoch++
+ const taskId = turn.task.taskId, cancellationId = turn.task.cancellationId
+ const key = cancellationId || taskId
+ mutating.value = true; confirming.add(key); confirmEpoch++
  let resync = false
  try {
-  const result = await confirmScheduledTask(taskId, turn.task.version)
-  const live = turns.value.find(item => item.task?.taskId === taskId)
-  if (live?.task) { live.task.status = result.status; live.task.created = true }
+  const result = cancellationId ? await confirmTaskCancellation(cancellationId) : await confirmScheduledTask(taskId, turn.task.version)
+  const live = turns.value.find(item => (item.task?.cancellationId || item.task?.taskId) === key)
+  if (live?.task) { live.task.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId) live.task.created = true }
+  if (cancellationId) for (const previous of turns.value) if (previous.task?.taskId === taskId && !previous.task.cancellationId) previous.task.status = result.status
  } catch (error) {
   errorMessage.value = error.data?.message || error.message
   resync = true
- } finally { confirming.delete(taskId); mutating.value = false; schedule(); follow() }
+ } finally { confirming.delete(key); mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
 async function discardTaskProposal(turn) {
  if (busy.value || turn.task?.status !== 'PENDING_CONFIRMATION') return
- const taskId = turn.task.taskId
+ const taskId = turn.task.taskId, cancellationId = turn.task.cancellationId
  mutating.value = true
  try {
-  const result = await discardScheduledTask(taskId)
-  const live = turns.value.find(item => item.task?.taskId === taskId)
+  const result = cancellationId ? await discardTaskCancellation(cancellationId) : await discardScheduledTask(taskId)
+  const live = turns.value.find(item => (item.task?.cancellationId || item.task?.taskId) === (cancellationId || taskId))
   if (live?.task) live.task.status = result.status
  } catch (error) { errorMessage.value = error.data?.message || error.message }
  finally { mutating.value = false; schedule() }

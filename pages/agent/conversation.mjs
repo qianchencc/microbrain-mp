@@ -62,6 +62,8 @@ export function applyEvent(turn, event) {
 	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
 	if (event.type === 'task.proposed') { turn.task = event.task; turn.traceOpen = false }
 	if (event.type === 'task.resolved' && turn.task?.taskId === event.taskId) turn.task.status = event.status
+	if (event.type === 'task.cancellation.proposed') { turn.task = event.task; turn.traceOpen = false }
+	if (event.type === 'task.cancellation.resolved' && turn.task?.cancellationId === event.cancellationId) turn.task.status = event.status
 	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.streaming = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
 	if (event.type === 'run.failed') {
 		turn.error = event.message || '本次回答未完成'
@@ -103,8 +105,9 @@ export function restoreTurns(savedTurns = []) {
 	const taskIds = new Set()
 	for (const turn of [...turns].reverse()) {
 		if (!turn.task) continue
-		if (taskIds.has(turn.task.taskId)) turn.task = null
-		else taskIds.add(turn.task.taskId)
+		const key = turn.task.cancellationId || turn.task.taskId
+		if (taskIds.has(key)) turn.task = null
+		else taskIds.add(key)
 	}
 	return turns
 }

@@ -54,3 +54,19 @@ test('任务提案恢复后保留确认状态，已安排任务不会退化为�
 	assert.equal(turns[0].task.created, true)
 	assert.equal(turns[0].running, false)
 })
+
+test('同一任务的创建与取消收据在会话恢复后分别保留', () => {
+	const created = { taskId: 'task-1', label: '会议准备', status: 'SCHEDULED', created: true, phases: [] }
+	const cancellation = { taskId: 'task-1', cancellationId: 'cancel-1', kind: 'cancellation',
+		label: '会议准备', status: 'CONFIRMED', phases: [] }
+	const turns = restoreTurns([
+		{ id: 'create', content: '创建任务', events: [], task: created },
+		{ id: 'cancel', content: '取消任务', events: [
+			{ type: 'task.cancellation.proposed', task: { ...cancellation, status: 'PENDING_CONFIRMATION' } },
+			{ type: 'task.cancellation.resolved', cancellationId: 'cancel-1', status: 'CONFIRMED' },
+		], task: cancellation },
+	])
+	assert.equal(turns[0].task.taskId, 'task-1')
+	assert.equal(turns[1].task.cancellationId, 'cancel-1')
+	assert.equal(turns[1].task.status, 'CONFIRMED')
+})

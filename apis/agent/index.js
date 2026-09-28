@@ -21,6 +21,8 @@ export const getTaskDetail = taskId => request(`/agent/tasks/${encodeURIComponen
 export const cancelTask = (taskId, version) => request(`/agent/tasks/${encodeURIComponent(taskId)}/cancel`, 'POST', { version })
 export const confirmTask = (taskId, version) => request(`/agent/tasks/${encodeURIComponent(taskId)}/confirm`, 'POST', { version })
 export const discardTask = taskId => request(`/agent/tasks/${encodeURIComponent(taskId)}/discard`, 'POST')
+export const confirmTaskCancellation = cancellationId => request(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/confirm`, 'POST')
+export const discardTaskCancellation = cancellationId => request(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/discard`, 'POST')
 export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${encodeURIComponent(deviceId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const restoreConversation = () => request('/agent/conversations/current', 'GET')

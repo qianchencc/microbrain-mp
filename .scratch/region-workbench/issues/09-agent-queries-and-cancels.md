@@ -8,10 +8,10 @@
 
 **Blocked by:** 08
 
-**Status:** ready-for-agent
+**Status:** implemented; pending user miniapp acceptance
 
-- [ ] Pi 工具 `list_tasks`：按区域与日期查询当前用户可见任务摘要，只读
-- [ ] Pi 工具 `propose_task_cancellation`：只能引用可见且未结束的任务；生成 `task.cancellation.proposed` 事件，遵循零滞留与 TTL
-- [ ] 确认复用 08 的取消接口与全部校验（权限、版本、已结束）
-- [ ] 小程序统一任务卡新增取消提案态；确认后显示已取消
-- [ ] 模型不能不经确认取消任务；Runtime 测试覆盖查询、提案、确认、零滞留退役、越权引用被拒
+- [x] Pi 工具 `list_tasks`：按区域与日期查询当前用户可见任务摘要，只读
+- [x] Pi 工具 `propose_task_cancellation`：只能引用可见且未结束的任务；生成 `task.cancellation.proposed` 事件，遵循零滞留与 TTL
+- [x] 确认复用 08 的取消接口与全部校验（权限、版本、已结束）
+- [x] 小程序统一任务卡新增取消提案态；确认后显示已取消
+- [x] 模型不能不经确认取消任务；Runtime 测试覆盖查询、提案、确认、零滞留退役、越权引用被拒
