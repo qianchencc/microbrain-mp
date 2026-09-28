@@ -52,7 +52,7 @@ const items = computed(() => regionTimelineItems(tasks.value))
 const sampleCalendarMarks = computed(() => {
  const { from, to } = calendarWindow(calendarMonth.value || date.value.slice(0, 7))
  return sampleTasks.value.length && sampleDate.value >= from && sampleDate.value <= to
-  ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'missed', 'interrupted'].includes(task.status)) }] : []
+  ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(task.status)) }] : []
 })
 let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer
 onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || ''; initialTaskId = query.taskId || '' })

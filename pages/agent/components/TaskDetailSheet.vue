@@ -8,7 +8,15 @@
     <text class="task-name">{{ detail.label }}</text>
     <text class="task-when">{{ detail.whenText }}</text>
     <view class="owner-line"><view class="owner-mark">{{ detail.creator.displayName.slice(0, 1) }}</view><text class="owner-name">{{ detail.creator.displayName }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
-    <view class="summary" :class="{ warning: ['partial', 'failed', 'interrupted', 'missed'].includes(detail.status) }">{{ detail.summary }}</view>
+    <view class="summary" :class="{ warning: ['partial', 'failed', 'unconfirmed', 'interrupted', 'missed'].includes(detail.status) }">{{ detail.summary }}</view>
+    <view v-if="lightIds.length && !sampleTask" class="current-observation">
+     <view class="current-head"><text>当前平台状态</text><button :disabled="currentLoading" @tap="loadCurrentStates()">{{ currentLoading ? '读取中' : '刷新' }}</button></view>
+     <text v-if="currentError" class="current-error">{{ currentError }}</text>
+     <text v-else-if="currentLoading" class="current-loading">正在读取照明状态</text>
+     <text v-if="currentSummary" class="current-summary">{{ currentSummary }}</text>
+     <text v-else-if="!currentLoading && !currentError" class="current-loading">当前平台没有可用状态</text>
+     <text v-if="currentSummary" class="current-note">读取于 {{ taskTime(currentObservedAt).slice(-5) }} · 当前状态不等于本次执行已核验</text>
+    </view>
     <text v-if="actionError" class="action-error">{{ actionError }}</text>
     <text class="section-title">阶段 · {{ detail.phases.length }}</text>
     <view v-for="(phase, index) in detail.phases" :key="phase.id" class="phase">
@@ -23,6 +31,7 @@
       <view v-if="phase.devices.length <= 1 || expandedPhases.includes(phase.id)" class="device-list">
        <view v-for="device in phase.devices" :key="device.id" class="device-row">
         <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><text class="result" :class="device.resultTone">{{ device.resultText }}</text>
+        <text v-if="device.kind === 'lighting' && currentStates[device.id]" class="current-device">当前平台：{{ currentStates[device.id].state === true ? '开启' : currentStates[device.id].state === false ? '关闭' : '状态未知' }} · {{ currentStates[device.id].reportedAt ? `上报于 ${taskTime(currentStates[device.id].reportedAt)}` : '上报时间未知' }}</text>
        </view>
        <text v-if="!phase.devices.length" class="no-devices">当前没有可查看的设备</text>
       </view>
@@ -36,30 +45,57 @@
 </template>
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { cancelTask, getTaskDetail } from '@/apis/agent'
+import { cancelTask, getTaskDetail, getTaskLightingStates } from '@/apis/agent'
 import DeviceSheet from './DeviceSheet.vue'
-import { taskDetailView } from '../task-detail-view.mjs'
+import { taskDetailView, taskTime } from '../task-detail-view.mjs'
 
 const props = defineProps({ open: Boolean, taskId: String, sampleTask: Object, regionName: String })
 const emit = defineEmits(['close', 'cancelled'])
 const task = ref(null), loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
+const currentStates = ref({}), currentObservedAt = ref(''), currentLoading = ref(false), currentError = ref('')
 const expandedPhases = ref([])
 const detail = computed(() => taskDetailView(task.value))
-let requestId = 0, refreshTimer
+const lightIds = computed(() => [...new Set((detail.value?.phases || []).flatMap(phase => phase.devices.filter(device => device.kind === 'lighting').map(device => device.id)))])
+const currentSummary = computed(() => {
+ const known = lightIds.value.filter(id => typeof currentStates.value[id]?.state === 'boolean')
+ if (!known.length) return ''
+ const on = known.filter(id => currentStates.value[id].state).length
+ const unknown = lightIds.value.length - known.length
+ return `当前平台显示：${on} 路开启、${known.length - on} 路关闭${unknown ? `、${unknown} 路未知` : ''}`
+})
+let requestId = 0, currentRequestId = 0, refreshTimer
 function togglePhase(id) {
  expandedPhases.value = expandedPhases.value.includes(id) ? expandedPhases.value.filter(value => value !== id) : [...expandedPhases.value, id]
 }
 async function load(silent = false) {
- const current = ++requestId
+ const current = ++requestId, taskId = props.taskId
  if (!props.open || !props.taskId) return
  if (!silent) { task.value = null; error.value = ''; loading.value = false }
  if (props.sampleTask) { task.value = props.sampleTask; return }
  if (!silent) loading.value = true
  try {
-  const result = await getTaskDetail(props.taskId)
-  if (current === requestId && props.open) task.value = result.task
+  const result = await getTaskDetail(taskId)
+  if (current === requestId && props.open && props.taskId === taskId) {
+   const previousStatus = task.value?.status
+   task.value = result.task
+   if ((!silent || previousStatus && previousStatus !== result.task.status && !['scheduled', 'executing'].includes(result.task.status))
+    && result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) void loadCurrentStates(taskId)
+  }
  } catch (cause) { if (!silent && current === requestId) error.value = cause.message || '任务暂不可用' }
  finally { if (!silent && current === requestId) loading.value = false }
+}
+async function loadCurrentStates(taskId = props.taskId) {
+ const current = ++currentRequestId
+ if (!props.open || !taskId || props.sampleTask) return
+ currentStates.value = {}; currentObservedAt.value = ''; currentError.value = ''; currentLoading.value = true
+ try {
+  const result = await getTaskLightingStates(taskId)
+  if (current === currentRequestId && props.open && props.taskId === taskId) {
+   currentStates.value = Object.fromEntries((result.states || []).map(state => [state.id, state]))
+   currentObservedAt.value = result.observedAt
+  }
+ } catch (cause) { if (current === currentRequestId) currentError.value = cause.message || '当前状态暂不可用' }
+ finally { if (current === currentRequestId) currentLoading.value = false }
 }
 async function deleteTask() {
  if (!detail.value?.canCancel || cancelling.value) return
@@ -80,6 +116,7 @@ async function deleteTask() {
 }
 watch(() => [props.open, props.taskId, props.sampleTask], () => {
  clearInterval(refreshTimer)
+ ++currentRequestId; currentStates.value = {}; currentObservedAt.value = ''; currentLoading.value = false; currentError.value = ''
  actionError.value = ''
  expandedPhases.value = []
  if (props.open) {
@@ -90,7 +127,7 @@ watch(() => [props.open, props.taskId, props.sampleTask], () => {
  }
  else { ++requestId; loading.value = false; task.value = null }
 }, { immediate: true })
-onUnmounted(() => clearInterval(refreshTimer))
+onUnmounted(() => { clearInterval(refreshTimer); ++currentRequestId })
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
@@ -107,9 +144,14 @@ button::after { border:0; }
 .owner-mark { width:25px; height:25px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#216b55; color:#fff; font-size:11px; }
 .owner-name { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#718176; font-size:11px; }
 .state-tag { flex-shrink:0; padding:4px 8px; border-radius:8px; color:#4d7663; background:#eaf3ed; font-size:11px; }
-.state-tag.partial,.state-tag.failed,.state-tag.interrupted,.state-tag.missed { color:#936827; background:#f9f0df; }
+.state-tag.partial,.state-tag.failed,.state-tag.unconfirmed,.state-tag.interrupted,.state-tag.missed { color:#936827; background:#f9f0df; }
 .summary { margin-top:14px; padding:10px 12px; background:#f4f8f4; border:1px solid #e0e9e1; border-radius:8px; color:#456052; font-size:12px; }
 .summary.warning { color:#8d672d; background:#fbf5e9; border-color:#edddbf; }
+.current-observation { margin-top:10px; padding:10px 12px; border:1px solid #dce7df; border-radius:8px; background:#f8fbf9; }
+.current-head { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#4a6654; font-size:11px; font-weight:600; }
+.current-head button { min-width:44px; min-height:32px; margin:0; color:#176b54; font-size:11px; line-height:32px; }
+.current-summary,.current-note,.current-loading,.current-error { display:block; margin-top:5px; font-size:11px; }
+.current-summary { color:#294f39; font-weight:600; }.current-note,.current-loading { color:#829187; }.current-error { color:#a15343; }
 .section-title { display:block; margin:18px 0 9px; font-size:11px; font-weight:700; color:#75877b; }
 .phase { display:flex; gap:11px; }
 .phase-rail { width:16px; display:flex; flex-direction:column; align-items:center; flex-shrink:0; }
@@ -133,6 +175,7 @@ button::after { border:0; }
 .device-name { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#304b39; font-size:12px; font-weight:600; }
 .target { color:#63796b; font-size:11px; text-align:right; }
 .result { grid-column:1/-1; font-size:11px; }
+.current-device { grid-column:1/-1; color:#507764; font-size:10px; }
 .result.ok { color:#397b61; }.result.warn { color:#a27128; }.result.fail { color:#a15343; }.result.wait { color:#839189; }
 .no-devices { display:block; padding:12px 0; color:#839189; font-size:11px; }
 .source { display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid #e2e9e3; color:#85958a; font-size:11px; }

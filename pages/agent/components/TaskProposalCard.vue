@@ -28,10 +28,10 @@ defineEmits(['confirm', 'discard', 'open'])
 const isCancellation = computed(() => props.task.kind === 'cancellation')
 const state = computed(() => String(props.task.status || '').toLowerCase())
 const isCreated = computed(() => isCancellation.value ? state.value === 'confirmed'
- : Boolean(props.task.created) || ['scheduled', 'executing', 'completed', 'partial', 'failed', 'missed', 'interrupted'].includes(state.value))
+ : Boolean(props.task.created) || ['scheduled', 'executing', 'completed', 'partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(state.value))
 const stateText = computed(() => isCancellation.value
  ? ({ pending_confirmation: '待确认', confirmed: '已取消', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束'
- : ({ pending_confirmation: '待确认', scheduled: '已安排', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', expired: '已过期' })[state.value] || '已结束')
+ : ({ pending_confirmation: '待确认', scheduled: '已安排', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '未核验', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', expired: '已过期' })[state.value] || '已结束')
 function phaseTitle(index) {
  if (isCancellation.value) return state.value === 'confirmed' ? '已取消' : '将取消'
  return props.task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束'
@@ -43,7 +43,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-head { display:flex; justify-content:space-between; align-items:center; padding:15px 15px 0; }
 .task-kicker { color:#718579; font-size:11px; font-weight:600; }
 .task-state { color:#176b54; font-size:11px; font-weight:600; }
-.task-state.partial,.task-state.expired,.task-state.cancelled,.task-state.failed { color:#9c7040; }
+.task-state.partial,.task-state.unconfirmed,.task-state.expired,.task-state.cancelled,.task-state.failed { color:#9c7040; }
 .task-name { display:block; margin:5px 15px 12px; font-size:16px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
 .task-phases { border-top:1px solid #e6ece7; }
 .task-phase { padding:11px 15px 9px; }

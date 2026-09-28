@@ -1,7 +1,7 @@
 import { fieldLabels, fanLabels, modeLabels } from './ac-draft.js'
 import { resolveDeviceArtwork } from './device-art/catalog.js'
 
-const statusText = { scheduled: '待执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', verified: '已核验', satisfied: '已达标', pending: '待执行' }
+const statusText = { scheduled: '待执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '未核验', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', verified: '已核验', satisfied: '已达标', pending: '待执行' }
 const outcomeText = { satisfied: '已达标，无需下发', verified: '已下发并核验', unconfirmed: '已受理，未核验', rejected: '平台拒绝', unknown: '结果未知', not_dispatched: '未下发', unreadable: '状态读取失败', missing: '设备不可用', pending: '待执行' }
 
 export function taskTime(instant) {
@@ -47,6 +47,7 @@ export function taskDetailView(task) {
   : task.status === 'executing' ? phases.some(phase => phase.status === 'executing') ? '正在读取并处理设备' : '等待下一阶段执行'
   : task.status === 'cancelled' ? '任务已取消，已执行的动作不会回滚'
   : task.status === 'missed' ? '任务已错过，没有自动补执行'
+  : task.status === 'unconfirmed' ? `${count} 台设备的执行结果未核验`
   : problemCount ? `${problemCount} 项结果需要关注` : `${count} 台设备目标已达成`
  const whenText = phases.length > 1 && phases[0].time.slice(0, 10) === phases.at(-1).time.slice(0, 10)
   ? `${phases[0].time} 至 ${phases.at(-1).clock}` : phases.map(phase => phase.time).join(' 至 ')

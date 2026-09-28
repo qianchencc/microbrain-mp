@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
+import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
+import { taskDetailView } from '../pages/agent/task-detail-view.mjs'
 import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/region-sample-tasks.mjs'
 
 test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 34px', () => {
@@ -51,4 +53,9 @@ test('本地演示的区域任务与设备记录指向同一任务及目标', ()
  assert.equal(regionSampleTaskDetail(closing).phases[0].devices[0].target.closeOrOpen, 0)
  assert.ok(tasks.every(task => task.devices.every(device => devices.some(source => source.id === device.id))))
  assert.deepEqual(deviceSampleEvents(tasks, 'unrelated-device'), [])
+ const unresolved = { ...tasks[0], status: 'unconfirmed', phases: tasks[0].phases.map(phase => ({
+  ...phase, status: 'unconfirmed', devices: phase.devices.map(device => ({ ...device, outcome: 'unconfirmed' })),
+ })) }
+ assert.equal(taskDetailView(unresolved).statusText, '未核验')
+ assert.equal(regionTimelineItems([unresolved])[0].warning, true)
 })
