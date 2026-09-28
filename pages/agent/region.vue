@@ -11,7 +11,7 @@
     </template>
     <template #card="{ item }">
      <view class="task-row" :class="{ cancelled: item.status === 'cancelled' }">
-     <text class="task-label"><text v-if="item.warning" class="warning-dot" />{{ item.label }}</text>
+     <text class="task-label"><text v-if="item.warning" class="warning-dot" /><text v-if="item.failure" class="failure-mark">×</text>{{ item.label }}</text>
      <text v-if="item.status === 'cancelled'" class="cancelled-status">已取消</text>
      <view class="avatars"><view v-for="avatar in item.avatars" :key="avatar.id" class="device-avatar"><image v-if="avatar.src" :src="avatar.src" mode="aspectFit" /><uni-icons v-else type="gear" size="13" color="#7c8d82" /></view><text v-if="item.more" class="more">+{{ item.more }}</text></view>
      <view class="task-separator" />
@@ -155,6 +155,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .more { font-size:8px; margin-left:2px; color:#7a8d80; }
 .task-label { flex:1; min-width:0; font-size:12px; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .warning-dot { display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:#b57932; box-shadow:0 0 0 2px #f7ecd8; vertical-align:1px; }
+.failure-mark { margin-right:6px; color:#a15343; font-size:13px; font-weight:700; }
 .cancelled-status { flex-shrink:0; color:#7a8b80; font-size:9px; }
 .task-separator { width:1px; height:14px; flex-shrink:0; background:#e1e8e2; }
 .owner-mark { width:22px; height:22px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#3a9478,#11553f); color:#fff; font-size:9px; font-weight:700; }

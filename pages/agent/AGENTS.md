@@ -23,7 +23,7 @@
 - 区域工作台接线与验收状态见 `plan/2026-09-27-region-workbench-first-loop-handoff.md`。消息发送/重试/编辑应在修改原轮前固定本次关注区域；本地选区按统一 session 的不可逆身份键分区，区域仅是默认上下文。
 - B6 生产几何共用 `timeline-geometry.mjs`；时间节点不承载任务完成状态。微信开发者工具已选 SVG 图片承载图形，普通视图承载时间字与卡片；Canvas 原生图层曾越过滚动裁切边界。空区域按 P2 原型显示局部符号。见 `docs/research/proto-region-panel/2026-09-27-native-renderer-status.md`；实际任务回读仍需真实操作验收。
 - 区域工作台的 `region-sample-tasks.mjs` 仅供开发版“查看样例”预览：只读授权目录构造 `sample-*` Task，区域与设备时间轴、任务详情共用同一批任务和设备 ID；结果是虚构的，不能写入 Runtime、确认或控制设备，也不能当真实任务验收。从样例返回时必须重新请求真实时间轴。见 `plan/2026-09-28-region-sample-record-consistency.md`。
-- 区域时间轴细卡按 P2 原型放任务名、设备头像和创建者标记；异常用提示点、执行中用卡片强调，取消态例外保留可见的“已取消”，完整状态与创建者姓名在任务详情中。开发样例仅对齐了 14:00–15:30 / 14:52 的主区间，不是票 02 所需的同数据叠图。见 `plan/2026-09-28-region-timeline-card-alignment.md`。
+- 区域时间轴细卡按 P2 原型放任务名、设备头像和创建者标记；部分完成用黄铜点，失败/错过/中断用红色叉号，执行中用卡片强调，取消态例外保留可见的“已取消”，完整状态与创建者姓名在任务详情中。开发样例仅对齐了 14:00–15:30 / 14:52 的主区间，不是票 02 所需的同数据叠图。见 `plan/2026-09-28-region-timeline-card-alignment.md`。
 - 区域设备抽屉见 `plan/2026-09-27-region-device-browser-handoff.md`：每次打开重读授权目录，目录先于状态显示；状态失败清空旧读数但保留目录。类型/位置/状态是互斥分组，搜索才过滤；设备卡进入时间轴要等票 11 接通后再开放点击。
 - 区域时间轴日历与任务详情见 `plan/2026-09-27-region-task-browse-handoff.md`：空日期仍保留日历，月标记失败单独提示；Task 详情的 `details.receipt/fields/timedOut` 必须参与结果文案，不能仅看总体 outcome。多设备阶段按 P2/D1 显示可展开设备组，单设备结果直接可见；见 `plan/2026-09-28-task-phase-disclosure.md`。开发版双阶段样例不属于真实任务。
 - 设备时间轴见 `plan/2026-09-27-device-timeline-handoff.md`：`DeviceTimelineView` 必须包在 `DeviceSheet` 的 flex 子容器中，并保持 `timeline-area` 的 `height:0; flex:1; min-height:0`，否则微信 `scroll-view` 高度会等于全部内容，定位记录失效。设备选择只保存 ID，详情始终从最新读数派生；真实与本地演示记录严格分开。紧凑日历通过 `RegionTimeline` 的日期入口按需展开，选日期后收起；区域常驻日历不受影响。见 `plan/2026-09-28-device-calendar-disclosure.md`。
