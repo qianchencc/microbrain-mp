@@ -1,6 +1,7 @@
 <template>
  <view class="timeline-shell">
- <RegionCalendar v-if="calendar" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" :compact="compactCalendar" @select="$emit('date-change', $event)" @month-change="$emit('calendar-month', $event)" />
+ <view v-if="calendar && compactCalendar" class="compact-date-bar"><button class="compact-date-toggle" :aria-label="calendarOpen ? '收起设备日历' : '展开设备日历'" @tap="calendarOpen = !calendarOpen"><text>{{ Number(date.slice(5, 7)) }} 月 {{ Number(date.slice(8)) }} 日</text><uni-icons :type="calendarOpen ? 'up' : 'down'" size="12" color="#fff" /></button></view>
+ <RegionCalendar v-if="calendar && (!compactCalendar || calendarOpen)" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" :compact="compactCalendar" @select="selectDate" @month-change="$emit('calendar-month', $event)" />
  <view v-if="!items.length" class="timeline-empty"><slot name="empty" /></view>
  <scroll-view v-else class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" :scroll-top="scrollTop" :scroll-into-view="focusId">
   <view class="timeline" :style="{ height: scene.height + 'px' }">
@@ -24,12 +25,13 @@ import { timelineSvg } from '../timeline-svg.mjs'
 import RegionCalendar from './RegionCalendar.vue'
 
 const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, calendarMarks: { type: Array, default: () => [] }, calendarError: Boolean, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, days: { type: Number, default: 1 } })
-defineEmits(['select', 'date-change', 'calendar-month'])
+const emit = defineEmits(['select', 'date-change', 'calendar-month'])
 const instance = getCurrentInstance()
 const width = ref(uni.getSystemInfoSync().windowWidth - 32)
 const scrollTop = ref(0)
 const focusId = ref('')
 const renderError = ref('')
+const calendarOpen = ref(false)
 const scene = computed(() => createTimeline({ date: props.date, items: props.items, now: props.now, width: width.value, days: props.days }))
 const svgImage = computed(() => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(timelineSvg(scene.value)))
 function measure() {
@@ -46,6 +48,10 @@ function focusDate() {
  }
  scrollTop.value = localDate(props.now) === props.date ? Math.max(0, Math.min(scene.value.height - 400, scene.value.nowY - 220)) : 0
 }
+function selectDate(value) {
+ if (props.compactCalendar) calendarOpen.value = false
+ emit('date-change', value)
+}
 onMounted(async () => { await nextTick(); measure(); focusDate() })
 watch(() => props.date, focusDate)
 watch(() => props.items.length, (length, previous) => { if (length && !previous) nextTick(focusDate) })
@@ -55,6 +61,9 @@ watch(() => props.items.length, (length, previous) => { if (length && !previous)
 view, text, input { font-size: inherit; line-height: inherit; }
 .timeline-scroll { height:0; width:100%; position:relative; overflow:hidden; }
 .timeline-shell { height:100%; min-height:0; display:flex; flex-direction:column; }
+.compact-date-bar { height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:flex-end; padding:0 12px; }
+.compact-date-toggle { min-height:30px; margin:0; padding:0 11px; border:0; border-radius:15px; display:flex; align-items:center; gap:6px; background:#176b54; color:#fff; font-size:11px; font-weight:600; line-height:1; box-shadow:0 4px 12px #11553f3d; }
+.compact-date-toggle::after { border:0; }
 .timeline-scroll { flex:1; min-height:0; }
 .timeline-empty { flex:1; min-height:0; }
 .timeline { position:relative; }
