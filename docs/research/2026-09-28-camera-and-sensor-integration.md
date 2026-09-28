@@ -101,6 +101,16 @@
 - 2026-09-28 已实施：observation 目录来源（environment/safety/energy）、`readStates` 扩展（video→`onlineStatus`、environment→`realTimeData`+影子兜底、energy→`realTimeRead`）、`query_alerts` 告警史查询、`GET /api/agent/devices/:id/video-stream` 取流端点（现取现返不落库）、草案/任务对 observation 设备的拒绝门禁。
 - 形态收敛：能耗读数不设独立工具，由 `read_device_states` 覆盖（43 台单页可全量返回）；告警史用独立 `query_alerts` 工具。
 
+## 八、取流协议试播记录（2026-09-28，原型探针）
+
+取流端点返回的 `wss://ncim.577119.com:6014/proxy/{内网媒体节点:559}/openUrl/{7位token}` 是海康 iSecure/综合安防 H5 私有双层 WS 协议的播放地址。用逆向社区客户端（holmesian/hik_ws_client）与客户 `owner` SPA 内打包的官方 h5player 2.1.3 构建产物逐字节核对后确认：
+
+- **`/proxy/{dev}/openUrl/{token}` 不是面向客户端的 WS 端点**：直接 upgrade 返回 mgc 404，属预期——token 不走该路径握手。
+- **正确链路**：`wss://{外网代理}:6014/media?version=0.1&cipherSuites=0&sessionID=&proxy={dev}` 建立 WS（**不带 Sec-WebSocket-Protocol**，服务端不协商子协议）→ 服务端下发 `{"PKD","rand"}` → 客户端发 `{sequence:0,cmd:"realplay",url:"ws://{dev}/openUrl/{token}"}` → 此后应接 SDP 与媒体帧。与客户 SPA 打包代码中的 URL 变换、套接字构造、realplay 载荷完全一致。
+- **当前卡点在上游**：realplay 被受理后返回 `{"errorCode":24317633,"errorMsg":"errPlatformIp=;errPlatformName=sb68tg==","statusCode":1,"statusString":"ERROR"}`——媒体网关向上游平台建流失败（平台 IP 为空）。四种 URL/版本变体结果一致，客户端路径已排除嫌疑。可能原因：摄像头在海康媒体层当前不可流（iot-center 的 `onlineStatus` 是另一份记录）、token 与调用方会话绑定、或媒体节点不匹配。**裁决实验**：在客户"智慧监控"H5（`ncim.577119.com/owner/#/pages/monitor/index`）实际播放同一台摄像头——能播则对齐其网络轨迹，不能播则属客户侧问题。
+- **设计结论**：播放页必须内嵌海康官方 h5player SDK（wasm 解码 + 私有协议，JSPlugin 形态），自研解码器不可行；`view`→前端→JSPlugin 的"现取现返"交接模式与协议兼容；回放命令 `playback` 在同一协议内已见形态（客户依赖第 3 项不变）。
+- **客户依赖新增**：确认 `view` 颁发的 openUrl token 是否绑定调用方会话/IP——若绑定，Runtime 代取模式在浏览器侧放不了，需改由 H5 页携带用户 token 直接调用 `interactive/{hub}/{view}/down`（webView 已注入 token/tenantCode，生产下取流端点同域，无新增鉴权管线）。
+
 ## 证据分级
 
 - **已实测只读（2026-09-28，普通用户身份）**：office 视频目录、`view`/`onlineStatus`/`realTimeData` 查询动作、环境影子、perception FIRE 目录、烟感/水浸/燃气告警史、能源设备目录与最新读数、水/气计量空目录。

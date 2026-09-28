@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>观察响应面原型 — observation.reported 事件形状与卡片呈现</title>
+<style>
+  :root { --jade:#176b54; --jade-ink:#22473a; --paper:#f7f5ef; --card:#fdfdfb; --line:#e3e0d4; --brass:#9a7b2d; --warn:#a27128; --muted:#7a857d; --red:#a33b2e; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif; background:var(--paper); color:var(--jade-ink); padding:28px 20px 60px; }
+  .wrap { max-width:880px; margin:0 auto; }
+  h1 { font-size:19px; font-weight:650; }
+  .q { margin-top:8px; font-size:13px; line-height:1.7; color:#4d5f55; }
+  .q code { background:#eceadf; padding:1px 5px; border-radius:4px; font-size:12px; }
+  .bar { margin-top:18px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .bar .lbl { font-size:11px; color:var(--muted); margin-right:2px; }
+  button.act { border:1px solid var(--line); background:var(--card); border-radius:16px; padding:7px 14px; font-size:12.5px; color:var(--jade-ink); cursor:pointer; }
+  button.act:hover { border-color:#b9c4b4; }
+  button.act.on { background:var(--jade); color:#fff; border-color:var(--jade); }
+  .tabs { display:flex; gap:6px; margin-top:22px; border-bottom:1px solid var(--line); }
+  .tab { padding:8px 14px; font-size:12.5px; color:var(--muted); cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab.on { color:var(--jade); border-bottom-color:var(--jade); font-weight:600; }
+  .desc { font-size:12px; color:var(--muted); margin:14px 2px 4px; line-height:1.6; }
+  .stage { margin-top:14px; border-radius:14px; background:#eef0ea; padding:18px 16px 22px; }
+  .conv { max-width:520px; }
+  .bubble-hint { font-size:11px; color:#98a49c; margin:0 0 10px 2px; }
+  /* —— 观察卡（即 AgentReplySurface 内的 ObservationCard 提案形态） —— */
+  .ocard { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .ocard + .ocard { margin-top:10px; }
+  .oblock + .oblock { border-top:1px solid #eceade; }
+  .oblock { padding:12px 14px; }
+  .oblock-head { display:flex; align-items:center; gap:7px; font-size:11px; font-weight:600; color:#5f6e66; letter-spacing:.3px; }
+  .oblock-head .count { font-weight:400; color:var(--muted); }
+  .orow { margin-top:9px; display:flex; align-items:center; gap:9px; min-height:30px; }
+  .orow .nm { flex:1; min-width:0; font-size:13px; color:#2b4237; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .orow .loc { font-size:11px; color:var(--muted); }
+  .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .dot.on { background:#3f9d74; } .dot.off { background:#b9b2a4; } .dot.warn { background:var(--warn); }
+  .vbtn { border:1px solid var(--jade); color:var(--jade); background:transparent; border-radius:13px; padding:5px 12px; font-size:11.5px; cursor:pointer; flex-shrink:0; }
+  .vbtn[disabled] { border-color:#cfccc0; color:#a8a89c; }
+  .vbtn:not([disabled]):hover { background:#eef5f1; }
+  .egrid { margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .ecell { background:#f4f4ee; border-radius:8px; padding:8px 10px; }
+  .ecell .v { font-size:17px; font-weight:600; color:#2b4237; } .ecell .v small { font-size:11px; font-weight:400; color:var(--muted); }
+  .ecell .k { margin-top:2px; font-size:10.5px; color:var(--muted); }
+  .stale { margin-top:9px; display:inline-block; font-size:10.5px; color:var(--warn); background:#f6efe0; border-radius:8px; padding:3px 8px; }
+  .meta { margin-top:8px; font-size:10.5px; color:var(--muted); }
+  .arow { margin-top:8px; display:flex; gap:8px; font-size:12px; align-items:baseline; }
+  .arow time { flex-shrink:0; color:#8a94a0; font-variant-numeric:tabular-nums; }
+  .arow .dn { flex:1; min-width:0; color:#2b4237; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tag { flex-shrink:0; font-size:10px; border-radius:7px; padding:2px 6px; }
+  .tag.r0 { background:#f3e8e4; color:var(--red); } .tag.r1 { background:#eef0ea; color:var(--muted); }
+  .more { margin-top:8px; font-size:11px; color:var(--jade); }
+  /* —— payload 面板 —— */
+  .payload { margin-top:18px; }
+  .payload summary { font-size:11px; color:var(--muted); cursor:pointer; }
+  .payload pre { margin-top:8px; background:#2b3833; color:#cfe3d6; border-radius:10px; padding:14px; font-size:11px; line-height:1.6; overflow:auto; max-height:340px; }
+  .verdict { margin-top:26px; border-left:3px solid var(--brass); padding:10px 14px; font-size:12px; line-height:1.8; color:#5d5340; background:#fbf8ef; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>观察响应面原型（proto-observation-surface）</h1>
+  <p class="q">回答的问题：Runtime 新增 <code>observation.reported</code> 流事件后，Agent 对话里该渲染什么结构、数据形状要携带什么、陈旧/缺态数据怎么诚实呈现。数据全部取自 2026-09-28 生产实测（环境 1 台 / 消防 3 台 / 电表 43 台 / 视频 / 告警台账 376 条，最新一条 2024-04）。原型只验证<b>信息结构与文案口径</b>，视觉交给后续设计 agent。</p>
+  <div class="bar">
+    <span class="lbl">呈现形态</span>
+    <button class="act on" data-v="single" onclick="setVariant(this)">A 单卡分节</button>
+    <button class="act" data-v="multi" onclick="setVariant(this)">B 逐块分卡</button>
+    <span class="lbl" style="margin-left:14px">注入事件</span>
+    <button class="act" onclick="push('video')">+ 视频</button>
+    <button class="act" onclick="push('env')">+ 环境</button>
+    <button class="act" onclick="push('energy')">+ 能耗</button>
+    <button class="act" onclick="push('alerts')">+ 告警</button>
+    <button class="act" onclick="push('safety')">+ 消防设备行</button>
+    <button class="act" onclick="clearAll()">清空</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <p class="desc" id="scenDesc"></p>
+  <div class="stage"><div class="conv"><div class="bubble-hint">Agent 回答正文 …</div><div id="cards"></div></div></div>
+  <div class="payload"><details><summary>当前 observation.reported 事件载荷（提议形状）</summary><pre id="payload">{}</pre></details></div>
+  <div class="verdict" id="verdict"></div>
+</div>
+
+<script>
+/* ============ 提议的事件形状（与 RosterEntry/disposition='none' 对齐的只读观察块） ============ */
+const BLOCKS = {
+  video: () => ({ type:'video', devices:[
+    { deviceId:'5805dda3', name:'监控-26楼运营走廊', location:'26楼运营办公区', online:true },
+    { deviceId:'9c1f77aa', name:'监控-27楼会议室',  location:'27楼', online:true },
+    { deviceId:'77b2e901', name:'监控-27楼财务走廊', location:'27楼', online:false },
+  ]}),
+  env: (shadow) => ({ type:'environment', devices:[
+    { deviceId:'env-1', name:'环境传感器', location:'站点级', source: shadow?'shadow':'device',
+      reading:{ temp:25.0, humidity:56, pm25:36, pm10:23, pm101:60 } },
+  ]}),
+  energy: (stale) => ({ type:'energy', devices:[
+    { deviceId:'kwh-26ops', name:'26楼运营部电表', location:'26楼', stale,
+      reading:{ readTime:'2024-09-10T14:20:00+08:00', totalActivePower:null, ia:3.42, ib:3.18, ic:3.55 } },
+    { deviceId:'kwh-27hall', name:'27楼展厅电表', location:'27楼', stale,
+      reading:{ readTime:'2024-09-10T14:20:00+08:00', totalActivePower:1.87, ia:1.2, ib:0.9, ic:1.1 } },
+  ]}),
+  safety: () => ({ type:'safety', devices:[
+    { deviceId:'fire-1', name:'27楼茶水间光电感烟', subtype:'smoke', liveState:null },
+    { deviceId:'fire-2', name:'水浸传感器',       subtype:'water', liveState:null },
+    { deviceId:'fire-3', name:'燃气感应器',       subtype:'gas',   liveState:null },
+  ]}),
+  alerts: (opts={}) => ({ type:'alerts', windowDays:opts.days??365, total:376,
+    records:[
+      { deviceName:'燃气感应器',   subtype:'gas',   alarm:true, report:false, occurredAt:'2024-04-20T09:31:00+08:00' },
+      { deviceName:'27楼茶水间光电感烟', subtype:'smoke', alarm:true, report:true,  occurredAt:'2024-04-13T16:02:00+08:00' },
+      { deviceName:'水浸传感器',   subtype:'water', alarm:true, report:false, occurredAt:'2024-03-28T11:47:00+08:00' },
+    ]}),
+};
+
+/* ============ 场景脚本 ============ */
+const SCENARIOS = [
+  { name:'安保巡查', desc:'「27楼展厅的摄像头在线吗？」逐层问一圈。看点：在线点语义、离线时「查看画面」的处置。',
+    blocks:[ ['video'] ] },
+  { name:'环境舒适度', desc:'「现在办公室空气怎么样？」看点：device/shadow 来源标注——影子是站点兜底值，不是该房间实测。',
+    blocks:[ ['env'] ] },
+  { name:'安全值守', desc:'「最近有烟感报警吗？有没处理过的吗？」看点：台账最新一条是 2024-04 时必须如实标注，不得暗示实时监测；report 只写「平台标记」。',
+    blocks:[ ['alerts'], ['safety'] ] },
+  { name:'能耗读数', desc:'「26楼运营部电表读数多少？」看点：readTime 停留在 2024-09-10——陈旧要标注「最新已知」，不得当作实时值。',
+    blocks:[ ['energy'] ] },
+  { name:'每日巡检简报', desc:'一条卡 = 摄像头在线率 + 环境 + 未处置告警 + 能耗概览（B12 值班简报方向的只读切片）。',
+    blocks:[ ['video'], ['env'], ['safety'], ['alerts'], ['energy'] ] },
+];
+
+/* ============ 页面逻辑 ============ */
+let variant = 'single', blocks = [], curScenario = -1;
+const $cards = document.getElementById('cards'), $payload = document.getElementById('payload');
+
+function setVariant(btn){ document.querySelectorAll('.bar [data-v]').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); variant = btn.dataset.v; render(); }
+function push(kind){ blocks.push(BLOCKS[kind]()); render(); }
+function clearAll(){ blocks = []; curScenario = -1; renderTabs(); render(); }
+function fmt(iso){ const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function ageHint(iso){ const ms = Date.now() - new Date(iso); const d = Math.floor(ms/86400000); return d>400 ? `${Math.floor(d/30)}个月前` : `${d}天前`; }
+
+const SUBTYPE = { smoke:'烟感', water:'水浸', gas:'燃气' };
+function blockHead(b){
+  const t = {video:'视频',environment:'环境',energy:'能耗',safety:'消防安全',alerts:'告警台账'}[b.type];
+  const c = b.devices ? ` · ${b.devices.length}` : b.records ? ` · ${b.total} 条` : '';
+  return `<div class="oblock-head">${t}<span class="count">${c}</span></div>`;
+}
+function renderBlock(b){
+  if (b.type==='video') return blockHead(b) + b.devices.map(d=>`
+    <div class="orow"><span class="dot ${d.online?'on':'off'}"></span>
+      <span class="nm">${d.name}</span><span class="loc">${d.location}</span>
+      <button class="vbtn" ${d.online?'':'disabled'}>${d.online?'查看画面':'已离线'}</button></div>`).join('');
+  if (b.type==='environment') return blockHead(b) + b.devices.map(d=>{
+    const r = d.reading;
+    return `<div class="orow"><span class="dot on"></span><span class="nm">${d.name}</span><span class="loc">${d.source==='shadow'?'平台影子值':'设备实时读'}</span></div>
+    <div class="egrid">
+      <div class="ecell"><div class="v">${r.temp}<small> °C</small></div><div class="k">温度</div></div>
+      <div class="ecell"><div class="v">${r.humidity}<small> %</small></div><div class="k">湿度</div></div>
+      <div class="ecell"><div class="v">${r.pm25}<small></small></div><div class="k">PM2.5</div></div>
+      <div class="ecell"><div class="v">${r.pm10}<small></small></div><div class="k">PM10</div></div>
+      <div class="ecell"><div class="v">${r.pm101}<small></small></div><div class="k">PM1.0</div></div>
+    </div>
+    <div class="meta">观测于 ${new Date().toISOString().slice(0,16).replace('T',' ')}${d.source==='shadow'?' · 影子兜底，非该房间实测':''}</div>`;
+  }).join('');
+  if (b.type==='safety') return blockHead(b) + b.devices.map(d=>`
+    <div class="orow"><span class="dot warn"></span>
+      <span class="nm">${d.name}</span><span class="loc">${SUBTYPE[d.subtype]}</span>
+      <span class="loc">无实时状态 · 仅告警台账</span></div>`).join('');
+  if (b.type==='energy') return blockHead(b) + b.devices.map(d=>{
+    const r = d.reading;
+    return `<div class="orow"><span class="dot ${d.stale?'warn':'on'}"></span>
+      <span class="nm">${d.name}</span><span class="loc">${r.totalActivePower!=null?r.totalActivePower+' kW':'读数不全'}</span></div>
+    <div class="meta">最新已知读数 · ${fmt(r.readTime)}（${ageHint(r.readTime)}）${d.stale?' · 采集维修中':''}</div>`;
+  }).join('');
+  if (b.type==='alerts'){
+    const latest = fmt(b.records[0].occurredAt);
+    return blockHead(b) + b.records.map(a=>`
+      <div class="arow"><time>${fmt(a.occurredAt)}</time>
+        <span class="dn">${a.deviceName}</span>
+        <span class="tag r0">${a.report?'已上报':'未上报'}</span></div>`).join('') +
+    `<div class="meta">最近一条为 ${latest.slice(0,7)}（${ageHint(b.records[0].occurredAt)}）· 平台标记已上报/未上报，不代表已恢复</div>
+     <div class="more">查看全部 ${b.total} 条 ›</div>`;
+  }
+  return '';
+}
+function render(){
+  const html = variant==='single'
+    ? `<div class="ocard">${blocks.map(b=>`<div class="oblock">${renderBlock(b)}</div>`).join('')}</div>`
+    : blocks.map(b=>`<div class="ocard"><div class="oblock">${renderBlock(b)}</div></div>`).join('');
+  $cards.innerHTML = blocks.length ? html : '<div class="meta" style="padding:8px 2px">（未注入事件——点上方按钮或选一个场景）</div>';
+  $payload.textContent = JSON.stringify({ type:'observation.reported', blocks }, null, 2);
+  verdict();
+}
+function renderTabs(){
+  document.getElementById('tabs').innerHTML = SCENARIOS.map((s,i)=>
+    `<button class="tab ${i===curScenario?'on':''}" onclick="run(${i})">${s.name}</button>`).join('');
+}
+function run(i){
+  curScenario = i; renderTabs();
+  document.getElementById('scenDesc').textContent = SCENARIOS[i].desc;
+  blocks = SCENARIOS[i].blocks.map(([k,arg])=>BLOCKS[k](arg===undefined? true : arg));
+  if (i===0) blocks[0].devices[2].online = false;          // 巡查场景固定带一台离线
+  if (i===1) blocks[0].devices[0].source = 'device';
+  if (i===4) { blocks[3] = BLOCKS.alerts({days:30}); }
+  render();
+}
+function verdict(){
+  const v = [];
+  if (blocks.some(b=>b.type==='video')) v.push('视频行：在线布尔态 → 「在线/离线 + 圆点 + 查看画面」语义成立；离线置灰并写明原因，避免静默无反应。');
+  if (blocks.some(b=>b.type==='environment')) v.push('环境块：五指标网格 + 来源标注（实时读/影子兜底）——影子不是该房间实测，标注缺不得。');
+  if (blocks.some(b=>b.type==='alerts')) v.push('告警块：最近一条 2024-04 已如实标注「N 个月前」+「report 是平台标记不代表已恢复」，没有暗示实时性。');
+  if (blocks.some(b=>b.type==='energy')) v.push('能耗块：readTime 完整展示为「最新已知读数」+ 相对年龄，陈旧是标注不是拒绝——口径与 Runtime 一致。');
+  if (blocks.some(b=>b.type==='safety')) v.push('消防设备行：不伪造当前态，明示「无实时状态 · 仅告警台账」。');
+  document.getElementById('verdict').innerHTML = v.join('<br>') || '注入事件后此处列出该形态暴露的口径问题。';
+}
+renderTabs(); run(0);
+</script>
+</body>
+</html>
