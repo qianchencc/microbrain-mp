@@ -5,7 +5,13 @@ const outcomeLabel = { verified: '已核验', satisfied: '已满足', unconfirme
  unreadable: '读取失败', missing: '设备缺失', not_dispatched: '未下发', pending: '待执行' }
 
 function summary(steps) {
- if (steps.some(step => step.phaseStatus === 'cancelled')) return { text: '已取消', tone: 'wait' }
+ if (steps.some(step => step.phaseStatus === 'cancelled')) {
+  const retained = steps.find(step => step.phaseStatus !== 'cancelled')
+  if (!retained) return { text: '已取消', tone: 'wait' }
+  const result = retained.phaseStatus === 'executing' ? '执行中' : retained.phaseStatus === 'missed' ? '已错过'
+   : retained.phaseStatus === 'interrupted' ? '执行中断' : outcomeLabel[retained.outcome] || '结果未知'
+  return { text: `${result} · 后续已取消`, tone: retained.phaseStatus === 'executing' ? 'active' : 'warn' }
+ }
  if (steps.every(step => step.phaseStatus === 'missed')) return { text: '已错过', tone: 'fail' }
  if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '执行中断', tone: 'warn' }
  if (steps.some(step => step.phaseStatus === 'executing')) return { text: '执行中', tone: 'active' }

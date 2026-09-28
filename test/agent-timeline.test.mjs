@@ -31,7 +31,7 @@ test('设备阶段卡区分待核验、进行中和部分完成', () => {
  assert.equal(deviceTimelineItems([morning, later('rejected')])[0].resultText, '部分完成')
  assert.equal(deviceTimelineItems([{ ...morning, phaseStatus: 'executing', outcome: 'pending' }])[0].resultText, '执行中')
  assert.equal(deviceTimelineItems([{ ...morning, taskStatus: 'cancelled' },
-  { ...later('not_dispatched'), taskStatus: 'cancelled', phaseStatus: 'cancelled' }])[0].resultText, '已取消')
+  { ...later('not_dispatched'), taskStatus: 'cancelled', phaseStatus: 'cancelled' }])[0].resultText, '已核验 · 后续已取消')
 })
 
 test('本地演示的区域任务与设备记录指向同一任务及目标', () => {
