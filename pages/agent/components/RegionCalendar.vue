@@ -1,9 +1,12 @@
 <template>
  <view class="calendar" :class="{ compact, expanded }">
   <view class="calendar-head">
-   <button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" aria-label="上个月" title="上个月" @tap="moveMonth(-1)"><uni-icons type="left" size="14" color="#586d60" /></button>
+   <view class="head-zone"><button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" aria-label="上个月" title="上个月" @tap="moveMonth(-1)"><uni-icons type="left" size="14" color="#586d60" /></button></view>
    <button class="month-title" :aria-expanded="expanded" @tap="expanded = !expanded"><text>{{ month.slice(0, 4) }} 年 {{ Number(month.slice(5)) }} 月</text><uni-icons :type="expanded ? 'up' : 'down'" size="12" color="#71877a" /></button>
-   <button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" :disabled="month >= maxDate.slice(0, 7)" aria-label="下个月" title="下个月" @tap="moveMonth(1)"><uni-icons type="right" size="14" color="#586d60" /></button>
+   <view class="head-zone head-right">
+    <button v-if="showToday" class="today-btn" hover-class="today-btn--pressed" aria-label="回到今天" title="回到今天" @tap="backToToday">今</button>
+    <button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" :disabled="month >= maxDate.slice(0, 7)" aria-label="下个月" title="下个月" @tap="moveMonth(1)"><uni-icons type="right" size="14" color="#586d60" /></button>
+   </view>
   </view>
   <view class="days-wrap" :style="{ maxHeight: Math.ceil(days.length / 7) * (compact ? 40 : 46) + 'px' }">
    <view class="days">
@@ -32,7 +35,9 @@ function moveMonth(delta) {
  const next = shiftDate(`${month.value}-01`, delta < 0 ? -1 : 32).slice(0, 7)
  if (next <= props.maxDate.slice(0, 7)) { month.value = next; expanded.value = true }
 }
+const showToday = computed(() => props.date !== props.today || month.value !== props.today.slice(0, 7))
 function select(day) { if (day > props.maxDate) return; month.value = day.slice(0, 7); emit('select', day) }
+function backToToday() { expanded.value = false; select(props.today) }
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
@@ -40,9 +45,14 @@ button { margin:0; padding:0; background:transparent; line-height:1.2; }
 button::after { border:0; }
 .calendar { flex-shrink:0; padding:2px 16px 8px; }
 .calendar-head { height:28px; display:flex; align-items:center; justify-content:space-between; }
+.head-zone { flex:1; min-width:0; display:flex; align-items:center; gap:2px; }
+.head-zone.head-right { justify-content:flex-end; }
 .month-arrow { width:30px; height:28px; display:flex; align-items:center; justify-content:center; transition:opacity 180ms ease; }
 .month-arrow.arrow-hidden { opacity:0; pointer-events:none; }
 .month-arrow[disabled] { opacity:.25; }
+.today-btn { height:24px; min-width:28px; padding:0 8px; margin:0; border-radius:12px; background:#eaf1ec; box-shadow:inset 0 0 0 .5px rgba(26,55,43,.14); color:#2f5a47; font-size:11px; font-weight:700; line-height:24px; text-align:center; animation:fadeIn 160ms ease-out backwards; transition:transform 130ms cubic-bezier(.23,1,.32,1); }
+.today-btn--pressed { transform:scale(.94); }
+@keyframes fadeIn { from { opacity:0; } }
 .month-title { display:flex; align-items:center; gap:7px; color:#455b4d; font-size:12px; font-weight:700; }
 .days-wrap { overflow:hidden; transition:max-height 240ms cubic-bezier(.32,.72,0,1); }
 .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; }

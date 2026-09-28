@@ -37,3 +37,4 @@
 - Task 详情独立读取当前授权照明现态，显示在执行收据之外；Office `switchStatus` 缺少执行时上报时间，当前显示“开启”不能把历史 `unconfirmed` 改成 `verified/completed`。现态读取失败不应抹掉任务收据。草案卡也只能根据本次回执及执行时回读决定结果标签，不能根据后来刷新到的现态把 `ACCEPTED` 改成“已达到目标”；所有现态查询不得用执行快照覆盖。
 - 现态手动与执行后的延迟刷新共用 `state-refresh.mjs`，只读设备状态；常驻界面不展示查询时间或“上报时间未知”。本轮边界与验证见 `plan/2026-09-28-device-state-receipt-separation.md`。
 - 工作台只在真实时间轴成功返回且完成视图更新后调用 `acknowledgeRegion`；加载失败、样例模式、隐藏页面或被新请求替代的结果不得清除异常提示。
+- `TaskDetailContent` 根节点是 `height:0;flex:1` 的 scroll-view，必须经宿主类（`content-host`/`task-content-host`，`flex:1;min-height:0;display:flex`）挂进 flex 容器；直接放进普通容器会塌成 0 高、详情空白（2026-09-28 抽屉栈重构踩过）。抽屉内 列表→设备→任务 三级导航栈见 `plan/2026-09-28-region-chrome-nav-motion.md`。

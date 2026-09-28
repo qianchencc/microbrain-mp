@@ -41,7 +41,7 @@
     </scroll-view>
    </view>
    <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceTimelineView class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
-   <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskDetailContent :active="Boolean(taskPane)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" /></view>
+   <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskDetailContent class="task-content-host" :active="Boolean(taskPane)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" /></view>
   </view>
  </DeviceSheet>
 </template>
@@ -154,7 +154,7 @@ onBeforeUnmount(() => { stateRefresh.cancel(); ++directoryRequest; ++stateReques
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.2; }
 button::after { border:0; }
-.filter-header { position:relative; height:50px; border-top:1px solid #edf0ed; overflow:hidden; }
+.filter-header { position:relative; height:50px; border-top:1px solid #edf0ed; border-bottom:1px solid #edf0ed; overflow:hidden; }
 .header-actions { display:flex; align-items:center; gap:6px; min-width:0; }
 .sheet-meta { max-width:170px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#78877e; font-size:11px; }
 .state-refresh { width:32px; height:32px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
@@ -163,7 +163,7 @@ button::after { border:0; }
 @keyframes state-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce){.spinning{animation:none}}
 .back-button { width:30px; height:30px; margin-right:8px; border-radius:15px; background:#eef2ef; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.group-controls,.search-controls { position:absolute; inset:0; padding:0 16px; display:flex; align-items:center; gap:8px; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
+.group-controls,.search-controls { position:absolute; top:0; right:0; bottom:0; left:0; padding:0 16px; display:flex; align-items:center; gap:8px; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
 .search-controls { opacity:0; transform:translateX(22px); pointer-events:none; }
 .filter-header.searching .group-controls { opacity:0; transform:translateX(-22px); pointer-events:none; }
 .filter-header.searching .search-controls { opacity:1; transform:none; pointer-events:auto; }
@@ -181,6 +181,7 @@ button::after { border:0; }
 .nav-pane.pane-before { transform:translateX(-12%); opacity:.8; pointer-events:none; }
 .nav-pane.pane-after { transform:translateX(26%); opacity:0; pointer-events:none; }
 .device-timeline-host { height:0; min-height:0; flex:1; overflow:hidden; }
+.task-content-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
 .state-warning { margin:6px 16px 0; color:#a27128; font-size:11px; }
 .device-scroll { flex:1; min-height:0; height:0; box-sizing:border-box; padding:0 16px; }
 .empty { padding:45px 8px; text-align:center; color:#89958e; font-size:13px; animation:fadeIn 160ms ease-out backwards; }

@@ -5,7 +5,7 @@
   <view v-else-if="detail" class="task-detail">
    <text class="task-name">{{ detail.label }}</text>
    <text class="task-when">{{ detail.whenText }}</text>
-   <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ detail.creator.displayName }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
+   <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ detail.creator?.displayName || '成员' }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
    <text v-if="currentError" class="current-error">状态暂不可用</text>
    <text v-if="actionError" class="action-error">{{ actionError }}</text>
@@ -70,6 +70,7 @@ async function load(silent = false) {
  try {
   const result = await getTaskDetail(taskId)
   if (current === requestId && props.active && props.taskId === taskId) {
+   if (!result?.task) { error.value = '任务不存在或没有查看权限'; return }
    const previousPhases = new Map((task.value?.phases || []).map(phase => [phase.id, phase.status]))
    task.value = result.task
    if (result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
