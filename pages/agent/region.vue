@@ -20,7 +20,7 @@
     </template>
    </RegionTimeline>
   </view>
-  <view class="device-dock"><button class="device-entry" hover-class="device-entry--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="device-entry primary" hover-class="device-entry--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view>
+  <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
   <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
   <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
@@ -114,7 +114,7 @@ function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId;
 function composeTask() {
  if (focusRegion.value) {
   selectFocusRegion(focusRegion.value.id)
-  queueComposePrefill(`在「${focusRegion.value.name}」`)
+  queueComposePrefill(`在 ${focusRegion.value.name} 新建任务：`)
  }
  uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pages/agent/index' }) })
 }
@@ -209,11 +209,12 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .owner-mark.cv-slate { background:linear-gradient(145deg,#8fa7b8,#5d7484); }
 .owner-mark.cv-grey { background:linear-gradient(145deg,#a9b0aa,#7a817b); }
 .task-row.cancelled .task-label { text-decoration:line-through; text-decoration-color:#9caaa0; }
-.device-dock { flex-shrink:0; height:70px; display:flex; align-items:center; justify-content:center; gap:10px; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
-.device-entry { height:44px; margin:0; padding:0 20px; border:1px solid #dce5dd; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#fff,#f2f6f1); box-shadow:0 5px 18px #233a2d1c; color:#315846; font-size:13px; font-weight:600; }
-.device-entry::after { border:0; }
-.device-entry.primary { border-color:transparent; background:linear-gradient(#3c8a68,#2d6b51); color:#f2f8f4; box-shadow:0 5px 18px #24513f33,inset 0 1px 0 #ffffff30; }
-.device-entry--pressed { transform:scale(.97); }
-.primary-plus { font-size:15px; font-weight:600; line-height:1; }
-.device-count { font-size:11px; color:#7b8d80; }
+.device-dock { flex-shrink:0; box-sizing:content-box; height:56px; padding-bottom:env(safe-area-inset-bottom); display:flex; align-items:center; justify-content:center; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
+.dock-bar { height:44px; padding:4px; border-radius:22px; display:flex; align-items:center; background:linear-gradient(#fefffe,#f1f5f2); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 10px 26px rgba(28,57,42,.18); }
+.dock-seg { height:36px; margin:0; padding:0 16px; border-radius:18px; display:flex; align-items:center; justify-content:center; gap:6px; background:transparent; color:#315846; font-size:12.5px; font-weight:650; line-height:1; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.dock-seg::after { border:0; }
+.dock-seg.primary { background:linear-gradient(145deg,#308b70,#1d5c45); color:#fff; box-shadow:0 3px 9px rgba(23,74,55,.25),inset 0 1px 0 rgba(255,255,255,.18); }
+.dock-seg--pressed { transform:scale(.96); }
+.primary-plus { font-size:15px; font-weight:500; line-height:1; }
+.device-count { font-size:11px; color:#7b8d80; font-weight:600; }
 </style>
