@@ -9,7 +9,7 @@
      <button class="icon-button" aria-label="搜索设备" hover-class="icon-button--pressed" @tap="openSearch"><image src="/static/search.svg" /></button>
      <text class="count">{{ devices.length }} 台</text>
     </view>
-    <view class="search-controls">
+    <view class="search-controls" :class="{ searching }">
      <button class="icon-button" aria-label="返回全部设备" hover-class="icon-button--pressed" @tap="closeSearch"><image src="/static/back.svg" /></button>
      <view class="search-field"><image src="/static/search.svg" /><input v-model="query" placeholder="搜索名称、位置或状态" placeholder-style="color:#8a978f" confirm-type="search" :focus="searchFocused" :adjust-position="false" /></view>
     </view>
@@ -154,7 +154,7 @@ onBeforeUnmount(() => { stateRefresh.cancel(); ++directoryRequest; ++stateReques
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.2; }
 button::after { border:0; }
-.filter-header { position:relative; height:50px; border-top:1px solid #edf0ed; border-bottom:1px solid #edf0ed; overflow:hidden; }
+.filter-header { position:relative; height:50px; padding:0 16px; display:flex; align-items:center; border-top:1px solid #edf0ed; border-bottom:1px solid #edf0ed; overflow:hidden; }
 .header-actions { display:flex; align-items:center; gap:6px; min-width:0; }
 .sheet-meta { max-width:170px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#78877e; font-size:11px; }
 .state-refresh { width:32px; height:32px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
@@ -163,8 +163,8 @@ button::after { border:0; }
 @keyframes state-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce){.spinning{animation:none}}
 .back-button { width:30px; height:30px; margin-right:8px; border-radius:15px; background:#eef2ef; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.group-controls,.search-controls { position:absolute; top:0; right:0; bottom:0; left:0; padding:0 16px; display:flex; align-items:center; gap:8px; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
-.search-controls { opacity:0; transform:translateX(22px); pointer-events:none; }
+.group-controls { width:100%; min-width:0; display:flex; align-items:center; gap:8px; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
+.search-controls { position:absolute; top:0; right:0; bottom:0; left:0; padding:0 16px; display:flex; align-items:center; gap:8px; opacity:0; transform:translateX(22px); pointer-events:none; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
 .filter-header.searching .group-controls { opacity:0; transform:translateX(-22px); pointer-events:none; }
 .filter-header.searching .search-controls { opacity:1; transform:none; pointer-events:auto; }
 .group-mode { height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:12px; transition:background-color 180ms ease,color 180ms ease,transform 130ms cubic-bezier(.23,1,.32,1); }
