@@ -16,7 +16,11 @@
      <view class="phase-main">
       <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><text class="phase-status">{{ phase.statusText }}</text></view>
       <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
-      <view class="device-list">
+      <button v-if="phase.devices.length > 1" class="phase-devices" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
+       <view class="phase-avatars"><view v-for="device in phase.devices.slice(0, 5)" :key="device.id" class="phase-avatar"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="12" color="#7c8d82" /></view></view>
+       <text class="phase-device-count">{{ phase.devices.length }} 台设备</text><uni-icons :type="expandedPhases.includes(phase.id) ? 'down' : 'right'" size="13" color="#839189" />
+      </button>
+      <view v-if="phase.devices.length <= 1 || expandedPhases.includes(phase.id)" class="device-list">
        <view v-for="device in phase.devices" :key="device.id" class="device-row">
         <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><text class="result" :class="device.resultTone">{{ device.resultText }}</text>
        </view>
@@ -39,8 +43,12 @@ import { taskDetailView } from '../task-detail-view.mjs'
 const props = defineProps({ open: Boolean, taskId: String, sampleTask: Object, regionName: String })
 const emit = defineEmits(['close', 'cancelled'])
 const task = ref(null), loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
+const expandedPhases = ref([])
 const detail = computed(() => taskDetailView(task.value))
 let requestId = 0, refreshTimer
+function togglePhase(id) {
+ expandedPhases.value = expandedPhases.value.includes(id) ? expandedPhases.value.filter(value => value !== id) : [...expandedPhases.value, id]
+}
 async function load(silent = false) {
  const current = ++requestId
  if (!props.open || !props.taskId) return
@@ -73,6 +81,7 @@ async function deleteTask() {
 watch(() => [props.open, props.taskId, props.sampleTask], () => {
  clearInterval(refreshTimer)
  actionError.value = ''
+ expandedPhases.value = []
  if (props.open) {
   load()
   if (!props.sampleTask) refreshTimer = setInterval(() => {
@@ -114,6 +123,11 @@ button::after { border:0; }
 .phase-title { color:#839189; font-size:11px; }
 .phase-status { margin-left:auto; flex-shrink:0; color:#397b61; font-size:11px; }
 .phase-reason { display:block; margin-top:5px; color:#9b6630; font-size:11px; }
+.phase-devices { width:100%; min-height:38px; margin:9px 0 0; padding:5px 9px; border:1px solid #e0e9e1; border-radius:8px; display:flex; align-items:center; gap:8px; background:#f9fbf9; text-align:left; }
+.phase-avatars { display:flex; align-items:center; flex-shrink:0; padding-left:5px; }
+.phase-avatar { width:22px; height:22px; margin-left:-5px; border:1px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#edf2ee; }
+.phase-avatar image { width:22px; height:22px; }
+.phase-device-count { flex:1; min-width:0; color:#718176; font-size:11px; }
 .device-list { margin-top:9px; border-top:1px solid #e2e9e3; }
 .device-row { padding:9px 0; border-bottom:1px solid #e2e9e3; display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:8px; row-gap:3px; }
 .device-name { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#304b39; font-size:12px; font-weight:600; }

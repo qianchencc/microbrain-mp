@@ -1,4 +1,5 @@
 import { fieldLabels, fanLabels, modeLabels } from './ac-draft.js'
+import { resolveDeviceArtwork } from './device-art/catalog.js'
 
 const statusText = { scheduled: '待执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', verified: '已核验', satisfied: '已达标', pending: '待执行' }
 const outcomeText = { satisfied: '已达标，无需下发', verified: '已下发并核验', unconfirmed: '已受理，未核验', rejected: '平台拒绝', unknown: '结果未知', not_dispatched: '未下发', unreadable: '状态读取失败', missing: '设备不可用', pending: '待执行' }
@@ -35,7 +36,8 @@ export function taskDetailView(task) {
  const phases = task.phases.map((phase, index) => ({
   ...phase, title: task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束',
   time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusText[phase.status] || phase.status,
-  devices: (phase.devices || []).map(device => ({ ...device, targetText: targetText(device.kind, device.target),
+  devices: (phase.devices || []).map(device => ({ ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
+   targetText: targetText(device.kind, device.target),
    resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device),
    resultTone: phase.status === 'cancelled' ? 'wait' : ['verified', 'satisfied'].includes(device.outcome) ? 'ok' : ['unconfirmed', 'unknown'].includes(device.outcome) ? 'warn' : device.outcome === 'pending' ? 'wait' : 'fail' })),
  }))
