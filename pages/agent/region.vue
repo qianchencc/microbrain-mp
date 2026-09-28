@@ -4,7 +4,7 @@
   <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text>{{ tasks.length }} 条记录</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
   <text v-if="sampleMode" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-body">
-   <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample-' : 'real-') + date" calendar :calendar-marks="calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :now="displayNow" @date-change="date = $event" @calendar-month="onCalendarMonth" @select="openTask">
+   <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample-' : 'real-') + date" calendar :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :now="displayNow" @date-change="date = $event" @calendar-month="onCalendarMonth" @select="openTask">
     <template #empty>
      <view v-if="loading || error" class="notice"><text>{{ loading ? '正在读取任务记录' : error }}</text><button v-if="error" @tap="load">重新加载</button></view>
      <view v-else class="empty"><image class="empty-art" :src="emptyArt" mode="aspectFit" /><text class="empty-title">这一天还没有任务记录</text><text>在物联 Agent 中确认设备操作后，</text><text>结果会显示在这里。</text></view>
@@ -41,7 +41,7 @@ import { calendarWindow, shiftDate, validCalendarDate } from './region-calendar.
 import { regionTimelineItems } from './region-timeline.mjs'
 import { regionSampleTasks, regionSampleTaskDetail } from './region-sample-tasks.mjs'
 const emptyArt = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80"><path d="M30 2c-9 12 9 22 0 38s9 26 0 38" fill="none" stroke="#c9d6ce" stroke-width="1.6"/><circle cx="31" cy="40" r="6" fill="#fff"/><circle cx="31" cy="40" r="4" fill="#ad711b"/></svg>')
-const error = ref(''), loading = ref(true), tasks = ref([]), sampleMode = ref(false)
+const error = ref(''), loading = ref(true), tasks = ref([]), sampleTasks = ref([]), sampleMode = ref(false)
 const deviceDrawerOpen = ref(false), deviceCount = ref(null)
 const selectedTaskId = ref(''), sampleDetail = ref(null), sampleDate = ref('')
 const calendarMarks = ref([]), calendarMonth = ref(''), calendarError = ref(false)
@@ -49,6 +49,11 @@ const now = ref(new Date().toISOString()), today = computed(() => localDate(now.
 const maxDate = computed(() => shiftDate(today.value, 7))
 const displayNow = computed(() => sampleMode.value ? `${date.value}T14:52:00+08:00` : now.value)
 const items = computed(() => regionTimelineItems(tasks.value))
+const sampleCalendarMarks = computed(() => {
+ const { from, to } = calendarWindow(calendarMonth.value || date.value.slice(0, 7))
+ return sampleTasks.value.length && sampleDate.value >= from && sampleDate.value <= to
+  ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'missed', 'interrupted'].includes(task.status)) }] : []
+})
 let initialRegion = '', initialDate = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer
 onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || '' })
 async function loadTimeline(silent = false) {
@@ -57,9 +62,12 @@ async function loadTimeline(silent = false) {
  try {
   if (!region) return
   if (sampleMode.value) {
-   if (date.value !== sampleDate.value) { tasks.value = []; return }
+   sampleTasks.value = []
    const result = await listRegionDevices(region)
-   if (current === requestId && scope === getAgentStorageScope() && sampleMode.value) tasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
+   if (current === requestId && scope === getAgentStorageScope() && sampleMode.value) {
+    sampleTasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
+    tasks.value = date.value === sampleDate.value ? sampleTasks.value : []
+   }
    return
   }
   const result = await listRegionTimeline(region, date.value)
@@ -79,7 +87,7 @@ function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7), sil
  if (!silent) { calendarMarks.value = []; calendarError.value = false }
  if (!region) return
  const { from, to } = calendarWindow(month)
- if (sampleMode.value) { calendarMarks.value = sampleDate.value >= from && sampleDate.value <= to ? [{ date: sampleDate.value, abnormal: true }] : []; return }
+ if (sampleMode.value) return
  listRegionCalendar(region, from, to).then(result => {
   if (current === calendarRequest && region === focusRegionId.value && scope === getAgentStorageScope()) calendarMarks.value = result.days || []
  }).catch(() => { if (!silent && current === calendarRequest) { calendarMarks.value = []; calendarError.value = true } })
@@ -92,16 +100,16 @@ function openTask(item) {
  sampleDetail.value = sample
 }
 function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId; sampleDetail.value = sampleTask || null }
-function toggleSample() { sampleMode.value = !sampleMode.value; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; void loadVisibleTimeline(); loadCalendar() }
+function toggleSample() { sampleMode.value = !sampleMode.value; sampleTasks.value = []; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; void loadVisibleTimeline(); loadCalendar() }
 async function load() {
  const currentLoad = ++loadId
- loadingDirectory = true; loading.value = true; error.value = ''; tasks.value = []; ++requestId
+ loadingDirectory = true; loading.value = true; error.value = ''; tasks.value = []; sampleTasks.value = []; ++requestId
  now.value = new Date().toISOString()
  try { await loadRegionFocus(); if (currentLoad !== loadId || !visible) return; if (initialRegion) { selectFocusRegion(initialRegion); initialRegion = '' }; if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate; initialDate = ''; await loadVisibleTimeline(); loadCalendar() }
  catch (cause) { if (currentLoad === loadId) { error.value = cause.message || '区域暂不可用'; loading.value = false } }
  finally { if (currentLoad === loadId) loadingDirectory = false }
 }
-watch(focusRegionId, () => { deviceCount.value = null; selectedTaskId.value = ''; if (visible && !loadingDirectory) { void loadVisibleTimeline(); loadCalendar() } })
+watch(focusRegionId, () => { deviceCount.value = null; sampleTasks.value = []; selectedTaskId.value = ''; if (visible && !loadingDirectory) { void loadVisibleTimeline(); loadCalendar() } })
 watch(date, () => { selectedTaskId.value = ''; if (visible && !loadingDirectory) void loadVisibleTimeline() })
 function scheduleRefresh() {
  clearTimeout(refreshTimer)
