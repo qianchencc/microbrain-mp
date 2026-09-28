@@ -109,7 +109,7 @@ watch(() => [props.draft?.draftId, props.openRequest], () => { if (!props.draft)
 // 面板内三页导航：0 全部设备 / 1 搜索 / 2 参数编辑；返回列表页即清过滤，列表始终是全量。
 watch(page, value => { if (value === 0) search.value = '' })
 watch(open, value => {
- if (value) { stateRefresh.run(); scrollY.value = 0; if (props.browser) listMeasurer.schedule() }
+ if (value) { stateRefresh.auto(); scrollY.value = 0; if (props.browser) listMeasurer.schedule() }
  else { stateRefresh.cancel(); ++stateRequest; stateLoading.value = false }
 })
 watch(() => props.result, result => {

@@ -1,29 +1,25 @@
-import { targetText } from './task-detail-view.mjs'
+import { executionResult, targetText } from './task-detail-view.mjs'
 import { creatorVariant } from './region-device-view.mjs'
 
-const settled = outcome => ['verified', 'satisfied'].includes(outcome)
-const outcomeLabel = { verified: '已核验', satisfied: '已满足', unconfirmed: '待核验', unknown: '结果未知', rejected: '未受理',
- unreadable: '读取失败', missing: '设备缺失', not_dispatched: '未下发', pending: '待执行' }
+const settled = step => ['已执行', '不必执行'].includes(executionResult(step))
 
 function summary(steps) {
  if (steps.some(step => step.phaseStatus === 'cancelled')) {
   const retained = steps.find(step => step.phaseStatus !== 'cancelled')
   if (!retained) return { text: '已取消', tone: 'wait' }
   const result = retained.phaseStatus === 'executing' ? '执行中' : retained.phaseStatus === 'missed' ? '已错过'
-   : retained.phaseStatus === 'interrupted' ? '执行中断' : outcomeLabel[retained.outcome] || '结果未知'
+   : retained.phaseStatus === 'interrupted' ? '明确报错' : executionResult(retained)
   return { text: `${result} · 后续已取消`, tone: retained.phaseStatus === 'executing' ? 'active' : 'warn' }
  }
- if (steps.every(step => step.phaseStatus === 'missed')) return { text: '已错过', tone: 'fail' }
- if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '执行中断', tone: 'warn' }
+ if (steps.every(step => step.phaseStatus === 'missed')) return { text: '明确报错', tone: 'fail' }
+ if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '明确报错', tone: 'fail' }
  if (steps.some(step => step.phaseStatus === 'executing')) return { text: '执行中', tone: 'active' }
- if (steps.length === 1) return { text: outcomeLabel[steps[0].outcome] || '结果未知',
-  tone: settled(steps[0].outcome) ? 'ok' : ['unconfirmed', 'unknown'].includes(steps[0].outcome) ? 'warn' : steps[0].outcome === 'pending' ? 'wait' : 'fail' }
- const outcomes = steps.map(step => step.outcome)
- if (outcomes.every(settled)) return { text: '已完成', tone: 'ok' }
- if (outcomes.some(outcome => outcome === 'pending')) return { text: outcomes.every(outcome => outcome === 'pending') ? '待执行' : '进行中', tone: 'wait' }
- if (outcomes.some(settled)) return { text: '部分完成', tone: 'warn' }
- if (outcomes.some(outcome => ['unconfirmed', 'unknown'].includes(outcome))) return { text: '待核验', tone: 'warn' }
- return { text: '未完成', tone: 'fail' }
+ if (steps.length === 1) return { text: executionResult(steps[0]),
+  tone: settled(steps[0]) ? 'ok' : executionResult(steps[0]) === '未执行' ? 'wait' : 'fail' }
+ if (steps.some(step => executionResult(step) === '明确报错')) return { text: '明确报错', tone: 'fail' }
+ if (steps.some(step => executionResult(step) === '未执行')) return { text: '未执行', tone: 'wait' }
+ if (steps.every(step => executionResult(step) === '不必执行')) return { text: '不必执行', tone: 'ok' }
+ return { text: '已执行', tone: 'ok' }
 }
 
 export function deviceTimelineItems(events) {
@@ -37,7 +33,7 @@ export function deviceTimelineItems(events) {
   const first = steps[0], last = steps.at(-1)
   const device = first.device
   const targets = steps.map(step => targetText(device.kind, step.target))
-  const allSettled = steps.every(step => settled(step.outcome))
+  const allSettled = steps.every(settled)
   const result = summary(steps)
   return [{
    id: steps.map(step => step.phaseId).join('-'), taskId: first.taskId, at: first.at,

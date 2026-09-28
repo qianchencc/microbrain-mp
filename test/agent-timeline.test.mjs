@@ -23,17 +23,17 @@ test('跨日任务在中间日期保留可见缎带和卡片，不显示画面�
  assert.ok(scene.shapes.some(shape => shape.fill === 'future'))
 })
 
-test('设备阶段卡区分待核验、进行中和部分完成', () => {
+test('设备阶段卡区分已执行、进行中和明确报错', () => {
  const event = (phaseId, outcome, at) => ({ taskId: 'task-1', taskLabel: '会议室任务', sourceType: 'scheduled', creatorName: '成员',
   phaseId, at, outcome, device: { id: 'ac-1', kind: 'ac', name: '空调' }, target: { power: 'on' } })
  const morning = event('start', 'verified', '2026-09-27T01:00:00Z')
  const later = outcome => event('end', outcome, '2026-09-27T06:00:00Z')
- assert.equal(deviceTimelineItems([event('only', 'unconfirmed', morning.at)])[0].resultText, '待核验')
- assert.equal(deviceTimelineItems([morning, later('pending')])[0].resultText, '进行中')
- assert.equal(deviceTimelineItems([morning, later('rejected')])[0].resultText, '部分完成')
+ assert.equal(deviceTimelineItems([{ ...event('only', 'unconfirmed', morning.at), details: { receipt: 'ACCEPTED' } }])[0].resultText, '已执行')
+ assert.equal(deviceTimelineItems([morning, later('pending')])[0].resultText, '未执行')
+ assert.equal(deviceTimelineItems([morning, later('rejected')])[0].resultText, '明确报错')
  assert.equal(deviceTimelineItems([{ ...morning, phaseStatus: 'executing', outcome: 'pending' }])[0].resultText, '执行中')
  assert.equal(deviceTimelineItems([{ ...morning, taskStatus: 'cancelled' },
-  { ...later('not_dispatched'), taskStatus: 'cancelled', phaseStatus: 'cancelled' }])[0].resultText, '已核验 · 后续已取消')
+  { ...later('not_dispatched'), taskStatus: 'cancelled', phaseStatus: 'cancelled' }])[0].resultText, '已执行 · 后续已取消')
 })
 
 test('本地演示的区域任务与设备记录指向同一任务及目标', () => {
@@ -56,6 +56,6 @@ test('本地演示的区域任务与设备记录指向同一任务及目标', ()
  const unresolved = { ...tasks[0], status: 'unconfirmed', phases: tasks[0].phases.map(phase => ({
   ...phase, status: 'unconfirmed', devices: phase.devices.map(device => ({ ...device, outcome: 'unconfirmed' })),
  })) }
- assert.equal(taskDetailView(unresolved).statusText, '未核验')
- assert.equal(regionTimelineItems([unresolved])[0].warning, true)
+ assert.equal(taskDetailView(unresolved).statusText, '明确报错')
+ assert.equal(regionTimelineItems([unresolved])[0].warning, false)
 })

@@ -1,8 +1,14 @@
 import { fieldLabels, fanLabels, modeLabels } from './ac-draft.js'
 import { resolveDeviceArtwork } from './device-art/catalog.js'
 
-const statusText = { scheduled: '待执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '未核验', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', verified: '已核验', satisfied: '已达标', pending: '待执行' }
-const outcomeText = { satisfied: '已达标，无需下发', verified: '已下发并核验', unconfirmed: '已受理，未核验', rejected: '平台拒绝', unknown: '结果未知', not_dispatched: '未下发', unreadable: '状态读取失败', missing: '设备不可用', pending: '待执行' }
+const statusText = { scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '明确报错', failed: '明确报错', unconfirmed: '明确报错', cancelled: '已取消', missed: '明确报错', interrupted: '明确报错', verified: '已执行', satisfied: '不必执行', pending: '未执行' }
+
+export function executionResult(device) {
+ if (device.outcome === 'satisfied') return '不必执行'
+ if (device.outcome === 'verified' || (device.outcome === 'unconfirmed' && device.details?.receipt === 'ACCEPTED' && !device.details?.timedOut)) return '已执行'
+ if (['pending', 'not_dispatched'].includes(device.outcome)) return '未执行'
+ return '明确报错'
+}
 
 export function taskTime(instant) {
  if (!instant) return ''
@@ -23,17 +29,19 @@ export function targetText(kind, target) {
 }
 
 export function resultText(device) {
+ const status = executionResult(device)
+ if (status !== '明确报错') return status
  const rejected = (device.details?.fields || []).filter(field => field.outcome === 'REJECTED')
   .map(field => fieldLabels[field.field] || field.field)
- if (device.details?.receipt === 'PARTIALLY_ACCEPTED') return `部分受理：${rejected.join('、')}被拒绝，设备未核验`
- if (device.outcome === 'rejected' && rejected.length) return `平台拒绝：${rejected.join('、')}`
- if (device.details?.timedOut) return '平台响应超时，结果未知'
- return outcomeText[device.outcome] || device.outcome || '待执行'
+ if (rejected.length) return `${status} · ${rejected.join('、')}被拒绝`
+ if (device.details?.timedOut) return `${status} · 平台响应超时`
+ const reason = { rejected: '平台拒绝', unknown: '结果未知', unreadable: '状态读取失败', missing: '设备不可用' }[device.outcome]
+ return reason ? `${status} · ${reason}` : status
 }
 
 const phaseTone = status =>
  ['verified', 'satisfied', 'completed'].includes(status) ? 'ok'
- : ['partial', 'unconfirmed'].includes(status) ? 'warn'
+ : status === 'partial' ? 'warn'
  : ['failed', 'missed', 'interrupted'].includes(status) ? 'fail'
  : status === 'executing' ? 'active' : status === 'cancelled' ? 'off' : 'wait'
 
@@ -55,16 +63,10 @@ export function taskDetailView(task) {
   devices: (phase.devices || []).map(device => ({ ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
    targetText: targetText(device.kind, device.target),
    resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device),
-   resultTone: phase.status === 'cancelled' ? 'wait' : ['verified', 'satisfied'].includes(device.outcome) ? 'ok' : ['unconfirmed', 'unknown'].includes(device.outcome) ? 'warn' : device.outcome === 'pending' ? 'wait' : 'fail' })),
+   resultTone: phase.status === 'cancelled' ? 'wait' : executionResult(device) === '明确报错' ? 'fail' : executionResult(device) === '未执行' ? 'wait' : 'ok' })),
  }))
- const count = new Set(phases.flatMap(phase => phase.devices.map(device => device.id))).size
- const problemCount = phases.flatMap(phase => phase.devices).filter(device => !['verified', 'satisfied', 'pending'].includes(device.outcome)).length
- const summary = task.status === 'scheduled' ? `${count} 台设备等待执行`
-  : task.status === 'executing' ? phases.some(phase => phase.status === 'executing') ? '正在读取并处理设备' : '等待下一阶段执行'
-  : task.status === 'cancelled' ? '任务已取消，已执行的动作不会回滚'
-  : task.status === 'missed' ? '任务已错过，没有自动补执行'
-  : task.status === 'unconfirmed' ? `${count} 台设备的执行结果未核验`
-  : problemCount ? `${problemCount} 项结果需要关注` : `${count} 台设备目标已达成`
+ const problemCount = phases.flatMap(phase => phase.devices).filter(device => executionResult(device) === '明确报错').length
+ const summary = problemCount ? `${problemCount} 项明确报错` : ''
  const whenText = phases.length > 1 && phases[0].time.slice(0, 10) === phases.at(-1).time.slice(0, 10)
   ? `${phases[0].time} 至 ${phases.at(-1).clock}` : phases.map(phase => phase.time).join(' 至 ')
  return { ...task, phases, whenText, createdText: taskTime(task.createdAt), statusText: statusText[task.status] || task.status,

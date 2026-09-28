@@ -31,7 +31,7 @@ const isCreated = computed(() => isCancellation.value ? state.value === 'confirm
  : Boolean(props.task.created) || ['scheduled', 'executing', 'completed', 'partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(state.value))
 const stateText = computed(() => isCancellation.value
  ? ({ pending_confirmation: '待确认', confirmed: '已取消', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束'
- : ({ pending_confirmation: '待确认', scheduled: '已安排', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '未核验', cancelled: '已取消', missed: '已错过', interrupted: '执行中断', expired: '已过期' })[state.value] || '已结束')
+ : ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '明确报错', failed: '明确报错', unconfirmed: '明确报错', cancelled: '已取消', missed: '明确报错', interrupted: '明确报错', expired: '已过期' })[state.value] || '已结束')
 function phaseTitle(index) {
  if (isCancellation.value) return state.value === 'confirmed' ? '已取消' : '将取消'
  return props.task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束'

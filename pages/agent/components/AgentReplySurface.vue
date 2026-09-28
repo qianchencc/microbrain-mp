@@ -22,8 +22,8 @@
     @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
     @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
     @configure="$emit('configure', $event)" @browse="$emit('browse')" />
-   <TaskProposalCard v-if="turn.task" :task="turn.task" :busy="busy"
-    @confirm="$emit('confirm-task')" @discard="$emit('discard-task')" @open="$emit('open-task')" />
+   <TaskProposalCard v-for="task in turn.tasks || (turn.task ? [turn.task] : [])" :key="task.cancellationId || task.taskId" :task="task" :busy="busy"
+    @confirm="$emit('confirm-task', task)" @discard="$emit('discard-task', task)" @open="$emit('open-task', task)" />
    <view v-if="turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
     <text v-if="turn.result.summary.status === 'completed'" class="execution-answer">{{ turn.result.summary.text }}</text>
     <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>

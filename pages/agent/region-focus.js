@@ -9,26 +9,37 @@ export const regionsError = ref('')
 export const focusRegion = computed(() => regions.value.find(region => region.id === focusRegionId.value) || null)
 let owner = ''
 let sequence = 0
+let loadedAt = 0, inFlight = null
 const storageKey = scope => 'agent-focus-region:' + scope
 
 export async function loadRegionFocus() {
+ await waitForAgentSession()
+ const scope = getAgentStorageScope()
+ if (scope === owner && regions.value.length && Date.now() - loadedAt < 30000) return
+ if (inFlight?.scope === scope) return inFlight.promise
  const request = ++sequence
+ if (scope !== owner) { regions.value = []; focusRegionId.value = ''; owner = scope; loadedAt = 0 }
  regionsLoading.value = true
  regionsError.value = ''
- try {
-  await waitForAgentSession()
-  const scope = getAgentStorageScope()
-  if (scope !== owner) { regions.value = []; focusRegionId.value = ''; owner = scope }
-  const result = await listRegions()
-  if (request !== sequence || scope !== getAgentStorageScope()) return
-  regions.value = result.regions || []
-  const saved = uni.getStorageSync(storageKey(scope))
-  focusRegionId.value = regions.value.find(region => region.id === saved)?.id || regions.value[0]?.id || ''
-  uni.setStorageSync(storageKey(scope), focusRegionId.value)
- } catch (error) {
-  if (request === sequence) { regions.value = []; focusRegionId.value = ''; regionsError.value = error.message || '区域暂不可用' }
-  throw error
- } finally { if (request === sequence) regionsLoading.value = false }
+ const promise = (async () => {
+  try {
+   const result = await listRegions()
+   if (request !== sequence || scope !== getAgentStorageScope()) return
+   regions.value = result.regions || []
+   const saved = uni.getStorageSync(storageKey(scope))
+   focusRegionId.value = regions.value.find(region => region.id === saved)?.id || regions.value[0]?.id || ''
+   uni.setStorageSync(storageKey(scope), focusRegionId.value)
+   loadedAt = Date.now()
+  } catch (error) {
+   if (request === sequence) { regions.value = []; focusRegionId.value = ''; regionsError.value = error.message || '区域暂不可用' }
+   throw error
+  } finally {
+   if (request === sequence) regionsLoading.value = false
+   if (inFlight?.promise === promise) inFlight = null
+  }
+ })()
+ inFlight = { scope, promise }
+ return promise
 }
 
 export function selectFocusRegion(id) {

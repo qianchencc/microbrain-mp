@@ -49,8 +49,8 @@ async function refresh() {
 let stateRequest = 0
 const stateRefresh = createStateRefresh(refresh)
 watch(() => props.result, result => { if (result) { ++stateRequest; states.value = {}; stateLoading.value = false; stateRefresh.after(1000) } })
-watch(pending, value => { if (value) stateRefresh.run() })
-onMounted(() => stateRefresh.run())
+watch(pending, value => { if (value) stateRefresh.auto() })
+onMounted(() => stateRefresh.auto())
 onUnmounted(() => { stateRefresh.cancel(); ++stateRequest })
 </script>
 <style scoped>

@@ -1,13 +1,13 @@
 import { fieldLabels } from './ac-draft.js'
 
 export function createTurn(id, content) {
-	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], draft: null, task: null, roster: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
+	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], draft: null, task: null, tasks: [], roster: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
 }
 
 export function canRecoverTurn(turn, isLatest) {
 	// 纯问答轮（无草案无结果）无论成败都可原位改写；未达服务端的失败轮（serverId 为空，
 	// 服务端没有可退役的条目）同样可改写；带设备操作事实的轮次保持只读。
-	return Boolean(isLatest && !turn.running && !turn.draft && !turn.task && !turn.result)
+	return Boolean(isLatest && !turn.running && !turn.draft && !turn.tasks?.length && !turn.task && !turn.result)
 }
 
 export function restartTurn(turn, content = turn.content) {
@@ -17,6 +17,7 @@ export function restartTurn(turn, content = turn.content) {
 		activities: [],
 		draft: null,
 		task: null,
+		tasks: [],
 		roster: null,
 		result: null,
 		running: true,
@@ -60,10 +61,13 @@ export function applyEvent(turn, event) {
 	if (event.type === 'message.completed') { turn.text = event.content || turn.text; turn.streaming = false }
 	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.roster = event.inventory || null; turn.traceOpen = false }
 	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
-	if (event.type === 'task.proposed') { turn.task = event.task; turn.traceOpen = false }
-	if (event.type === 'task.resolved' && turn.task?.taskId === event.taskId) turn.task.status = event.status
-	if (event.type === 'task.cancellation.proposed') { turn.task = event.task; turn.traceOpen = false }
-	if (event.type === 'task.cancellation.resolved' && turn.task?.cancellationId === event.cancellationId) turn.task.status = event.status
+	if (event.type === 'task.proposed' || event.type === 'task.cancellation.proposed') {
+		if (!turn.tasks.some(task => (task.cancellationId || task.taskId) === (event.task.cancellationId || event.task.taskId))) turn.tasks.push(event.task)
+		turn.task = turn.tasks[0]
+		turn.traceOpen = false
+	}
+	if (event.type === 'task.resolved') for (const task of turn.tasks) if (task.taskId === event.taskId && !task.cancellationId) task.status = event.status
+	if (event.type === 'task.cancellation.resolved') for (const task of turn.tasks) if (task.cancellationId === event.cancellationId) task.status = event.status
 	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.streaming = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
 	if (event.type === 'run.failed') {
 		turn.error = event.message || '本次回答未完成'
@@ -88,7 +92,8 @@ export function restoreTurns(savedTurns = []) {
 		const turn = createTurn(saved.id, saved.content)
 		for (const event of saved.events || []) applyEvent(turn, event)
 		turn.draft = saved.draft || null
-		turn.task = saved.task || turn.task
+		turn.tasks = saved.tasks?.length ? saved.tasks : saved.task ? [saved.task] : turn.tasks
+		turn.task = turn.tasks[0] || null
 		turn.result = saved.result || null
 		turn.traceOpen = false
 		const started = Date.parse(saved.startedAt || saved.events?.find(event => event.type === 'run.started')?.createdAt)
@@ -104,10 +109,13 @@ export function restoreTurns(savedTurns = []) {
 	}
 	const taskIds = new Set()
 	for (const turn of [...turns].reverse()) {
-		if (!turn.task) continue
-		const key = turn.task.cancellationId || turn.task.taskId
-		if (taskIds.has(key)) turn.task = null
-		else taskIds.add(key)
+		turn.tasks = turn.tasks.filter(task => {
+			const key = task.cancellationId || task.taskId
+			if (taskIds.has(key)) return false
+			taskIds.add(key)
+			return true
+		})
+		turn.task = turn.tasks[0] || null
 	}
 	return turns
 }

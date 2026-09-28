@@ -70,3 +70,15 @@ test('同一任务的创建与取消收据在会话恢复后分别保留', () =>
 	assert.equal(turns[1].task.cancellationId, 'cancel-1')
 	assert.equal(turns[1].task.status, 'CONFIRMED')
 })
+
+test('同轮两项任务分别保留确认状态', () => {
+	const first = { taskId: 'meeting', status: 'PENDING_CONFIRMATION' }
+	const second = { taskId: 'closing', status: 'PENDING_CONFIRMATION' }
+	const turn = createTurn('turn', '开会并安排下班关灯')
+	applyEvent(turn, { type: 'task.proposed', taskId: first.taskId, task: first })
+	applyEvent(turn, { type: 'task.proposed', taskId: second.taskId, task: second })
+	applyEvent(turn, { type: 'task.resolved', taskId: first.taskId, status: 'SCHEDULED' })
+	assert.deepEqual(turn.tasks.map(task => task.status), ['SCHEDULED', 'PENDING_CONFIRMATION'])
+	const [restored] = restoreTurns([{ id: 'turn', content: turn.content, events: [], tasks: turn.tasks }])
+	assert.deepEqual(restored.tasks.map(task => task.taskId), ['meeting', 'closing'])
+})

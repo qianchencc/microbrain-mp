@@ -186,6 +186,7 @@
 **票 03（设备扩展支持包）建议追加**：
 > - 2026-09-15/18 探测复核：视频维持 E3（scoped 发现 + hub join 已证，view/onlineStatus 动作编目完成，取流契约待客户）；能源维持 E2（readTime 滞后 16-24 个月复测成立）；水浸报警上调 E1→E2（298 条真实记录含 alarm/report 字段）；水/气/红外/配电/人数维持 E0/E1（目录全空）。GET 副作用接口全量编目 5 条（perception 4 + office 1）。
 > - 新增确认项：视频 view 动作契约、能源采集链路状态、水浸 alarm/report 生命周期语义。
+> - 2026-09-28 复核（见 `docs/research/2026-09-28-camera-and-sensor-integration.md`）：C3-1 的"普通用户权限下 view 动作可用性"已验证通过——开发身份（普通用户）调用 `view`/`onlineStatus`/`realTimeData` 均返回有效结果；视频上调 E3→E4（仅剩回放暴露）。
 
 ## 还有其他吗？
 
