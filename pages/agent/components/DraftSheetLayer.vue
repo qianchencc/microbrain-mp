@@ -1,10 +1,10 @@
 <template>
  <DeviceSheet :open="open" :open-request="openRequest" :title="sheetTitle" :meta="sheetMeta" :subtitle="sheetSubtitle" :tall="browser" :busy="busy" @close="emit('close')">
-  <template v-if="browser && page !== 2" #header-right>
+  <template v-if="browser || current" #header-right>
    <view class="header-actions">
-    <button class="title-state-refresh" aria-label="刷新设备状态" :disabled="busy || stateLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="#5d6f65" /></button>
-    <button v-if="dirty" class="title-restore" :disabled="busy" hover-class="title-restore--pressed" @tap="emit('restore')">还原</button>
-    <button class="title-select-all" :disabled="busy || !pending" hover-class="title-select-all--pressed" @tap="toggleAll">{{ allSelected ? '取消全选' : '全选' }}</button>
+    <button class="title-state-refresh" aria-label="刷新设备状态" :disabled="!open || busy || stateLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="#5d6f65" /></button>
+    <button v-if="browser && page !== 2 && dirty" class="title-restore" :disabled="busy" hover-class="title-restore--pressed" @tap="emit('restore')">还原</button>
+    <button v-if="browser && page !== 2" class="title-select-all" :disabled="busy || !pending" hover-class="title-select-all--pressed" @tap="toggleAll">{{ allSelected ? '取消全选' : '全选' }}</button>
    </view>
   </template>
   <view v-if="browser" class="pages" :class="{ editing: page === 2 }">
