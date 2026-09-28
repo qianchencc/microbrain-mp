@@ -1,7 +1,7 @@
 # 区域工作台（region-workbench）
 
 - 日期：2026-09-25
-- Status: ready-for-agent
+- Status: tickets 01–13 code implemented; P2/B6 miniapp fidelity, real device records, and ticket 14 acceptance pending
 - 范围：mp（客户小程序 `pages/agent`，主）+ iot-agent-runtime（任务存储、执行、查询接口）
 - 设计来源：原型 `pages/agent/proto-region-workbench.html?variant=P2`（结构选定记录见 `docs/research/proto-region-panel/c1-workbench-exploration.md`）；时间轴几何合同见 `docs/research/proto-region-panel/b6-timeline-design.md`
 - 领域与决策：`CONTEXT.md`（区域、范围选择、任务区域归属、设备时间轴、区域异常提示、已查看、执行身份、错过的阶段、任务取消）；ADR 0003、ADR 0004（2026-09-25 修订为已接受）
