@@ -6,7 +6,7 @@
   </view>
   <text v-if="sampleMode" class="sample-label">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-area">
-   <RegionTimeline :key="selectedDate + '-' + items.length" calendar compact-calendar focus-items :date="selectedDate" :now="now" :max-date="maxDate" :calendar-marks="marks" :calendar-error="calendarError" :items="items" @date-change="selectedDate = $event" @calendar-month="onMonth" @select="openTask">
+   <RegionTimeline :key="selectedDate + '-' + items.length" calendar compact-calendar focus-items :date="selectedDate" :now="displayNow" :max-date="maxDate" :calendar-marks="marks" :calendar-error="calendarError" :items="items" @date-change="selectedDate = $event" @calendar-month="onMonth" @select="openTask">
     <template #card="{ item }"><view class="record-card"><text class="source" :class="item.sourceText === '即时' ? 'immediate' : 'scheduled'">{{ item.sourceText }}</text><text class="record-target">{{ item.label }}<text class="record-task">{{ item.taskLabel }}</text></text><text class="record-result" :class="item.resultTone">{{ item.resultText }}</text><text class="creator">{{ item.creatorName.slice(0, 1) }}</text></view></template>
     <template #empty>
      <view v-if="loading || error" class="empty"><text>{{ loading ? '正在读取设备记录' : error }}</text><button v-if="error" @tap="loadTimeline">重新加载</button></view>
@@ -22,13 +22,14 @@ import { listDeviceCalendar, listDeviceTimeline } from '@/apis/agent'
 import { calendarWindow, shiftDate } from '../region-calendar.mjs'
 import { localDate } from '../timeline-geometry.mjs'
 import { deviceTimelineItems } from '../device-timeline-view.mjs'
-import { deviceSampleTask } from '../region-sample-tasks.mjs'
+import { deviceSampleEvents, regionSampleTaskDetail } from '../region-sample-tasks.mjs'
 import RegionTimeline from './RegionTimeline.vue'
 
-const props = defineProps({ device: Object, date: String, now: String, sampleMode: Boolean, sampleDate: String })
+const props = defineProps({ device: Object, date: String, now: String, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
 const emit = defineEmits(['task'])
 const selectedDate = ref(props.date), month = ref(props.date.slice(0, 7))
 const maxDate = computed(() => shiftDate(localDate(props.now), 7))
+const displayNow = computed(() => props.sampleMode ? `${selectedDate.value}T14:52:00+08:00` : props.now)
 const events = ref([]), marks = ref([]), loading = ref(false), error = ref(''), calendarError = ref(false)
 const items = computed(() => deviceTimelineItems(events.value))
 let timelineRequest = 0, calendarRequest = 0
@@ -36,10 +37,7 @@ async function loadTimeline() {
  const current = ++timelineRequest, deviceId = props.device.id, date = selectedDate.value
  events.value = []; error.value = ''; loading.value = true
  if (props.sampleMode) {
-  const task = date === props.sampleDate ? deviceSampleTask(props.device, date) : null
-  events.value = task ? task.phases.map(phase => ({ taskId: task.id, taskLabel: task.label, taskStatus: task.status,
-   sourceType: 'sample', creatorName: task.creator.displayName, phaseId: phase.id, at: phase.at,
-   device: phase.devices[0], target: phase.devices[0].target, outcome: phase.devices[0].outcome })) : []
+  events.value = date === props.sampleDate ? deviceSampleEvents(props.sampleTasks, deviceId) : []
   loading.value = false
   return
  }
@@ -54,8 +52,9 @@ async function loadCalendar() {
  marks.value = []; calendarError.value = false
  const { from, to } = calendarWindow(month.value)
  if (props.sampleMode) {
-  marks.value = props.sampleDate >= from && props.sampleDate <= to && deviceSampleTask(props.device, props.sampleDate)
-   ? [{ date: props.sampleDate, abnormal: false }] : []
+  const sampleEvents = deviceSampleEvents(props.sampleTasks, deviceId)
+  marks.value = props.sampleDate >= from && props.sampleDate <= to && sampleEvents.length
+   ? [{ date: props.sampleDate, abnormal: sampleEvents.some(event => !['verified', 'satisfied', 'pending'].includes(event.outcome)) }] : []
   return
  }
  try {
@@ -63,10 +62,14 @@ async function loadCalendar() {
   if (current === calendarRequest) marks.value = result.days || []
  } catch { if (current === calendarRequest) calendarError.value = true }
 }
-watch(() => [props.device.id, selectedDate.value, props.sampleMode], loadTimeline, { immediate: true })
-watch(() => [props.device.id, month.value, props.sampleMode], loadCalendar, { immediate: true })
+watch(() => [props.device.id, selectedDate.value, props.sampleMode, props.sampleTasks], loadTimeline, { immediate: true })
+watch(() => [props.device.id, month.value, props.sampleMode, props.sampleTasks], loadCalendar, { immediate: true })
 function onMonth(value) { if (month.value === value) loadCalendar(); else month.value = value }
-function openTask(item) { emit('task', { taskId: item.taskId, sampleTask: props.sampleMode ? deviceSampleTask(props.device, props.sampleDate) : null }) }
+function openTask(item) {
+ const sampleTask = props.sampleMode ? regionSampleTaskDetail(props.sampleTasks.find(task => task.id === item.taskId)) : null
+ if (props.sampleMode && !sampleTask) return
+ emit('task', { taskId: item.taskId, sampleTask })
+}
 onBeforeUnmount(() => { ++timelineRequest; ++calendarRequest })
 </script>
 <style scoped>

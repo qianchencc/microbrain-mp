@@ -22,7 +22,7 @@
 - `proto-region-workbench.html`（C1）以 B6 为起点探索入口、区域切换、细任务卡、抽屉、设备列表、设备时间轴、日历归属与区域提示；改动前先读 `docs/research/proto-region-panel/c1-workbench-exploration.md`。其中时间轴组件是 B6 分支的移植，几何参数随 B6 契约冻结，只允许替换卡片内容；`proto-region-panel.html` 保持冻结作对照。
 - 区域工作台接线与验收状态见 `plan/2026-09-27-region-workbench-first-loop-handoff.md`。消息发送/重试/编辑应在修改原轮前固定本次关注区域；本地选区按统一 session 的不可逆身份键分区，区域仅是默认上下文。
 - B6 生产几何共用 `timeline-geometry.mjs`；时间节点不承载任务完成状态。微信开发者工具已选 SVG 图片承载图形，普通视图承载时间字与卡片；Canvas 原生图层曾越过滚动裁切边界。空区域按 P2 原型显示局部符号。见 `docs/research/proto-region-panel/2026-09-27-native-renderer-status.md`；实际任务回读仍需真实操作验收。
-- 区域工作台的 `region-sample-tasks.mjs` 仅供开发版“查看样例”预览，不能写入 Runtime 数据库，也不能当作真实任务验收；从样例返回时必须重新请求真实时间轴。
+- 区域工作台的 `region-sample-tasks.mjs` 仅供开发版“查看样例”预览：只读授权目录构造 `sample-*` Task，区域与设备时间轴、任务详情共用同一批任务和设备 ID；结果是虚构的，不能写入 Runtime、确认或控制设备，也不能当真实任务验收。从样例返回时必须重新请求真实时间轴。见 `plan/2026-09-28-region-sample-record-consistency.md`。
 - 区域时间轴细卡按 P2 原型放任务名、设备头像和创建者标记；异常用提示点、执行中用卡片强调，取消态例外保留可见的“已取消”，完整状态与创建者姓名在任务详情中。开发样例仅对齐了 14:00–15:30 / 14:52 的主区间，不是票 02 所需的同数据叠图。见 `plan/2026-09-28-region-timeline-card-alignment.md`。
 - 区域设备抽屉见 `plan/2026-09-27-region-device-browser-handoff.md`：每次打开重读授权目录，目录先于状态显示；状态失败清空旧读数但保留目录。类型/位置/状态是互斥分组，搜索才过滤；设备卡进入时间轴要等票 11 接通后再开放点击。
 - 区域时间轴日历与任务详情见 `plan/2026-09-27-region-task-browse-handoff.md`：空日期仍保留日历，月标记失败单独提示；Task 详情的 `details.receipt/fields/timedOut` 必须参与结果文案，不能仅看总体 outcome。开发版双阶段样例不属于真实任务。

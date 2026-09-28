@@ -1,55 +1,56 @@
-// Local workbench preview data. IDs cannot be confused with persisted Task IDs.
-export function regionSampleTasks(date, regionId) {
+// Local workbench preview data. Task IDs are never persisted or executable.
+export function regionSampleTasks(date, regionId, devices) {
  const at = time => `${date}T${time}:00+08:00`
- const device = (id, kind, name, outcome) => ({ id: `sample-${id}`, kind, name, outcome })
- const task = (id, label, time, status, devices, creatorName = '演示成员') => ({
-  id: `sample-${id}`, label, status, version: 1, regionIds: [regionId],
-  phases: [{ id: `sample-phase-${id}`, at: at(time), status }],
-  devices, creator: { displayName: creatorName },
-  source: { type: 'sample' }, canCancel: false,
+ const lights = devices.filter(device => device.kind === 'lighting').slice(0, 4)
+ const ac = devices.find(device => device.kind === 'ac')
+ const action = (device, target, outcome) => ({ id: device.id, kind: device.kind, name: device.name, target, outcome })
+ const phase = (id, time, status, actions) => ({ id: `sample-phase-${id}`, at: at(time), status, devices: actions })
+ const task = (id, label, status, creatorName, phases) => ({
+  id: `sample-${id}`, label, status, version: 1, regionIds: [regionId], createdAt: at('07:00'), phases,
+  devices: [...new Map(phases.flatMap(item => item.devices).map(device => [device.id, {
+   id: device.id, kind: device.kind, name: device.name, outcome: device.outcome,
+  }])).values()],
+  creator: { displayName: creatorName }, source: { type: 'sample' }, canCancel: false,
  })
- return [
-  { ...task('meeting-window', '客户会议 · 会议室B', '14:00', 'executing', [device('ac-window', 'ac', '会议室空调', 'verified')]),
-   phases: [
-    { id: 'sample-phase-window-start', at: at('14:00'), status: 'verified', devices: [{ ...device('ac-window', 'ac', '会议室空调', 'verified'), target: { power: 'on', temperature: 26 } }] },
-    { id: 'sample-phase-window-end', at: at('15:30'), status: 'pending', devices: [{ ...device('ac-window', 'ac', '会议室空调', 'pending'), target: { power: 'off' } }] },
-   ] },
-  task('morning-ac', '晨间空调开启', '08:30', 'completed', [
-   device('ac-east', 'ac', '东区空调', 'verified'), device('ac-west', 'ac', '西区空调', 'satisfied'),
-  ]),
-  task('meeting-light', '会议室照明开启', '10:05', 'completed', [
-   device('light-meeting', 'lighting', '会议室格栅灯', 'verified'), device('strip-meeting', 'lighting', '会议室灯带', 'verified'),
-  ]),
-  task('noon-light', '午间照明调整', '11:50', 'partial', [
-   device('light-east', 'lighting', '东区格栅灯', 'verified'), device('light-west', 'lighting', '西区格栅灯', 'rejected'),
-  ]),
-  task('ac-temperature', '会议室空调调温', '13:15', 'failed', [
-   device('ac-meeting', 'ac', '会议室空调', 'rejected'),
-  ]),
-  task('corridor-light', '走廊照明开启', '14:05', 'completed', [
-   device('strip-corridor', 'lighting', '走廊灯带', 'verified'),
-  ]),
-  task('readback', '办公区照明关闭', '14:35', 'failed', [
-   device('light-office', 'lighting', '办公区格栅灯', 'unconfirmed'),
-  ]),
- ]
+ const tasks = []
+ if (ac) tasks.push(task('morning-ac', '晨间准备', 'completed', '张明', [
+  phase('morning-ac', '08:30', 'verified', [action(ac, { power: 'on', temperature: 26 }, 'verified')]),
+ ]))
+ if (lights.length > 1) tasks.push(task('noon-light', '午间照明调整', 'partial', '系统', [
+  phase('noon-light', '12:00', 'partial', lights.slice(0, 2).map((device, index) =>
+   action(device, { closeOrOpen: 1 }, index ? 'rejected' : 'verified'))),
+ ]))
+ if (ac && lights.length) {
+  const meeting = [...lights.slice(0, 2), ac]
+  tasks.push(task('meeting-window', '客户会议 · 会议室B', 'executing', '李雯', [
+   phase('meeting-start', '14:00', 'verified', meeting.map((device, index) =>
+    action(device, device.kind === 'ac' ? { power: 'on', temperature: 26 } : { closeOrOpen: 1 }, index ? 'verified' : 'satisfied'))),
+   phase('meeting-end', '15:30', 'pending', meeting.map(device =>
+    action(device, device.kind === 'ac' ? { power: 'off' } : { closeOrOpen: 0 }, 'pending'))),
+  ]))
+ }
+ if (lights.length) {
+  tasks.push(task('after-hours', '下班关灯', 'scheduled', '张明', [
+   phase('after-hours', '19:00', 'pending', lights.map(device => action(device, { closeOrOpen: 0 }, 'pending'))),
+  ]))
+  tasks.push(task('cleaning', '晚间保洁照明', 'scheduled', '王工', [
+   phase('cleaning-start', '20:00', 'pending', lights.slice(0, 3).map(device => action(device, { closeOrOpen: 1 }, 'pending'))),
+   phase('cleaning-end', '21:30', 'pending', lights.slice(0, 3).map(device => action(device, { closeOrOpen: 0 }, 'pending'))),
+  ]))
+ }
+ return tasks
 }
 
 export function regionSampleTaskDetail(task) {
- const target = task.label.includes('关闭') ? { power: 'off' } : task.label.includes('调温') ? { temperature: 26 } : { power: 'on' }
- return { ...task, createdAt: task.phases[0].at, phases: task.phases.map(phase => ({ ...phase,
-  devices: (phase.devices || task.devices.map(device => ({ ...device, target }))).map(device => ({ ...device, details: null })) })) }
+ if (!task) return null
+ return { ...task, phases: task.phases.map(phase => ({ ...phase,
+  devices: phase.devices.map(device => ({ ...device, details: null })) })) }
 }
 
-export function deviceSampleTask(device, date) {
- if (!['lighting', 'ac'].includes(device.kind)) return null
- const at = time => `${date}T${time}:00+08:00`
- const id = `sample-device-${device.id}`
- const phase = (suffix, time, target) => ({ id: `${id}-${suffix}`, at: at(time), status: 'verified',
-  devices: [{ id: device.id, kind: device.kind, name: device.name, target, outcome: 'verified', details: null }] })
- const phases = device.kind === 'ac'
-  ? [phase('start', '09:00', { power: 'on', temperature: 26 }), phase('end', '14:00', { power: 'off' })]
-  : [phase('point', '10:30', { closeOrOpen: 1 })]
- return { id, label: device.kind === 'ac' ? '空调时段演示' : '照明操作演示', status: 'completed',
-  createdAt: phases[0].at, creator: { displayName: '演示成员' }, source: { type: 'sample' }, phases }
+export function deviceSampleEvents(tasks, deviceId) {
+ return tasks.flatMap(task => task.phases.flatMap(phase => phase.devices
+  .filter(device => device.id === deviceId)
+  .map(device => ({ taskId: task.id, taskLabel: task.label, taskStatus: task.status,
+   sourceType: 'sample', creatorName: task.creator.displayName, phaseId: phase.id, phaseStatus: phase.status,
+   at: phase.at, device, target: device.target, outcome: device.outcome }))))
 }

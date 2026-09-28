@@ -15,7 +15,7 @@
     </view>
    </view>
   </template>
-  <view v-if="activeDevice" class="drawer-content"><DeviceTimelineView class="device-timeline-host" :device="activeDevice" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" @task="emit('task', $event)" /></view>
+  <view v-if="activeDevice" class="drawer-content"><DeviceTimelineView class="device-timeline-host" :device="activeDevice" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="emit('task', $event)" /></view>
   <view v-else class="drawer-content">
    <view v-if="stateError && devices.length" class="state-warning"><text>状态暂不可用，设备目录仍可查看</text><button @tap="loadStates">重试</button></view>
    <scroll-view class="device-scroll" scroll-y enhanced :show-scrollbar="false">
@@ -51,7 +51,7 @@ import DeviceSheet from './DeviceSheet.vue'
 import DeviceTimelineView from './DeviceTimelineView.vue'
 import { regionDeviceGroups } from '../region-device-view.mjs'
 
-const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, sampleMode: Boolean, sampleDate: String })
+const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
 const emit = defineEmits(['close', 'count', 'task'])
 const modes = [{ key: 'kind', label: '类型' }, { key: 'location', label: '位置' }, { key: 'status', label: '状态' }]
 const devices = ref([]), readings = ref({}), loading = ref(false), stateLoading = ref(false)

@@ -4,7 +4,7 @@
   <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text>{{ tasks.length }} 条记录</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
   <text v-if="sampleMode" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-body">
-   <RegionTimeline :key="(sampleMode ? 'sample-' : 'real-') + date" calendar :calendar-marks="calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :now="displayNow" @date-change="date = $event" @calendar-month="onCalendarMonth" @select="openTask">
+   <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample-' : 'real-') + date" calendar :calendar-marks="calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :now="displayNow" @date-change="date = $event" @calendar-month="onCalendarMonth" @select="openTask">
     <template #empty>
      <view v-if="loading || error" class="notice"><text>{{ loading ? '正在读取任务记录' : error }}</text><button v-if="error" @tap="load">重新加载</button></view>
      <view v-else class="empty"><image class="empty-art" :src="emptyArt" mode="aspectFit" /><text class="empty-title">这一天还没有任务记录</text><text>在物联 Agent 中确认设备操作后，</text><text>结果会显示在这里。</text></view>
@@ -21,14 +21,14 @@
    </RegionTimeline>
   </view>
   <view class="device-dock"><button class="device-entry" hover-class="device-entry--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button></view>
-  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
+  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
   <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
 </template>
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { listRegionTimeline, listRegionCalendar } from '@/apis/agent'
+import { listRegionTimeline, listRegionCalendar, listRegionDevices } from '@/apis/agent'
 import { isDev } from '@/config/settings'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionChip from './components/RegionChip.vue'
@@ -56,10 +56,15 @@ async function loadTimeline(silent = false) {
  if (!silent) { tasks.value = []; error.value = ''; loading.value = true }
  try {
   if (!region) return
-  if (sampleMode.value) { tasks.value = date.value === sampleDate.value ? regionSampleTasks(sampleDate.value, region) : []; return }
+  if (sampleMode.value) {
+   if (date.value !== sampleDate.value) { tasks.value = []; return }
+   const result = await listRegionDevices(region)
+   if (current === requestId && scope === getAgentStorageScope() && sampleMode.value) tasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
+   return
+  }
   const result = await listRegionTimeline(region, date.value)
   if (current === requestId && scope === getAgentStorageScope()) { tasks.value = result.tasks || []; return current }
- } catch (cause) { if (!silent && current === requestId && scope === getAgentStorageScope()) error.value = cause.message || '任务记录暂不可用' }
+ } catch (cause) { if (!silent && current === requestId && scope === getAgentStorageScope()) error.value = cause.message || (sampleMode.value ? '演示设备目录暂不可用' : '任务记录暂不可用') }
  finally { if (!silent && current === requestId) loading.value = false }
 }
 async function loadVisibleTimeline() {
@@ -81,8 +86,10 @@ function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7), sil
 }
 function onCalendarMonth(month) { calendarMonth.value = month; if (visible && !loadingDirectory) loadCalendar(month) }
 function openTask(item) {
+ const sample = sampleMode.value ? regionSampleTaskDetail(tasks.value.find(task => task.id === item.id)) : null
+ if (sampleMode.value && !sample) return
  selectedTaskId.value = item.id
- sampleDetail.value = sampleMode.value ? regionSampleTaskDetail(tasks.value.find(task => task.id === item.id)) : null
+ sampleDetail.value = sample
 }
 function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId; sampleDetail.value = sampleTask || null }
 function toggleSample() { sampleMode.value = !sampleMode.value; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; void loadVisibleTimeline(); loadCalendar() }

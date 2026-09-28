@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
+import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/region-sample-tasks.mjs'
 
 test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 34px', () => {
  assert.equal(timelineYOf('2026-09-25T01:00:00+08:00', '2026-09-25') - timelineYOf('2026-09-25T00:00:00+08:00', '2026-09-25'), 34)
@@ -31,4 +32,23 @@ test('设备阶段卡区分待核验、进行中和部分完成', () => {
  assert.equal(deviceTimelineItems([{ ...morning, phaseStatus: 'executing', outcome: 'pending' }])[0].resultText, '执行中')
  assert.equal(deviceTimelineItems([{ ...morning, taskStatus: 'cancelled' },
   { ...later('not_dispatched'), taskStatus: 'cancelled', phaseStatus: 'cancelled' }])[0].resultText, '已取消')
+})
+
+test('本地演示的区域任务与设备记录指向同一任务及目标', () => {
+ const devices = [
+  { id: 'light-1', kind: 'lighting', name: '会议室格栅灯' },
+  { id: 'light-2', kind: 'lighting', name: '会议室灯带' },
+  { id: 'ac-1', kind: 'ac', name: '会议室空调' },
+ ]
+ const tasks = regionSampleTasks('2026-09-28', 'office-1', devices)
+ const closing = tasks.find(task => task.id === 'sample-after-hours')
+ assert.ok(closing)
+ const events = deviceSampleEvents(tasks, 'light-1')
+ const record = deviceTimelineItems(events).find(item => item.taskId === closing.id)
+ assert.ok(record)
+ assert.equal(record.taskId, closing.id)
+ assert.equal(record.label, '关闭')
+ assert.equal(regionSampleTaskDetail(closing).phases[0].devices[0].target.closeOrOpen, 0)
+ assert.ok(tasks.every(task => task.devices.every(device => devices.some(source => source.id === device.id))))
+ assert.deepEqual(deviceSampleEvents(tasks, 'unrelated-device'), [])
 })
