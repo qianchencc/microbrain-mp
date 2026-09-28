@@ -7,7 +7,8 @@
     <view class="group-controls">
      <button v-for="mode in modes" :key="mode.key" class="group-mode" :class="{ active: groupBy === mode.key }" hover-class="group-mode--pressed" @tap="groupBy = mode.key">{{ mode.label }}</button>
      <button class="icon-button" aria-label="搜索设备" hover-class="icon-button--pressed" @tap="openSearch"><image src="/static/search.svg" /></button>
-     <text class="count">{{ devices.length }} 台</text>
+     <view class="controls-spacer" />
+     <view class="count">{{ devices.length }} 台</view>
     </view>
     <view class="search-controls" :class="{ searching }">
      <button class="icon-button" aria-label="返回全部设备" hover-class="icon-button--pressed" @tap="closeSearch"><image src="/static/back.svg" /></button>
@@ -152,7 +153,7 @@ onBeforeUnmount(() => { stateRefresh.cancel(); ++directoryRequest; ++stateReques
 
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
-button { margin:0; padding:0; border:0; background:transparent; line-height:1.2; }
+button { margin:0; padding:0; border:0; background:transparent; line-height:1.2; min-width:0; min-height:0; }
 button::after { border:0; }
 .filter-header { position:relative; height:50px; padding:0 16px; display:flex; align-items:center; border-top:1px solid #edf0ed; border-bottom:1px solid #edf0ed; overflow:hidden; }
 .header-actions { display:flex; align-items:center; gap:6px; min-width:0; }
@@ -167,12 +168,13 @@ button::after { border:0; }
 .search-controls { position:absolute; top:0; right:0; bottom:0; left:0; padding:0 16px; display:flex; align-items:center; gap:8px; opacity:0; transform:translateX(22px); pointer-events:none; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
 .filter-header.searching .group-controls { opacity:0; transform:translateX(-22px); pointer-events:none; }
 .filter-header.searching .search-controls { opacity:1; transform:none; pointer-events:auto; }
-.group-mode { height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:12px; transition:background-color 180ms ease,color 180ms ease,transform 130ms cubic-bezier(.23,1,.32,1); }
+.group-mode { width:auto; flex-shrink:0; height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:12px; transition:background-color 180ms ease,color 180ms ease,transform 130ms cubic-bezier(.23,1,.32,1); }
 .group-mode.active { background:#176b54; color:#fff; }
 .group-mode--pressed,.icon-button--pressed { transform:scale(.95); }
 .icon-button { width:32px; height:32px; border:1px solid #d8e1dc; border-radius:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .icon-button image { width:14px; height:14px; }
-.count { margin-left:auto; font-size:11px; color:#89958e; }
+.controls-spacer { flex:1; min-width:0; }
+.count { flex-shrink:0; white-space:nowrap; font-size:11px; color:#89958e; }
 .search-field { min-width:0; flex:1; height:36px; padding:0 12px; border:1px solid #d8e1dc; border-radius:18px; display:flex; align-items:center; gap:8px; background:#f4f7f5; }
 .search-field image { width:14px; height:14px; flex-shrink:0; }
 .search-field input { flex:1; min-width:0; height:100%; font-size:13px; color:#24382d; }
