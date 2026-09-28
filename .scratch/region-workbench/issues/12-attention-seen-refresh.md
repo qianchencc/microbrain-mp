@@ -8,11 +8,11 @@
 
 **Blocked by:** 04, 07
 
-**Status:** ready-for-agent
+**Status:** implemented; pending user miniapp acceptance
 
-- [ ] 新增区域查看水位表；`POST /api/agent/regions/:regionId/seen` 记录最后查看时间
-- [ ] `GET /api/agent/regions` 的 `attention` 按“该用户在该区域存在查看水位之后结束的 partial/failed 任务”计算
-- [ ] 打开工作台与切换区域时上报已查看
-- [ ] 区域芯片浮层显示提示；无任何活动点
-- [ ] 工作台 onShow 刷新、可见期间 30 秒刷新、存在执行中任务时 5 秒，离开页面停止
-- [ ] Runtime 测试：提示出现、按用户消除、他人仍可见、已查看不改变任务状态
+- [x] 新增区域查看水位表；`POST /api/agent/regions/:regionId/seen` 记录最后查看时间
+- [x] `GET /api/agent/regions` 的 `attention` 按“该用户在该区域存在查看水位之后结束的 partial/failed 任务”计算
+- [x] 打开工作台与切换区域时上报已查看
+- [x] 区域芯片浮层显示提示；无任何活动点
+- [x] 工作台 onShow 刷新、可见期间 30 秒刷新、存在执行中任务时 5 秒，离开页面停止
+- [x] Runtime 测试：提示出现、按用户消除、他人仍可见、已查看不改变任务状态

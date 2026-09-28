@@ -13,6 +13,7 @@ const request = (url, method, data, timeout) => requestJson(globalConfig.agentUr
 
 export const createConversation = () => request('/agent/conversations', 'POST')
 export const listRegions = () => request('/agent/regions', 'GET')
+export const markRegionSeen = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/seen`, 'POST')
 export const listRegionDevices = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/devices`, 'GET')
 export const listRegionDeviceStates = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/device-states`, 'GET')
 export const listRegionTimeline = (regionId, date) => request(`/agent/regions/${encodeURIComponent(regionId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')

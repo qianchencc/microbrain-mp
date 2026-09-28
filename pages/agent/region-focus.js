@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { listRegions } from '@/apis/agent'
+import { listRegions, markRegionSeen } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 
 export const regions = ref([])
@@ -36,4 +36,12 @@ export function selectFocusRegion(id) {
  focusRegionId.value = id
  uni.setStorageSync(storageKey(owner), id)
  return true
+}
+
+export async function acknowledgeRegion(id) {
+ const scope = getAgentStorageScope()
+ if (!id || scope !== owner || !regions.value.some(region => region.id === id)) return
+ await markRegionSeen(id)
+ if (scope === getAgentStorageScope()) regions.value = regions.value.map(region =>
+  region.id === id ? { ...region, attention: false } : region)
 }

@@ -1,7 +1,7 @@
 <template>
  <view class="region-row">
   <view class="region-chip">
-   <button class="region-name" :disabled="!focusRegion || regionsLoading" @tap="workbench ? open = true : $emit('open', focusRegion)"><view class="region-dot" /><text>{{ regionsLoading ? '正在读取区域' : focusRegion?.name || '暂无可用区域' }}</text><uni-icons v-if="!workbench && focusRegion" type="forward" size="12" color="#7f9287" /></button>
+   <button class="region-name" :disabled="!focusRegion || regionsLoading" @tap="workbench ? open = true : $emit('open', focusRegion)"><text>{{ regionsLoading ? '正在读取区域' : focusRegion?.name || '暂无可用区域' }}</text><uni-icons v-if="!workbench && focusRegion" type="forward" size="12" color="#7f9287" /></button>
    <button class="region-toggle" :disabled="!regions.length || regionsLoading" aria-label="切换关注区域" @tap="open = true"><uni-icons type="bottom" size="14" color="#536b5c" /></button>
   </view>
  </view>
@@ -33,7 +33,6 @@ button::after { border:0; }
 button[disabled] { background:transparent; color:#89958e; }
 .region-name { display:flex; align-items:center; gap:8px; padding:0 10px 0 13px; min-height:44px; min-width:0; font-size:13px; font-weight:600; color:#3d5947; }
 .region-name text { max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.region-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; background:#628775; box-shadow:0 1px 0 #fff; }
 .region-toggle { width:42px; min-height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-left:1px solid #526b4c14; }
 .region-options { max-height:45vh; }
 .region-option { margin:0 16px 8px; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-radius:14px; color:#405747; font-size:15px; }

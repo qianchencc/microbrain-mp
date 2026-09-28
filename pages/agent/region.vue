@@ -34,7 +34,7 @@ import RegionChip from './components/RegionChip.vue'
 import RegionTimeline from './components/RegionTimeline.vue'
 import RegionDeviceDrawer from './components/RegionDeviceDrawer.vue'
 import TaskDetailSheet from './components/TaskDetailSheet.vue'
-import { focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion } from './region-focus.js'
+import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion } from './region-focus.js'
 import { localDate } from './timeline-geometry.mjs'
 import { calendarWindow, shiftDate, validCalendarDate } from './region-calendar.mjs'
 import { regionTimelineItems } from './region-timeline.mjs'
@@ -77,27 +77,36 @@ function openTask(item) {
  sampleDetail.value = sampleMode.value ? regionSampleTaskDetail(tasks.value.find(task => task.id === item.id)) : null
 }
 function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId; sampleDetail.value = sampleTask || null }
-function toggleSample() { sampleMode.value = !sampleMode.value; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; loadTimeline(); loadCalendar() }
+function toggleSample() { sampleMode.value = !sampleMode.value; if (sampleMode.value) sampleDate.value = date.value; else void acknowledgeRegion(focusRegionId.value).catch(() => {}); selectedTaskId.value = ''; loadTimeline(); loadCalendar() }
 async function load() {
  const currentLoad = ++loadId
  loadingDirectory = true; loading.value = true; error.value = ''; tasks.value = []; ++requestId
  now.value = new Date().toISOString()
- try { await loadRegionFocus(); if (currentLoad !== loadId || !visible) return; if (initialRegion) { selectFocusRegion(initialRegion); initialRegion = '' }; if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate; initialDate = ''; await loadTimeline(); loadCalendar() }
+ try { await loadRegionFocus(); if (currentLoad !== loadId || !visible) return; if (initialRegion) { selectFocusRegion(initialRegion); initialRegion = '' }; if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate; initialDate = ''; if (!sampleMode.value) void acknowledgeRegion(focusRegionId.value).catch(() => {}); await loadTimeline(); loadCalendar() }
  catch (cause) { if (currentLoad === loadId) { error.value = cause.message || '区域暂不可用'; loading.value = false } }
  finally { if (currentLoad === loadId) loadingDirectory = false }
 }
-watch(focusRegionId, () => { deviceCount.value = null; selectedTaskId.value = ''; if (visible && !loadingDirectory) { loadTimeline(); loadCalendar() } })
+watch(focusRegionId, () => { deviceCount.value = null; selectedTaskId.value = ''; if (visible && !loadingDirectory) { if (!sampleMode.value) void acknowledgeRegion(focusRegionId.value).catch(() => {}); loadTimeline(); loadCalendar() } })
 watch(date, () => { selectedTaskId.value = ''; if (visible && !loadingDirectory) loadTimeline() })
+function scheduleRefresh() {
+ clearTimeout(refreshTimer)
+ if (!visible) return
+ refreshTimer = setTimeout(async () => {
+  if (!visible) return
+  if (!sampleMode.value && !loadingDirectory) {
+   now.value = new Date().toISOString()
+   await loadTimeline(true)
+   loadCalendar(calendarMonth.value || date.value.slice(0, 7), true)
+  }
+  scheduleRefresh()
+ }, tasks.value.some(task => task.status === 'executing') ? 5000 : 30000)
+}
+watch(() => tasks.value.some(task => task.status === 'executing'), scheduleRefresh)
 onShow(() => {
- visible = true; clearInterval(refreshTimer); load()
- refreshTimer = setInterval(() => {
-  if (!visible || sampleMode.value || loadingDirectory) return
-  now.value = new Date().toISOString()
-  loadTimeline(true); loadCalendar(calendarMonth.value || date.value.slice(0, 7), true)
- }, 15000)
+ visible = true; void load().finally(scheduleRefresh)
 })
-onHide(() => { visible = false; clearInterval(refreshTimer); deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
-onUnload(() => { visible = false; clearInterval(refreshTimer); deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
+onHide(() => { visible = false; clearTimeout(refreshTimer); deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
+onUnload(() => { visible = false; clearTimeout(refreshTimer); deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
