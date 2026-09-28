@@ -24,6 +24,7 @@
 | 设备现态刷新与草案/任务执行结果分离 | [现态与结果交接](../plan/2026-09-28-device-state-receipt-separation.md) |
 | 区域时间轴原型、区间与时刻的组件设计语言 | [B6 时间轴设计](./research/proto-region-panel/b6-timeline-design.md)（非生产实现） |
 | 自动化设计盘点、区域工作台入口/区域切换/任务卡/设备时间轴/日历/通知探索 | [C1 区域工作台探索](./research/proto-region-panel/c1-workbench-exploration.md)（含待拍板决策，非生产实现） |
+| 摄像头与环境/消防/能耗传感器接入设计、业务场景 | [摄像头与传感器接入方案](./research/2026-09-28-camera-and-sensor-integration.md)（2026-09-28 只读复核，未实施） |
 | 向客户索取新增设备接口与验收材料 | [设备接入支持包](./research/2026-09-18-customer-device-expansion-support-package.md) 与 [客户请求清单](../plan/2026-09-18-customer-device-support-request.md) |
 | 合同范围和业务能力缺口 | [合同能力审查](./research/2026-09-11-contract-device-capability-audit.md) |
 | 当前客户 Agent 页面实现约束 | [页面维护说明](../pages/agent/AGENTS.md) |
