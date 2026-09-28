@@ -21,7 +21,7 @@
    </RegionTimeline>
   </view>
   <view class="device-dock"><button class="device-entry" hover-class="device-entry--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button></view>
-  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
+  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
   <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
 </template>
@@ -43,6 +43,7 @@ import { regionSampleTasks, regionSampleTaskDetail } from './region-sample-tasks
 const emptyArt = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80"><path d="M30 2c-9 12 9 22 0 38s9 26 0 38" fill="none" stroke="#c9d6ce" stroke-width="1.6"/><circle cx="31" cy="40" r="6" fill="#fff"/><circle cx="31" cy="40" r="4" fill="#ad711b"/></svg>')
 const error = ref(''), loading = ref(true), tasks = ref([]), sampleTasks = ref([]), sampleMode = ref(false)
 const deviceDrawerOpen = ref(false), deviceCount = ref(null)
+const deviceRefreshSignal = ref(0)
 const selectedTaskId = ref(''), sampleDetail = ref(null), sampleDate = ref('')
 const calendarMarks = ref([]), calendarMonth = ref(''), calendarError = ref(false)
 const now = ref(new Date().toISOString()), today = computed(() => localDate(now.value)), date = ref(localDate(now.value))
@@ -71,7 +72,13 @@ async function loadTimeline(silent = false) {
    return
   }
   const result = await listRegionTimeline(region, selectedDate)
-  if (current === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope()) { tasks.value = result.tasks || []; return current }
+  if (current === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope()) {
+   const previous = new Map(tasks.value.flatMap(task => task.phases.map(phase => [phase.id, phase.status])))
+   const next = result.tasks || []
+   if (next.some(task => task.phases.some(phase => ['pending', 'executing'].includes(previous.get(phase.id)) && !['pending', 'executing'].includes(phase.status)))) deviceRefreshSignal.value++
+   tasks.value = next
+   return current
+  }
  } catch (cause) { if (!silent && current === requestId && scope === getAgentStorageScope()) error.value = cause.message || (sampleMode.value ? '演示设备目录暂不可用' : '任务记录暂不可用') }
  finally { if (!silent && current === requestId) loading.value = false }
 }

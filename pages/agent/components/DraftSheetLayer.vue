@@ -2,6 +2,7 @@
  <DeviceSheet :open="open" :open-request="openRequest" :title="sheetTitle" :meta="sheetMeta" :subtitle="sheetSubtitle" :tall="browser" :busy="busy" @close="emit('close')">
   <template v-if="browser && page !== 2" #header-right>
    <view class="header-actions">
+    <button class="title-state-refresh" aria-label="刷新设备状态" :disabled="busy || stateLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="#5d6f65" /></button>
     <button v-if="dirty" class="title-restore" :disabled="busy" hover-class="title-restore--pressed" @tap="emit('restore')">还原</button>
     <button class="title-select-all" :disabled="busy || !pending" hover-class="title-select-all--pressed" @tap="toggleAll">{{ allSelected ? '取消全选' : '全选' }}</button>
    </view>
@@ -36,7 +37,8 @@
 import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { readDeviceStates, updateParameters } from '@/apis/agent'
 import { operationLabel } from '../ac-draft.js'
-import { mergeObservedStates, receiptPhase } from '../device-card-state.js'
+import { receiptPhase } from '../device-card-state.js'
+import { createStateRefresh } from '../state-refresh.mjs'
 import { computeDeviceGrid, createDraftGroups, draftBaselineChanged, firstRowBelowFold, remainingBelowFold } from '../action-draft-presentation.js'
 import { createViewportMeasurer } from '../list-viewport.mjs'
 import { receiptText } from '../conversation.mjs'
@@ -46,7 +48,7 @@ import ParameterEditor from './ParameterEditor.vue'
 const props = defineProps({ draft: { type: Object, default: null }, result: { type: Object, default: null }, baseline: { type: Object, default: null }, browser: Boolean, currentActionId: { type: String, default: '' }, openRequest: { type: Number, default: 0 }, busy: Boolean, settleSelection: { type: Function, default: null } })
 const emit = defineEmits(['close', 'select', 'confirm', 'updated', 'editing', 'revalidate', 'restore'])
 const initialWindowWidth = uni.getWindowInfo?.().windowWidth || uni.getSystemInfoSync().windowWidth || 320
-const states = ref({}), page = ref(0), search = ref(''), searchMounted = ref(false), searchFocused = ref(false), groupIndex = ref(0), parameterError = ref(''), windowWidth = ref(initialWindowWidth)
+const states = ref({}), stateLoading = ref(false), page = ref(0), search = ref(''), searchMounted = ref(false), searchFocused = ref(false), groupIndex = ref(0), parameterError = ref(''), windowWidth = ref(initialWindowWidth)
 const currentId = ref(''), editorBack = ref(0)
 let focusTimer, searchTimer
 const groupModes = [{ label: '区域', by: 'location' }, { label: '类型', by: 'kind' }, { label: '选择', by: 'selection' }]
@@ -106,12 +108,17 @@ watch(() => props.currentActionId, value => { currentId.value = value }, { immed
 watch(() => [props.draft?.draftId, props.openRequest], () => { if (!props.draft) return; page.value = 0; search.value = ''; searchMounted.value = false; searchFocused.value = false; groupIndex.value = 0; parameterError.value = ''; if (props.browser) listMeasurer.schedule() })
 // 面板内三页导航：0 全部设备 / 1 搜索 / 2 参数编辑；返回列表页即清过滤，列表始终是全量。
 watch(page, value => { if (value === 0) search.value = '' })
-watch(open, value => { if (value) { refresh(); scrollY.value = 0; if (props.browser) listMeasurer.schedule() } })
-// 与 ActionDraftCard 一致：result 落地先合入回读权威状态再补查，否则面板内徽标停在指令前。
-watch(() => props.result, result => { if (result) renderResult.value = result; states.value = mergeObservedStates(states.value, result?.observedStates); refresh() })
+watch(open, value => {
+ if (value) { stateRefresh.run(); scrollY.value = 0; if (props.browser) listMeasurer.schedule() }
+ else { stateRefresh.cancel(); ++stateRequest; stateLoading.value = false }
+})
+watch(() => props.result, result => {
+ if (result) renderResult.value = result
+ if (result && open.value) { ++stateRequest; states.value = {}; stateRefresh.after(1000) }
+})
 function updateWindowWidth(event) { windowWidth.value = event?.size?.windowWidth || event?.windowWidth || uni.getWindowInfo?.().windowWidth || windowWidth.value; listMeasurer.schedule() }
 onMounted(() => uni.onWindowResize?.(updateWindowWidth))
-onBeforeUnmount(() => { clearTimeout(focusTimer); clearTimeout(searchTimer); listMeasurer.dispose(); uni.offWindowResize?.(updateWindowWidth) })
+onBeforeUnmount(() => { clearTimeout(focusTimer); clearTimeout(searchTimer); stateRefresh.cancel(); ++stateRequest; listMeasurer.dispose(); uni.offWindowResize?.(updateWindowWidth) })
 // 交互动作以 open 为门：收起动画那 300ms 里渲染快照仍非空，但面板已关，不允许再发操作。
 function toggle(id) { if (!open.value || !pending.value || props.busy) return; emit('select', selected.value.includes(id) ? selected.value.filter(item => item !== id) : [...selected.value, id]) }
 function toggleAll() { if (!open.value || !pending.value || props.busy) return; emit('select', allSelected.value ? [] : renderDraft.value.actions.map(action => action.id)) }
@@ -131,14 +138,21 @@ function configure(action) { if (!open.value || props.busy || !pending.value || 
 function receipt(action) { return renderResult.value?.receipts?.find(item => item.actionId === action.id) }
 function outcome(action) { return receiptText(receipt(action)) }
 function phase(action) {
- if (renderResult.value) return receiptPhase(action, receipt(action)?.outcome ?? (selected.value.includes(action.id) ? renderResult.value.status : 'UNSELECTED'), states.value[action.deviceId])
+ if (renderResult.value) return receiptPhase(action, receipt(action)?.outcome ?? (selected.value.includes(action.id) ? renderResult.value.status : 'UNSELECTED'), renderResult.value.readback?.[action.id])
  return renderDraft.value?.status === 'CANCELLED' ? 'cancelled' : renderDraft.value?.status === 'EXPIRED' ? 'expired' : 'pending'
 }
 async function refresh() {
- if (!props.draft) return
- try { const snapshot = await readDeviceStates(props.draft.draftId); states.value = mergeObservedStates(snapshot.states, props.result?.observedStates) }
- catch { states.value = {} }
+ if (!props.draft || !open.value) return
+ const current = ++stateRequest, draftId = props.draft.draftId
+ stateLoading.value = true
+ try {
+  const snapshot = await readDeviceStates(draftId)
+  if (current === stateRequest && props.draft?.draftId === draftId && open.value) states.value = snapshot.states || {}
+ } catch { if (current === stateRequest) states.value = {} }
+ finally { if (current === stateRequest) stateLoading.value = false }
 }
+let stateRequest = 0
+const stateRefresh = createStateRefresh(refresh)
 async function save(changes) {
  if (!open.value || props.busy || !pending.value) return
  emit('editing', true)
@@ -187,10 +201,15 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .grid device-action-card { width:119px; }
 .editor-surface .back { flex-shrink:0; }
 .header-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.title-state-refresh { width:32px; height:32px; margin:0; padding:0; display:flex; align-items:center; justify-content:center; background:transparent; flex-shrink:0; }
+.title-state-refresh[disabled] { opacity:.5; }
+.spinning { animation:state-spin 900ms linear infinite; }
+@keyframes state-spin { to { transform:rotate(360deg); } }
 .title-restore { height:32px; margin:0; padding:0 12px; border:1px solid #d3dcd6; border-radius:16px; background:transparent; color:#5d6f65; font-size:12px; line-height:30px; white-space:nowrap; flex-shrink:0; transition:transform 130ms cubic-bezier(.23,1,.32,1),opacity 150ms ease; }
 .title-restore--pressed { transform:scale(.96); opacity:.75; }
 .title-restore[disabled] { opacity:.4; }
 @media(prefers-reduced-motion:reduce){.header-viewport,.header-viewport .controls,.search-controls,.search-back,.search-field,.surface,.title-restore{transition:none;}.pages.editing .devices-surface{transform:translateX(0);opacity:0}.editor-surface{transform:translateX(0);opacity:0}.pages.editing .editor-surface{opacity:1}}
+@media(prefers-reduced-motion:reduce){.spinning{animation:none}}
 /* DeviceSheet owns the safe-area inset; the action dock must not add it a second time. */
 .confirm-float { padding:14px 20px 10px; background:linear-gradient(to bottom, rgba(252,253,252,0), #fcfdfc 42%); }
 </style>

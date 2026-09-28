@@ -1,7 +1,7 @@
 <template>
  <DeviceSheet :open="open" expanded compact-header :title="activeDevice?.name || '设备'" @close="$emit('close')">
   <template v-if="activeDevice" #header-left><button class="back-button" aria-label="返回设备列表" @tap="activeDeviceId = ''"><uni-icons type="left" size="17" color="#315846" /></button></template>
-  <template #header-right><text class="sheet-meta">{{ activeDevice ? regionName : regionName + ' · ' + devices.length + ' 台' }}</text></template>
+  <template #header-right><view class="header-actions"><text class="sheet-meta">{{ activeDevice ? regionName : regionName + ' · ' + devices.length + ' 台' }}</text><button class="state-refresh" aria-label="刷新设备状态" :disabled="stateLoading || !devices.length" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="#315846" /></button></view></template>
   <template #header>
    <view v-if="!activeDevice" class="filter-header" :class="{ searching }">
     <view class="group-controls">
@@ -17,7 +17,7 @@
   </template>
   <view v-if="activeDevice" class="drawer-content"><DeviceTimelineView class="device-timeline-host" :device="activeDevice" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="emit('task', $event)" /></view>
   <view v-else class="drawer-content">
-   <view v-if="stateError && devices.length" class="state-warning"><text>状态暂不可用，设备目录仍可查看</text><button @tap="loadStates">重试</button></view>
+   <text v-if="stateError && devices.length" class="state-warning">状态暂不可用</text>
    <scroll-view class="device-scroll" scroll-y enhanced :show-scrollbar="false">
     <view v-if="!regionId" class="empty">{{ regionError || '正在读取关注区域' }}</view>
     <view v-else-if="loading" class="empty">正在读取设备目录</view>
@@ -32,8 +32,7 @@
        <view class="device-copy">
         <text class="device-name"><text v-for="(part, index) in device.nameParts" :key="index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
         <text class="device-location"><text v-for="(part, index) in device.kindParts" :key="'kind-' + index" :class="{ hit: part.hit }">{{ part.text }}</text><text> · </text><text v-for="(part, index) in device.locationParts" :key="'location-' + index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
-        <text v-if="stateLoading" class="device-state">状态读取中 · 上报时间未知</text>
-        <text v-else class="device-state"><text v-for="(part, index) in device.detailParts" :key="index" :class="{ hit: part.hit }">{{ part.text }}</text><text> · {{ device.age }}</text></text>
+        <text class="device-state"><text v-for="(part, index) in device.detailParts" :key="index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
        </view>
       </view>
      </view>
@@ -50,17 +49,17 @@ import { listRegionDevices, listRegionDeviceStates } from '@/apis/agent'
 import DeviceSheet from './DeviceSheet.vue'
 import DeviceTimelineView from './DeviceTimelineView.vue'
 import { regionDeviceGroups } from '../region-device-view.mjs'
+import { createStateRefresh } from '../state-refresh.mjs'
 
-const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
+const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, refreshSignal: Number, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
 const emit = defineEmits(['close', 'count', 'task'])
 const modes = [{ key: 'kind', label: '类型' }, { key: 'location', label: '位置' }, { key: 'status', label: '状态' }]
 const devices = ref([]), readings = ref({}), loading = ref(false), stateLoading = ref(false)
 const error = ref(''), stateError = ref(''), groupBy = ref('kind'), query = ref(''), searching = ref(false), searchFocused = ref(false)
-const observedNow = ref(Date.now())
 const activeDeviceId = ref('')
-const groups = computed(() => regionDeviceGroups(devices.value, readings.value, groupBy.value, query.value, observedNow.value))
+const groups = computed(() => regionDeviceGroups(devices.value, readings.value, groupBy.value, query.value))
 const activeDevice = computed(() => activeDeviceId.value
- ? regionDeviceGroups(devices.value, readings.value, 'kind', '', observedNow.value)
+ ? regionDeviceGroups(devices.value, readings.value, 'kind', '')
   .flatMap(group => group.items).find(device => device.id === activeDeviceId.value) || null : null)
 let directoryRequest = 0, stateRequest = 0, focusTimer
 
@@ -83,15 +82,15 @@ async function loadDirectory() {
 async function loadStates() {
  const current = ++stateRequest, regionId = props.regionId
  if (!props.open || !regionId || !devices.value.length) return
- readings.value = {}; observedNow.value = Date.now(); stateLoading.value = true; stateError.value = ''
+ stateLoading.value = true; stateError.value = ''
  try {
   const result = await listRegionDeviceStates(regionId)
   if (current !== stateRequest || regionId !== props.regionId || !props.open) return
   readings.value = Object.fromEntries((result.states || []).map(item => [item.id, item]))
-  observedNow.value = Date.now()
- } catch (cause) { if (current === stateRequest) stateError.value = cause.message || '设备状态暂不可用' }
+ } catch (cause) { if (current === stateRequest) { readings.value = {}; stateError.value = cause.message || '设备状态暂不可用' } }
  finally { if (current === stateRequest) stateLoading.value = false }
 }
+const stateRefresh = createStateRefresh(loadStates)
 
 function openSearch() {
  clearTimeout(focusTimer)
@@ -103,9 +102,10 @@ function closeSearch() { clearTimeout(focusTimer); searchFocused.value = false; 
 watch(() => props.regionId, loadDirectory, { immediate: true })
 watch(() => props.open, value => {
  if (value) { activeDeviceId.value = ''; if (!loading.value) loadDirectory() }
- else { ++stateRequest; stateLoading.value = false; closeSearch(); groupBy.value = 'kind' }
+ else { stateRefresh.cancel(); ++stateRequest; stateLoading.value = false; closeSearch(); groupBy.value = 'kind' }
 })
-onBeforeUnmount(() => { ++directoryRequest; ++stateRequest; clearTimeout(focusTimer) })
+watch(() => props.refreshSignal, () => { if (props.open) stateRefresh.after(1000) })
+onBeforeUnmount(() => { stateRefresh.cancel(); ++directoryRequest; ++stateRequest; clearTimeout(focusTimer) })
 </script>
 
 <style scoped>
@@ -113,7 +113,13 @@ view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.2; }
 button::after { border:0; }
 .filter-header { position:relative; height:50px; border-top:1px solid #edf0ed; overflow:hidden; }
-.sheet-meta { max-width:230px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#78877e; font-size:11px; }
+.header-actions { display:flex; align-items:center; gap:6px; min-width:0; }
+.sheet-meta { max-width:170px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#78877e; font-size:11px; }
+.state-refresh { width:32px; height:32px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.state-refresh[disabled] { opacity:.5; }
+.spinning { animation:state-spin 900ms linear infinite; }
+@keyframes state-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce){.spinning{animation:none}}
 .back-button { width:30px; height:30px; margin-right:8px; border-radius:15px; background:#eef2ef; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .group-controls,.search-controls { position:absolute; inset:0; padding:0 16px; display:flex; align-items:center; gap:8px; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
 .search-controls { opacity:0; transform:translateX(22px); pointer-events:none; }
@@ -130,8 +136,7 @@ button::after { border:0; }
 .search-field input { flex:1; min-width:0; height:100%; font-size:13px; color:#24382d; }
 .drawer-content { min-height:0; flex:1; display:flex; flex-direction:column; }
 .device-timeline-host { height:0; min-height:0; flex:1; overflow:hidden; }
-.state-warning { margin:6px 16px 0; padding:7px 10px; background:#fbf4e5; color:#896529; font-size:11px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.state-warning button { color:#176b54; font-size:11px; }
+.state-warning { margin:6px 16px 0; color:#896529; font-size:11px; }
 .device-scroll { flex:1; min-height:0; height:0; box-sizing:border-box; padding:0 16px; }
 .empty { padding:45px 8px; text-align:center; color:#89958e; font-size:13px; }
 .empty text { display:block; }

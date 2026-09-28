@@ -2,7 +2,7 @@
  <view class="device-view">
   <view class="device-hero">
    <view class="hero-art"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="27" color="#8b9a91" /></view>
-   <view class="hero-copy"><text class="hero-name">{{ device.name }}</text><text class="hero-location">{{ device.kindLabel }} · {{ device.location }}</text><text class="hero-state">{{ device.detail }} · {{ device.age }}</text></view>
+   <view class="hero-copy"><text class="hero-name">{{ device.name }}</text><text class="hero-location">{{ device.kindLabel }} · {{ device.location }}</text><text class="hero-state">{{ device.detail }}</text></view>
   </view>
   <text v-if="sampleMode" class="sample-label">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-area">

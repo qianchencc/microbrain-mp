@@ -15,27 +15,24 @@ export function highlightedParts(value, query) {
  ].filter(part => part.text)
 }
 
-function statePresentation(device, reading, now) {
+function statePresentation(device, reading) {
  const value = reading?.state
  const power = typeof value === 'boolean' ? value : value && typeof value === 'object' ? value.power === 'on' ? true : value.power === 'off' ? false : null : null
  const status = power === true ? 'on' : power === false ? 'off' : 'unknown'
  const detail = device.kind === 'ac' && value && typeof value === 'object' && Number.isFinite(value.temperature)
   ? `${power === false ? '关闭' : power === true ? '运行' : '状态未知'} · ${value.temperature}℃`
   : power === true ? '开启' : power === false ? '关闭' : '状态未知'
- const reportedAt = reading?.reportedAt ? Date.parse(reading.reportedAt) : NaN
- const minutes = Math.max(0, Math.floor((now - reportedAt) / 60000))
- const age = !Number.isFinite(reportedAt) ? '上报时间未知' : minutes < 1 ? '刚刚上报' : minutes < 60 ? `${minutes} 分钟前上报` : minutes < 1440 ? `${Math.floor(minutes / 60)} 小时前上报` : `${Math.floor(minutes / 1440)} 天前上报`
- return { status, detail, age }
+ return { status, detail }
 }
 
-export function regionDeviceGroups(devices, readings, mode, query, now = Date.now()) {
+export function regionDeviceGroups(devices, readings, mode, query) {
  const needle = query.trim().toLocaleLowerCase()
  const groups = new Map()
  const ordered = [...devices].sort((a, b) => (kindOrder[a.kind] ?? 99) - (kindOrder[b.kind] ?? 99) || a.name.localeCompare(b.name, 'zh-CN'))
  for (const device of ordered) {
   const kind = kindNames[device.kind] || kindNames.unknown
   const location = device.location || '位置未标注'
-  const state = statePresentation(device, readings[device.id], now)
+  const state = statePresentation(device, readings[device.id])
   if (needle && ![device.name, location, kind, state.detail].some(value => value.toLocaleLowerCase().includes(needle))) continue
   const group = mode === 'location' ? location : mode === 'status' ? state.status === 'on' ? '运行中' : state.status === 'off' ? '已关闭' : '状态未知' : kind
   if (!groups.has(group)) groups.set(group, [])

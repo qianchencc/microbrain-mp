@@ -24,7 +24,7 @@
 - B6 生产几何共用 `timeline-geometry.mjs`；时间节点不承载任务完成状态。微信开发者工具已选 SVG 图片承载图形，普通视图承载时间字与卡片；Canvas 原生图层曾越过滚动裁切边界。空区域按 P2 原型显示局部符号。见 `docs/research/proto-region-panel/2026-09-27-native-renderer-status.md`；实际任务回读仍需真实操作验收。
 - 区域工作台的 `region-sample-tasks.mjs` 仅供开发版“查看样例”预览：只读授权目录构造 `sample-*` Task，区域与设备时间轴、任务详情共用同一批任务和设备 ID；结果是虚构的，不能写入 Runtime、确认或控制设备，也不能当真实任务验收。从样例返回时必须重新请求真实时间轴。见 `plan/2026-09-28-region-sample-record-consistency.md`。
 - 区域时间轴细卡按 P2 原型放任务名、设备头像和创建者标记；部分完成用黄铜点，失败/错过/中断用红色叉号，执行中用卡片强调，取消态例外保留可见的“已取消”，完整状态与创建者姓名在任务详情中。开发样例仅对齐了 14:00–15:30 / 14:52 的主区间，不是票 02 所需的同数据叠图。见 `plan/2026-09-28-region-timeline-card-alignment.md`。
-- 区域设备抽屉见 `plan/2026-09-27-region-device-browser-handoff.md`：每次打开重读授权目录，目录先于状态显示；状态失败清空旧读数但保留目录。类型/位置/状态是互斥分组，搜索才过滤；设备卡进入时间轴要等票 11 接通后再开放点击。
+- 区域设备抽屉见 `plan/2026-09-27-region-device-browser-handoff.md`：每次打开重读授权目录，目录先于状态显示；标题栏可手动刷新状态，任务阶段收口后约 1 秒自动刷新一次。刷新期间保留布局，失败时清空旧读数但保留目录。类型/位置/状态是互斥分组，搜索才过滤。
 - 区域时间轴日历与任务详情见 `plan/2026-09-27-region-task-browse-handoff.md`：空日期仍保留日历，月标记失败单独提示；Task 详情的 `details.receipt/fields/timedOut` 必须参与结果文案，不能仅看总体 outcome。多设备阶段按 P2/D1 显示可展开设备组，单设备结果直接可见；见 `plan/2026-09-28-task-phase-disclosure.md`。开发版双阶段样例不属于真实任务。
 - 设备时间轴见 `plan/2026-09-27-device-timeline-handoff.md`：`DeviceTimelineView` 必须包在 `DeviceSheet` 的 flex 子容器中，并保持 `timeline-area` 的 `height:0; flex:1; min-height:0`，否则微信 `scroll-view` 高度会等于全部内容，定位记录失效。设备选择只保存 ID，详情始终从最新读数派生；真实与本地演示记录严格分开。紧凑日历通过 `RegionTimeline` 的日期入口按需展开，选日期后收起；区域常驻日历不受影响。两阶段任务只取消后续阶段时，设备记录须同时保留已发生阶段的结果和后续取消事实，不能统称“已取消”。见 `plan/2026-09-28-device-calendar-disclosure.md` 与 `plan/2026-09-28-device-cancelled-stage-receipt.md`。
 - 定时 Task 提案在对话中使用 `TaskProposalCard`：流事件 `task.proposed/task.resolved` 和恢复快照 `turn.task` 共用 taskId；只有点击“创建任务”才调用确认接口。`scheduled/executing` 状态持续按 Task 详情轮询，终态停止；“放弃”只退役提案，不能误显示成已创建任务。工作台深链必须在授权时间轴返回目标 Task 后打开详情，见 `plan/2026-09-28-task-workbench-deeplink.md`。跨日任务仍在每天的区域时间轴显示，绘图只裁切当前日视口，不改变原始阶段时间或同日 B6 几何。微信端验收由用户完成。
@@ -32,5 +32,5 @@
 - 工作台删除任务使用任务详情 `canCancel` 与 `version`，二次确认后调用取消接口；403/409 保留抽屉并刷新详情。已取消记录继续留在时间轴，淡化并显示“已取消”；未下发设备不得显示为故障。小程序交互验收由用户完成。
 - Agent `list_tasks` 只读查询授权区域的某一天；取消必须先列出准确任务，再生成独立 `task.cancellation.proposed` 卡。卡片 `cancellationId` 与目标 `taskId` 不同；会话恢复按前者去重，保留原创建收据。确认调用取消提案接口，放弃/新消息/过期只退役提案；任务状态由真实 Task 详情驱动。
 - 区域列表的 `attention` 只表示当前身份尚未查看的部分完成/失败/未核验任务，不能拿运行中状态或装饰圆点充当提示。进入/切换真实区域调用 `acknowledgeRegion`，只有服务端确认后清除本地提示；样例模式不得更新真实水位。工作台可见时常态 30 秒、任务执行中 5 秒刷新，隐藏后停止；小程序交互验收由用户完成。
-- Task 详情独立读取当前授权照明现态，显示在执行收据之外；Office `switchStatus` 缺少执行时上报时间，当前显示“开启”不能把历史 `unconfirmed` 改成 `verified/completed`。现态读取失败不应抹掉任务收据。
+- Task 详情独立读取当前授权照明现态，显示在执行收据之外；Office `switchStatus` 缺少执行时上报时间，当前显示“开启”不能把历史 `unconfirmed` 改成 `verified/completed`。现态读取失败不应抹掉任务收据。草案卡也只能根据本次回执及执行时回读决定结果标签，不能根据后来刷新到的现态把 `ACCEPTED` 改成“已达到目标”；所有现态查询不得用执行快照覆盖。
 - 工作台只在真实时间轴成功返回且完成视图更新后调用 `acknowledgeRegion`；加载失败、样例模式、隐藏页面或被新请求替代的结果不得清除异常提示。

@@ -7,15 +7,6 @@ export function stateText(action, state) {
   return acSummary(state) || '状态未知';
 }
 
-// 执行结果自带回读时刻的权威状态（confirm 响应 observedStates）：
-// 覆盖普通状态查询里可能更旧的"最后已知值"；只取非空项，空项保留查询结果。
-export function mergeObservedStates(states, observedStates) {
-  if (!observedStates) return states
-  const merged = { ...states }
-  for (const [id, state] of Object.entries(observedStates)) if (state != null) merged[id] = state
-  return merged
-}
-
 // 只有空调有可编辑参数（温度/模式/风速）；门禁一次执行即开一次门，无参数可配，长按不激活面板。
 export function cardConfigurable(action, phase, { readonly = false, disabled = false } = {}) {
   return !readonly && !disabled && phase === 'pending' && action.kind === 'ac';
@@ -31,14 +22,12 @@ export function reduceCardHold(state, event) {
   return state;
 }
 
-export function receiptPhase(action, outcome, state) {
+export function receiptPhase(action, outcome, readback) {
   if (outcome === 'UNSELECTED') return 'unselected';
   if (action.kind === 'access') return outcome === 'ACCEPTED' ? 'accepted' : 'failed';
   if (outcome === 'ALREADY_SATISFIED') return 'complete';
   if (outcome !== 'ACCEPTED') return 'failed';
-  const reached = state != null && Object.entries(action.command).every(([key, value]) =>
-    key === 'closeOrOpen' ? state === (value === 1) : state[key] === value);
-  return reached ? 'complete' : 'accepted';
+  return readback === 'confirmed' ? 'complete' : 'accepted';
 }
 
 // 只读/禁用卡片被点击时必须给出原因与出路；静默无反应会被用户当成"坏了"
