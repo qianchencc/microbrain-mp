@@ -131,7 +131,7 @@
 var plugin = new JSPlugin({
   szId: 'playWnd', iWidth: 640, iHeight: 360,
   szBasePath: '/owner/static/h5player/',
-  oStyle: { border: '#343434', background: '#000' }, openDebug: false
+  oStyle: { borderWidth: 0, background: 'transparent' }, openDebug: false
 });
 plugin.JS_Play(url, { playURL: url, mode: 0 }, 1)
   .then(function(){ /* playing */ })
@@ -140,6 +140,12 @@ plugin.JS_Play(url, { playURL: url, mode: 0 }, 1)
 </script>
 ```
 
+注意 `oStyle` 只认十六进制色值——`rgba(...)`/`transparent` 传入会回落默认金色选中框（`borderSelect:#FFCC00`）；单画面播放页须显式 `borderWidth:0`。
+
+**按拟物材质体系重做的播放页原型**：`pages/agent/proto-h5player.html`（替换了早前的调试探针 `proto-h5player-probe.html`，已删）。玉墨渐变深底（非纯黑）+ 深色毛毡控件（内发丝线/内顶高光/按压缩放）+ 纸面错误卡 + 玉绿呼吸指示灯 + 实时徽标；播放中顶部/底部镀铬 3s 自动隐去、点按唤回；`?debug=1` 开底部日志抽屉；入参 `url`（直参）或 `deviceId+api+token+tenant`（页内取流）。加载/错误/无参三态已截图核验；直播态因下述上游限流待复验。
+
+**取流上游存在会话/频控上限（09-28 晚实测）**：连续取流并遗留未优雅关闭的播放会话后，`monitor/down` 与 Runtime `view` 两条路径同时对**该账号下所有摄像头**返回 `code:207` 空内容（非 401/非设备级）。含义：openUrl token 颁发消耗上游会话名额且过期回收较慢；生产页必须把"取流暂时不可用"做成可稍后重试的一等状态（原型已按此设计），且 `JS_Stop` 清理必须可靠执行以减少孤儿会话。
+
 **H5 播放页生产规格（设计 agent 输入）**：
 
 - 路由入参优先 `deviceId`（不穿越长寿命凭据/URL）；页面用 webView 注入的 `token`/`tenantCode` 作 `Authorization`/`Tenantcode` 头调 `GET /api/agent/devices/:id/video-stream` 现取短时效 URL（生产下同域 `/micro-api/api/ai`，零新增鉴权）。兜底可收 `stream=` 直参（小程序侧先取流再跳转）。
@@ -147,6 +153,7 @@ plugin.JS_Play(url, { playURL: url, mode: 0 }, 1)
 - 生命周期：页面隐藏/卸载时 `JS_Stop`；`beforeunload`/`pagehide` 都要挂。
 - 能力边界：实时预览单画面（iMaxSplit=1）；无音频对讲（不加载 talk 资产）、无录像（不加载 transform 资产）、无回放（接口未暴露）。
 - 部署：页面 + 可选 SDK 目录镜像放 `ncim.577119.com` 下任一路径；微信业务域名已覆盖。
+- 视觉沿用拟物材质体系（玉绿渐变/纸面/黄铜点缀，渐变+内阴影+发丝线，无 backdrop-filter）；播放区为玉墨深底（非纯黑）以保证画面可读性与镀铬对比度；`prefers-reduced-motion` 下停用呼吸动画。参考实现 `pages/agent/proto-h5player.html`。
 
 ## 证据分级
 

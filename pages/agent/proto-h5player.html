@@ -1,0 +1,257 @@
+<!-- 原型：自建 H5 监控播放页（拟物材质体系；2026-09-28 同链路已实测可播）。
+     SDK 资产默认取 ./static/h5player/（本地镜像）；生产指 /owner/static/h5player/ 或页面自带目录。
+     入参：?url=<wss> 直播 ｜ ?deviceId=&api=&token=&tenant= 页内取流 ｜ &name=&loc= 展示 ｜ &debug=1 日志。 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>监控画面</title>
+<style>
+:root{
+  --jade:#176b54; --jade-hi:#2a876c; --jade-deep:#145c46; --jade-ink:#22473a;
+  --paper:#fdfdfb; --felt:#edf2ec; --brass:#9a7b2d; --warn:#a27128; --red:#a33b2e;
+  --ink-hi:#eef3ef; --ink-mid:#9db2a6; --ink-low:#6e8378;
+  --hair:rgba(231,236,232,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+  background:linear-gradient(168deg,#111e19 0%,#0a1310 58%,#080f0c 100%);
+  color:var(--ink-hi); overflow:hidden; user-select:none;
+}
+.page{position:fixed;inset:0;display:flex;flex-direction:column}
+
+/* —— 舞台 —— */
+.stage-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+#playWnd{position:relative}
+#playWnd canvas{display:block}
+
+/* —— 顶部/底部镀铬（播放时自动隐去，点按唤回） —— */
+.chrome{position:absolute;left:0;right:0;z-index:5;display:flex;align-items:center;
+  padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right));
+  transition:opacity 220ms ease,transform 260ms cubic-bezier(.32,.72,0,1)}
+.chrome.top{top:0;padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:26px;
+  background:linear-gradient(180deg,rgba(7,14,11,.78),rgba(7,14,11,0))}
+.chrome.bottom{bottom:0;padding-top:26px;padding-bottom:calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(0deg,rgba(7,14,11,.78),rgba(7,14,11,0));justify-content:space-between}
+.chrome.hidden{opacity:0;pointer-events:none}
+.chrome.top.hidden{transform:translateY(-8px)}
+.chrome.bottom.hidden{transform:translateY(8px)}
+
+.titlebox{flex:1;min-width:0;margin-left:12px}
+.name{font-size:15px;font-weight:650;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{margin-top:2px;font-size:10.5px;color:var(--ink-mid);letter-spacing:.4px}
+
+/* 深色毛毡钮：内发丝线 + 内顶高光 + 柔影，按压缩放 */
+.btn,.iconbtn{font-family:inherit;color:var(--ink-hi);cursor:pointer;border:0;
+  background:linear-gradient(165deg,#263b31,#182720 72%);
+  box-shadow:inset 0 0 0 .5px rgba(255,255,255,.14),inset 0 1px 0 rgba(255,255,255,.09),0 2px 8px -3px rgba(0,0,0,.55);
+  transition:transform 130ms cubic-bezier(.23,1,.32,1),opacity 180ms ease}
+.iconbtn{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.iconbtn svg{width:17px;height:17px;display:block}
+.btn{border-radius:15px;padding:9px 18px;font-size:12.5px;font-weight:600;letter-spacing:.3px}
+.btn:active,.iconbtn:active{transform:scale(.93)}
+.btn.primary{background:linear-gradient(155deg,var(--jade-hi),var(--jade-deep));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 .5px rgba(11,63,46,.35),0 3px 10px -4px rgba(18,90,66,.65)}
+.btn.ghost{background:linear-gradient(165deg,#f8faf8,#e7ede8);color:#3a5148;
+  box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 2px 7px -4px rgba(0,0,0,.35)}
+
+/* —— 实时徽标 —— */
+.live{display:none;align-items:center;gap:6px;flex-shrink:0;margin-left:10px;
+  font-size:10.5px;font-weight:600;letter-spacing:.8px;color:#a8dcc2}
+.live.on{display:flex}
+.live i{width:7px;height:7px;border-radius:50%;background:#43a374;
+  box-shadow:0 0 0 3px rgba(67,163,116,.18)}
+@media (prefers-reduced-motion:no-preference){
+  .live i{animation:breathe 2.4s ease-in-out infinite}
+}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 3px rgba(67,163,116,.18)}50%{box-shadow:0 0 0 5px rgba(67,163,116,.07)}}
+
+/* —— 中部状态层 —— */
+.overlay{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.overlay>*{pointer-events:auto}
+.loading{display:none;flex-direction:column;align-items:center;gap:14px}
+.loading.on{display:flex}
+.loom{width:38px;height:38px;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 34% 30%,#3d8f6f,#176b54 62%,#0f4a39);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -6px 12px rgba(0,0,0,.35),0 6px 18px -6px rgba(20,110,80,.5)}
+@media (prefers-reduced-motion:no-preference){
+  .loom{animation:loom 1.9s cubic-bezier(.45,.05,.55,.95) infinite}
+}
+@keyframes loom{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(.86);opacity:.66}}
+.state-text{font-size:13px;font-weight:600;letter-spacing:.3px}
+.state-sub{font-size:11px;color:var(--ink-mid);letter-spacing:.3px}
+
+/* 纸面错误卡 */
+.errcard{display:none;width:min(300px,78vw);border-radius:16px;padding:22px 20px 18px;text-align:center;
+  background:linear-gradient(178deg,#fefefc,#f2f4ee);
+  box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px rgba(26,55,43,.10),0 18px 46px -14px rgba(0,0,0,.6)}
+.errcard.on{display:block;animation:card-in 260ms cubic-bezier(.23,1,.32,1)}
+@keyframes card-in{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.err-mark{width:34px;height:34px;margin:0 auto 10px;border-radius:50%;
+  background:linear-gradient(160deg,#f3ead2,#e5d3a8);color:var(--brass);
+  display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 0 0 .5px rgba(122,94,32,.28)}
+.err-title{font-size:14px;font-weight:650;color:var(--jade-ink)}
+.err-sub{margin-top:6px;font-size:11.5px;line-height:1.6;color:#75817a}
+.err-actions{margin-top:16px;display:flex;flex-direction:column;gap:9px}
+.err-actions .btn{width:100%}
+
+/* —— 底部状态条 —— */
+.foot-status{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:11px;color:var(--ink-mid);letter-spacing:.3px}
+.foot-status b{color:var(--ink-hi);font-weight:600}
+.foot-status time{font-variant-numeric:tabular-nums;color:var(--ink-low)}
+.foot-actions{display:flex;gap:9px;align-items:center}
+.relink{font-size:11px;padding:7px 13px;border-radius:13px}
+
+/* —— 调试抽屉（?debug=1） —— */
+#devlog{position:fixed;left:0;right:0;bottom:0;z-index:9;max-height:34vh;overflow:auto;display:none;
+  background:rgba(10,17,14,.92);border-top:1px solid var(--hair);
+  font:10px/1.6 ui-monospace,Menlo,monospace;color:#8fb3a2;padding:8px 12px;white-space:pre-wrap}
+#devlog.on{display:block}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="stage-wrap"><div id="playWnd"></div></div>
+
+  <header class="chrome top" id="chromeTop">
+    <button class="iconbtn" id="btnBack" aria-label="返回">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="titlebox">
+      <div class="name" id="camName">监控画面</div>
+      <div class="sub" id="camSub">实时预览</div>
+    </div>
+    <div class="live" id="liveBadge"><i></i>实时</div>
+  </header>
+
+  <div class="overlay" id="overlay">
+    <div class="loading on" id="loadingView">
+      <div class="loom"></div>
+      <div class="state-text">正在接入画面</div>
+      <div class="state-sub" id="stateSub">获取视频流地址</div>
+    </div>
+    <div class="errcard" id="errorView">
+      <div class="err-mark">!</div>
+      <div class="err-title" id="errTitle">视频流暂时不可用</div>
+      <div class="err-sub" id="errSub">请稍后重试</div>
+      <div class="err-actions">
+        <button class="btn primary" id="btnRetry">重新连接</button>
+        <button class="btn ghost" id="btnBack2">返回</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="chrome bottom" id="chromeBottom">
+    <div class="foot-status"><b id="footState">待机</b><time id="footTime"></time></div>
+    <div class="foot-actions"><button class="btn relink" id="btnRelink">重新连接</button></div>
+  </footer>
+</div>
+<pre id="devlog"></pre>
+
+<script src="./static/h5player/h5player.min.js"></script>
+<script>
+(function(){
+'use strict';
+var Q=new URLSearchParams(location.search);
+var SDK=Q.get('sdk')||'./static/h5player/';
+var DEV=Q.get('debug')==='1';
+var $=function(id){return document.getElementById(id)};
+var log=function(){ if(!DEV)return; var el=$('devlog'); el.classList.add('on');
+  el.textContent+=Array.prototype.map.call(arguments,function(x){
+    try{return typeof x==='object'?JSON.stringify(x):String(x)}catch(e){return'?'} }).join(' ')+'\n';
+  el.scrollTop=el.scrollHeight; };
+['warn','error'].forEach(function(k){var o=console[k].bind(console);console[k]=function(){o.apply(null,arguments);log.apply(null,['['+k+']'].concat([].slice.call(arguments)))}});
+
+/* 入参 */
+var urlParam=Q.get('url'), deviceId=Q.get('deviceId'), apiBase=Q.get('api')||'';
+var authToken=Q.get('token')||'', tenantCode=Q.get('tenant')||'';
+$('camName').textContent=Q.get('name')||'监控画面';
+var loc=Q.get('loc'); if(loc)$('camSub').textContent=loc+' · 实时预览';
+
+/* 状态机 */
+var state='boot', plugin=null, streamUrl=null, fetchedAt=null, hideTimer=null;
+var STATE_LABEL={fetching:'取流中',connecting:'接入中',playing:'播放中',failed:'不可用'};
+function setState(s,sub){
+  state=s;
+  $('loadingView').classList.toggle('on',s==='fetching'||s==='connecting');
+  $('errorView').classList.toggle('on',s==='failed');
+  $('liveBadge').classList.toggle('on',s==='playing');
+  $('footState').textContent=STATE_LABEL[s]||s;
+  if(sub)$('stateSub').textContent=sub;
+  if(s==='playing'){ $('footTime').textContent=fetchedAt?('流地址 '+fetchedAt.slice(11,19)):'';
+    scheduleHide(); } else { showChrome(); }
+  log('state:',s,sub||'');
+}
+function fail(title,sub){ $('errTitle').textContent=title; $('errSub').textContent=sub||'请稍后重试'; setState('failed'); }
+
+function showChrome(){ $('chromeTop').classList.remove('hidden'); $('chromeBottom').classList.remove('hidden'); }
+function scheduleHide(){ clearTimeout(hideTimer); if(state!=='playing')return;
+  hideTimer=setTimeout(function(){ $('chromeTop').classList.add('hidden'); $('chromeBottom').classList.add('hidden'); },3200); }
+document.querySelector('.stage-wrap').addEventListener('click',function(){
+  var h=$('chromeTop').classList.contains('hidden');
+  if(h){showChrome();scheduleHide()} else if(state==='playing'){scheduleHide()}
+});
+
+/* 取流：deviceId 模式页内现取（生产同域 /micro-api/api/ai）；url 模式直用 */
+function obtainUrl(){
+  if(urlParam)return Promise.resolve(urlParam);
+  if(!deviceId)return Promise.reject({msg:'缺少设备参数'});
+  return fetch(apiBase+'/agent/devices/'+encodeURIComponent(deviceId)+'/video-stream',
+      {headers:{Authorization:authToken,Tenantcode:tenantCode}})
+    .then(function(r){ if(!r.ok)throw{msg:'取流接口 '+r.status,status:r.status}; return r.json() })
+    .then(function(j){ fetchedAt=j.fetchedAt||null; if(!j.url)throw{msg:'取流返回为空'}; return j.url });
+}
+function teardown(){
+  try{ if(plugin&&plugin.JS_Stop)plugin.JS_Stop(); }catch(e){}
+  plugin=null; $('playWnd').innerHTML='';
+}
+function stageSize(){
+  var w=document.querySelector('.stage-wrap').getBoundingClientRect();
+  var vw=w.width, vh=w.height, ar=16/9;
+  var sh=Math.min(vh, vw/ar), sw=sh*ar;
+  if(sw>vw){sw=vw;sh=sw/ar}
+  return {w:Math.floor(sw),h:Math.floor(sh)};
+}
+function play(){
+  teardown(); clearTimeout(hideTimer);
+  setState('fetching','获取视频流地址');
+  obtainUrl().then(function(u){
+    streamUrl=u; setState('connecting','正在建立播放通道');
+    var s=stageSize(), wnd=$('playWnd');
+    wnd.style.width=s.w+'px'; wnd.style.height=s.h+'px';
+    if(typeof JSPlugin!=='function')throw{msg:'播放器组件未加载'};
+    plugin=new JSPlugin({szId:'playWnd',iWidth:s.w,iHeight:s.h,iMaxSplit:1,iCurrentSplit:1,szBasePath:SDK,
+      oStyle:{borderWidth:0,background:'transparent'},openDebug:DEV});
+    log('JS_Play',u);
+    return Promise.resolve(plugin.JS_Play(u,{playURL:u,mode:0},1));
+  }).then(function(){ if(state==='connecting')setState('playing'); })
+   .catch(function(e){
+     var msg=(e&&(e.msg||e.message))||'';
+     if(state==='failed')return;
+     if(/取流|设备参数|401|403|404|503|fetch/i.test(msg))
+       fail('无法获取视频流',msg.indexOf('过期')>-1?'取流地址已过期，请重试':'请稍后重试');
+     else
+       fail('视频流暂时不可用','连接未建立，请稍后重试'+(urlParam?'（若重试无效，取流地址可能已过期）':''));
+     log('fail',msg,JSON.stringify(e));
+   });
+}
+
+$('btnRetry').addEventListener('click',play);
+$('btnRelink').addEventListener('click',play);
+function goBack(){ try{ if(window.wx&&wx.miniProgram&&wx.miniProgram.navigateBack){wx.miniProgram.navigateBack();return} }catch(e){}
+  if(history.length>1)history.back(); }
+$('btnBack').addEventListener('click',goBack);
+$('btnBack2').addEventListener('click',goBack);
+window.addEventListener('pagehide',teardown);
+window.addEventListener('beforeunload',teardown);
+
+if(!urlParam&&!deviceId){ fail('缺少播放参数','请从设备详情进入播放页'); }
+else play();
+})();
+</script>
+</body>
+</html>
