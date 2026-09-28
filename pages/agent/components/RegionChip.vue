@@ -3,31 +3,35 @@
   <view class="region-chip">
    <button class="region-name" :disabled="!focusRegion || regionsLoading" @tap="workbench ? open = true : $emit('open', focusRegion)"><text>{{ regionsLoading ? '正在读取区域' : focusRegion?.name || '暂无可用区域' }}</text><uni-icons v-if="!workbench && focusRegion" type="forward" size="12" color="#7f9287" /></button>
    <button class="region-toggle" :disabled="!regions.length || regionsLoading" aria-label="切换关注区域" @tap="open = true"><uni-icons type="bottom" size="14" color="#536b5c" /></button>
+   <view v-if="anyAttention" class="chip-att" aria-hidden="true" />
   </view>
  </view>
  <button v-if="regionsError" class="region-retry" @tap="loadRegionFocus().catch(() => {})">{{ regionsError }} · 重试</button>
  <DeviceSheet :open="open" title="关注区域" subtitle="未指明地点时，优先在此区域查找设备" @close="open = false">
   <scroll-view class="region-options" :style="{ height: (regions.length * 68 + 8) + 'px' }" scroll-y enhanced :show-scrollbar="false">
    <radio-group @change="choose($event.detail.value)">
-    <label v-for="region in regions" :key="region.id" class="region-option" :class="{ chosen: region.id === focusRegionId }"><view class="option-copy"><text>{{ region.name }}</text><text v-if="region.attention" class="attention">有待查看的异常</text></view><radio :value="region.id" :checked="region.id === focusRegionId" color="#176b54" /></label>
+    <label v-for="region in regions" :key="region.id" class="region-option" :class="{ chosen: region.id === focusRegionId }"><view class="option-copy"><text>{{ region.name }}</text><view v-if="region.attention" class="attention"><view class="attention-dot" /><text>有待查看的异常结果</text></view></view><radio :value="region.id" :checked="region.id === focusRegionId" color="#176b54" /></label>
    </radio-group>
   </scroll-view>
+  <view class="sheet-note">打开区域即视为已查看最新结果；已读不代表异常已处置。</view>
  </DeviceSheet>
 </template>
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import { regions, focusRegion, focusRegionId, regionsLoading, regionsError, selectFocusRegion, loadRegionFocus } from '../region-focus.js'
 defineProps({ workbench: Boolean })
 const emit = defineEmits(['open', 'change'])
 const open = ref(false)
+const anyAttention = computed(() => regions.value.some(region => region.attention))
 function choose(id) { if (selectFocusRegion(id)) { open.value = false; emit('change', focusRegion.value) } }
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
 .region-row { padding:0 18px 10px; display:flex; }
-.region-retry { margin:0 18px 10px; color:#9a752e; font-size:12px; text-align:left; }
-.region-chip { display:flex; min-width:0; max-width:100%; border-radius:16px; background:linear-gradient(#fefffe,#edf2ec); box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px #29493624,0 3px 8px -6px #233a2d66; }
+.region-retry { margin:0 18px 10px; color:#ad711b; font-size:12px; text-align:left; }
+.region-chip { position:relative; display:flex; min-width:0; max-width:100%; border-radius:16px; background:linear-gradient(#fefffe,#edf2ec); box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px #29493624,0 3px 8px -6px #233a2d66; }
+.chip-att { position:absolute; top:-3px; right:-3px; width:10px; height:10px; border-radius:50%; background:#ad711b; border:2px solid #fdfcfa; box-shadow:0 1px 3px rgba(122,75,17,.35); }
 button { background:transparent; margin:0; padding:0; border-radius:0; line-height:1.2; }
 button::after { border:0; }
 button[disabled] { background:transparent; color:#89958e; }
@@ -39,5 +43,7 @@ button[disabled] { background:transparent; color:#89958e; }
 .region-option.chosen { background:#edf3ee; }
 .option-copy { min-width:0; }
 .option-copy text { display:block; }
-.attention { margin-top:4px; font-size:11px; color:#9a752e; }
+.attention { margin-top:4px; display:flex; align-items:center; gap:5px; font-size:11px; color:#ad711b; }
+.attention-dot { width:6px; height:6px; border-radius:50%; background:#ad711b; flex-shrink:0; }
+.sheet-note { margin:2px 16px 10px; font-size:11px; color:#93a297; line-height:1.5; }
 </style>

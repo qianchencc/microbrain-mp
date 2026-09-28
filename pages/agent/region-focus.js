@@ -45,3 +45,20 @@ export async function acknowledgeRegion(id) {
  if (scope === getAgentStorageScope()) regions.value = regions.value.map(region =>
   region.id === id ? { ...region, attention: false } : region)
 }
+
+const composeKey = scope => 'agent-compose-prefill:' + scope
+
+// 工作台“新建任务”回到对话时的一次性输入预填：写入当前身份作用域，Agent 页 onShow 消费一次即清除。
+export function queueComposePrefill(text) {
+ const scope = getAgentStorageScope()
+ if (!scope || !text) return
+ uni.setStorageSync(composeKey(scope), text)
+}
+
+export function consumeComposePrefill() {
+ const scope = getAgentStorageScope()
+ if (!scope) return ''
+ const text = uni.getStorageSync(composeKey(scope))
+ if (text) uni.removeStorageSync(composeKey(scope))
+ return typeof text === 'string' ? text : ''
+}

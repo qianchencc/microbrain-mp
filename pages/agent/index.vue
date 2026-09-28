@@ -48,7 +48,7 @@ import AgentReplySurface from './components/AgentReplySurface.vue'
 import DraftSheetLayer from './components/DraftSheetLayer.vue'
 import UserMessage from './components/UserMessage.vue'
 import RegionChip from './components/RegionChip.vue'
-import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus } from './region-focus.js'
+import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus, consumeComposePrefill } from './region-focus.js'
 function openRegion(region) { uni.navigateTo({ url: '/pages/agent/region?regionId=' + encodeURIComponent(region.id) }) }
 const conversationId = ref('')
 const input = ref('')
@@ -467,7 +467,9 @@ function clearHistory() {
  } })
 }
 onLoad(() => { restore() })
-onShow(() => { visible = true; loadRegionFocus().catch(() => {}); if (!activeRequest) restore() })
+onShow(() => { visible = true; loadRegionFocus().catch(() => {}); if (!activeRequest) restore()
+ const prefill = consumeComposePrefill()
+ if (prefill && !input.value.trim()) input.value = prefill })
 onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer); clearTimeout(taskPollTimer) })
 onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
@@ -493,7 +495,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
    min-content（短消息每行一字）；定宽后气泡用 inline-block 收缩即可安全测量。 */
 .user-row .um-host { width:100%; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
-.error { display:block; margin-top:20rpx; color:#a66a13; font-size:25rpx; }
+.error { display:block; margin-top:20rpx; color:#ad711b; font-size:25rpx; }
 .composer-shell { position:relative; z-index:4; padding:8px 18px calc(14px + env(safe-area-inset-bottom)); background:transparent; flex-shrink:0; transition:padding-bottom .25s ease; }.anchor { height:2rpx; }
 @media(prefers-reduced-motion:reduce){.composer-shell{transition:none;}}
 </style>

@@ -27,7 +27,7 @@
     <view v-for="group in groups" :key="group.label" class="group">
      <text class="group-title">{{ group.label }} · {{ group.items.length }}</text>
      <view class="device-grid">
-      <view v-for="device in group.items" :key="device.id" class="device-card" role="button" @tap="activeDeviceId = device.id">
+      <view v-for="device in group.items" :key="device.id" class="device-card" role="button" hover-class="device-card--pressed" @tap="activeDeviceId = device.id">
        <view class="device-art"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="28" color="#8b9a91" /><view class="state-lamp" :class="device.status" /></view>
        <view class="device-copy">
         <text class="device-name"><text v-for="(part, index) in device.nameParts" :key="index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
@@ -136,7 +136,7 @@ button::after { border:0; }
 .search-field input { flex:1; min-width:0; height:100%; font-size:13px; color:#24382d; }
 .drawer-content { min-height:0; flex:1; display:flex; flex-direction:column; }
 .device-timeline-host { height:0; min-height:0; flex:1; overflow:hidden; }
-.state-warning { margin:6px 16px 0; color:#896529; font-size:11px; }
+.state-warning { margin:6px 16px 0; color:#a27128; font-size:11px; }
 .device-scroll { flex:1; min-height:0; height:0; box-sizing:border-box; padding:0 16px; }
 .empty { padding:45px 8px; text-align:center; color:#89958e; font-size:13px; }
 .empty text { display:block; }
@@ -144,12 +144,14 @@ button::after { border:0; }
 .group { margin-top:14px; }
 .group-title { display:block; margin:0 2px 8px; font-size:11px; font-weight:600; color:#5f6e66; }
 .device-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-.device-card { min-width:0; background:#f8faf7; border:1px solid #dae3dc; border-radius:8px; overflow:hidden; }
+.device-card { min-width:0; background:#f8faf7; border:1px solid #dae3dc; border-radius:8px; overflow:hidden; transition:transform 130ms cubic-bezier(.23,1,.32,1); animation:cardIn 200ms cubic-bezier(.23,1,.32,1) backwards; }
+.device-card--pressed { transform:scale(.97); }
+@keyframes cardIn { from { opacity:0; transform:translateY(8px) scale(.98); } }
 .device-art { height:76px; position:relative; display:flex; align-items:center; justify-content:center; background:linear-gradient(155deg,#dfe4de,#f4f5ef 52%,#d4ddd6); }
 .device-art image { width:92%; height:92%; }
 .state-lamp { position:absolute; right:9px; top:9px; width:8px; height:8px; border-radius:50%; background:#bbc7be; border:1px solid white; box-shadow:0 1px 2px #1f352b33; }
 .state-lamp.on { background:#e4ae37; box-shadow:0 0 6px #e7b94c99; }
-.state-lamp.unknown { background:#fff; border-color:#b57932; }
+.state-lamp.unknown { background:#fff; border-color:#ad711b; }
 .device-copy { padding:8px 9px 10px; min-width:0; }
 .device-name,.device-location,.device-state { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .device-name { font-size:12px; font-weight:600; color:#24382d; }
@@ -157,5 +159,5 @@ button::after { border:0; }
 .device-state { margin-top:7px; padding-top:7px; border-top:1px solid #e2e9e2; font-size:10px; color:#687a6d; }
 .hit { background:#f6dda4; border-radius:2px; }
 .list-tail { height:28px; }
-@media(prefers-reduced-motion:reduce) { .group-controls,.search-controls { transition:none; } }
+@media(prefers-reduced-motion:reduce) { .group-controls,.search-controls,.device-card { transition:none; animation:none; } }
 </style>

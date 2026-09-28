@@ -11,7 +11,7 @@
   </view></scroll-view></view>
   <view v-if="pending && !embedded" class="actions"><text class="selection-status">已选 {{ selected.length }} 项</text><button class="quiet" :disabled="busy" hover-class="quiet--pressed" @tap="emit('cancel')">取消</button><button class="primary" :disabled="busy || !selected.length" :loading="busy" hover-class="primary--pressed" @tap="emit('confirm')">执行操作</button></view>
   <button v-if="draft.status === 'EXPIRED' && !embedded" class="quiet" :disabled="busy" @tap="emit('revalidate')">重新核验</button>
-  <view v-if="(result || draft.status === 'EXECUTING') && !embedded" class="receipt"><uni-icons :class="{ spinning: draft.status === 'EXECUTING' }" :type="draft.status === 'EXECUTING' ? 'loop' : result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? 'info' : 'checkmarkempty'" size="16" :color="result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? '#a66a13' : '#526d5e'" /><text>{{ result?.message || '正在执行，请稍候' }}</text></view>
+  <view v-if="(result || draft.status === 'EXECUTING') && !embedded" class="receipt"><uni-icons :class="{ spinning: draft.status === 'EXECUTING' }" :type="draft.status === 'EXECUTING' ? 'loop' : result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? 'info' : 'checkmarkempty'" size="16" :color="result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? '#ad711b' : '#526d5e'" /><text>{{ result?.message || '正在执行，请稍候' }}</text></view>
  </view>
 </template>
 <script setup>

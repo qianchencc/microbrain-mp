@@ -1,4 +1,5 @@
 import { targetText } from './task-detail-view.mjs'
+import { creatorVariant } from './region-device-view.mjs'
 
 const settled = outcome => ['verified', 'satisfied'].includes(outcome)
 const outcomeLabel = { verified: '已核验', satisfied: '已满足', unconfirmed: '待核验', unknown: '结果未知', rejected: '未受理',
@@ -43,6 +44,7 @@ export function deviceTimelineItems(events) {
    endAt: steps.length > 1 ? last.at : undefined, label: targets.join(' → '), taskLabel: first.taskLabel,
    sourceText: first.sourceType === 'sample' ? '演示' : first.sourceType === 'immediate_draft' ? '即时' : '定时',
    resultText: result.text, resultTone: result.tone, creatorName: first.creatorName,
+   creatorVariant: creatorVariant(first.creatorName, false),
    faded: allSettled || first.taskStatus === 'cancelled',
   }]
  })

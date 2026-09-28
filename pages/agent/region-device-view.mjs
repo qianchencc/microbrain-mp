@@ -3,6 +3,14 @@ import { resolveDeviceArtwork } from './device-art/catalog.js'
 const kindNames = { lighting: '照明', ac: '空调', access: '门禁', video: '视频', environment: '环境', energy: '能耗', safety: '安全', unknown: '其他' }
 const kindOrder = { lighting: 0, ac: 1, access: 2, video: 3, environment: 4, energy: 5, safety: 6, unknown: 7 }
 
+// 创建者按人稳定着色；本人固定 jade，其余按展示名散列到 brass/slate/grey，与 P2 原型的 owner-mark 语言一致。
+export function creatorVariant(name, mine) {
+ if (mine) return 'mine'
+ let hash = 0
+ for (const char of String(name || '')) hash = (hash * 31 + char.codePointAt(0)) >>> 0
+ return ['brass', 'slate', 'grey'][hash % 3]
+}
+
 export function highlightedParts(value, query) {
  const text = String(value || '')
  const needle = query.trim()

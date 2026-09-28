@@ -7,16 +7,16 @@
    <view v-else-if="detail" class="task-detail">
     <text class="task-name">{{ detail.label }}</text>
     <text class="task-when">{{ detail.whenText }}</text>
-    <view class="owner-line"><view class="owner-mark">{{ detail.creator.displayName.slice(0, 1) }}</view><text class="owner-name">{{ detail.creator.displayName }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
+    <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ detail.creator.displayName }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
     <view class="summary" :class="{ warning: ['partial', 'failed', 'unconfirmed', 'interrupted', 'missed'].includes(detail.status) }">{{ detail.summary }}</view>
     <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
     <text v-if="currentError" class="current-error">状态暂不可用</text>
     <text v-if="actionError" class="action-error">{{ actionError }}</text>
     <text class="section-title">阶段 · {{ detail.phases.length }}</text>
     <view v-for="(phase, index) in detail.phases" :key="phase.id" class="phase">
-     <view class="phase-rail"><view class="phase-node" :class="{ complete: ['verified', 'satisfied', 'completed'].includes(phase.status), ending: detail.phases.length > 1 && index === 1 }" /><view v-if="index < detail.phases.length - 1" class="phase-link" /></view>
+     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
      <view class="phase-main">
-      <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><text class="phase-status">{{ phase.statusText }}</text></view>
+      <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><text class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
       <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
       <button v-if="phase.devices.length > 1" class="phase-devices" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
        <view class="phase-avatars"><view v-for="device in phase.devices.slice(0, 5)" :key="device.id" class="phase-avatar"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="12" color="#7c8d82" /></view></view>
@@ -43,6 +43,7 @@ import { cancelTask, getTaskDetail, getTaskLightingStates } from '@/apis/agent'
 import DeviceSheet from './DeviceSheet.vue'
 import { taskDetailView } from '../task-detail-view.mjs'
 import { createStateRefresh } from '../state-refresh.mjs'
+import { creatorVariant } from '../region-device-view.mjs'
 
 const props = defineProps({ open: Boolean, taskId: String, sampleTask: Object, regionName: String })
 const emit = defineEmits(['close', 'cancelled'])
@@ -50,6 +51,10 @@ const task = ref(null), loading = ref(false), error = ref(''), actionError = ref
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
 const expandedPhases = ref([])
 const detail = computed(() => taskDetailView(task.value))
+// 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于创建者标记显示“我”。
+const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
+const creatorMark = computed(() => detailMine.value ? '我' : (detail.value?.creator?.displayName || '').slice(0, 1))
+const ownerVariant = computed(() => creatorVariant(detail.value?.creator?.displayName, detailMine.value))
 const lightIds = computed(() => [...new Set((detail.value?.phases || []).flatMap(phase => phase.devices.filter(device => device.kind === 'lighting').map(device => device.id)))])
 const currentSummary = computed(() => {
  const known = lightIds.value.filter(id => typeof currentStates.value[id]?.state === 'boolean')
@@ -137,10 +142,15 @@ button::after { border:0; }
 .task-name { display:block; color:#263c2e; font-size:18px; font-weight:700; line-height:1.35; }
 .task-when { display:block; margin-top:5px; color:#75877b; font-size:12px; }
 .owner-line { display:flex; align-items:center; gap:8px; margin-top:13px; }
-.owner-mark { width:25px; height:25px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#216b55; color:#fff; font-size:11px; }
+.owner-mark { width:25px; height:25px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#3a9478,#11553f); color:#fff; font-size:11px; font-weight:600; }
+.owner-mark.cv-brass { background:linear-gradient(145deg,#d9b06c,#a87c33); }
+.owner-mark.cv-slate { background:linear-gradient(145deg,#8fa7b8,#5d7484); }
+.owner-mark.cv-grey { background:linear-gradient(145deg,#a9b0aa,#7a817b); }
 .owner-name { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#718176; font-size:11px; }
 .state-tag { flex-shrink:0; padding:4px 8px; border-radius:8px; color:#4d7663; background:#eaf3ed; font-size:11px; }
-.state-tag.partial,.state-tag.failed,.state-tag.unconfirmed,.state-tag.interrupted,.state-tag.missed { color:#936827; background:#f9f0df; }
+.state-tag.partial,.state-tag.unconfirmed { color:#936827; background:#f9f0df; }
+.state-tag.failed,.state-tag.interrupted,.state-tag.missed { color:#a15343; background:#f2e3e0; }
+.state-tag.cancelled { color:#7a7f76; background:#eef1ef; }
 .summary { margin-top:14px; padding:10px 12px; background:#f4f8f4; border:1px solid #e0e9e1; border-radius:8px; color:#456052; font-size:12px; }
 .summary.warning { color:#8d672d; background:#fbf5e9; border-color:#edddbf; }
 .current-observation { min-height:32px; margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:#4a6654; font-size:11px; }
@@ -154,15 +164,25 @@ button::after { border:0; }
 .phase { display:flex; gap:11px; }
 .phase-rail { width:16px; display:flex; flex-direction:column; align-items:center; flex-shrink:0; }
 .phase-node { width:14px; height:14px; margin-top:3px; border:2px solid #89a395; box-sizing:border-box; border-radius:50%; background:#fff; }
-.phase-node.complete { background:#176b54; border-color:#176b54; box-shadow:inset 0 0 0 3px white; }
+.phase-node.tone-ok { background:#176b54; border-color:#176b54; box-shadow:inset 0 0 0 3px white; }
+.phase-node.tone-warn { background:#ad711b; border-color:#ad711b; box-shadow:inset 0 0 0 3px white; }
+.phase-node.tone-fail { background:#a15343; border-color:#a15343; box-shadow:inset 0 0 0 3px white; }
+.phase-node.tone-active { border-color:#176b54; background:#fff; }
+.phase-node.tone-off { border-color:#aab4ac; }
 .phase-node.ending { background:#fff; }
-.phase-link { width:2px; min-height:25px; flex:1; background:#d5e0d8; }
+.phase-link { width:3px; min-height:25px; flex:1; border-radius:2px; background:#dde5df; overflow:hidden; }
+.phase-link-fill { width:100%; background:linear-gradient(#3c8a68,#8fb9a4); }
 .phase-main { flex:1; min-width:0; padding-bottom:18px; }
 .phase-head { display:flex; align-items:baseline; gap:7px; min-width:0; }
 .phase-time { color:#263c2e; font-size:12px; font-weight:700; }
 .phase-title { color:#839189; font-size:11px; }
-.phase-status { margin-left:auto; flex-shrink:0; color:#397b61; font-size:11px; }
-.phase-reason { display:block; margin-top:5px; color:#9b6630; font-size:11px; }
+.phase-status { margin-left:auto; flex-shrink:0; color:#839189; font-size:11px; }
+.phase-status.tone-ok { color:#397b61; }
+.phase-status.tone-warn { color:#a27128; }
+.phase-status.tone-fail { color:#a15343; }
+.phase-status.tone-active { color:#176b54; }
+.phase-status.tone-off { color:#8a8f86; }
+.phase-reason { display:block; margin-top:5px; color:#a27128; font-size:11px; }
 .phase-devices { width:100%; min-height:38px; margin:9px 0 0; padding:5px 9px; border:1px solid #e0e9e1; border-radius:8px; display:flex; align-items:center; gap:8px; background:#f9fbf9; text-align:left; }
 .phase-avatars { display:flex; align-items:center; flex-shrink:0; padding-left:5px; }
 .phase-avatar { width:22px; height:22px; margin-left:-5px; border:1px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#edf2ee; }
@@ -177,7 +197,7 @@ button::after { border:0; }
 .result.ok { color:#397b61; }.result.warn { color:#a27128; }.result.fail { color:#a15343; }.result.wait { color:#839189; }
 .no-devices { display:block; padding:12px 0; color:#839189; font-size:11px; }
 .source { display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid #e2e9e3; color:#85958a; font-size:11px; }
-.task-delete { width:100%; height:38px; margin:18px 0 0; border:1px solid #ead6d1; border-radius:8px; background:#fff; color:#9a5549; font-size:12px; line-height:36px; }
+.task-delete { width:100%; height:38px; margin:18px 0 0; border:1px solid #ead6d1; border-radius:8px; background:#fff; color:#a15343; font-size:12px; line-height:36px; }
 .task-delete[disabled] { opacity:.55; }
 .action-error { display:block; margin-top:10px; color:#a15343; font-size:11px; }
 </style>

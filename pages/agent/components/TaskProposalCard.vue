@@ -60,7 +60,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-actions button::after,.task-link::after { border:0; }
 .task-secondary { flex:1; background:#edf3ee; color:#4d6756; }
 .task-primary { flex:2; background:#176b54; color:#fff; }
-.task-primary.destructive { background:#9a5549; }
+.task-primary.destructive { background:#a15343; }
 .task-actions button[disabled] { opacity:.55; }
 .task-link { display:flex; align-items:center; justify-content:center; gap:4px; min-height:43px; margin:0; border-top:1px solid #e6ece7; border-radius:0; background:#f5f9f6; color:#176b54; font-size:12px; }
 .task-ended { display:block; padding:12px 15px; border-top:1px solid #e6ece7; color:#89978b; font-size:11px; }

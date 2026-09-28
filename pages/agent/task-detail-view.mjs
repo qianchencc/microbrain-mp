@@ -31,11 +31,27 @@ export function resultText(device) {
  return outcomeText[device.outcome] || device.outcome || '待执行'
 }
 
+const phaseTone = status =>
+ ['verified', 'satisfied', 'completed'].includes(status) ? 'ok'
+ : ['partial', 'unconfirmed'].includes(status) ? 'warn'
+ : ['failed', 'missed', 'interrupted'].includes(status) ? 'fail'
+ : status === 'executing' ? 'active' : status === 'cancelled' ? 'off' : 'wait'
+
+// 两阶段之间的连线按上一阶段推进程度填充：已跑完（含失败/中断）满格；执行中按时间进度；未到/错过/取消不填充。
+function linkProgress(phase, next) {
+ if (!next) return null
+ if (['verified', 'satisfied', 'completed', 'partial', 'failed', 'unconfirmed', 'interrupted'].includes(phase.status)) return 100
+ if (phase.status !== 'executing') return 0
+ const span = Date.parse(next.at) - Date.parse(phase.at)
+ return span > 0 ? Math.max(0, Math.min(100, (Date.now() - Date.parse(phase.at)) / span * 100)) : 100
+}
+
 export function taskDetailView(task) {
  if (!task) return null
  const phases = task.phases.map((phase, index) => ({
   ...phase, title: task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束',
   time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusText[phase.status] || phase.status,
+  tone: phaseTone(phase.status), link: linkProgress(phase, task.phases[index + 1]),
   devices: (phase.devices || []).map(device => ({ ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
    targetText: targetText(device.kind, device.target),
    resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device),

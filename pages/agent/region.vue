@@ -15,12 +15,12 @@
      <text v-if="item.status === 'cancelled'" class="cancelled-status">已取消</text>
      <view class="avatars"><view v-for="avatar in item.avatars" :key="avatar.id" class="device-avatar"><image v-if="avatar.src" :src="avatar.src" mode="aspectFit" /><uni-icons v-else type="gear" size="13" color="#7c8d82" /></view><text v-if="item.more" class="more">+{{ item.more }}</text></view>
      <view class="task-separator" />
-     <view class="owner-mark" :aria-label="item.creatorName">{{ item.creatorName.slice(0, 1) }}</view>
+     <view class="owner-mark" :class="'cv-' + item.creatorVariant" :aria-label="item.creatorName">{{ item.creatorMark }}</view>
      </view>
     </template>
    </RegionTimeline>
   </view>
-  <view class="device-dock"><button class="device-entry" hover-class="device-entry--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button></view>
+  <view class="device-dock"><button class="device-entry" hover-class="device-entry--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="device-entry primary" hover-class="device-entry--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view>
   <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @task="openDeviceTask" />
   <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
@@ -35,7 +35,7 @@ import RegionChip from './components/RegionChip.vue'
 import RegionTimeline from './components/RegionTimeline.vue'
 import RegionDeviceDrawer from './components/RegionDeviceDrawer.vue'
 import TaskDetailSheet from './components/TaskDetailSheet.vue'
-import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion } from './region-focus.js'
+import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion, queueComposePrefill } from './region-focus.js'
 import { localDate } from './timeline-geometry.mjs'
 import { calendarWindow, shiftDate, validCalendarDate } from './region-calendar.mjs'
 import { regionTimelineItems } from './region-timeline.mjs'
@@ -110,6 +110,14 @@ function openTask(item) {
  sampleDetail.value = sample
 }
 function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId; sampleDetail.value = sampleTask || null }
+// 新建任务入口=回到对话：把当前区域固定为关注区域并预填含区域名的输入开头，真实创建仍走 Agent 确认流。
+function composeTask() {
+ if (focusRegion.value) {
+  selectFocusRegion(focusRegion.value.id)
+  queueComposePrefill(`在「${focusRegion.value.name}」`)
+ }
+ uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pages/agent/index' }) })
+}
 function toggleSample() { sampleMode.value = !sampleMode.value; sampleTasks.value = []; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; void loadVisibleTimeline(); loadCalendar() }
 async function load() {
  const currentLoad = ++loadId
@@ -176,7 +184,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .day-title { color:#45564d; font-size:20px; font-weight:600; }
 .sample-toggle { margin:0 0 0 auto; padding:0; background:transparent; color:#176b54; font-size:11px; line-height:1.4; }
 .sample-toggle::after { border:0; }
-.sample-notice { margin:0 23px 6px; color:#987034; font-size:11px; }
+.sample-notice { margin:0 23px 6px; color:#ad711b; font-size:11px; }
 .timeline-body { position:relative; flex:1; min-height:0; margin:0 16px; overflow:hidden; }
 .empty { padding:70px 24px 0; text-align:center; font-size:12px; line-height:1.8; color:#89958e; }
 .empty-art { display:block; width:60px; height:80px; margin:0 auto 14px; }
@@ -187,20 +195,25 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .notice button::after { border:0; }
 .task-row { display:flex; align-items:center; gap:7px; height:32px; min-width:0; }
 .avatars { display:flex; align-items:center; flex-shrink:0; }
-.device-avatar { width:21px; height:21px; margin-left:-7px; border:1px solid #fff; border-radius:50%; background:#edf2ee; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.device-avatar { width:21px; height:21px; margin-left:-7px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffffff,#dfe7e1 72%); box-shadow:0 0 0 1.5px #fff,0 2px 5px rgba(31,52,42,.12); display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .device-avatar image { width:21px; height:21px; }
 .device-avatar:first-child { margin-left:0; }
 .more { font-size:8px; margin-left:2px; color:#7a8d80; }
 .task-label { flex:1; min-width:0; font-size:12px; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.warning-dot { display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:#b57932; box-shadow:0 0 0 2px #f7ecd8; vertical-align:1px; }
+.warning-dot { display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:#ad711b; box-shadow:0 0 0 2px #f7ecd8; vertical-align:1px; }
 .failure-mark { margin-right:6px; color:#a15343; font-size:13px; font-weight:700; }
 .cancelled-status { flex-shrink:0; color:#7a8b80; font-size:9px; }
 .task-separator { width:1px; height:14px; flex-shrink:0; background:#e1e8e2; }
 .owner-mark { width:22px; height:22px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#3a9478,#11553f); color:#fff; font-size:9px; font-weight:700; }
+.owner-mark.cv-brass { background:linear-gradient(145deg,#d9b06c,#a87c33); }
+.owner-mark.cv-slate { background:linear-gradient(145deg,#8fa7b8,#5d7484); }
+.owner-mark.cv-grey { background:linear-gradient(145deg,#a9b0aa,#7a817b); }
 .task-row.cancelled .task-label { text-decoration:line-through; text-decoration-color:#9caaa0; }
-.device-dock { flex-shrink:0; height:70px; display:flex; align-items:center; justify-content:center; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
-.device-entry { height:44px; min-width:130px; margin:0; padding:0 20px; border:1px solid #dce5dd; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#fff,#f2f6f1); box-shadow:0 5px 18px #233a2d1c; color:#315846; font-size:13px; font-weight:600; }
+.device-dock { flex-shrink:0; height:70px; display:flex; align-items:center; justify-content:center; gap:10px; background:linear-gradient(#f4f7f500,#f4f7f5 36%); }
+.device-entry { height:44px; margin:0; padding:0 20px; border:1px solid #dce5dd; border-radius:22px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#fff,#f2f6f1); box-shadow:0 5px 18px #233a2d1c; color:#315846; font-size:13px; font-weight:600; }
 .device-entry::after { border:0; }
+.device-entry.primary { border-color:transparent; background:linear-gradient(#3c8a68,#2d6b51); color:#f2f8f4; box-shadow:0 5px 18px #24513f33,inset 0 1px 0 #ffffff30; }
 .device-entry--pressed { transform:scale(.97); }
+.primary-plus { font-size:15px; font-weight:600; line-height:1; }
 .device-count { font-size:11px; color:#7b8d80; }
 </style>

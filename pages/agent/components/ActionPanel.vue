@@ -30,7 +30,7 @@
    <button class="foot-primary" :disabled="busy" hover-class="foot-primary--pressed" @tap="emit('revalidate')">重新核验</button>
   </view>
   <view v-else-if="result || draft.status === 'EXECUTING'" class="panel-foot panel-foot--receipt">
-   <uni-icons :class="{ spinning: draft.status === 'EXECUTING' }" :type="draft.status === 'EXECUTING' ? 'loop' : result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? 'info' : 'checkmarkempty'" size="16" :color="result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? '#a66a13' : '#526d5e'" />
+   <uni-icons :class="{ spinning: draft.status === 'EXECUTING' }" :type="draft.status === 'EXECUTING' ? 'loop' : result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? 'info' : 'checkmarkempty'" size="16" :color="result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? '#ad711b' : '#526d5e'" />
    <text class="panel-foot__receipt">{{ result?.message || '正在执行，请稍候' }}</text>
   </view>
  </view>

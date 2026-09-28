@@ -42,6 +42,6 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .mark image { width:19px; height:19px; filter:brightness(0) invert(1); }
 .title { font-size:15px; font-weight:600; color:#253b30; white-space:nowrap; }
 .dot { width:5px; height:5px; flex-shrink:0; border-radius:50%; background:#31866a; box-shadow:0 0 0 2px #e4eee8; }
-.dot--working { background:#8c9c93; box-shadow:0 0 0 2px #e8edea; }.dot--error { background:#b57932; box-shadow:0 0 0 2px #f4eadc; }
+.dot--working { background:#8c9c93; box-shadow:0 0 0 2px #e8edea; }.dot--error { background:#ad711b; box-shadow:0 0 0 2px #f4eadc; }
 .connection { padding:3px 16px 8px; font-size:11px; color:#96672f; }
 </style>

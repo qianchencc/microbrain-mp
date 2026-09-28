@@ -50,7 +50,7 @@ button::after { border:0; }
 .weekday { color:#9aa99f; font-size:9px; }
 .day-number { font-size:11px; }
 .day-mark { position:absolute; bottom:2px; width:4px; height:4px; border-radius:50%; background:#176b54; }
-.day-mark.abnormal { background:#b57932; }
+.day-mark.abnormal { background:#ad711b; }
 .calendar-error { margin:5px auto 0; color:#986b2d; font-size:10px; }
 .calendar.compact { margin:0 14px 8px; padding:4px 9px 7px; border:1px solid #e1e9e2; border-radius:8px; background:#f8faf8; }
 .calendar.compact .day { height:38px; }
