@@ -54,33 +54,36 @@ const sampleCalendarMarks = computed(() => {
  return sampleTasks.value.length && sampleDate.value >= from && sampleDate.value <= to
   ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'missed', 'interrupted'].includes(task.status)) }] : []
 })
-let initialRegion = '', initialDate = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer
-onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || '' })
+let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer
+onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || ''; initialTaskId = query.taskId || '' })
 async function loadTimeline(silent = false) {
- const current = ++requestId, region = focusRegionId.value, scope = getAgentStorageScope()
+ const current = ++requestId, region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()
  if (!silent) { tasks.value = []; error.value = ''; loading.value = true }
  try {
   if (!region) return
   if (sampleMode.value) {
    sampleTasks.value = []
    const result = await listRegionDevices(region)
-   if (current === requestId && scope === getAgentStorageScope() && sampleMode.value) {
+   if (current === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope() && sampleMode.value) {
     sampleTasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
-    tasks.value = date.value === sampleDate.value ? sampleTasks.value : []
+    tasks.value = selectedDate === sampleDate.value ? sampleTasks.value : []
    }
    return
   }
-  const result = await listRegionTimeline(region, date.value)
-  if (current === requestId && scope === getAgentStorageScope()) { tasks.value = result.tasks || []; return current }
+  const result = await listRegionTimeline(region, selectedDate)
+  if (current === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope()) { tasks.value = result.tasks || []; return current }
  } catch (cause) { if (!silent && current === requestId && scope === getAgentStorageScope()) error.value = cause.message || (sampleMode.value ? '演示设备目录暂不可用' : '任务记录暂不可用') }
  finally { if (!silent && current === requestId) loading.value = false }
 }
 async function loadVisibleTimeline() {
- const region = focusRegionId.value, scope = getAgentStorageScope()
+ const region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()
  const loadedRequest = await loadTimeline()
  if (!loadedRequest) return
  await nextTick()
- if (visible && !sampleMode.value && loadedRequest === requestId && region === focusRegionId.value && scope === getAgentStorageScope()) void acknowledgeRegion(region).catch(() => {})
+ if (visible && !sampleMode.value && loadedRequest === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope()) {
+  void acknowledgeRegion(region).catch(() => {})
+  return loadedRequest
+ }
 }
 function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7), silent = false) {
  const current = ++calendarRequest, region = focusRegionId.value, scope = getAgentStorageScope()
@@ -103,14 +106,42 @@ function openDeviceTask({ taskId, sampleTask }) { selectedTaskId.value = taskId;
 function toggleSample() { sampleMode.value = !sampleMode.value; sampleTasks.value = []; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; void loadVisibleTimeline(); loadCalendar() }
 async function load() {
  const currentLoad = ++loadId
+ let loadedRegion = '', loadedDate = ''
  loadingDirectory = true; loading.value = true; error.value = ''; tasks.value = []; sampleTasks.value = []; ++requestId
  now.value = new Date().toISOString()
- try { await loadRegionFocus(); if (currentLoad !== loadId || !visible) return; if (initialRegion) { selectFocusRegion(initialRegion); initialRegion = '' }; if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate; initialDate = ''; await loadVisibleTimeline(); loadCalendar() }
+ try {
+  await loadRegionFocus()
+  if (currentLoad !== loadId || !visible) return
+  if (initialRegion) { if (!selectFocusRegion(initialRegion)) initialTaskId = ''; initialRegion = '' }
+  if (initialDate) {
+   if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate
+   else initialTaskId = ''
+  }
+  initialDate = ''
+  loadedRegion = focusRegionId.value; loadedDate = date.value
+  const loadedRequest = await loadVisibleTimeline()
+  if (currentLoad !== loadId || !visible) return
+  if (loadedRequest && initialTaskId) {
+   const item = tasks.value.find(task => task.id === initialTaskId)
+   initialTaskId = ''
+   if (item) openTask(item)
+  }
+  loadCalendar()
+ }
  catch (cause) { if (currentLoad === loadId) { error.value = cause.message || '区域暂不可用'; loading.value = false } }
- finally { if (currentLoad === loadId) loadingDirectory = false }
+ finally {
+  if (currentLoad === loadId) {
+   loadingDirectory = false
+   if (visible && loadedRegion && (loadedRegion !== focusRegionId.value || loadedDate !== date.value)) {
+    initialTaskId = ''
+    void loadVisibleTimeline()
+    loadCalendar()
+   }
+  }
+ }
 }
-watch(focusRegionId, () => { deviceCount.value = null; sampleTasks.value = []; selectedTaskId.value = ''; if (visible && !loadingDirectory) { void loadVisibleTimeline(); loadCalendar() } })
-watch(date, () => { selectedTaskId.value = ''; if (visible && !loadingDirectory) void loadVisibleTimeline() })
+watch(focusRegionId, () => { deviceCount.value = null; sampleTasks.value = []; selectedTaskId.value = ''; if (visible && !loadingDirectory) { initialTaskId = ''; void loadVisibleTimeline(); loadCalendar() } })
+watch(date, () => { selectedTaskId.value = ''; if (visible && !loadingDirectory) { initialTaskId = ''; void loadVisibleTimeline() } })
 function scheduleRefresh() {
  clearTimeout(refreshTimer)
  if (!visible) return

@@ -26,3 +26,5 @@
 2026-09-28：实现与证据见 `plan/2026-09-28-scheduled-task-creation-handoff.md`、Runtime `test/scheduled-task.test.ts` 和 `test/runtime-config.test.ts`。真实设备执行属于票 07/14。凭据持久化与终态删除由票 07 的同一公开流程补充验证；Langfuse 轨迹逐字段不作为本票自动化测试。
 
 2026-09-28 只读实测：唯一 3200 以现有开发身份和真实授权目录生成一阶段照明任务提案，NDJSON 返回 `task.proposed`、`run.awaiting_confirmation`；随后主动放弃提案并清除测试会话，没有调用确认或设备控制。Langfuse v4 观测只读接口在该时间窗返回 6 条 `agent-run`、`find_device_candidates`、`model-turn`、`propose_task` 观测；仅在本地进程中比较敏感字段标记和开发身份的原始 token，命中数均为 0，未回显轨迹载荷或凭据。追踪器只接收用户内容/模型消息/工具摘要，任务扫描器不向追踪器传递解密身份。该结论限于可读样本与当前源码；此自托管实例历史上存在异步丢行，不能推断全部历史轨迹完整。
+
+2026-09-28：补齐“在区域面板查看”深链，工作台只在当前授权区域日期的时间轴返回目标 `taskId` 后打开任务抽屉；旧请求或无效区域/日期不自动打开。源码测试与微信本地编译通过，用户小程序操作验收仍待完成。见 `plan/2026-09-28-task-workbench-deeplink.md`。

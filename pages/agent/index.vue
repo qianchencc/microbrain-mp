@@ -393,9 +393,9 @@ async function discardTaskProposal(turn) {
 }
 function openTaskRegion(turn) {
  const task = turn.task
- if (!task?.regionIds?.length || !task.phases?.length) return
+ if (!task?.taskId || !task.regionIds?.length || !task.phases?.length) return
  const date = taskTime(task.phases[0].at).slice(0, 10)
- uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(task.regionIds[0])}&date=${encodeURIComponent(date)}` })
+ uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(task.regionIds[0])}&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(task.taskId)}` })
 }
 async function cancelDraft(turn) {
  if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
