@@ -35,8 +35,8 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .header { flex-shrink:0; background:linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom:1px solid rgba(44,75,58,.05); }
 .native-bar { display:flex; align-items:center; padding-left:16px; box-sizing:border-box; min-height:44px; }
 .nav-chip { flex:1; min-width:0; display:flex; justify-content:center; align-items:center; }
-.identity { display:flex; align-items:center; gap:8px; min-height:44px; padding:0; margin:0; background:transparent; line-height:1.2; border-radius:12px; text-align:left; transition:opacity 140ms ease; }
-.identity::after { border:0; }.identity--pressed { opacity:.65; }
+.identity { display:flex; align-items:center; gap:8px; min-height:44px; padding:0; margin:0; background:transparent; line-height:1.2; border-radius:12px; text-align:left; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.identity::after { border:0; }.identity--pressed { transform:scale(.97); }
 .mark { width:28px; height:28px; flex-shrink:0; border-radius:9px; background:linear-gradient(145deg,#308b70,#11553f); border:1px solid rgba(14,70,50,.2); box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 2px 4px rgba(21,74,51,.12); display:flex; align-items:center; justify-content:center; }
 .mark image { width:19px; height:19px; filter:brightness(0) invert(1); }
 .dot { width:5px; height:5px; flex-shrink:0; border-radius:50%; background:#31866a; box-shadow:0 0 0 2px #e4eee8; }

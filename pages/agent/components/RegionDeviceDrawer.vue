@@ -169,7 +169,7 @@ button::after { border:0; }
 .filter-header.searching .search-controls { opacity:1; transform:none; pointer-events:auto; }
 .group-mode { height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:12px; transition:background-color 180ms ease,color 180ms ease,transform 130ms cubic-bezier(.23,1,.32,1); }
 .group-mode.active { background:#176b54; color:#fff; }
-.group-mode--pressed,.icon-button--pressed { opacity:.7; transform:scale(.95); }
+.group-mode--pressed,.icon-button--pressed { transform:scale(.95); }
 .icon-button { width:32px; height:32px; border:1px solid #d8e1dc; border-radius:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .icon-button image { width:14px; height:14px; }
 .count { margin-left:auto; font-size:11px; color:#89958e; }

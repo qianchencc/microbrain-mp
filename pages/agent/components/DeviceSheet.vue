@@ -171,7 +171,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .handle-zone--pressed { background:rgba(23,107,84,.04); }
 .handle { width:36px; height:4px; background:#c4cbc6; border-radius:4px; transition:width 140ms cubic-bezier(.23,1,.32,1),background 140ms ease,transform 140ms ease; }
 .handle-zone--pressed .handle { width:44px; background:#9eafa5; transform:scaleY(1.15); }
-.header-slot { position:relative; z-index:2; border-bottom:1px solid #e3e8e4; overflow:visible; }
+.header-slot { position:relative; z-index:2; overflow:visible; }
 .header-top { display:flex; align-items:center; padding:2px 20px 8px; }
 .header-copy { flex:1; min-width:0; overflow:hidden; }
 .title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }

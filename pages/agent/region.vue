@@ -192,9 +192,9 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .region-page { height:100vh; box-sizing:border-box; background:#f4f7f5; color:#526759; display:flex; flex-direction:column; position:relative; }
 .nav { flex-shrink:0; background:linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom:1px solid rgba(44,75,58,.05); }
 .nav-row { display:flex; align-items:center; padding-left:10px; box-sizing:border-box; min-height:44px; }
-.nav-back { width:34px; height:34px; margin:0; padding:0; border-radius:17px; background:transparent; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:opacity 140ms ease; }
+.nav-back { width:34px; height:34px; margin:0; padding:0; border-radius:17px; background:transparent; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
 .nav-back::after { border:0; }
-.nav-back--pressed { opacity:.6; }
+.nav-back--pressed { transform:scale(.92); }
 .nav-chip { flex:1; min-width:0; display:flex; justify-content:center; align-items:center; }
 .day-heading { padding:14px 23px 12px; display:flex; align-items:baseline; flex-wrap:wrap; gap:9px; color:#89958e; font-size:11px; }
 .day-title { color:#45564d; font-size:20px; font-weight:600; }
