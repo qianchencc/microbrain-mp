@@ -1,7 +1,7 @@
 import { fieldLabels } from './ac-draft.js'
 
 export function createTurn(id, content) {
-	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], draft: null, task: null, tasks: [], roster: null, result: null, running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
+	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], draft: null, task: null, tasks: [], roster: null, result: null, observations: [], running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
 }
 
 export function canRecoverTurn(turn, isLatest) {
@@ -20,6 +20,7 @@ export function restartTurn(turn, content = turn.content) {
 		tasks: [],
 		roster: null,
 		result: null,
+		observations: [],
 		running: true,
 		traceOpen: true,
 		error: '',
@@ -59,6 +60,7 @@ export function applyEvent(turn, event) {
 	}
 	if (event.type === 'message.delta') { turn.streaming = true; turn.text += event.content || ''; turn.traceOpen = false }
 	if (event.type === 'message.completed') { turn.text = event.content || turn.text; turn.streaming = false }
+	if (event.type === 'observation.reported') { turn.observations.push({ observedAt: event.observedAt, blocks: event.blocks || [] }); turn.traceOpen = false }
 	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.roster = event.inventory || null; turn.traceOpen = false }
 	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
 	if (event.type === 'task.proposed' || event.type === 'task.cancellation.proposed') {

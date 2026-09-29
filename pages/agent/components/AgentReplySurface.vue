@@ -18,6 +18,7 @@
    </view>
 
    <AssistantMarkdown v-if="turn.text" :content="turn.text" />
+   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" />
    <ActionPanel v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
     @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
     @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
@@ -38,6 +39,7 @@
 import ActionPanel from './ActionPanel.vue'
 import AgentAvatar from './AgentAvatar.vue'
 import AssistantMarkdown from './AssistantMarkdown.vue'
+import ObservationCard from './ObservationCard.vue'
 import ThinkingOrb from './ThinkingOrb.vue'
 import ToolActivity from './ToolActivity.vue'
 import TaskProposalCard from './TaskProposalCard.vue'

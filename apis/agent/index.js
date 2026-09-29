@@ -26,6 +26,8 @@ export const discardTask = taskId => request(`/agent/tasks/${encodeURIComponent(
 export const confirmTaskCancellation = cancellationId => request(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/confirm`, 'POST')
 export const discardTaskCancellation = cancellationId => request(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/discard`, 'POST')
 export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${encodeURIComponent(deviceId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
+// 视频取流：返回短时效播放地址（wss），不缓存；页面与组件不接触凭据。
+export const getVideoStream = deviceId => request(`/agent/devices/${encodeURIComponent(deviceId)}/video-stream`, 'GET')
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const restoreConversation = () => request('/agent/conversations/current', 'GET')
 export const clearConversation = id => request(`/agent/conversations/${id}`, 'DELETE')

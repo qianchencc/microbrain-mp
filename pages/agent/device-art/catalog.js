@@ -35,6 +35,19 @@ const artwork = Object.freeze({
     src: "/static/device-art/lighting-linear-luminaire.png",
     variant: "linear",
   }),
+  // 观察类暂无位图素材：src=null，由调用处按 variant 渲染（video→CSS 摄像头，observe→CSS 传感点）。
+  "video-camera": Object.freeze({
+    key: "video-camera", code: "CAM", label: "视频监控", src: null, variant: "video",
+  }),
+  "environment-sensor": Object.freeze({
+    key: "environment-sensor", code: "ENV", label: "环境传感器", src: null, variant: "observe",
+  }),
+  "energy-meter": Object.freeze({
+    key: "energy-meter", code: "ENG", label: "能耗计量", src: null, variant: "observe",
+  }),
+  "safety-sensor": Object.freeze({
+    key: "safety-sensor", code: "SAFE", label: "安全传感器", src: null, variant: "observe",
+  }),
 });
 
 const artworkRules = [
@@ -47,6 +60,10 @@ export function resolveDeviceArtwork(device = {}) {
   const explicitKey = String(device.visualKey ?? "").trim();
   if (Object.hasOwn(artwork, explicitKey)) return artwork[explicitKey];
   if (device.kind === "ac") return artwork["ac-central"];
+  if (device.kind === "video") return artwork["video-camera"];
+  if (device.kind === "environment") return artwork["environment-sensor"];
+  if (device.kind === "energy") return artwork["energy-meter"];
+  if (device.kind === "safety") return artwork["safety-sensor"];
 
   const haystack = normalize(`${device.deviceName ?? ""} ${device.location ?? ""}`);
   const matchedRule = artworkRules.find(({ terms }) => terms.some((term) => haystack.includes(term)));

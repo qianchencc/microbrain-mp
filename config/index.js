@@ -47,6 +47,12 @@ const getAgentBaseUrl = () => {
 	return isDev ? 'http://127.0.0.1:3200/api' : getGatewayBaseUrl() + '/api/ai'
 }
 
+// 自建 H5 监控播放页部署位：客户确认 ncim 静态路径后填入（如 ipAddress + '/owner/h5player/index.html'）。
+// 为空时「查看画面」按钮置灰显示“播放页接入中”，不跳取流。
+const getAgentVideoPlayerUrl = () => {
+	return ''
+}
+
 export default {
 	/**
 	 * 针对不同平台的baseUrl
@@ -54,5 +60,6 @@ export default {
 	baseUrl: getGatewayBaseUrl(),
 	ssoUrl: getSsoBaseUrl(),
 	fileAddr: getFileBaseUrl(),
-	agentUrl: getAgentBaseUrl()
+	agentUrl: getAgentBaseUrl(),
+	videoPlayerUrl: getAgentVideoPlayerUrl()
 }

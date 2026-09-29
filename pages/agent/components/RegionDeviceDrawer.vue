@@ -29,7 +29,7 @@
       <text class="group-title">{{ group.label }} · {{ group.items.length }}</text>
       <view class="device-grid">
        <view v-for="device in group.items" :key="device.id" class="device-card" role="button" hover-class="device-card--pressed" @tap="openDevice(device.id)">
-        <view class="device-art"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="28" color="#8b9a91" /><view class="state-lamp" :class="device.status" /></view>
+        <view class="device-art"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><view v-else-if="device.artVariant === 'video'" class="art-cam"><view class="art-cam__lens" /></view><view v-else-if="device.artVariant === 'observe'" class="art-sensor" /><uni-icons v-else type="gear" size="28" color="#8b9a91" /><view class="state-lamp" :class="device.status" /></view>
         <view class="device-copy">
          <text class="device-name"><text v-for="(part, index) in device.nameParts" :key="index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
          <text class="device-location"><text v-for="(part, index) in device.kindParts" :key="'kind-' + index" :class="{ hit: part.hit }">{{ part.text }}</text><text> · </text><text v-for="(part, index) in device.locationParts" :key="'location-' + index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
@@ -41,7 +41,7 @@
      <view class="list-tail" />
     </scroll-view>
    </view>
-   <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceTimelineView class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
+   <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceObservationView v-if="isObservationKind(devicePane.kind)" class="device-timeline-host" :device="devicePane" :reading="readings[devicePane.id]" /><DeviceTimelineView v-else class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
    <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskDetailContent class="task-content-host" :active="Boolean(taskPane)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" /></view>
   </view>
  </DeviceSheet>
@@ -53,8 +53,9 @@ import { listRegionDevices, listRegionDeviceStates } from '@/apis/agent'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import DeviceSheet from './DeviceSheet.vue'
 import DeviceTimelineView from './DeviceTimelineView.vue'
+import DeviceObservationView from './DeviceObservationView.vue'
 import TaskDetailContent from './TaskDetailContent.vue'
-import { regionDeviceGroups } from '../region-device-view.mjs'
+import { isObservationKind, regionDeviceGroups } from '../region-device-view.mjs'
 import { createStateRefresh } from '../state-refresh.mjs'
 
 const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, refreshSignal: Number, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
@@ -201,6 +202,13 @@ button::after { border:0; }
 .state-lamp { position:absolute; right:9px; top:9px; width:8px; height:8px; border-radius:50%; background:#bbc7be; border:1px solid white; box-shadow:0 1px 2px #1f352b33; transition:background-color 200ms ease,box-shadow 200ms ease,border-color 200ms ease; }
 .state-lamp.on { background:#e4ae37; box-shadow:0 0 6px #e7b94c99; }
 .state-lamp.unknown { background:#fff; border-color:#ad711b; }
+.state-lamp.observe { background:#5d9478; box-shadow:0 0 4px #5d947866; }
+.art-cam { width:44px; height:26px; position:relative; border-radius:7px; background:linear-gradient(160deg,#33493e,#17271f); box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 5px 12px -6px rgba(20,40,32,.65); }
+.art-cam::before { content:''; position:absolute; right:-6px; top:8px; width:7px; height:10px; border-radius:1px 3px 3px 1px; background:linear-gradient(90deg,#1c3026,#28473a); }
+.art-cam__lens { position:absolute; left:8px; top:7px; width:12px; height:12px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#9fd7b9,#1e6647 55%,#0d3b28); box-shadow:inset 0 0 0 1px rgba(255,255,255,.3); }
+.art-sensor { width:28px; height:28px; position:relative; border-radius:50%; background:linear-gradient(160deg,#f2f4ef,#cfd8d1); box-shadow:inset 0 1px 0 #fff,inset 0 -3px 6px rgba(48,70,58,.18),0 4px 10px -5px rgba(30,50,40,.5); }
+.art-sensor::before { content:''; position:absolute; left:10px; top:10px; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#8fd0ae,#26714f 70%); box-shadow:0 0 4px #3f9d7455; }
+.art-sensor::after { content:''; position:absolute; left:5px; top:19px; right:5px; height:1px; background:rgba(38,64,50,.25); }
 .device-copy { padding:8px 9px 10px; min-width:0; }
 .device-name,.device-location,.device-state { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .device-name { font-size:12px; font-weight:600; color:#24382d; }
