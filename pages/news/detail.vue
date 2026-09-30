@@ -58,9 +58,8 @@
 		},
 		onShareAppMessage(e) {
 			return {
-				title: this.detail.title,
-				path: `/pages/news/detail?id=${this.detail.id}`,
-				imageUrl: getUrl(this.detail.coverPicUrl)
+				title: this.detail.infoSubject,
+				path: `/pages/news/detail?id=${this.detail.id}`
 			}
 		},
 		methods: {
