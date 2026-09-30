@@ -1,6 +1,6 @@
 # 项目文档入口
 
-更新：2026-09-28
+更新：2026-09-30
 
 ## 当前状态
 
@@ -13,6 +13,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
+| 本轮周期任务、任务编辑、结束通知与模型缓存：用户任务、探索进度、Matt 阶段及下一步 | [任务总表](../plan/2026-09-30-agent-task-register.md)（探索中，非冻结规格） |
 | 客户小程序 Agent 接入、环境路由、当前验收边界 | [客户小程序生产主线](../plan/2026-09-18-customer-miniapp-canonical-agent-migration.md) |
 | 登录态、Token、园区和 Agent session | [登录与接入调查](./research/2026-09-18-customer-miniapp-login-and-agent-integration.md) |
 | 长期用户隔离、记忆/规则 owner | [真实 MP 身份边界](./research/2026-09-18-real-mp-identity-boundary.md) |
