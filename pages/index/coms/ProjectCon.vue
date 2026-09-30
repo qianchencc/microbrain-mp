@@ -13,22 +13,80 @@
 				</view>
 				<view class="arrow"></view>
 			</view>
+			<m-empty v-if="loaded && !list.length" description="暂无项目"></m-empty>
+		</view>
+		<!-- 分页器 -->
+		<view v-if="pageCount > 1" class="pager">
+			<view class="page-btn" :class="{ disabled: page === 1 }" hover-class="btn-hover" @click="changePage(page - 1)">上一页</view>
+			<view class="page-num">{{ page }} / {{ pageCount }}</view>
+			<view class="page-btn" :class="{ disabled: page === pageCount }" hover-class="btn-hover" @click="changePage(page + 1)">下一页</view>
 		</view>
 	</view>
 </template>
 
 <script>
 import {goPage} from "@/utils/tools";
+import {fetchProjectPage} from "@/apis/common";
+
+// todo 分页接口未就绪，先mock；联调时删除此方法，getList里改用 fetchProjectPage
+const mockFetchProjectPage = ({page = 1, size = 6} = {}) => {
+	const total = 14
+	const all = Array.from({length: total}, (_, i) => ({
+		projectName: `示例项目${i + 1}`,
+		projectNo: `PRJ${String(i + 1).padStart(4, '0')}`
+	}))
+	const start = (page - 1) * size
+	return Promise.resolve({
+		content: {
+			content: all.slice(start, start + size),
+			totalElements: total
+		}
+	})
+}
 
 export default {
 	name: "ProjectCon",
 	props: {
-		list: {
-			type: Array,
-			default: () => []
+		query: {
+			type: Object,
+			default: () => ({})
 		}
 	},
+	data(){
+		return {
+			list: [],
+			total: 0,
+			page: 1,
+			pageSize: 6,
+			loaded: false
+		}
+	},
+	computed: {
+		pageCount() {
+			return Math.ceil(this.total / this.pageSize) || 1
+		}
+	},
+	mounted() {
+		this.getList()
+	},
 	methods: {
+		// 项目分页查询，query为外部传入的固定查询条件
+		async getList() {
+			const params = { ...this.query, page: this.page, size: this.pageSize }
+			// todo 联调时换成 fetchProjectPage(params)
+			const res = await mockFetchProjectPage(params)
+			const content = res?.content
+			this.list = content?.content || []
+			this.total = content?.totalElements || 0
+			this.loaded = true
+			this.$emit('toBottom')
+		},
+		// 上一页/下一页
+		changePage(page) {
+			if (page < 1 || page > this.pageCount) return
+			this.page = page
+			this.getList()
+		},
 		toDetail(item) {
 			goPage(`/pages/detail/project?code=${item.projectNo}`)
 		}
@@ -117,6 +175,37 @@ export default {
 			border-top: 3rpx solid #cccccc;
 			border-right: 3rpx solid #cccccc;
 			transform: rotate(45deg);
+		}
+	}
+
+	.pager {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding-top: 20rpx;
+		border-top: 2rpx solid #f2f2f2;
+
+		.page-btn {
+			padding: 10rpx 28rpx;
+			border-radius: 28rpx;
+			border: 2rpx solid #3974F6;
+			font-size: 24rpx;
+			color: #3974F6;
+
+			&.btn-hover {
+				opacity: 0.7;
+			}
+
+			&.disabled {
+				border-color: #DDDDDD;
+				color: #CCCCCC;
+			}
+		}
+
+		.page-num {
+			margin: 0 30rpx;
+			font-size: 24rpx;
+			color: #666666;
 		}
 	}
 }

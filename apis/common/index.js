@@ -9,5 +9,9 @@ export const chatToAi = data => request.globalRequest(`/api/ai/business/coze/cha
 // 项目查询
 export const chatToAiProject = userInput => request.globalRequest(`/api/ai/app/projectBaseInfo/page/ai`, 'GET', { userInput })
 
+// 项目分页查询
+// todo 分页接口地址待后端确认，页面暂时使用mock数据
+export const fetchProjectPage = data => request.globalRequest(`/api/ai/app/projectBaseInfo/page`, 'GET', data)
+
 // 根据项目编号查询项目详情
 export const fetchProjectDetail = data => request.globalRequest(`/api/ai/app/${data.type}/projectNo/${data.code}`, 'GET')

@@ -12,7 +12,7 @@
 						<view v-if="chatItem.type === 'AI_ANSWER'" class="ai">
 							<zero-markdown-view :markdown="chatItem.data" @load="toBottom"/>
 						</view>
-						<project-con v-else :list="chatItem.data"></project-con>
+						<project-con v-else :query="chatItem.data"></project-con>
 					</view>
 				</view>
 			</template>
@@ -60,11 +60,9 @@ export default {
 			chatToAiProject(data.data).then(res => {
 				this.loading = false
 				if (res) {
-					let haveData = res.content && res.content.content && res.content.content.length
-					this.chatList.push({
-						type: haveData ? 'PRROJECT' : 'AI_ANSWER',
-						data: haveData ? res.content.content : '未查询到任何项目,请重新描述'
-					})
+					// todo 修改后,返回的就是查询的条件,传入后查询项目
+					let queryData = res.content || {}
+					this.chatList.push({type: 'PROJECT', data: queryData})
 					this.toBottom()
 				}
 			})

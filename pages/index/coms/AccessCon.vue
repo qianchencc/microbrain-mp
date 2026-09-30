@@ -50,10 +50,10 @@
 				<view class="name">{{ device.name }}</view>
 				<view
 					class="open-btn"
-					:class="{ disabled: device.switchStatus }"
+					:class="{ disabled: openingId }"
 					hover-class="btn-hover"
 					@click="openDevice(device)">
-					{{ device.switchStatus ? '关闭' : '开锁' }}
+					开锁
 				</view>
 			</view>
 			<m-empty v-if="!deviceList.length" description="暂无门禁设备"></m-empty>
@@ -151,14 +151,10 @@ export default {
 			if (this.openingId) return
 			this.openingId = device.id
 			uni.showLoading({ title: '开锁中...', mask: true })
-			const res = await openAccessDevice({
-				accessAreaDeviceId: device.id,
-				controlType: device.switchStatus ? 1 : 2
-			})
+			const res = await openAccessDevice({ accessAreaDeviceId: device.id, controlType: 2 })
 			uni.hideLoading()
 			this.openingId = ''
 			if (res) {
-				device.switchStatus = !device.switchStatus
 				uni.showToast({ title: res.message || '开锁成功', icon: 'none' })
 			}
 		},

@@ -312,9 +312,6 @@ export default {
 				min-width: 0;
 				font-size: 26rpx;
 				color: #333333;
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
 			}
 
 			.open-btn {
