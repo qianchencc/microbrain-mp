@@ -15,7 +15,7 @@
 
 一期可以沿用 `requestSubscribeMessage` 和 `uni-subscribemsg`，以一项真实 Task 结束作为一个通知事件。周期任务每次发生使用真实 Task 身份，不能在创建计划时把一次订阅解释为未来永久发送许可。
 
-同轮根代理只读实测 `/account/me` 两次均为 HTTP/code=200，`content.id` 为相同非空字符串，响应没有 `principalId/openid/wxOpenId`，证据见 [S01 身份核对](2026-09-30-recurring-principal-readonly-verification.md)。`mp/store/modules/user.js:115` 获取该资料，`:116` 已使用 `userInfo.id`。因此业务主体已有候选来源，需确认其生命周期/唯一性契约；待补的是可信openid映射，不能笼统写成“没有用户ID”。本报告未保存响应原文或个人标识。
+同轮根代理只读实测 `/account/me` 两次均为 HTTP/code=200，`content.id` 为相同非空字符串，响应没有 `principalId/openid/wxOpenId`，证据见 [S01 身份核对](2026-09-30-recurring-principal-readonly-verification.md)。`mp/store/modules/user.js:115` 获取该资料，`:116` 已使用 `userInfo.id`。业务主体已有来源；通知待补的是可信 openid 映射，不能笼统写成“没有用户ID”，也不以跨 Token 或刷新契约作为本轮依赖。本报告未保存响应原文或个人标识。
 
 ## 微信官方规则核对
 

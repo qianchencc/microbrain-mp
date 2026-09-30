@@ -7,7 +7,7 @@
 - 客户小程序根目录是 Agent 唯一生产开发主线；独立回归壳已于 2026-09-24 经 `git subtree split` 迁出为同级独立仓库 `agent-miniapp`（保留完整提交历史），仅用于回归、演示和故障复现。
 - 本机只有单一 Runtime 实例：`127.0.0.1:3200` 直连真实客户网关；Iotfake 与 `3201`/`3100` 已于 2026-09-23 退役，不应再有进程监听这些端口。
 - 2026-09-23 已完成 `.scratch/customer-agent-migration/issues/03-local-real-gateway-acceptance.md`：唯一 `3200` 真实网关上的只读查询完整收尾，低风险照明操作完成草案→确认→受理→回读闭环，重复 confirm 只回放结果不重复执行（审计仅一次 `ACTION_DRAFT_ACCEPTED`）；票 04 随之关闭，独立 miniapp 正式定位为回归壳。
-- 一次性 Task 已具备本地代码闭环；体验版/正式版 HTTPS 网关、稳定用户主体契约、更多设备、记忆、重复计划和告警仍未进入完成状态。
+- 一次性 Task 已具备本地代码闭环；体验版/正式版 HTTPS 网关、更多设备、记忆、重复计划和告警仍未进入完成状态。账户来源 `account/me.id` 已核验；“Token 频繁过期”是用户纠正的误记录，不再列作自动化前置阻塞。
 
 ## 按任务进入
 
@@ -16,7 +16,7 @@
 | 本轮周期任务、任务编辑、结束通知与模型缓存：用户任务、探索进度、Matt 阶段及下一步 | [任务总表](../plan/2026-09-30-agent-task-register.md)（探索中，非冻结规格） |
 | 客户小程序 Agent 接入、环境路由、当前验收边界 | [客户小程序生产主线](../plan/2026-09-18-customer-miniapp-canonical-agent-migration.md) |
 | 登录态、Token、园区和 Agent session | [登录与接入调查](./research/2026-09-18-customer-miniapp-login-and-agent-integration.md) |
-| 长期用户隔离、记忆/规则 owner | [真实 MP 身份边界](./research/2026-09-18-real-mp-identity-boundary.md)与[09-30 主体只读核验](./research/2026-09-30-recurring-principal-readonly-verification.md)（账户 ID 候选已实测，跨 Token 与后台契约待收口） |
+| 长期用户隔离、记忆/规则 owner | [真实 MP 身份边界](./research/2026-09-18-real-mp-identity-boundary.md)与[09-30 主体只读核验](./research/2026-09-30-recurring-principal-readonly-verification.md)（账户来源已核验，归属键接入未实施；不再以 Token 生命周期阻断） |
 | 自动化结束通知：订阅规则、可信接收人、发送链路与客户缺项 | [09-30 通知接线核对](./research/2026-09-30-task-completion-notification-integration.md)（事实调查已完成，功能未实施） |
 | 设备扩展、自动化、日程/会议、告警和富操作面 | [业务探索地图](./research/2026-09-18-agent-business-opportunity-map.md) |
 | 系统对象、会话、持久化、配置、记忆和路线总览 | [Agent 系统全景地图](./research/2026-09-24-agent-system-map.md) |
@@ -42,6 +42,6 @@
 ## 尚未关闭
 
 - `trial/release` HTTPS、合法域名和 NDJSON 代理验收；
-- 客户稳定 `principalId/workspaceId`、Token 刷新/撤销和后台运行契约；
+- 我方服务端接入现有账户 ID 与旧 owner 兼容；通知的可信账户→openid 映射仍待接线，Token 刷新不再作为本轮客户前置要求；
 - 客户 AppID 的 `WechatSI` 插件授权；
 - 区域工作台票 01–13 的代码闭环已推进，票 02 的 P2/B6 视觉保真和票 04 的真实设备记录仍待用户在小程序验收；开发版本地演示记录不算真实任务证据。票 14 的真实网关最终验收仍待推进。各闭环记录见 `plan/2026-09-27-*` 与 `plan/2026-09-28-*`。

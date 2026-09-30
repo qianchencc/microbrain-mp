@@ -160,7 +160,7 @@
 
 | # | 索取项 | 对应验收案例 |
 | --- | --- | --- |
-| C1-1 | 稳定用户主体来源：Agent 可用的 principalId 字段（SSO introspection 端点或 JWT claim 名），及 Token 刷新/撤销/多端规则 | 案例 1（A/B 隔离）、案例 2（刷新漂移） |
+| C1-1 | **09-30 已关闭来源索取**：真实 `account/me.id` 已核验；用户纠正频繁过期前提，刷新/跨 Token 契约不再作为本轮客户要求。服务端主体解析与旧 owner 兼容由我方实现 | 案例 1（A/B 隔离）；见[主体核验](../docs/research/2026-09-30-recurring-principal-readonly-verification.md) |
 | C1-2 | tenantCode 列表与切换语义：合法租户清单、同一 Token 跨租户是否合法、切换时的会话策略 | 案例 4（园区切换） |
 | C1-2b | `local-development` 假身份与真实 token 混布时（历史 owner 漂移 ×3 的根因说明或确认无害） | 案例 2 |
 | C1-3 | 审计 actor 契约：是否要求记录到人（当前 actor_id=null）；如要求，提供主体 ID 来源 | 案例 8（审计归属） |
