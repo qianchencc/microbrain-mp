@@ -31,3 +31,11 @@
 应用关闭重建与压缩后暖复用已证明；独立 Node 进程恢复、带真实工具结果的跨进程恢复、生产窗口下自然达到压缩阈值和 Langfuse 实际入库仍未证明。09-30 的工具暖命中属于连续调用，不用来替代这些未验项。生产升级验收继续核对适用项，不用本组局部证明关闭全部缓存稳定性义务。
 
 原始脱敏结果在 `/tmp/iot-cache-compaction-only-result.json`，已核对三条用量映射、压缩计数、完整前缀与零写入。最终 Node 进程及临时应用/库/探针源码已清理；没有真实 IoT、生产任务库、控制或通知。诊断记录交接见 [Runtime 回传](../../../iot-agent-runtime/plan/2026-10-03-model-cache-recovery-handoff.md)。
+
+## OTLP 发送与查询补证
+
+另发一条明确标注 `diagnostic/no-model` 的根 SPAN，复用生产 `createObservability` 与已有 `scripts/otlp-proxy.mjs`；仅临时将 baseUrl 指向本地 9600 代理，未改生产配置。没有 generation、模型调用、伪造 usage、设备请求或生产数据库。SDK `forceFlush()` 报 `Request timed out`，代理随后记录 `/api/public/otel/v1/traces` 的 2,493 字节 / 1 span 请求收到 200，摄取 job 为 `47d93deb-8582-4786-b259-fcaabd3832cf`。
+
+一次 CLI observations 时间窗查询随后实际返回该 span：session `otlp-no-model-bd932d96-bcb1-4f9d-985e-f0515e0a67e7`、trace `0507988455ec1297bbc607d647b1ab53`、observation `5c6545381b0437f4`。开始/结束 UTC `2026-10-02T17:35:46.311Z`，服务端摄取回执 UTC `17:36:00.626Z`，查询响应 UTC `17:36:44`。这证明本次诊断根观测实际落库、会话属性存在；不补推先前模型 generation 已落库，也不改变缓存计数证据来源。
+
+安装的 `@langfuse/otel@5.11.1` 从 `LANGFUSE_TIMEOUT` 取秒数，未配置时默认 5 秒；当前环境未设置。观测结束到摄取响应约 14.3 秒，包含序列化/传输/服务端处理，不能当作精确网络延迟。超时与服务端最终接收可以同时成立，因此 flush 超时或读 API 暂时零行都不能单独解释为缓存不命中。尚未证明应采用何种生产超时值，未擅自改配置或 SDK。探针进程终止，代理 PID 61347 已停止，临时源码删除。
