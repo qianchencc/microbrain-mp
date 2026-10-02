@@ -39,3 +39,6 @@
 - 现态手动与执行后的延迟刷新共用 `state-refresh.mjs`，只读设备状态；常驻界面不展示查询时间或“上报时间未知”。本轮边界与验证见 `plan/2026-09-28-device-state-receipt-separation.md`。
 - 工作台只在真实时间轴成功返回且完成视图更新后调用 `acknowledgeRegion`；加载失败、样例模式、隐藏页面或被新请求替代的结果不得清除异常提示。
 - `TaskDetailContent` 根节点是 `height:0;flex:1` 的 scroll-view，必须经宿主类（`content-host`/`task-content-host`，`flex:1;min-height:0;display:flex`）挂进 flex 容器；直接放进普通容器会塌成 0 高、详情空白（2026-09-28 抽屉栈重构踩过）。抽屉内 列表→设备→任务 三级导航栈见 `plan/2026-09-28-region-chrome-nav-motion.md`。
+
+- Company 只读入口暂在 Office 现有会话菜单中，避免与 RegionChip/原生胶囊挤占顶栏；正式 A 首屏归票 09。路由 source 仅在页面创建时固定，API 显式传递，本端恢复拒绝错来源。Company 不消费 Office 区域/任务/播放入口。见 `plan/2026-10-03-company-readonly-handoff.md`（仓库根）。
+- 微信页面卸载会销毁页面包的模块级内存；跨来源导航草稿须放 app globalData，并按 getAgentStorageScope() + source 分区，身份变化清空，不保存长期凭据。Company 返回后重进必须做真实输入/点击验收，纯 helper 断言不能证明此行为。

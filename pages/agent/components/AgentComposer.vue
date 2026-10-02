@@ -15,7 +15,7 @@
     <textarea v-show="!voiceMode" class="composer-input" :value="fieldValue" :disabled="disabled" :focus="focusRequest"
      :auto-height="true" :adjust-position="false" :disable-default-padding="true"
      :hold-keyboard="true" :show-confirm-bar="false"
-     confirm-type="send" :confirm-hold="true" :maxlength="200" :placeholder="editing ? '编辑这条消息' : '想查看或调整什么设备？'" placeholder-class="composer-placeholder"
+     confirm-type="send" :confirm-hold="true" :maxlength="200" :placeholder="editing ? '编辑这条消息' : (placeholder || '想查看或调整什么设备？')" placeholder-class="composer-placeholder"
      @focus="onFocus" @blur="focused = false" @keyboardheightchange="onKeyboard"
      @input="onInput" @confirm="onConfirm" />
     <view v-if="voiceMode" class="hold-input" role="button" aria-label="按住说话，上滑取消"
@@ -35,7 +35,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { createVoiceInput } from '../voice-input.mjs'
 import { createFieldEchoGuard } from '../field-echo-guard.mjs'
 import { resolveKeyboardDock } from '../keyboard-dock.mjs'
-const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean, editing: Boolean })
+const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean, editing: Boolean, placeholder: String })
 const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice', 'keyboard', 'cancel-edit'])
 const focused = ref(false), voiceMode = ref(false), phase = ref('idle'), cancelling = ref(false), focusRequest = ref(false)
 // 字段非受控：打字（含拼音组合中态）不写回 :value，只向上同步；

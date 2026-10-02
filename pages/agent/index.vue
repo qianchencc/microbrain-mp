@@ -2,29 +2,33 @@
  <view class="agent-page">
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
-  <AgentHeader :status="statusText" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory"><RegionChip nav @open="openRegion" /></AgentHeader>
+  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'" :menu-action-label="isCompany ? '' : '打开公司 Agent'" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @source-action="openCompany">
+   <button v-if="isCompany" class="source-switch" hover-class="source-switch--pressed" :hover-stay-time="60" aria-label="返回办公室 Agent" @tap="returnToOffice"><uni-icons type="back" size="14" color="#6c7d73" /><text>办公室 Agent</text></button>
+   <RegionChip v-if="!isCompany" nav @open="openRegion" />
+  </AgentHeader>
   <view class="conversation-shell">
    <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
-    <view v-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
+    <view v-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>只读查询公司环境、能耗与已接入的告警台账。设备控制和视频播放尚未接入。</view></view>
+    <view v-else-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
-     <view v-for="change in regionChanges.filter(change => change.before === turnIndex)" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
-     <view v-if="!regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
+     <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turnIndex)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
+     <view v-if="!isCompany && !regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
-     <AgentReplySurface :turn="turn" :busy="busy"
+     <AgentReplySurface :turn="turn" :busy="busy" :read-only="isCompany" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
       @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)"
       @confirm-task="confirmTaskProposal($event)" @discard-task="discardTaskProposal($event)" @open-task="openTaskRegion($event)" />
     </view>
-    <view v-for="change in regionChanges.filter(change => change.before === turns.length)" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
+    <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turns.length)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
     <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
     <view id="agent-bottom" class="anchor" />
    </view>
   </scroll-view>
   </view>
-  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
+  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :placeholder="isCompany ? '查询公司环境、能耗或告警' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
   <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
    :settle-selection="settleSelection"
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
@@ -36,8 +40,9 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
-import { waitForAgentSession } from '@/utils/agent-session'
+import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
+import { preserveComposerDraft, takeComposerDraft } from './composer-drafts.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
 import { taskTime } from './task-detail-view.mjs'
 import { createPresentation } from './presentation.mjs'
@@ -50,7 +55,13 @@ import RegionChip from './components/RegionChip.vue'
 import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus, consumeComposePrefill } from './region-focus.js'
 function openRegion(region) { uni.navigateTo({ url: '/pages/agent/region?regionId=' + encodeURIComponent(region.id) }) }
 const conversationId = ref('')
+const agentSource = ref('office')
+const isCompany = computed(() => agentSource.value === 'company')
+const draftScope = ref('')
 const input = ref('')
+watch(input, value => {
+ if (draftScope.value) preserveComposerDraft(draftScope.value, agentSource.value, value)
+}, { flush: 'sync' })
 const composer = ref(null)
 const turns = ref([])
 const errorMessage = ref('')
@@ -62,6 +73,13 @@ const nearBottom = ref(true)
 const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
 const busy = computed(() => isRunning.value || mutating.value || hasExecution.value)
 const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
+function openCompany() { uni.navigateTo({ url: '/pages/agent/index?source=company' }) }
+function returnToOffice() {
+ uni.navigateBack({ delta: 1, fail: () => uni.redirectTo({ url: '/pages/agent/index' }) })
+}
+function preserveCurrentComposerDraft() {
+ if (draftScope.value) preserveComposerDraft(draftScope.value, agentSource.value, input.value)
+}
 const sheetDraftId = ref(''), sheetBrowser = ref(false), sheetActionId = ref(''), sheetOpenRequest = ref(0)
 const sheetTurn = computed(() => turns.value.find(turn => turn.draft?.draftId === sheetDraftId.value) ?? null)
 // 面板跟随轮次上的草案对象本身（含过期态）：过期不再踢掉面板，转只读 + 面板内重新核验；
@@ -111,7 +129,7 @@ function schedule() {
  clearTimeout(pollTimer)
  if (visible && !disposed && (hasExecution.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
  clearTimeout(taskPollTimer)
- if (visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
+ if (!isCompany.value && visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
  clearTimeout(expiryTimer)
  const pending = turns.value.filter(turn => turn.draft?.status === 'PENDING_CONFIRMATION')
  const pendingTasks = turns.value.flatMap(turn => tasksOf(turn)).filter(task => task.status === 'PENDING_CONFIRMATION')
@@ -141,8 +159,11 @@ async function restore() {
  const epoch = confirmEpoch
  try {
   await waitForAgentSession()
-  const restored = await restoreConversation()
-  const conversation = restored.conversation || await createConversation()
+  draftScope.value = getAgentStorageScope()
+  const restored = await restoreConversation(agentSource.value)
+  const conversation = restored.conversation || await createConversation(agentSource.value)
+  const returnedSource = restored.source ?? conversation.source ?? conversation.agent_source
+  if (returnedSource && returnedSource !== agentSource.value) throw new Error('会话来源与当前入口不一致')
   if (disposed) return
   // 快照可能取于确认请求到达服务端之前（EXECUTING 提交前的待确认旧态）：
   // 跨越确认起点的快照整表丢弃，由确认结果写回或下一轮轮询收口。
@@ -207,11 +228,11 @@ watch(focusRegionId, (id, previous) => {
 async function sendMessage(voiceText) {
  const content = (typeof voiceText === 'string' ? voiceText : input.value).trim()
  if (!content || busy.value || !conversationId.value) return
- const region = readyRegion()
- if (!region) return
+ const region = isCompany.value ? null : readyRegion()
+ if (!isCompany.value && !region) return
  turns.value.push(createTurn('local-' + Date.now() + '-' + sequence++, content))
  const current = turns.value[turns.value.length - 1]
- current.focusRegion = region
+ if (region) current.focusRegion = region
  if (typeof voiceText !== 'string') input.value = ''
  await runTurn(current, content)
 }
@@ -236,7 +257,7 @@ async function runTurn(current, content) {
   }
   follow()
  })
- const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion.id)
+ const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion?.id, agentSource.value)
  activeRequest = request
  let transportInterrupted = false
  try { await request.promise; await presentation.settle() }
@@ -264,17 +285,17 @@ async function runTurn(current, content) {
 }
 async function recoverTurn(turn, content) {
  if (busy.value || !canRecoverTurn(turn, turns.value.at(-1) === turn)) return
- const region = readyRegion()
- if (!region) return
+ const region = isCompany.value ? null : readyRegion()
+ if (!isCompany.value && !region) return
  mutating.value = true
  // 未达服务端的失败轮没有 serverId，也没有可退役的服务端条目，直接重发即可。
  if (turn.serverId) {
-  try { await discardTurn(conversationId.value, turn.serverId) }
+  try { await discardTurn(conversationId.value, turn.serverId, agentSource.value) }
   catch (error) { errorMessage.value = error.message; mutating.value = false; return }
  }
  mutating.value = false
  restartTurn(turn, content)
- turn.focusRegion = region
+ if (region) turn.focusRegion = region
  await runTurn(turn, content)
 }
 function retryTurn(turn) { return recoverTurn(turn, turn.content) }
@@ -444,18 +465,18 @@ async function stopRun() {
  isRunning.value = false
  // 停止=显式取消：本地断流之外必须终止服务端在途运行（含断开重连轮询盯着的孤儿运行）。
  if (conversationId.value) {
-  try { await cancelRun(conversationId.value) } catch { /* 无在途运行或未达服务端，以本地事实为准 */ }
+  try { await cancelRun(conversationId.value, agentSource.value) } catch { /* 无在途运行或未达服务端，以本地事实为准 */ }
   if (!disposed) restore()
  }
 }
 function clearHistory() {
  if (!conversationId.value) return
- uni.showModal({ title: '清除会话', content: '清除当前对话和草案记录？', success: async response => {
+ uni.showModal({ title: isCompany.value ? '清除公司会话' : '清除会话', content: isCompany.value ? '清除当前公司 Agent 对话记录？' : '清除当前对话和草案记录？', success: async response => {
   if (!response.confirm) return
   mutating.value = true
   try {
-   await clearConversation(conversationId.value)
-   const fresh = await createConversation()
+   await clearConversation(conversationId.value, agentSource.value)
+   const fresh = await createConversation(agentSource.value)
    conversationId.value = fresh.id
    turns.value = []
    regionChanges.value = []
@@ -467,12 +488,18 @@ function clearHistory() {
   finally { mutating.value = false }
  } })
 }
-onLoad(() => { restore() })
-onShow(() => { visible = true; loadRegionFocus().catch(() => {}); if (!activeRequest) restore()
- const prefill = consumeComposePrefill()
+onLoad(options => { agentSource.value = options?.source === 'company' ? 'company' : 'office'; restore() })
+onShow(() => { visible = true; if (!isCompany.value) loadRegionFocus().catch(() => {}); if (!activeRequest) restore()
+ let scope = ''
+ try { scope = getAgentStorageScope() } catch { /* 会话准备完成后由 restore 重新分区 */ }
+ if (draftScope.value && draftScope.value !== scope) input.value = ''
+ draftScope.value = scope
+ const savedDraft = takeComposerDraft(scope, agentSource.value)
+ if (savedDraft !== null) input.value = savedDraft
+ const prefill = isCompany.value ? '' : consumeComposePrefill()
  if (prefill && !input.value.trim()) input.value = prefill })
-onHide(() => { visible = false; composer.value?.interrupt(); clearTimeout(pollTimer); clearTimeout(taskPollTimer) })
-onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
+onHide(() => { preserveCurrentComposerDraft(); visible = false; composer.value?.interrupt(); clearTimeout(pollTimer); clearTimeout(taskPollTimer) })
+onUnload(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
 <style scoped>
 
@@ -482,6 +509,8 @@ onUnload(() => { disposed = true; clearTimeout(pollTimer); clearTimeout(taskPoll
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
 .agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; }
+.source-switch { display:flex; align-items:center; gap:3px; min-height:34px; margin:0 6px; padding:0 8px; border:1px solid #d9e3dc; border-radius:8px; background:#f8faf8; color:#52665a; font-size:11px; line-height:1; transition:transform 140ms cubic-bezier(.23,1,.32,1),background-color 140ms ease; }
+.source-switch::after { border:0; }.source-switch--pressed { transform:scale(.97); background:#edf3ee; }
 .agent-status { display:flex; align-items:center; justify-content:space-between; padding:0 32rpx; min-height:72rpx; background:#fafcfb; border-bottom:1rpx solid #e0e7e2; color:#738278; font-size:23rpx; }
 .clear { width:80rpx; height:72rpx; line-height:72rpx; padding:0; margin:0; background:transparent; }.clear::after { border:0; }
 /* scroll-view 禁止直接用 flex:1/height:0 撑高（微信 webview 已知塌陷：盒子 0 高、

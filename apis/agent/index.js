@@ -4,6 +4,7 @@ import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
 import { transportError, createTerminalTracker } from './stream-errors.mjs'
 import { requestJson } from './request.mjs'
+import { conversationSourceBody, withConversationSource } from './conversation-source.mjs'
 
 const STREAM_IDLE_TIMEOUT_MS = 60000
 const STREAM_REQUEST_TIMEOUT_MS = 300000
@@ -11,7 +12,7 @@ const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 
 const request = (url, method, data, timeout) => requestJson(globalConfig.agentUrl + url, method, data, getAgentHeaders(), timeout)
 
-export const createConversation = () => request('/agent/conversations', 'POST')
+export const createConversation = (source = 'office') => request('/agent/conversations', 'POST', conversationSourceBody(source))
 export const listRegions = () => request('/agent/regions', 'GET')
 export const markRegionSeen = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/seen`, 'POST')
 export const listRegionDevices = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/devices`, 'GET')
@@ -29,9 +30,9 @@ export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${
 // 视频取流：返回短时效播放地址（wss），不缓存；页面与组件不接触凭据。
 export const getVideoStream = deviceId => request(`/agent/devices/${encodeURIComponent(deviceId)}/video-stream`, 'GET')
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
-export const restoreConversation = () => request('/agent/conversations/current', 'GET')
-export const clearConversation = id => request(`/agent/conversations/${id}`, 'DELETE')
-export const discardTurn = (conversationId, turnId) => request(`/agent/conversations/${conversationId}/turns/${turnId}`, 'DELETE')
+export const restoreConversation = (source = 'office') => request(withConversationSource('/agent/conversations/current', source), 'GET')
+export const clearConversation = (id, source = 'office') => request(withConversationSource(`/agent/conversations/${id}`, source), 'DELETE')
+export const discardTurn = (conversationId, turnId, source = 'office') => request(withConversationSource(`/agent/conversations/${conversationId}/turns/${turnId}`, source), 'DELETE')
 export const confirmAction = (draftId, revision) => request(`/agent/action-drafts/${draftId}/confirm`, 'POST', { revision }, CONFIRM_REQUEST_TIMEOUT_MS)
 export const updateSelection = (draftId, revision, selectedActionIds) => request(`/agent/action-drafts/${draftId}/selection`, 'PATCH', { revision, selectedActionIds })
 export const retrySummary = draftId => request(`/agent/action-drafts/${draftId}/summary`, 'POST')
@@ -40,9 +41,9 @@ export const updateParameters = (draftId, revision, changes) => request(`/agent/
 export const revalidateAction = (draftId, revision) => request(`/agent/action-drafts/${draftId}/revalidate`, 'POST', { revision })
 export const restoreAction = (draftId, revision) => request(`/agent/action-drafts/${draftId}/restore`, 'POST', { revision })
 export const cancelAction = draftId => request(`/agent/action-drafts/${draftId}/cancel`, 'POST')
-export const cancelRun = conversationId => request(`/agent/conversations/${conversationId}/runs/cancel`, 'POST')
+export const cancelRun = (conversationId, source = 'office') => request(withConversationSource(`/agent/conversations/${conversationId}/runs/cancel`, source), 'POST')
 
-export const streamMessage = (conversationId, content, onEvent, focusRegionId) => {
+export const streamMessage = (conversationId, content, onEvent, focusRegionId, source = 'office') => {
 	let task, watchdog, receivedChunk = false
 	const terminal = createTerminalTracker()
 	const decoder = createNdjsonStreamDecoder(event => {
@@ -51,7 +52,7 @@ export const streamMessage = (conversationId, content, onEvent, focusRegionId) =
 	})
 	const promise = new Promise((resolve, reject) => {
 		const options = {
-			url: `${globalConfig.agentUrl}/agent/conversations/${conversationId}/messages`,
+			url: `${globalConfig.agentUrl}${withConversationSource(`/agent/conversations/${conversationId}/messages`, source)}`,
 			method: 'POST',
 			data: { content, ...(focusRegionId ? { focusRegionId } : {}) },
 			dataType: 'text',

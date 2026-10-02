@@ -9,9 +9,11 @@
       <view class="dot" :class="dotOf(d.online)" />
       <text class="nm">{{ d.name }}</text>
       <text class="loc">{{ d.location }}</text>
-      <button class="vbtn" :disabled="viewDisabled(d)" hover-class="vbtn--pressed" @tap="view(d)">{{ viewLabel(d) }}</button>
+      <button v-if="!readOnly" class="vbtn" :disabled="viewDisabled(d)" hover-class="vbtn--pressed" @tap="view(d)">{{ viewLabel(d) }}</button>
+      <text v-else class="meta meta--wide">仅状态，播放未接入</text>
      </view>
     </template>
+    <text v-if="block.type === 'video'" class="meta">状态查询于 {{ observed || '时间未知' }}</text>
 
     <template v-else-if="block.type === 'environment'">
      <view v-for="d in block.devices" :key="d.deviceId" class="erow">
@@ -67,7 +69,7 @@ import { computed, ref } from 'vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
-const props = defineProps({ observation: { type: Object, required: true } })
+const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean })
 const fetchingId = ref('')
 const playerReady = videoPlayerReady()
 const observed = computed(() => fmtDateTime(props.observation.observedAt))

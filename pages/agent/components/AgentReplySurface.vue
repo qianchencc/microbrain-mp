@@ -3,7 +3,7 @@
   <view class="reply-identity">
    <AgentAvatar :running="turn.running" />
    <view class="reply-identity__meta">
-    <text class="reply-identity__name">物联 Agent</text>
+    <text class="reply-identity__name">{{ agentName }}</text>
     <ThinkingOrb :running="turn.running" :failed="Boolean(turn.error)" :seconds="turn.seconds" />
    </view>
   </view>
@@ -18,14 +18,17 @@
    </view>
 
    <AssistantMarkdown v-if="turn.text" :content="turn.text" />
-   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" />
-   <ActionPanel v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
-    @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
-    @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
-    @configure="$emit('configure', $event)" @browse="$emit('browse')" />
-   <TaskProposalCard v-for="task in turn.tasks || (turn.task ? [turn.task] : [])" :key="task.cancellationId || task.taskId" :task="task" :busy="busy"
-    @confirm="$emit('confirm-task', task)" @discard="$emit('discard-task', task)" @open="$emit('open-task', task)" />
-   <view v-if="turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
+   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" :read-only="readOnly" />
+   <template v-if="!readOnly">
+    <ActionPanel v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
+     @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
+     @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
+     @configure="$emit('configure', $event)" @browse="$emit('browse')" />
+    <TaskProposalCard v-for="task in turn.tasks || (turn.task ? [turn.task] : [])" :key="task.cancellationId || task.taskId" :task="task" :busy="busy"
+     @confirm="$emit('confirm-task', task)" @discard="$emit('discard-task', task)" @open="$emit('open-task', task)" />
+   </template>
+   <view v-else-if="turn.draft || turn.tasks?.length || turn.task || turn.result" class="read-only-boundary">此来源当前仅开放只读查询，操作能力尚未接入。</view>
+   <view v-if="!readOnly && turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
     <text v-if="turn.result.summary.status === 'completed'" class="execution-answer">{{ turn.result.summary.text }}</text>
     <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>
     <button v-else-if="turn.result.summary.status === 'failed'" class="execution-retry" :disabled="busy" hover-class="execution-retry--pressed" @tap="$emit('retry-answer')"><uni-icons type="refreshempty" size="14" color="#738177" /><text>重试回答</text></button>
@@ -44,7 +47,7 @@ import ThinkingOrb from './ThinkingOrb.vue'
 import ToolActivity from './ToolActivity.vue'
 import TaskProposalCard from './TaskProposalCard.vue'
 
-defineProps({ turn: { type: Object, required: true }, busy: Boolean })
+defineProps({ turn: { type: Object, required: true }, busy: Boolean, readOnly: Boolean, agentName: { type: String, default: '物联 Agent' } })
 defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task'])
 </script>
 
@@ -75,6 +78,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .trace__clip { padding:0 11px; }
 .trace :deep(.activity) { margin:2px 0 10px; }
 .execution-summary { margin-top:16px; }
+.read-only-boundary { margin-top:12px; padding:8px 10px; border-left:2px solid #b58c4b; background:#f8f4eb; color:#806338; font-size:12px; line-height:1.55; }
 .execution-answer { display:block; color:#253b30; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
 .execution-progress,.execution-retry { display:flex; align-items:center; gap:8px; color:#738177; font-size:12px; }
 .execution-retry { min-height:40px; margin:0; padding:0 8px; border-radius:10px; background:transparent; transition:transform 140ms cubic-bezier(.23,1,.32,1),background-color 140ms ease; }

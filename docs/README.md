@@ -4,20 +4,20 @@
 
 ## 当前状态
 
-- 2026-10-02 客户新增“仪表盘 + 公司大 Agent + 办公室物联 Agent”要求，用户基本认可模块首屏及共用自动化规则方向；两端范围分别由微脑/办公室上游提供。办公室目录合并账号级环境/消防/能耗及告警绕过的错误已完成窄范围源码修复，见[任务总表最新转向](../plan/2026-09-30-agent-task-register.md)和[Runtime 来源纠正](../../iot-agent-runtime/plan/2026-10-02-office-source-boundary-correction.md)。公司 Agent、仪表盘与周期自动化仍未实施；源码回归不等于运行服务或真机验收。
+- 2026-10-02 客户新增“仪表盘 + 公司大 Agent + 办公室物联 Agent”要求，用户基本认可模块首屏及共用自动化规则方向；两端范围分别由微脑/办公室上游提供。办公室目录合并账号级环境/消防/能耗及告警绕过的错误已完成窄范围源码修复，见[任务总表最新转向](../plan/2026-09-30-agent-task-register.md)和[Runtime 来源纠正](../../iot-agent-runtime/plan/2026-10-02-office-source-boundary-correction.md)。Company 已知只读对话已实施（Runtime `ddb0d5f`），微脑环境/能耗/安全台账与 Office 固定来源分开，见[票 02 交接](../plan/2026-10-03-company-readonly-handoff.md)。仪表盘、周期自动化与未核验公司能力仍未实施；源码回归及协议夹具页面验证不等于客户运行服务或真机验收。
 
 - 客户小程序根目录是 Agent 唯一生产开发主线；独立回归壳已于 2026-09-24 经 `git subtree split` 迁出为同级独立仓库 `agent-miniapp`（保留完整提交历史），仅用于回归、演示和故障复现。
 - 本地 Runtime 运行规范为唯一 `3200` 直连真实客户网关；2026-10-02 本轮检查该端口未监听，没有新启动真实扫描。Iotfake 与 `3201`/`3100` 已于 2026-09-23 退役，不应再有进程监听这些端口。
 - 2026-09-23 已完成 `.scratch/customer-agent-migration/issues/03-local-real-gateway-acceptance.md`：唯一 `3200` 真实网关上的只读查询完整收尾，低风险照明操作完成草案→确认→受理→回读闭环，重复 confirm 只回放结果不重复执行（审计仅一次 `ACTION_DRAFT_ACCEPTED`）；票 04 随之关闭，独立 miniapp 正式定位为回归壳。
 - 一次性 Task 已具备本地代码闭环；体验版/正式版 HTTPS 网关、更多设备、记忆、重复计划和告警仍未进入完成状态。账户来源 `account/me.id` 已核验；“Token 频繁过期”是用户纠正的误记录，不再列作自动化前置阻塞。
 
-- 2026-10-02 用户基本认可仪表盘 A，并指定 `pages/agent/proto-observation-surface.html` 为前端重要参考。业务范围、验收与长期推进纪律见[完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)；Office 历史恢复已完成源码实施，尚未启动真实服务或长期循环。
+- 2026-10-02 用户基本认可仪表盘 A，并指定 `pages/agent/proto-observation-surface.html` 为前端重要参考。业务范围、验收与长期推进纪律见[完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)；Office 历史恢复与 Company 只读对话已完成源码实施；按票长期推进中，尚未启动真实生产服务。
 
 ## 按任务进入
 
 | 任务 | 权威入口 |
 |---|---|
-| 双 Agent 新规格与实施切片审阅 | [55 故事核心规格](../plan/2026-10-02-dual-agent-automation-spec.md)、[16 切片图](../plan/2026-10-02-dual-agent-automation-ticket-review.md)（核心与拆分已认可，tracker 已发布；票 01 已提交 `cb2a18c`，58/58 通过，真实升级待验收；局部决定/外部依赖保留） |
+| 双 Agent 新规格与实施切片审阅 | [55 故事核心规格](../plan/2026-10-02-dual-agent-automation-spec.md)、[16 切片图](../plan/2026-10-02-dual-agent-automation-ticket-review.md)（核心与拆分已认可，tracker 已发布；票 01 已提交 `cb2a18c`，真实升级待验收；票 02 Runtime `ddb0d5f`、59/59，前端与联调见票 02 交接；局部决定/外部依赖保留） |
 | 长期推进的理想成品、设计依据、全部待办关闭标准与外部阻塞 | [完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)（A 方向与核心 spec/切片已认可；局部决定及外部依赖保留） |
 | 仪表盘、双 Agent、自动化、通知、能耗与告警、模型缓存：全部已知待办、依赖缺口与 UI 定稿状态 | [任务总表](../plan/2026-09-30-agent-task-register.md)（含最新完整度核对、批准规格和逐票实施状态） |
 | 任务前台简化、交给 Agent 与引用到输入框：最终体验及剩余依赖 | [10-02 接手复核与体验基准](../plan/2026-10-02-agent-task-management-handoff.md)（方向已认可，最新场景原型见下行，非生产实现） |
