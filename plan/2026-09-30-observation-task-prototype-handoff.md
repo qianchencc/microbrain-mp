@@ -1,13 +1,13 @@
 # 观察 Task 原型交接
 
-日期：2026-09-30。原型已完成并经浏览器走查，等待用户体验反馈。生产只读 Task、条件执行与报告存储尚未实施。
+日期：2026-09-30；2026-10-02 完成现有组件风格对齐。原型已完成并经浏览器走查，等待用户体验反馈。生产只读 Task、条件执行与报告存储尚未实施。
 
 ## 进入条件与入口
 
 继续观察设备参与任务、证据与草案的关系，或准备一次性只读巡检规格时，先读[本轮探索记录](2026-09-30-observation-task-exploration.md)。O1/O2/O3 已接受，后续不重复询问。
 
 - 原型分支：`prototype/observation-task-loop`。
-- 原型提交：`14b01f0`。
+- 初版原型提交：`14b01f0`；组件对齐提交：`72580cf`。
 - 原型 worktree：`/Users/qianchen/works/新发展/mp-observation-prototype`。
 - 原型文件：[proto-observation-task.html](../../mp-observation-prototype/pages/agent/proto-observation-task.html)。直接打开即可，素材与 Lucide 图标均已内联，无依赖、无服务器。
 - 主线只保存领域决定与本交接；原型未加入生产页面路由。使用现有[场景记录](../docs/research/2026-09-30-agent-business-scenario-simulation.md)，无需另造同义场景。
@@ -40,6 +40,21 @@
 内联脚本语法检查与 `git diff --check` 通过。没有给原型新增测试框架或生产构建任务。
 
 ## 本轮结论与未决项
+
+### 2026-10-02 组件对齐修正
+
+用户指出初版风格与已有组件不一致，核对后成立：初版仅复用头像和设备素材，读数块、设备草案结构与居中弹窗仍是另造的样式。此前“复用视觉语言”的表述不足以证明组件对齐。
+
+本次以生产 `pages/agent/components/` 中的 `ObservationCard`、`TaskProposalCard`、`ActionPanel`、`ActionDraftCard`、`DeviceActionCard`、`DeviceRoster`、`DeviceSheet`、`TaskDetailContent`、`UserMessage`、`AgentReplySurface` 为来源，迁移对应 DOM 层级和 CSS 快照。保留原型侧栏输入与内存状态机。
+
+- 观察卡恢复紧凑五列读数网格、来源标签、观测时间与数据限制；设备卡恢复 119×180px、72px 产品图、纵向 before→after 和横向 rail。
+- 草案使用当前生产概览/草案分段、统计条、300px 内部区域与底部操作栏；任务卡恢复生产标题、阶段节点、设备行及按钮层级。
+- 居中弹窗改为底部 Sheet：16px 顶部圆角、44px 横杆区、78vh 高度及完整 flex 滚动链。桌面 Sheet 对齐左侧预览栏，窄屏占满宽度。
+- 点击设备卡可调整待确认选择；收据只显示已确认设备，仍可点开单设备回执。
+
+这是独立 HTML 中的静态 DOM/CSS 复刻，不是挂载 Vue 生产组件。样式隔离使用浏览器原生 `@scope`；uni-app 特有元素、滚动容器通过原生 DOM 适配。它不证明微信 WXS 手势或真机渲染等价。
+
+浏览器实测：设备卡 119×180px，草案区 300px，读数 12px，观察块圆角 12px；任务详情滚动区非零（1280×920 时 616px）。已检查桌面、390px、320px 无页面横向溢出，并重走原确认范围、修订重新确认、部分查询失败、影子值、空选择、证据不足、取消确认及单设备收据。脚本语法检查和 `git diff --check` 通过。没有真实接口调用。
 
 浏览器结果支持已接受的模型：确认范围以版本快照保存；观察报告区分查询完成度与数据质量；条件未满足和条件不可判断分别记录；动作收据与条件依据保持不同角色。原型只证明这些假设可以被操作和呈现，视觉质量与产品可理解性仍待用户走查。
 
