@@ -14,7 +14,8 @@
 | 任务 | 权威入口 |
 |---|---|
 | 本轮周期任务、任务编辑、结束通知与模型缓存：用户任务、探索进度、Matt 阶段及下一步 | [任务总表](../plan/2026-09-30-agent-task-register.md)（探索中，非冻结规格） |
-| 已认可的周期计划/独立区间方向与原型验证 | [ADR 0005](./adr/0005-recurring-plans-and-independent-task-intervals.md)、[原型交接](../plan/2026-09-30-recurring-prototype-handoff.md)与[原型回传](../plan/2026-09-30-recurring-prototype-return.md)（独立分支原型及浏览器走查完成，待体验评审，非生产实现） |
+| 任务前台简化、交给 Agent 与引用到输入框：最终体验及剩余依赖 | [10-02 接手复核与体验基准](../plan/2026-10-02-agent-task-management-handoff.md)（方向已认可，引用/周期原型待调整，非生产实现） |
+| 已认可的周期计划/独立区间方向与原型验证 | [ADR 0005](./adr/0005-recurring-plans-and-independent-task-intervals.md)、[原型交接](../plan/2026-09-30-recurring-prototype-handoff.md)与[原型回传](../plan/2026-09-30-recurring-prototype-return.md)（旧前台编辑原型为历史证据，现行交互以 10-02 简化方向为准） |
 | 客户小程序 Agent 接入、环境路由、当前验收边界 | [客户小程序生产主线](../plan/2026-09-18-customer-miniapp-canonical-agent-migration.md) |
 | 登录态、Token、园区和 Agent session | [登录与接入调查](./research/2026-09-18-customer-miniapp-login-and-agent-integration.md) |
 | 长期用户隔离、记忆/规则 owner | [真实 MP 身份边界](./research/2026-09-18-real-mp-identity-boundary.md)与[09-30 主体只读核验](./research/2026-09-30-recurring-principal-readonly-verification.md)（账户来源已核验，归属键接入未实施；不再以 Token 生命周期阻断） |
