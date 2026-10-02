@@ -15,7 +15,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
-| 本轮周期任务、任务编辑、结束通知与模型缓存：用户任务、探索进度、Matt 阶段及下一步 | [任务总表](../plan/2026-09-30-agent-task-register.md)（探索中，非冻结规格） |
+| 仪表盘、双 Agent、自动化、通知、能耗与告警、模型缓存：全部已知待办、依赖缺口与 UI 定稿状态 | [任务总表](../plan/2026-09-30-agent-task-register.md)（含最新完整度核对；探索中，非冻结规格/实现票） |
 | 任务前台简化、交给 Agent 与引用到输入框：最终体验及剩余依赖 | [10-02 接手复核与体验基准](../plan/2026-10-02-agent-task-management-handoff.md)（方向已认可，引用/周期原型待调整，非生产实现） |
 | 已认可的周期计划/独立区间方向与原型验证 | [ADR 0005](./adr/0005-recurring-plans-and-independent-task-intervals.md)、[原型交接](../plan/2026-09-30-recurring-prototype-handoff.md)与[原型回传](../plan/2026-09-30-recurring-prototype-return.md)（旧前台编辑原型为历史证据，现行交互以 10-02 简化方向为准） |
 | 客户小程序 Agent 接入、环境路由、当前验收边界 | [客户小程序生产主线](../plan/2026-09-18-customer-miniapp-canonical-agent-migration.md) |
