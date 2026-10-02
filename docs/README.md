@@ -17,6 +17,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
+| 模型缓存的应用恢复、压缩与真实用量 | [10-03 恢复/压缩核验](./research/2026-10-03-model-cache-recovery-compaction-verification.md)（局部诊断通过，跨进程/生产/Langfuse 落库仍未验；无生产代码改动） |
 | 双 Agent 新规格与实施切片审阅 | [55 故事核心规格](../plan/2026-10-02-dual-agent-automation-spec.md)、[16 切片图](../plan/2026-10-02-dual-agent-automation-ticket-review.md)（核心与拆分已认可，tracker 已发布；票 01 已提交 `cb2a18c`，真实升级待验收；票 02 Runtime `ddb0d5f`、59/59，前端与联调见票 02 交接；局部决定/外部依赖保留） |
 | 长期推进的理想成品、设计依据、全部待办关闭标准与外部阻塞 | [完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)（A 方向与核心 spec/切片已认可；局部决定及外部依赖保留） |
 | 仪表盘、双 Agent、自动化、通知、能耗与告警、模型缓存：全部已知待办、依赖缺口与 UI 定稿状态 | [任务总表](../plan/2026-09-30-agent-task-register.md)（含最新完整度核对、批准规格和逐票实施状态） |
