@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- 2026-10-02 客户新增“仪表盘 + 公司大 Agent + 办公室物联 Agent”要求，用户基本认可模块首屏及共用自动化规则方向；两端范围分别由微脑/办公室上游提供。办公室目录合并账号级环境/消防/能耗及告警绕过的错误已进入窄修复，见[任务总表最新转向](../plan/2026-09-30-agent-task-register.md)和[Runtime 来源纠正](../../iot-agent-runtime/plan/2026-10-02-office-source-boundary-correction.md)。公司 Agent、仪表盘与周期自动化仍未实施；源码回归不等于运行服务或真机验收。
+- 2026-10-02 客户新增“仪表盘 + 公司大 Agent + 办公室物联 Agent”要求，用户基本认可模块首屏及共用自动化规则方向；两端范围分别由微脑/办公室上游提供。办公室目录合并账号级环境/消防/能耗及告警绕过的错误已完成窄范围源码修复，见[任务总表最新转向](../plan/2026-09-30-agent-task-register.md)和[Runtime 来源纠正](../../iot-agent-runtime/plan/2026-10-02-office-source-boundary-correction.md)。公司 Agent、仪表盘与周期自动化仍未实施；源码回归不等于运行服务或真机验收。
 
 - 客户小程序根目录是 Agent 唯一生产开发主线；独立回归壳已于 2026-09-24 经 `git subtree split` 迁出为同级独立仓库 `agent-miniapp`（保留完整提交历史），仅用于回归、演示和故障复现。
 - 本地 Runtime 运行规范为唯一 `3200` 直连真实客户网关；2026-10-02 本轮检查该端口未监听，没有新启动真实扫描。Iotfake 与 `3201`/`3100` 已于 2026-09-23 退役，不应再有进程监听这些端口。
@@ -17,6 +17,7 @@
 |---|---|
 | 仪表盘、双 Agent、自动化、通知、能耗与告警、模型缓存：全部已知待办、依赖缺口与 UI 定稿状态 | [任务总表](../plan/2026-09-30-agent-task-register.md)（含最新完整度核对；探索中，非冻结规格/实现票） |
 | 任务前台简化、交给 Agent 与引用到输入框：最终体验及剩余依赖 | [10-02 接手复核与体验基准](../plan/2026-10-02-agent-task-management-handoff.md)（方向已认可，引用/周期原型待调整，非生产实现） |
+| 双 Agent 真实业务情境：仪表盘、任务引用、来源拒绝、告警、报告与通知返回 | [11 场景原型交接/回传](../plan/2026-10-02-dual-agent-scenario-prototype-handoff.md)（独立 HTML 内存演练，待用户评审，非生产实现） |
 | 已认可的周期计划/独立区间方向与原型验证 | [ADR 0005](./adr/0005-recurring-plans-and-independent-task-intervals.md)、[原型交接](../plan/2026-09-30-recurring-prototype-handoff.md)与[原型回传](../plan/2026-09-30-recurring-prototype-return.md)（旧前台编辑原型为历史证据，现行交互以 10-02 简化方向为准） |
 | 客户小程序 Agent 接入、环境路由、当前验收边界 | [客户小程序生产主线](../plan/2026-09-18-customer-miniapp-canonical-agent-migration.md) |
 | 登录态、Token、园区和 Agent session | [登录与接入调查](./research/2026-09-18-customer-miniapp-login-and-agent-integration.md) |
