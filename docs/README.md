@@ -17,6 +17,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
+| 双 Agent 新规格与实施切片审阅 | [55 故事规格草案](../plan/2026-10-02-dual-agent-automation-spec.md)、[16 切片提案](../plan/2026-10-02-dual-agent-automation-ticket-review.md)（待必要决定/拆分审阅，尚未发布 ready-for-agent 实现票） |
 | 长期推进的理想成品、设计依据、全部待办关闭标准与外部阻塞 | [完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)（A 方向已认可；spec/票据和剩余决定待收口） |
 | 仪表盘、双 Agent、自动化、通知、能耗与告警、模型缓存：全部已知待办、依赖缺口与 UI 定稿状态 | [任务总表](../plan/2026-09-30-agent-task-register.md)（含最新完整度核对；探索中，非冻结规格/实现票） |
 | 任务前台简化、交给 Agent 与引用到输入框：最终体验及剩余依赖 | [10-02 接手复核与体验基准](../plan/2026-10-02-agent-task-management-handoff.md)（方向已认可，最新场景原型见下行，非生产实现） |
