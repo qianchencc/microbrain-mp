@@ -29,7 +29,15 @@ Standards 审查无发现；Spec 发现 1 个 P2：台账总数/窗口文案含�
 
 实际微信开发者工具通过官方 SDK/CUA，从首页点物联助手进入 dashboard；HTTP 协议夹具显示观察设备 6（环境 1 / 电表 2 / 安全 3）、环境 26°C / 57% / PM2.5 34。首屏园区 SVG 与数据生成曲线实际渲染、摘要可读，固定 Agent dock 下的内容可经页面滚动查看。截图 `/tmp/dashboard-a-wechat.png` 是夹具 UI 证据，不进入业务提交，不当真实数据证明。
 
-能耗演示↔真实切换已通过：夹具真实读数为 2.5 kW、2024-09-11，显示陈旧/未知时间标记，回演示仍明确样例。环境详情实际显示 26°C / 57% / PM2.5 34 等字段。Company 底部按钮进入 `source=company&from=dashboard`，可见“返回总览”；通过 SDK 的公开 InputElement.input 输入未发送草稿，返回后重新进入仍保留且未发送。截图 `/tmp/dashboard-a-company.png` / `/tmp/dashboard-a-wechat-scrolled.png` 仅为本地夹具 UI 证据。台账详情显示 4 条带日期的记录与“未上报/已上报”标记，并显示“本次读取 4 条 · 平台处置标记不代表已恢复”；通过公开 XPath 点击 Sheet 遮罩实际关闭，截图 `/tmp/dashboard-a-alerts-closed.png`。Office 入口与页面卸载/重新进入后的草稿保留已通过，没有自动发送。点击仪表盘刷新按钮实际发起 `GET /api/agent/dashboard?source=company` 并返回 200，夹具无设备写入。Office 返回菜单为原生 action sheet，当前 SDK 只访问 WXML、CUA 返回 noWindowsAvailable，菜单项无法实际点击，该路径留真机验收。空/失败/部分失败页面尚未操作验证（后端 HTTP 故障语义已测）；未绕过授权对话或私有状态。
+能耗演示↔真实切换已通过：夹具真实读数为 2.5 kW、2024-09-11，显示陈旧/未知时间标记，回演示仍明确样例。环境详情实际显示 26°C / 57% / PM2.5 34 等字段。Company 底部按钮进入 `source=company&from=dashboard`，可见“返回总览”；通过 SDK 的公开 InputElement.input 输入未发送草稿，返回后重新进入仍保留且未发送。截图 `/tmp/dashboard-a-company.png` / `/tmp/dashboard-a-wechat-scrolled.png` 仅为本地夹具 UI 证据。台账详情显示 4 条带日期的记录与“未上报/已上报”标记，并显示“本次读取 4 条 · 平台处置标记不代表已恢复”；通过公开 XPath 点击 Sheet 遮罩实际关闭，截图 `/tmp/dashboard-a-alerts-closed.png`。Office 入口与页面卸载/重新进入后的草稿保留已通过，没有自动发送。点击仪表盘刷新按钮实际发起 `GET /api/agent/dashboard?source=company` 并返回 200，夹具无设备写入。Office 返回菜单为原生 action sheet，子代理的 SDK 无法操作此项。随后父任务通过 CUA 重新打开客户项目，窗口可截图/操作，实际点击菜单“返回总览”后页面路径恢复 dashboard，已补齐模拟器菜单返回验证；真机仍未验。空/失败/部分失败页面尚未操作验证（后端 HTTP 故障语义已测）；未绕过授权对话或私有状态。
+
+## 本地真实服务与页面补证
+
+临时协议夹具、SDK 会话及临时数据库已关闭，旧夹具释放 3200 后，按既有 `start:local-real` 启动 Node 22 的唯一 `0.0.0.0:3200`（Runtime 代码 `fde5a4c`、前端 `0d5c1d9`）。启动前只读核对生产库：3 个 completed Task，零 pending/executing 阶段。`/healthz` 返回 production、GLM-5.3-Flash、real-runtime.sqlite；真实服务的 dashboard GET 返回 200，环境 1 / 电表 43 / 安全 3、台账 410、无区域错误。
+
+父任务随后 CUA 从客户首页进入 dashboard，实际显示 47 台观察设备与环境 29°C / 65% / PM2.5 10、本次台账 410。切到真实计量模式显示“暂无有效电表读数 / 本次未取得有效读数”：本次没有有效 totalActivePower，不把观察行存在冒充功率已取得。进入 Office 后从原生菜单返回 dashboard，路径和页面已核对。此为真实网关→本地微信模拟器只读页面/导航证据，不是模型对话、物理控制或真机正式部署验收。没有发送消息、创建控制任务、设备控制或推送；本地真实服务保留给用户查看，不再清理为临时夹具。
+
+验证 CLI 曾触发 Codex 授权对话，未批准；父重新打开项目时未见该对话，关闭了无关蓝牙授权请求。未修改系统权限或客户登录态。前端空/失败/部分失败状态仍待操作验收。
 
 ## 下一步
 

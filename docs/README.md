@@ -6,7 +6,7 @@
 
 - 2026-10-04 用户明确当前推进目的为领导展示型项目：A 仪表盘展示质量、Company 已知“智慧”接口与正常自动化业务优先；专门治理、客户办公室入口、正式部署/H5 后置。告警只负责客户跳转后的引用和对话继续。见[当前目的与缺口交接](../plan/2026-10-04-demonstration-delivery-handoff.md)，旧地图中的全局阻塞/治理优先表述不再适用，后置能力没有被记为完成。
 
-- 2026-10-04 A 原生仪表盘首条闭环已实现：物联助手菜单进入公司观察概览，维修演示与真实最新计量读数分开，Company/Office 两入口沿既有会话机制返回。Runtime 60/60、前端 18/18、微信编译通过；一次真实只读接口取得环境 1 / 电表 43 / 安全 3。微信操作验收与提交状态见[首屏交接](../plan/2026-10-04-dashboard-first-loop-handoff.md)。完整统计、任务摘要、Company 控制和周期自动化仍未完成。
+- 2026-10-04 A 原生仪表盘首条闭环已实现：物联助手菜单进入公司观察概览，维修演示与真实最新计量读数分开，Company/Office 两入口沿既有会话机制返回。Runtime 60/60、前端 18/18、微信编译通过；一次真实只读接口取得环境 1 / 电表 43 / 安全 3。Runtime `fde5a4c`、mp `0d5c1d9` 已提交，唯一 3200 已按真实网关规范启动；真实数据已在微信模拟器展示、Office 原生菜单返回已补验。操作证据及剩余状态见[首屏交接](../plan/2026-10-04-dashboard-first-loop-handoff.md)。完整统计、任务摘要、Company 控制和周期自动化仍未完成。
 
 - 2026-10-02 客户新增“仪表盘 + 公司大 Agent + 办公室物联 Agent”要求，用户基本认可模块首屏及共用自动化规则方向；两端范围分别由微脑/办公室上游提供。办公室目录合并账号级环境/消防/能耗及告警绕过的错误已完成窄范围源码修复，见[任务总表最新转向](../plan/2026-09-30-agent-task-register.md)和[Runtime 来源纠正](../../iot-agent-runtime/plan/2026-10-02-office-source-boundary-correction.md)。Company 已知只读对话已实施（Runtime `ddb0d5f`），微脑环境/能耗/安全台账与 Office 固定来源分开，见[票 02 交接](../plan/2026-10-03-company-readonly-handoff.md)。仪表盘最新实施状态见上行；周期自动化与未核验公司能力仍未实施；源码回归及协议夹具页面验证不等于客户运行服务或真机验收。
 
@@ -15,7 +15,7 @@
 - 2026-09-23 已完成 `.scratch/customer-agent-migration/issues/03-local-real-gateway-acceptance.md`：唯一 `3200` 真实网关上的只读查询完整收尾，低风险照明操作完成草案→确认→受理→回读闭环，重复 confirm 只回放结果不重复执行（审计仅一次 `ACTION_DRAFT_ACCEPTED`）；票 04 随之关闭，独立 miniapp 正式定位为回归壳。
 - 一次性 Task 已具备本地代码闭环；体验版/正式版 HTTPS 网关、更多设备、记忆、重复计划和告警仍未进入完成状态。账户来源 `account/me.id` 已核验；“Token 频繁过期”是用户纠正的误记录，不再列作自动化前置阻塞。
 
-- 2026-10-02 用户基本认可仪表盘 A，并指定 `pages/agent/proto-observation-surface.html` 为前端重要参考。业务范围、验收与长期推进纪律见[完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)；Office 历史恢复与 Company 只读对话已完成源码实施；按票长期推进中，尚未启动真实生产服务。
+- 2026-10-02 用户基本认可仪表盘 A，并指定 `pages/agent/proto-observation-surface.html` 为前端重要参考。业务范围、验收与长期推进纪律见[完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)；Office 历史恢复与 Company 只读对话已完成源码实施；按票长期推进中；10-04 本地真实网关服务已启动，正式部署仍后置。
 
 ## 按任务进入
 
