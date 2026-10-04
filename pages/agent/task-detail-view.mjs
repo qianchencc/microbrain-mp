@@ -56,8 +56,9 @@ function linkProgress(phase, next) {
 
 export function taskDetailView(task) {
  if (!task) return null
+ const interval = task.interval || null
  const phases = task.phases.map((phase, index) => ({
-  ...phase, title: task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束',
+  ...phase, title: interval ? `检查点${index + 1}` : task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束',
   time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusText[phase.status] || phase.status,
   tone: phaseTone(phase.status), link: linkProgress(phase, task.phases[index + 1]),
   devices: (phase.devices || []).map(device => ({ ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
@@ -65,8 +66,19 @@ export function taskDetailView(task) {
    resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device),
    resultTone: phase.status === 'cancelled' ? 'wait' : executionResult(device) === '明确报错' ? 'fail' : executionResult(device) === '未执行' ? 'wait' : 'ok' })),
  }))
- const whenText = phases.length > 1 && phases[0].time.slice(0, 10) === phases.at(-1).time.slice(0, 10)
-  ? `${phases[0].time} 至 ${phases.at(-1).clock}` : phases.map(phase => phase.time).join(' 至 ')
- return { ...task, phases, whenText, createdText: taskTime(task.createdAt), statusText: statusText[task.status] || task.status,
+ const start = interval ? taskTime(interval.startsAt) : phases[0]?.time || ''
+ const end = interval ? taskTime(interval.endsAt) : phases.length > 1 ? phases.at(-1).time : ''
+ const whenText = end && start.slice(0, 10) === end.slice(0, 10)
+  ? `${start} 至 ${end.slice(-5)}` : [start, end].filter(Boolean).join(' 至 ')
+ const report = task.report ? {
+  generatedText: taskTime(task.report.generatedAt),
+  outcomeText: statusText[task.report.outcome] || task.report.outcome,
+  checkpoints: task.report.phases.length,
+  devicesVisible: new Set(task.report.phases.flatMap(phase => phase.devices.map(device => device.id))).size,
+ } : null
+ return { ...task, phases, whenText, report, createdText: taskTime(task.createdAt),
+  statusText: interval && task.status === 'executing'
+   ? task.executionActive ? '设备执行中' : '区间进行中'
+   : statusText[task.status] || task.status,
   sourceText: task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? 'Agent 即时操作' : 'Agent 定时任务' }
 }

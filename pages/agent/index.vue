@@ -42,7 +42,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
-import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
+import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail } from './conversation.mjs'
 import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference } from './composer-drafts.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
 import { taskTime } from './task-detail-view.mjs'
@@ -154,7 +154,7 @@ async function refreshScheduledTasks() {
   const id = task.taskId
   const result = await getTaskDetail(id)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => item.taskId === id && !item.cancellationId)
-  if (live && result.task) live.status = result.task.status
+  if (live && result.task) mergeTaskDetail(live, result.task)
  }))
  schedule()
 }
@@ -434,8 +434,9 @@ async function discardTaskProposal(task) {
  finally { mutating.value = false; schedule() }
 }
 function openTaskRegion(task) {
- if (!task?.taskId || !task.regionIds?.length || !task.phases?.length) return
- const date = taskTime(task.phases[0].at).slice(0, 10)
+ const at = task?.interval?.startsAt ?? task?.phases?.[0]?.at
+ if (!task?.taskId || !task.regionIds?.length || !at) return
+ const date = taskTime(at).slice(0, 10)
  uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(task.regionIds[0])}&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(task.taskId)}` })
 }
 async function cancelDraft(turn) {

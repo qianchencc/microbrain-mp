@@ -32,16 +32,20 @@ export function deviceTimelineItems(events) {
   steps.sort((a, b) => a.at.localeCompare(b.at))
   const first = steps[0], last = steps.at(-1)
   const device = first.device
+  const interval = first.interval || null
   const targets = steps.map(step => targetText(device.kind, step.target))
   const allSettled = steps.every(settled)
   const result = summary(steps)
+  const taskTerminal = !['scheduled', 'executing'].includes(first.taskStatus)
   return [{
-   id: steps.map(step => step.phaseId).join('-'), taskId: first.taskId, at: first.at,
-   endAt: steps.length > 1 ? last.at : undefined, label: targets.join(' → '), taskLabel: first.taskLabel,
+   id: steps.map(step => step.phaseId).join('-'), taskId: first.taskId,
+   at: interval?.startsAt ?? first.at,
+   endAt: interval?.endsAt ?? (steps.length > 1 ? last.at : undefined),
+   label: targets.join(' → '), taskLabel: first.taskLabel,
    sourceText: first.sourceType === 'sample' ? '演示' : first.sourceType === 'immediate_draft' ? '即时' : '定时',
    resultText: result.text, resultTone: result.tone, creatorName: first.creatorName,
    creatorVariant: creatorVariant(first.creatorName, false),
-   faded: allSettled || first.taskStatus === 'cancelled',
+   faded: first.taskStatus === 'cancelled' || (interval ? allSettled && taskTerminal : allSettled),
   }]
  })
 }

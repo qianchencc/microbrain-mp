@@ -82,6 +82,17 @@ export function applyEvent(turn, event) {
 	}
 }
 
+export function mergeTaskDetail(task, detail) {
+	task.status = detail.status
+	task.executionActive = detail.executionActive
+	task.report = detail.report ?? null
+	if (detail.interval) task.interval = detail.interval
+	for (const phase of task.phases || []) {
+		const fresh = (detail.phases || []).find(item => (phase.id ? item.id === phase.id : item.at === phase.at))
+		if (fresh) { phase.id = fresh.id; phase.status = fresh.status }
+	}
+}
+
 export function friendlyError(message) {
 	const text = String(message || '')
 	if (/request:fail|network|timeout|超时/i.test(text)) return '网络连接中断，本次回答未完成'

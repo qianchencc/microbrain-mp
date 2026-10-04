@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createTurn, applyEvent, restoreTurns, restartTurn } from '../pages/agent/conversation.mjs'
+import { createTurn, applyEvent, restoreTurns, restartTurn, mergeTaskDetail } from '../pages/agent/conversation.mjs'
 
 test('告警引用固定在原轮，恢复和编辑重试不替换成后来的引用', () => {
 	const reference = { type: 'customer_alert', content: '客户告警A：展示厅水浸' }
@@ -64,6 +64,41 @@ test('任务提案恢复后保留确认状态，已安排任务不会退化为�
 	assert.equal(turns[0].task.status, 'SCHEDULED')
 	assert.equal(turns[0].task.created, true)
 	assert.equal(turns[0].running, false)
+})
+
+test('区间任务提案与恢复保留区间边界与检查点顺序', () => {
+	const interval = { startsAt: '2026-10-05T06:00:00.000Z', endsAt: '2026-10-05T08:00:00.000Z' }
+	const phases = [
+		{ at: '2026-10-05T06:10:00.000Z', actions: [{ kind: 'lighting', deviceId: 'light-1', deviceName: '灯', command: { closeOrOpen: 1 } }] },
+		{ at: '2026-10-05T07:30:00.000Z', actions: [{ kind: 'lighting', deviceId: 'light-1', deviceName: '灯', command: { closeOrOpen: 0 } }] },
+	]
+	const proposal = { taskId: 'task-9', label: '下午巡检', status: 'PENDING_CONFIRMATION', interval, phases }
+	const turn = createTurn('turn', '安排下午巡检')
+	applyEvent(turn, { type: 'task.proposed', taskId: proposal.taskId, task: proposal })
+	assert.deepEqual(turn.task.interval, interval, '提案事件保留区间边界')
+	assert.deepEqual(turn.task.phases.map(phase => phase.at), phases.map(phase => phase.at), '检查点顺序保留')
+	const [restored] = restoreTurns([{ id: 'turn', content: turn.content, events: [],
+		task: { ...proposal, status: 'SCHEDULED', created: true } }])
+	assert.deepEqual(restored.task.interval, interval, '恢复任务保留区间边界')
+	assert.deepEqual(restored.task.phases, phases, '恢复任务保留检查点')
+
+	mergeTaskDetail(restored.task, { status: 'executing', executionActive: true, report: null, interval,
+		phases: [
+			{ id: 'ph-1', at: phases[0].at, status: 'completed' },
+			{ id: 'ph-2', at: phases[1].at, status: 'executing' },
+		] })
+	assert.deepEqual(restored.task.phases.map(phase => phase.id), ['ph-1', 'ph-2'], '无 id 检查点按时刻对齐后写入阶段 id')
+	assert.deepEqual(restored.task.phases.map(phase => phase.status), ['completed', 'executing'])
+	assert.deepEqual(restored.task.phases[0].actions, phases[0].actions, '轮询合并不覆盖提案动作')
+	assert.equal(restored.task.executionActive, true)
+
+	mergeTaskDetail(restored.task, { status: 'executing', executionActive: false, report: null, interval,
+		phases: [
+			{ id: 'ph-1', at: '2026-10-05T09:00:00.000Z', status: 'completed' },
+			{ id: 'ph-2', at: '2026-10-05T10:00:00.000Z', status: 'completed' },
+		] })
+	assert.deepEqual(restored.task.phases.map(phase => phase.status), ['completed', 'completed'], '写入 id 后按 id 同步阶段状态')
+	assert.equal(restored.task.executionActive, false)
 })
 
 test('同一任务的创建与取消收据在会话恢复后分别保留', () => {

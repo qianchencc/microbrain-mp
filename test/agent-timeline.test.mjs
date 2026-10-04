@@ -59,3 +59,50 @@ test('本地演示的区域任务与设备记录指向同一任务及目标', ()
  assert.equal(taskDetailView(unresolved).statusText, '明确报错')
  assert.equal(regionTimelineItems([unresolved])[0].warning, false)
 })
+
+test('独立区间任务使用保存边界，未到终点不淡化', () => {
+ const interval = { startsAt: '2026-10-05T06:00:00.000Z', endsAt: '2026-10-05T08:00:00.000Z' }
+ const phase = (id, at, status, outcome) => ({ id, at, status, failureReason: null,
+  devices: [{ id: 'light-1', kind: 'lighting', name: '数智工程院长室照明', location: '院长室', target: { closeOrOpen: 1 }, outcome, details: { receipt: outcome === 'unconfirmed' ? 'ACCEPTED' : null } }] })
+ const running = { id: 'task-1', label: '下午巡检', status: 'executing', executionActive: false, interval,
+  createdAt: '2026-10-05T02:00:00.000Z', creator: { id: 'u-1', displayName: '钱晨' }, source: { type: 'scheduled' },
+  devices: [{ id: 'light-1', kind: 'lighting', name: '数智工程院长室照明' }],
+  phases: [phase('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed'), phase('p2', '2026-10-05T07:30:00.000Z', 'pending', 'pending')] }
+ const regionCard = regionTimelineItems([running])[0]
+ assert.equal(regionCard.at, interval.startsAt, '区域时间轴以区间起点定位')
+ assert.equal(regionCard.endAt, interval.endsAt, '区域时间轴以区间终点收尾')
+ assert.equal(regionCard.faded, false, '区间进行中不淡化')
+ assert.equal(regionTimelineItems([{ ...running, status: 'completed' }])[0].faded, true, '区间终态后淡化')
+
+ const event = (phaseId, at, phaseStatus, outcome, taskStatus = 'executing') => ({ taskId: 'task-1', taskLabel: '下午巡检',
+  sourceType: 'scheduled', creatorName: '钱晨', phaseId, at, phaseStatus, taskStatus, interval, outcome,
+  details: outcome === 'unconfirmed' ? { receipt: 'ACCEPTED' } : null,
+  device: { id: 'light-1', kind: 'lighting', name: '数智工程院长室照明' }, target: { closeOrOpen: 1 } })
+ const items = deviceTimelineItems([event('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed')])
+ assert.equal(items[0].at, interval.startsAt, '设备记录投影完整任务区间')
+ assert.equal(items[0].endAt, interval.endsAt)
+ assert.equal(items[0].faded, false, '该设备检查点已收口但区间未终态不淡化')
+ assert.equal(deviceTimelineItems([event('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed', 'completed')])[0].faded, true,
+  '任务终态后设备记录才淡化')
+
+ const detail = taskDetailView(running)
+ assert.equal(detail.whenText, '2026-10-05 14:00 至 16:00', '区间任务时间按保存边界显示')
+ assert.deepEqual(detail.phases.map(item => item.title), ['检查点1', '检查点2'], '检查点不沿用开始/结束命名')
+ assert.equal(detail.statusText, '区间进行中')
+ assert.equal(taskDetailView({ ...running, executionActive: true }).statusText, '设备执行中')
+ assert.equal(detail.phases[0].devices[0].resultText, '已执行')
+ assert.equal(detail.phases[0].devices[0].outcome, 'unconfirmed', '受理结果不被改写成物理核验')
+ const verified = phase('p3', '2026-10-05T06:45:00.000Z', 'completed', 'verified')
+ assert.equal(taskDetailView({ ...running, phases: [verified] }).phases[0].devices[0].outcome, 'verified')
+ const report = { generatedAt: '2026-10-05T08:00:12.000Z', outcome: 'completed',
+  phases: [phase('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed'), phase('p2', '2026-10-05T07:30:00.000Z', 'completed', 'verified')] }
+ const terminal = taskDetailView({ ...running, status: 'completed', phases: report.phases, report })
+ assert.equal(terminal.report.outcomeText, '已执行')
+ assert.equal(terminal.report.checkpoints, 2)
+ assert.equal(terminal.report.devicesVisible, 1, '报告台数按授权可见的唯一设备统计，同一设备跨检查点不重复')
+ const otherPhase = { ...phase('p2b', '2026-10-05T07:30:00.000Z', 'completed', 'verified'),
+  devices: [{ id: 'ac-1', kind: 'ac', name: '数智工程院长室空调', location: '院长室', target: { temperature: 26 }, outcome: 'verified', details: {} }] }
+ assert.equal(taskDetailView({ ...running, status: 'completed', phases: [report.phases[0], otherPhase],
+  report: { ...report, phases: [report.phases[0], otherPhase] } }).report.devicesVisible, 2, '不同设备仍分别计入报告台数')
+ assert.ok(terminal.report.generatedText.startsWith('2026-10-05 16:00'))
+})

@@ -9,9 +9,9 @@
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
    <text v-if="currentError" class="current-error">状态暂不可用</text>
    <text v-if="actionError" class="action-error">{{ actionError }}</text>
-   <text class="section-title">阶段 · {{ detail.phases.length }}</text>
+   <text class="section-title">{{ detail.interval ? '检查点' : '阶段' }} · {{ detail.phases.length }}</text>
    <view v-for="(phase, index) in detail.phases" :key="phase.id" class="phase">
-    <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
+    <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
      <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><text class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
      <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
@@ -27,6 +27,11 @@
       <text v-if="!phase.devices.length" class="no-devices">当前没有可查看的设备</text>
      </view>
     </view>
+   </view>
+   <view v-if="detail.report" class="task-report">
+    <text class="report-title">执行报告 · {{ detail.report.generatedText }}</text>
+    <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 个检查点 · {{ detail.report.devicesVisible }} 台设备</text>
+    <text class="report-note">按已保存的执行回执汇总；上方记录如实保留受理与未核验结果</text>
    </view>
    <view class="source"><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId">对话 {{ detail.source.conversationId.slice(0, 8) }}</text></view>
    <button v-if="detail.canCancel && !sampleTask" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="deleteTask">删除任务</button>
@@ -97,8 +102,10 @@ const stateRefresh = createStateRefresh(loadCurrentStates)
 async function deleteTask() {
  if (!detail.value?.canCancel || cancelling.value) return
  const taskId = props.taskId, version = task.value.version
+ const settledInterval = detail.value?.interval && !detail.value.phases.some(phase => phase.status === 'pending')
  const confirmed = await new Promise(resolve => uni.showModal({ title: '删除任务',
-  content: '未执行的阶段将取消；已经执行的设备动作不会回滚。', confirmText: '删除任务', confirmColor: '#a15343',
+  content: settledInterval ? '结束剩余区间；已发生动作不会回滚。'
+   : `${detail.value?.interval ? '未执行的检查点' : '未执行的阶段'}将取消；已经执行的设备动作不会回滚。`, confirmText: '删除任务', confirmColor: '#a15343',
   success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || !props.active || props.taskId !== taskId) return
  cancelling.value = true; actionError.value = ''
@@ -192,6 +199,10 @@ button::after { border:0; }
 .current-device { grid-column:1/-1; color:#507764; font-size:10px; }
 .result.ok { color:#397b61; }.result.warn { color:#a27128; }.result.fail { color:#a15343; }.result.wait { color:#839189; }
 .no-devices { display:block; padding:12px 0; color:#839189; font-size:11px; }
+.task-report { margin-top:14px; padding:12px 14px; border:1px solid #e0e9e1; border-radius:10px; background:linear-gradient(#fdfefd,#f6f8f5); box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.05); }
+.report-title { display:block; color:#4d7663; font-size:11px; font-weight:700; }
+.report-summary { display:block; margin-top:5px; color:#263c2e; font-size:12px; font-weight:600; }
+.report-note { display:block; margin-top:5px; color:#85958a; font-size:11px; }
 .source { display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid #e2e9e3; color:#85958a; font-size:11px; }
 .task-delete { width:100%; height:38px; margin:18px 0 0; border:1px solid #ead6d1; border-radius:8px; background:#fff; color:#a15343; font-size:12px; line-height:36px; }
 .task-delete[disabled] { opacity:.55; }
