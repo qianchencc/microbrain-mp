@@ -18,13 +18,13 @@
    </view>
 
    <AssistantMarkdown v-if="turn.text" :content="turn.text" />
-   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" :read-only="readOnly" />
+   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" :read-only="readOnly || source === 'company'" />
    <template v-if="!readOnly">
-    <ActionPanel v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
+    <ActionPanel :source="source" v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
      @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
      @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
      @configure="$emit('configure', $event)" @browse="$emit('browse')" />
-    <TaskProposalCard v-for="task in turn.tasks || (turn.task ? [turn.task] : [])" :key="task.cancellationId || task.taskId" :task="task" :busy="busy"
+    <TaskProposalCard v-if="source !== 'company'" v-for="task in turn.tasks || (turn.task ? [turn.task] : [])" :key="task.cancellationId || task.taskId" :task="task" :busy="busy"
      @confirm="$emit('confirm-task', task)" @discard="$emit('discard-task', task)" @open="$emit('open-task', task)" />
    </template>
    <view v-else-if="turn.draft || turn.tasks?.length || turn.task || turn.result" class="read-only-boundary">此来源当前仅开放只读查询，操作能力尚未接入。</view>
@@ -47,7 +47,7 @@ import ThinkingOrb from './ThinkingOrb.vue'
 import ToolActivity from './ToolActivity.vue'
 import TaskProposalCard from './TaskProposalCard.vue'
 
-defineProps({ turn: { type: Object, required: true }, busy: Boolean, readOnly: Boolean, agentName: { type: String, default: '物联 Agent' } })
+defineProps({ turn: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean, readOnly: Boolean, agentName: { type: String, default: '物联 Agent' } })
 defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task'])
 </script>
 

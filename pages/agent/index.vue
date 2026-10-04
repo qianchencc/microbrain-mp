@@ -9,13 +9,13 @@
   <view class="conversation-shell">
    <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
-    <view v-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>只读查询公司环境、能耗与已接入的告警台账。设备控制和视频播放尚未接入。</view></view>
+    <view v-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>查询公司环境、能耗和告警，或确认智慧空调操作。自动化与视频播放尚未接入。</view></view>
     <view v-else-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
      <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turnIndex)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
      <view v-if="!isCompany && !regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
-     <AgentReplySurface :turn="turn" :busy="busy" :read-only="isCompany" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'"
+     <AgentReplySurface :turn="turn" :busy="busy" :source="agentSource" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
@@ -28,8 +28,8 @@
    </view>
   </scroll-view>
   </view>
-  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :placeholder="isCompany ? '查询公司环境、能耗或告警' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
-  <DraftSheetLayer :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
+  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
+  <DraftSheetLayer :source="agentSource" :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
    :settle-selection="settleSelection"
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
@@ -330,7 +330,7 @@ function selectDraft(turn, selected) {
     selectionDesired.delete(draftId)
     if (sameIds(desired, selectionSynced.get(draftId) ?? [])) continue
     try {
-     Object.assign(live.draft, await updateSelection(draftId, live.draft.revision, desired))
+     Object.assign(live.draft, await updateSelection(draftId, live.draft.revision, desired, agentSource.value))
      selectionSynced.set(draftId, desired)
     } catch (error) {
      const synced = selectionSynced.get(draftId)
@@ -353,7 +353,7 @@ async function restoreDraft(turn) {
  const draftId = turn.draft.draftId
  await settleSelection(draftId)
  try {
-  const updated = await restoreAction(draftId, (liveDraftTurn(draftId) ?? turn).draft?.revision ?? turn.draft.revision)
+  const updated = await restoreAction(draftId, (liveDraftTurn(draftId) ?? turn).draft?.revision ?? turn.draft.revision, agentSource.value)
   const live = liveDraftTurn(draftId) ?? turn
   if (live.draft) Object.assign(live.draft, updated)
  } catch (error) {
@@ -377,7 +377,7 @@ async function confirmDraft(turn) {
  confirmEpoch++
  let resync = false
  try {
-  const result = await confirmAction(draftId, current.draft.revision)
+  const result = await confirmAction(draftId, current.draft.revision, agentSource.value)
   const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
   live.result = result
   live.draft.status = result.status
@@ -427,7 +427,7 @@ async function cancelDraft(turn) {
  const draftId = turn.draft.draftId
  await settleSelection(draftId)
  try {
-  const cancelled = await cancelAction(draftId)
+  const cancelled = await cancelAction(draftId, agentSource.value)
   const live = liveDraftTurn(draftId) ?? turn
   if (live.draft) live.draft.status = cancelled.status
  } catch (error) { errorMessage.value = error.message }
@@ -440,7 +440,7 @@ async function revalidateDraft(turn) {
  await settleSelection(draftId)
  try {
   const live = liveDraftTurn(draftId) ?? turn
-  if (live.draft) Object.assign(live.draft, await revalidateAction(draftId, live.draft.revision))
+  if (live.draft) Object.assign(live.draft, await revalidateAction(draftId, live.draft.revision, agentSource.value))
  } catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }
@@ -449,7 +449,7 @@ async function retryAnswer(turn) {
  mutating.value = true
  const draftId = turn.draft.draftId
  try {
-  const summary = await retrySummary(draftId)
+  const summary = await retrySummary(draftId, agentSource.value)
   const live = liveDraftTurn(draftId) ?? turn
   if (live.result) live.result.summary = summary
  } catch (error) { errorMessage.value = error.message }

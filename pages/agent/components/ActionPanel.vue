@@ -15,7 +15,7 @@
   <view class="panel-body">
    <DeviceRoster v-show="tab === 'overview'" class="panel-pane" :entries="roster" :draft="draft" :observed="result?.observedStates" :active="tab === 'overview'" />
    <scroll-view v-show="tab === 'draft'" scroll-y enhanced :show-scrollbar="false" class="panel-pane panel-pane--draft">
-    <ActionDraftCard embedded :draft="draft" :result="result" :busy="busy"
+    <ActionDraftCard :source="source" embedded :draft="draft" :result="result" :busy="busy"
      @select="emit('select', $event)" @configure="emit('configure', $event)" @browse="emit('browse')"
      @updated="emit('updated', $event)" @editing="emit('editing', $event)" />
    </scroll-view>
@@ -34,7 +34,7 @@
    <text class="panel-foot__receipt">{{ result?.message || '正在执行，请稍候' }}</text>
   </view>
  </view>
- <ActionDraftCard v-else :draft="draft" :result="result" :busy="busy"
+ <ActionDraftCard :source="source" v-else :draft="draft" :result="result" :busy="busy"
   @select="emit('select', $event)" @confirm="emit('confirm')" @cancel="emit('cancel')"
   @revalidate="emit('revalidate')" @updated="emit('updated', $event)" @editing="emit('editing', $event)"
   @configure="emit('configure', $event)" @browse="emit('browse')" />
@@ -51,6 +51,7 @@ const props = defineProps({
 	roster: Array,
 	result: Object,
 	busy: Boolean,
+	source: { type: String, default: 'office' },
 })
 const emit = defineEmits(['confirm', 'cancel', 'select', 'revalidate', 'updated', 'editing', 'configure', 'browse'])
 

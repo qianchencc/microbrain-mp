@@ -45,7 +45,7 @@ import { receiptText } from '../conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
 import DeviceSheet from './DeviceSheet.vue'
 import ParameterEditor from './ParameterEditor.vue'
-const props = defineProps({ draft: { type: Object, default: null }, result: { type: Object, default: null }, baseline: { type: Object, default: null }, browser: Boolean, currentActionId: { type: String, default: '' }, openRequest: { type: Number, default: 0 }, busy: Boolean, settleSelection: { type: Function, default: null } })
+const props = defineProps({ source: { type: String, default: 'office' }, draft: { type: Object, default: null }, result: { type: Object, default: null }, baseline: { type: Object, default: null }, browser: Boolean, currentActionId: { type: String, default: '' }, openRequest: { type: Number, default: 0 }, busy: Boolean, settleSelection: { type: Function, default: null } })
 const emit = defineEmits(['close', 'select', 'confirm', 'updated', 'editing', 'revalidate', 'restore'])
 const initialWindowWidth = uni.getWindowInfo?.().windowWidth || uni.getSystemInfoSync().windowWidth || 320
 const states = ref({}), stateLoading = ref(false), page = ref(0), search = ref(''), searchMounted = ref(false), searchFocused = ref(false), groupIndex = ref(0), parameterError = ref(''), windowWidth = ref(initialWindowWidth)
@@ -146,7 +146,7 @@ async function refresh() {
  const current = ++stateRequest, draftId = props.draft.draftId
  stateLoading.value = true
  try {
-  const snapshot = await readDeviceStates(draftId)
+  const snapshot = await readDeviceStates(draftId, props.source)
   if (current === stateRequest && props.draft?.draftId === draftId && open.value) states.value = snapshot.states || {}
  } catch { if (current === stateRequest) states.value = {} }
  finally { if (current === stateRequest) stateLoading.value = false }
@@ -160,7 +160,7 @@ async function save(changes) {
  // 点选同步是异步串行的：先等它落地再取 revision，避免 409
  await props.settleSelection?.(props.draft.draftId)
  try {
-  const updated = await updateParameters(props.draft.draftId, props.draft.revision, changes)
+  const updated = await updateParameters(props.draft.draftId, props.draft.revision, changes, props.source)
   emit('updated', updated)
   if (props.browser) page.value = 0
   else emit('close')

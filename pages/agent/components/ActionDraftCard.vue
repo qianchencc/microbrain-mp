@@ -22,7 +22,7 @@ import { receiptPhase } from '../device-card-state.js'
 import { createStateRefresh } from '../state-refresh.mjs'
 import { receiptText } from '../conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
-const props = defineProps({ draft: {type:Object,required:true}, result:Object, busy:Boolean, embedded:Boolean })
+const props = defineProps({ source: { type: String, default: 'office' }, draft: {type:Object,required:true}, result:Object, busy:Boolean, embedded:Boolean })
 const emit = defineEmits(['confirm','cancel','select','revalidate','updated','editing','configure','browse'])
 const scopeOpen = ref(false), states = ref({}), stateLoading = ref(false)
 const pending = computed(() => props.draft.status === 'PENDING_CONFIRMATION')
@@ -41,7 +41,7 @@ async function refresh() {
  const current = ++stateRequest, draftId = props.draft.draftId
  stateLoading.value = true
  try {
-  const snapshot = await readDeviceStates(draftId)
+  const snapshot = await readDeviceStates(draftId, props.source)
   if (current === stateRequest && props.draft.draftId === draftId) states.value = snapshot.states || {}
  } catch { if (current === stateRequest) states.value = {} }
  finally { if (current === stateRequest) stateLoading.value = false }
