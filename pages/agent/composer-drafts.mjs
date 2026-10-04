@@ -6,7 +6,7 @@ const getDraftStore = () => {
 
 function draftKey(store, scope, source) {
 	if (!scope) return ''
-	if (store.activeScope && store.activeScope !== scope) store.drafts.clear()
+	if (store.activeScope && store.activeScope !== scope) { store.drafts.clear(); store.references?.clear() }
 	store.activeScope = scope
 	return `${scope}:${source}`
 }
@@ -24,4 +24,19 @@ export function takeComposerDraft(scope, source) {
 	const value = store.drafts.get(key)
 	store.drafts.delete(key)
 	return value
+}
+
+export function preserveComposerReference(scope, source, reference) {
+	const store = getDraftStore(), key = draftKey(store, scope, source)
+	if (!key) return
+	store.references ||= new Map()
+	store.references.set(key, reference ? { ...reference } : null)
+}
+
+export function takeComposerReference(scope, source) {
+	const store = getDraftStore(), key = draftKey(store, scope, source)
+	if (!key || !store.references?.has(key)) return undefined
+	const reference = store.references.get(key)
+	store.references.delete(key)
+	return reference
 }

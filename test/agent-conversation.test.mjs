@@ -1,6 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createTurn, applyEvent, restoreTurns } from '../pages/agent/conversation.mjs'
+import { createTurn, applyEvent, restoreTurns, restartTurn } from '../pages/agent/conversation.mjs'
+
+test('告警引用固定在原轮，恢复和编辑重试不替换成后来的引用', () => {
+	const reference = { type: 'customer_alert', content: '客户告警A：展示厅水浸' }
+	const turn = restoreTurns([{ id: 'turn-a', content: '如何处理？', events: [
+		{ type: 'run.started', reference }, { type: 'run.completed' },
+	] }])[0]
+	assert.deepEqual(turn.reference, reference)
+	restartTurn(turn, '现场确认前怎么处理？')
+	assert.deepEqual(turn.reference, reference)
+	assert.equal(turn.content, '现场确认前怎么处理？')
+})
 
 test('恢复以持久化草案和收尾为准，同一草案修订只出现一次', () => {
 	const draft = { draftId: 'draft', revision: 3, status: 'ACCEPTED', selectedActionIds: ['b'] }

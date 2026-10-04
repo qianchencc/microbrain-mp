@@ -7,6 +7,11 @@
    <image class="edit-strip__icon" src="/static/compose.svg" /><text class="edit-strip__label">正在编辑消息</text>
    <button class="edit-strip__cancel" aria-label="取消编辑" hover-class="pressed" @tap="$emit('cancel-edit')"><image class="edit-strip__cancel-icon" src="/static/close.svg" /></button>
   </view>
+  <view v-if="reference" class="edit-strip reference-strip">
+   <image class="edit-strip__icon" src="/static/compose.svg" />
+   <button class="reference-label" aria-label="查看客户告警引用" @tap="showReference"><text>客户告警引用 · {{ reference.content }}</text></button>
+   <button v-if="!editing" class="edit-strip__cancel" aria-label="移除告警引用" hover-class="pressed" @tap="$emit('remove-reference')"><image class="edit-strip__cancel-icon" src="/static/close.svg" /></button>
+  </view>
   <view class="composer" :class="{ focused, voice: voiceMode, held: phase === 'recording', cancel: cancelling, editing }">
    <button class="mode-button" :disabled="disabled || running || editing || phase !== 'idle'" :aria-label="voiceMode ? '切换文字输入' : '切换语音输入'" hover-class="pressed" @tap="toggleMode">
     <image class="mode-icon" :src="voiceMode ? '/static/compose.svg' : '/static/mic.svg'" />
@@ -35,8 +40,9 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { createVoiceInput } from '../voice-input.mjs'
 import { createFieldEchoGuard } from '../field-echo-guard.mjs'
 import { resolveKeyboardDock } from '../keyboard-dock.mjs'
-const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean, editing: Boolean, placeholder: String })
-const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice', 'keyboard', 'cancel-edit'])
+const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean, editing: Boolean, placeholder: String, reference: Object })
+const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice', 'keyboard', 'cancel-edit', 'remove-reference'])
+function showReference() { uni.showModal({ title: '客户告警引用', content: props.reference.content, showCancel: false }) }
 const focused = ref(false), voiceMode = ref(false), phase = ref('idle'), cancelling = ref(false), focusRequest = ref(false)
 // 字段非受控：打字（含拼音组合中态）不写回 :value，只向上同步；
 // 仅程序性改写（发送后清空等）经回声判定后落原生层，否则 IME 会被强制提交。
@@ -107,6 +113,9 @@ defineExpose({ interrupt })
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
 .composer-wrap { position:relative; width:100%; max-width:480px; margin:0 auto; }
+.reference-strip { border-left:2px solid #b69655; }
+.reference-label { flex:1; min-width:0; margin:0; padding:0; background:transparent; text-align:left; color:#64746a; font-size:11px; line-height:20px; }
+.reference-label::after { border:0; }.reference-label text { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .composer { display:flex; align-items:flex-end; gap:3px; padding:5px; min-height:46px; box-sizing:border-box; border:1px solid #cbd9d0; border-radius:24px; background:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.10),0 7px 22px rgba(28,57,42,.12); transition:border-color 160ms ease,box-shadow 160ms ease,transform 160ms cubic-bezier(.23,1,.32,1); }
 .composer.focused { border-color:#78a28b; box-shadow:0 0 0 2px rgba(56,117,84,.07),0 2px 4px rgba(28,57,42,.10),0 9px 26px rgba(28,57,42,.14); transform:translateY(-1px); }
 .mode-button,.send-button { display:flex; align-items:center; justify-content:center; margin:0; padding:0; width:36px; height:36px; flex:0 0 36px; line-height:36px; border-radius:50%; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }

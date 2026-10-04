@@ -44,7 +44,7 @@ export const restoreAction = (draftId, revision, source = 'office') => request(w
 export const cancelAction = (draftId, source = 'office') => request(withConversationSource(`/agent/action-drafts/${draftId}/cancel`, source), 'POST')
 export const cancelRun = (conversationId, source = 'office') => request(withConversationSource(`/agent/conversations/${conversationId}/runs/cancel`, source), 'POST')
 
-export const streamMessage = (conversationId, content, onEvent, focusRegionId, source = 'office') => {
+export const streamMessage = (conversationId, content, onEvent, focusRegionId, source = 'office', reference) => {
 	let task, watchdog, receivedChunk = false
 	const terminal = createTerminalTracker()
 	const decoder = createNdjsonStreamDecoder(event => {
@@ -55,7 +55,7 @@ export const streamMessage = (conversationId, content, onEvent, focusRegionId, s
 		const options = {
 			url: `${globalConfig.agentUrl}${withConversationSource(`/agent/conversations/${conversationId}/messages`, source)}`,
 			method: 'POST',
-			data: { content, ...(focusRegionId ? { focusRegionId } : {}) },
+			data: { content, ...(focusRegionId ? { focusRegionId } : {}), ...(reference ? { reference } : {}) },
 			dataType: 'text',
 			responseType: 'arraybuffer',
 			header: getAgentHeaders(true),

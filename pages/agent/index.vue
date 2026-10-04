@@ -14,6 +14,7 @@
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
      <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turnIndex)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
      <view v-if="!isCompany && !regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
+     <view v-if="turn.reference" class="turn-reference"><text>客户告警引用 · {{ turn.reference.content }}</text></view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
      <AgentReplySurface :turn="turn" :busy="busy" :source="agentSource" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
@@ -28,7 +29,7 @@
    </view>
   </scroll-view>
   </view>
-  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
+  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
   <DraftSheetLayer :source="agentSource" :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
    :settle-selection="settleSelection"
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
@@ -42,7 +43,7 @@ import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn } from './conversation.mjs'
-import { preserveComposerDraft, takeComposerDraft } from './composer-drafts.mjs'
+import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference } from './composer-drafts.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
 import { taskTime } from './task-detail-view.mjs'
 import { createPresentation } from './presentation.mjs'
@@ -61,6 +62,9 @@ const isCompany = computed(() => agentSource.value === 'company')
 const returnLabel = computed(() => fromDashboard.value ? '返回总览' : '办公室 Agent')
 const draftScope = ref('')
 const input = ref('')
+const composerReference = ref(null)
+let incomingReference, composerHydrated = false
+watch(composerReference, value => { if (draftScope.value) preserveComposerReference(draftScope.value, agentSource.value, value) }, { flush: 'sync' })
 watch(input, value => {
  if (draftScope.value) preserveComposerDraft(draftScope.value, agentSource.value, value)
 }, { flush: 'sync' })
@@ -81,6 +85,7 @@ function returnToOffice() {
 }
 function preserveCurrentComposerDraft() {
  if (draftScope.value) preserveComposerDraft(draftScope.value, agentSource.value, input.value)
+ if (draftScope.value) preserveComposerReference(draftScope.value, agentSource.value, composerReference.value)
 }
 const sheetDraftId = ref(''), sheetBrowser = ref(false), sheetActionId = ref(''), sheetOpenRequest = ref(0)
 const sheetTurn = computed(() => turns.value.find(turn => turn.draft?.draftId === sheetDraftId.value) ?? null)
@@ -161,7 +166,17 @@ async function restore() {
  const epoch = confirmEpoch
  try {
   await waitForAgentSession()
-  draftScope.value = getAgentStorageScope()
+  const scope = getAgentStorageScope()
+  if (draftScope.value && draftScope.value !== scope) { input.value = ''; composerReference.value = null; composerHydrated = false }
+  draftScope.value = scope
+  if (!composerHydrated) {
+   const savedDraft = takeComposerDraft(scope, agentSource.value)
+   if (savedDraft !== null) input.value = savedDraft
+   const savedReference = takeComposerReference(scope, agentSource.value)
+   if (savedReference !== undefined) composerReference.value = savedReference
+   if (incomingReference) { composerReference.value = incomingReference; incomingReference = null }
+   composerHydrated = true
+  }
   const restored = await restoreConversation(agentSource.value)
   const conversation = restored.conversation || await createConversation(agentSource.value)
   const returnedSource = restored.source ?? conversation.source ?? conversation.agent_source
@@ -235,6 +250,8 @@ async function sendMessage(voiceText) {
  turns.value.push(createTurn('local-' + Date.now() + '-' + sequence++, content))
  const current = turns.value[turns.value.length - 1]
  if (region) current.focusRegion = region
+ if (composerReference.value) current.reference = { ...composerReference.value }
+ composerReference.value = null
  if (typeof voiceText !== 'string') input.value = ''
  await runTurn(current, content)
 }
@@ -259,7 +276,7 @@ async function runTurn(current, content) {
   }
   follow()
  })
- const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion?.id, agentSource.value)
+ const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion?.id, agentSource.value, current.reference)
  activeRequest = request
  let transportInterrupted = false
  try { await request.promise; await presentation.settle() }
@@ -490,14 +507,26 @@ function clearHistory() {
   finally { mutating.value = false }
  } })
 }
-onLoad(options => { fromDashboard.value = options?.from === 'dashboard'; agentSource.value = options?.source === 'company' ? 'company' : 'office'; restore() })
+onLoad(options => {
+ fromDashboard.value = options?.from === 'dashboard'
+ agentSource.value = options?.source === 'company' || options?.alertPrompt !== undefined ? 'company' : 'office'
+ if (options?.alertPrompt !== undefined) {
+  let content = ''
+  try { content = decodeURIComponent(options.alertPrompt).trim() } catch { /* malformed customer quote */ }
+  if (content && content.length <= 2000) incomingReference = { type: 'customer_alert', content }
+  else uni.showToast({ title: '告警引用无效或超过2000字', icon: 'none' })
+ }
+ restore()
+})
 onShow(() => { visible = true; if (!isCompany.value) loadRegionFocus().catch(() => {}); if (!activeRequest) restore()
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 会话准备完成后由 restore 重新分区 */ }
- if (draftScope.value && draftScope.value !== scope) input.value = ''
+ if (draftScope.value && draftScope.value !== scope) { input.value = ''; composerReference.value = null; composerHydrated = false }
  draftScope.value = scope
  const savedDraft = takeComposerDraft(scope, agentSource.value)
  if (savedDraft !== null) input.value = savedDraft
+ const savedReference = takeComposerReference(scope, agentSource.value)
+ if (savedReference !== undefined) composerReference.value = savedReference
  const prefill = isCompany.value ? '' : consumeComposePrefill()
  if (prefill && !input.value.trim()) input.value = prefill })
 onHide(() => { preserveCurrentComposerDraft(); visible = false; composer.value?.interrupt(); clearTimeout(pollTimer); clearTimeout(taskPollTimer) })
@@ -522,6 +551,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .conversation { height:100%; }.conversation__inner { padding:24px 16px 32px; }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
 .region-divider { margin:12px 0 22px; text-align:center; font-size:11px; color:#839186; }
+.turn-reference { margin-bottom:8px; padding:6px 10px; border-left:2px solid #b69655; background:#f6f4ee; color:#758176; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
 /* 宿主必须定宽：组件宿主是 flex item、宽度靠内容反推，会让整条 fit-content 链塌到
    min-content（短消息每行一字）；定宽后气泡用 inline-block 收缩即可安全测量。 */
