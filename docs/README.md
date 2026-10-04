@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- 2026-10-04 站内收件箱方向已认可：首期统一通知记录＋站内收件箱返回原报告，双端差异与业务协调计划已整理（accepted 与建议分层），功能未实施；外部告警推送/复杂外部集成 deferred 且不阻塞站内。见[核心规格](../plan/2026-10-02-dual-agent-automation-spec.md)与[任务总表](../plan/2026-09-30-agent-task-register.md)。
+
 - 2026-10-04 Office 一次性独立区间 MVP 源码已实施：`interval` 独立起止＋至少一个自由检查点，正常扫描先执行到期检查点再在终点收口报告，最后检查点提前完成不提前终态、不自动生成终点动作。Runtime 初版 66/66、审查修正后窄回归 13/13＋typecheck/build，前端 21/21，HBuilder 微信编译通过；微信模拟器 18 张截图覆盖提案三检查点、区间进行中/设备执行中、详情检查点与执行报告、设备抽屉。创建/放弃点击、sheet 内滚动、设备时间轴深入、320/375 宽度、真机与真实设备均未验，蓝牙权限弹窗遮挡部分截图；联调为临时 `wx.request` mock 夹具（已恢复），本地 3200 未启动。见[任务总表最新回传](../plan/2026-09-30-agent-task-register.md)。
 
 - 2026-10-04 客户告警跳转后的Company引用与对话继续已接通：保留草稿、不自动发送、可移除、原轮恢复/重试引用固定；Runtime62/62、前端19/19、构建及微信夹具交互通过。正式客户回调与真机仍待对接，未开发告警发送/处置平台。见[引用闭环交接](../plan/2026-10-04-customer-alert-reference-handoff.md)。
@@ -28,7 +30,7 @@
 | 任务 | 权威入口 |
 |---|---|
 | 模型缓存的应用恢复、压缩与真实用量 | [10-03 恢复/压缩核验](./research/2026-10-03-model-cache-recovery-compaction-verification.md)（局部诊断通过，跨进程/生产/Langfuse 落库仍未验；无生产代码改动） |
-| 双 Agent 新规格与实施切片审阅 | [55 故事核心规格](../plan/2026-10-02-dual-agent-automation-spec.md)、[16 切片图](../plan/2026-10-02-dual-agent-automation-ticket-review.md)（核心与拆分已认可，tracker 已发布；票 01 已提交 `cb2a18c`，真实升级待验收；票 02 Runtime `ddb0d5f`、59/59，前端与联调见票 02 交接；局部决定/外部依赖保留） |
+| 双 Agent 新规格与实施切片审阅 | [核心规格](../plan/2026-10-02-dual-agent-automation-spec.md)、[16 切片图](../plan/2026-10-02-dual-agent-automation-ticket-review.md)（核心与拆分已认可，tracker 已发布；票 01 已提交 `cb2a18c`，真实升级待验收；票 02 Runtime `ddb0d5f`、59/59，前端与联调见票 02 交接；局部决定/外部依赖保留） |
 | 长期推进的理想成品、设计依据、全部待办关闭标准与外部阻塞 | [完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)（A 方向与核心 spec/切片已认可；局部决定及外部依赖保留） |
 | 仪表盘、双 Agent、自动化、通知、能耗与告警、模型缓存：全部已知待办、依赖缺口与 UI 定稿状态 | [任务总表](../plan/2026-09-30-agent-task-register.md)（含最新完整度核对、批准规格和逐票实施状态） |
 | 任务前台简化、交给 Agent 与引用到输入框：最终体验及剩余依赖 | [10-02 接手复核与体验基准](../plan/2026-10-02-agent-task-management-handoff.md)（方向已认可，最新场景原型见下行，非生产实现） |
