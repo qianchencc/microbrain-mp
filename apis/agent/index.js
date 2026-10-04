@@ -13,6 +13,7 @@ const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 const request = (url, method, data, timeout) => requestJson(globalConfig.agentUrl + url, method, data, getAgentHeaders(), timeout)
 
 export const createConversation = (source = 'office') => request('/agent/conversations', 'POST', conversationSourceBody(source))
+export const getCompanyDashboard = () => request('/agent/dashboard?source=company', 'GET')
 export const listRegions = () => request('/agent/regions', 'GET')
 export const markRegionSeen = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/seen`, 'POST')
 export const listRegionDevices = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/devices`, 'GET')

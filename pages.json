@@ -17,6 +17,10 @@
 			}
 		},
 		{
+			"path": "pages/agent/dashboard",
+			"style": { "navigationStyle": "custom", "navigationBarTitleText": "物联助手", "disableScroll": true }
+		},
+		{
 			"path": "pages/agent/index",
 			"style": {
 				"navigationBarTitleText": "物联 Agent",

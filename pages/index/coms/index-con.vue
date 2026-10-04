@@ -30,7 +30,7 @@
 						</view>
 						<scroll-view class="scroll-menu" scroll-x="true">
 							<view class="menu-one">
-								<view class="menu-item" @click="goPage('/pages/agent/index')">
+								<view class="menu-item" @click="goPage('/pages/agent/dashboard')">
 									<view class="agent-entry-icon">
 										<uni-icons type="chatboxes-filled" size="28" color="#176b54" />
 									</view>

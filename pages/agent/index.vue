@@ -2,8 +2,8 @@
  <view class="agent-page">
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
-  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'" :menu-action-label="isCompany ? '' : '打开公司 Agent'" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @source-action="openCompany">
-   <button v-if="isCompany" class="source-switch" hover-class="source-switch--pressed" :hover-stay-time="60" aria-label="返回办公室 Agent" @tap="returnToOffice"><uni-icons type="back" size="14" color="#6c7d73" /><text>办公室 Agent</text></button>
+  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'" :menu-action-label="isCompany ? '' : fromDashboard ? '返回总览' : '打开公司 Agent'" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @source-action="fromDashboard ? returnToOffice() : openCompany()">
+   <button v-if="isCompany" class="source-switch" hover-class="source-switch--pressed" :hover-stay-time="60" :aria-label="returnLabel" @tap="returnToOffice"><uni-icons type="back" size="14" color="#6c7d73" /><text>{{ returnLabel }}</text></button>
    <RegionChip v-if="!isCompany" nav @open="openRegion" />
   </AgentHeader>
   <view class="conversation-shell">
@@ -56,7 +56,9 @@ import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus, consumeCom
 function openRegion(region) { uni.navigateTo({ url: '/pages/agent/region?regionId=' + encodeURIComponent(region.id) }) }
 const conversationId = ref('')
 const agentSource = ref('office')
+const fromDashboard = ref(false)
 const isCompany = computed(() => agentSource.value === 'company')
+const returnLabel = computed(() => fromDashboard.value ? '返回总览' : '办公室 Agent')
 const draftScope = ref('')
 const input = ref('')
 watch(input, value => {
@@ -75,7 +77,7 @@ const busy = computed(() => isRunning.value || mutating.value || hasExecution.va
 const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
 function openCompany() { uni.navigateTo({ url: '/pages/agent/index?source=company' }) }
 function returnToOffice() {
- uni.navigateBack({ delta: 1, fail: () => uni.redirectTo({ url: '/pages/agent/index' }) })
+ uni.navigateBack({ delta: 1, fail: () => uni.redirectTo({ url: fromDashboard.value ? '/pages/agent/dashboard' : '/pages/agent/index' }) })
 }
 function preserveCurrentComposerDraft() {
  if (draftScope.value) preserveComposerDraft(draftScope.value, agentSource.value, input.value)
@@ -488,7 +490,7 @@ function clearHistory() {
   finally { mutating.value = false }
  } })
 }
-onLoad(options => { agentSource.value = options?.source === 'company' ? 'company' : 'office'; restore() })
+onLoad(options => { fromDashboard.value = options?.from === 'dashboard'; agentSource.value = options?.source === 'company' ? 'company' : 'office'; restore() })
 onShow(() => { visible = true; if (!isCompany.value) loadRegionFocus().catch(() => {}); if (!activeRequest) restore()
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 会话准备完成后由 restore 重新分区 */ }

@@ -95,9 +95,9 @@ async function view(d) {
 function alertsMeta(block) {
  const parts = []
  const records = block.records || []
- if (records.length && (block.total ?? 0) > records.length) parts.push(`共 ${block.total} 条，显示最近 ${records.length} 条`)
- else if (records.length) parts.push(`共 ${block.total ?? records.length} 条`)
- else parts.push(`近 ${block.windowDays || 0} 天无记录`)
+ if (records.length && (block.total ?? 0) > records.length) parts.push(`本次读取 ${block.total} 条，显示最近 ${records.length} 条`)
+ else if (records.length) parts.push(`本次读取 ${block.total ?? records.length} 条`)
+ else parts.push(block.windowDays ? `近 ${block.windowDays} 天无记录` : '本次查询无记录')
  if (block.latest?.time) parts.push(`最新一条 ${fmtDateTime(block.latest.time)}（${ageHint(block.latest.time)}）`)
  parts.push('平台处置标记不代表已恢复')
  return parts.join(' · ')
