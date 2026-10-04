@@ -2,6 +2,8 @@
 
 日期：2026-10-02。Status: approved breakdown — published locally; blocked tickets remain blocked。
 
+2026-10-04 用户修订推进目的和优先级：13/14 治理、11 客户办公室入口及正式部署/H5 后置；10 先做客户跳转后的告警引用继续；08 从已知“智慧”接口恢复接入；09 仪表盘不应整体等待 07 或治理/正式部署。详细现行范围见 [10-04 交接](2026-10-04-demonstration-delivery-handoff.md)。下方原切片作为历史拆分保留，tracker 已同步范围调整，未把后置票标完成。
+
 来源：[规格草案](2026-10-02-dual-agent-automation-spec.md)、[完整交付交接](2026-10-02-full-business-completion-handoff.md)。用户认可当前完整用户闭环、粒度和真实阻塞边；已发布到本地 tracker，一票一文件。D01/D02 按上一轮推荐决定，其余 D/E 仅阻塞对应切片。不会发布纯存储、纯 UI、测试设施或 Company 通用平台票。
 
 D/E 未决及外部编号定义见规格草案。01/02 等前置按可实际开始的 frontier 工作，不把此编号当强制串行队列。估算为新增/主要修改生产逻辑的初始范围，不含固定测试倍数，冻结单票再校正；不是报价或代码量承诺。
