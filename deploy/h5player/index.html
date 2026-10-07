@@ -237,7 +237,7 @@ function play(){
 $('btnRetry').addEventListener('click',function(){ urlParam=null; play(); });
 $('btnRelink').addEventListener('click',function(){ urlParam=null; play(); });
 function goBack(){ try{ if(window.wx&&wx.miniProgram&&wx.miniProgram.navigateBack){wx.miniProgram.navigateBack();return} }catch(e){}
-  if(history.length>1)history.back(); }
+  if(history.length>1)history.back(); else { showChrome(); $('footState').textContent='请使用微信返回或关闭此页'; } }
 $('btnBack').addEventListener('click',goBack);
 $('btnBack2').addEventListener('click',goBack);
 window.addEventListener('pagehide',teardown);

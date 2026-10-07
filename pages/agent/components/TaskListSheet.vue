@@ -69,6 +69,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { onShow, onHide } from '@dcloudio/uni-app'
+import { getAgentStorageScope } from '@/utils/agent-session'
 import { getTaskPlan, listAgentTasks, listTaskPlans } from '@/apis/agent'
 import { repeatText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
@@ -91,7 +93,10 @@ const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selected
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : '周期安排')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : '暂无周期计划')
-let requestId = 0, planRequest = 0
+let requestId = 0, planRequest = 0, loadedScope = '', pageVisible = true
+function resetIdentity() { tasks.value = []; plans.value = []; loadedTaskView = ''; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null }
+onHide(() => { pageVisible = false; ++requestId; ++planRequest; loading.value = false; planLoading.value = false })
+onShow(() => { pageVisible = true; if (props.open) void load() })
 let loadedTaskView = ''
 
 function startOfDay(date) {
@@ -147,20 +152,22 @@ function selectTaskRows(values, kind) {
 }
 
 async function load() {
- if (!props.open) return
+ if (!props.open || !pageVisible) return
  const current = ++requestId, kind = view.value
  if (kind !== 'plans' && loadedTaskView !== kind) tasks.value = []
  if (kind !== 'plans') loadedTaskView = kind
  loading.value = true
  error.value = ''
  try {
+  const scope = getAgentStorageScope(), source = props.source
+  if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
   if (kind === 'plans') {
    const result = await listTaskPlans({ source: props.source })
-   if (current === requestId && props.open && view.value === kind) plans.value = Array.isArray(result?.plans) ? result.plans : []
+   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) plans.value = Array.isArray(result?.plans) ? result.plans : []
   } else {
    const range = taskRange(kind)
    const result = await listAgentTasks({ source: props.source, ...range })
-   if (current === requestId && props.open && view.value === kind) tasks.value = selectTaskRows(result?.tasks, kind)
+   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) tasks.value = selectTaskRows(result?.tasks, kind)
   }
  } catch (cause) {
   if (current === requestId && props.open && view.value === kind) error.value = cause.message || '安排暂不可用'
@@ -174,12 +181,12 @@ function openTask(task) {
  selectedPlan.value = null
 }
 async function openPlan(plan) {
- const current = ++planRequest, source = props.source
+ const current = ++planRequest, source = props.source, scope = getAgentStorageScope()
  selectedPlan.value = plan; selectedTask.value = null; returnPlan.value = null
  planLoading.value = true
  try {
   const result = await getTaskPlan(plan.planId, source)
-  if (current === planRequest && props.open && props.source === source && selectedPlan.value?.planId === plan.planId) {
+  if (current === planRequest && pageVisible && props.open && scope === getAgentStorageScope() && props.source === source && selectedPlan.value?.planId === plan.planId) {
    if (!result.plan) throw new Error('计划不存在或已无权查看')
    selectedPlan.value = result.plan
   }

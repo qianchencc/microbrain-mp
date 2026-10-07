@@ -1,7 +1,7 @@
 <template>
- <DeviceSheet :open="open" expanded compact-header :title="sheetTitle" @close="$emit('close')">
-  <template v-if="depth > 0" #header-left><button class="back-button" aria-label="返回上一级" @tap="pop"><uni-icons type="left" size="17" color="#315846" /></button></template>
-  <template #header-right><view class="header-actions"><text class="sheet-meta">{{ depth === 0 ? regionName + ' · ' + devices.length + ' 台' : regionName }}</text><button class="state-refresh" aria-label="刷新设备状态" :disabled="stateLoading || !devices.length" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="#315846" /></button></view></template>
+ <DeviceSheet :open="open" expanded compact-header :title="sheetTitle" :back="backWithinDrawer" @close="$emit('close')">
+  <template v-if="depth > 0" #header-left><button class="back-button" aria-label="返回上一级" @tap="backWithinDrawer"><uni-icons type="left" size="17" color="#315846" /></button></template>
+  <template #header-right><view class="header-actions"><text v-if="depth === 0" class="sheet-meta">{{ regionName }} · {{ devices.length }} 台</text><button class="state-refresh" aria-label="刷新设备状态" :disabled="stateLoading || !devices.length" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="#315846" /></button></view></template>
   <template #header>
    <view v-if="depth === 0" class="filter-header" :class="{ searching }">
     <view class="group-controls">
@@ -41,14 +41,15 @@
      <view class="list-tail" />
     </scroll-view>
    </view>
-   <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceObservationView v-if="isObservationKind(devicePane.kind)" class="device-timeline-host" :device="devicePane" :reading="readings[devicePane.id]" /><DeviceTimelineView v-else class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
-   <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskDetailContent class="task-content-host" :active="Boolean(taskPane)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" @reference="$emit('reference', $event)" /></view>
+   <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceObservationView v-if="isObservationKind(devicePane.kind)" class="device-timeline-host" :device="devicePane" :reading="readings[devicePane.id]" /><DeviceTimelineView v-else ref="deviceTimeline" class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
+   <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskDetailContent class="task-content-host" :active="open && Boolean(taskPane)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" @reference="$emit('reference', $event)" /></view>
   </view>
  </DeviceSheet>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { onShow, onHide } from '@dcloudio/uni-app'
 import { listRegionDevices, listRegionDeviceStates } from '@/apis/agent'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import DeviceSheet from './DeviceSheet.vue'
@@ -61,9 +62,16 @@ import { createStateRefresh } from '../state-refresh.mjs'
 const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, refreshSignal: Number, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
 const emit = defineEmits(['close', 'count', 'cancelled', 'reference'])
 const modes = [{ key: 'kind', label: '类型' }, { key: 'location', label: '位置' }, { key: 'status', label: '状态' }]
+const pageVisible = ref(true)
+onHide(() => { pageVisible.value = false; stateRefresh.cancel(); ++stateRequest; ++directoryRequest; loading.value = false })
+onShow(() => { pageVisible.value = true; if (props.open) {
+ const scope = getAgentStorageScope()
+ loadDirectory(scope === loadedScope)
+} })
 const devices = ref([]), readings = ref({}), loading = ref(false), stateLoading = ref(false)
 const error = ref(''), stateError = ref(''), groupBy = ref('kind'), query = ref(''), searching = ref(false), searchFocused = ref(false)
 const activeDeviceId = ref(''), activeTask = ref(null)
+const deviceTimeline = ref(null)
 const deviceClosing = ref(null), taskClosing = ref(null)
 const paneTimers = {}
 const depth = computed(() => activeTask.value ? 2 : activeDeviceId.value ? 1 : 0)
@@ -92,37 +100,45 @@ function pop() {
  if (activeTask.value) { taskClosing.value = activeTask.value; activeTask.value = null; releasePane('task', taskClosing) }
  else if (activeDeviceId.value) { deviceClosing.value = activeDevice.value; activeDeviceId.value = ''; releasePane('device', deviceClosing) }
 }
+function backWithinDrawer() {
+ if (depth.value === 1 && deviceTimeline.value?.dismissCalendar()) return
+ if (depth.value) pop()
+ else if (searching.value) closeSearch()
+ else emit('close')
+}
 function resetStack() {
  activeDeviceId.value = ''; activeTask.value = null
  deviceClosing.value = null; taskClosing.value = null
  clearPaneTimer('device'); clearPaneTimer('task')
 }
 
-async function loadDirectory() {
+async function loadDirectory(preserveNavigation = false) {
+ preserveNavigation = preserveNavigation === true && loadedScope === getAgentStorageScope() && props.regionId === loadedRegionId
  const current = ++directoryRequest, regionId = props.regionId
- resetStack()
+ if (!preserveNavigation) resetStack()
  const scope = getAgentStorageScope()
- if (regionId === loadedRegionId && scope === loadedScope && Date.now() - loadedAt < 30000) {
+ if (!preserveNavigation && regionId === loadedRegionId && scope === loadedScope && Date.now() - loadedAt < 30000) {
   if (props.open) stateRefresh.auto()
   return
  }
- ++stateRequest; devices.value = []; readings.value = {}; stateLoading.value = false; error.value = ''; stateError.value = ''; emit('count', null)
+ ++stateRequest; if (!preserveNavigation) { devices.value = []; readings.value = {} };  stateLoading.value = false; error.value = ''; stateError.value = ''; emit('count', null)
  if (!regionId) return
  loading.value = true
  try {
   const result = await listRegionDevices(regionId)
-  if (current !== directoryRequest || regionId !== props.regionId) return
+  if (current !== directoryRequest || regionId !== props.regionId || !pageVisible.value || scope !== getAgentStorageScope()) return
   devices.value = result.devices || []
+  if (activeDeviceId.value && !devices.value.some(device => device.id === activeDeviceId.value)) resetStack()
   loadedRegionId = regionId; loadedScope = scope; loadedAt = Date.now()
   emit('count', devices.value.length)
   if (props.open) stateRefresh.auto()
- } catch (cause) { if (current === directoryRequest) error.value = cause.message || '设备目录暂不可用' }
+ } catch (cause) { if (current === directoryRequest) error.value = cause.message === 'request:fail' ? '设备目录暂不可用，请重试' : cause.message || '设备目录暂不可用' }
  finally { if (current === directoryRequest) loading.value = false }
 }
 
 async function loadStates() {
  const current = ++stateRequest, regionId = props.regionId
- if (!props.open || !regionId || !devices.value.length) return
+ if (!props.open || !pageVisible.value || !regionId || !devices.value.length) return
  stateLoading.value = true; stateError.value = ''
  try {
   const result = await listRegionDeviceStates(regionId)
@@ -136,7 +152,7 @@ const stateRefresh = createStateRefresh(loadStates)
 function openSearch() {
  clearTimeout(focusTimer)
  searching.value = true
- focusTimer = setTimeout(() => { searchFocused.value = true }, 220)
+ focusTimer = setTimeout(() => { searchFocused.value = true }, 0)
 }
 function closeSearch() { clearTimeout(focusTimer); searchFocused.value = false; searching.value = false; query.value = '' }
 
@@ -158,21 +174,21 @@ button { margin:0; padding:0; border:0; background:transparent; line-height:1.2;
 button::after { border:0; }
 .filter-header { position:relative; height:50px; padding:0 16px; display:flex; align-items:center; border-top:1px solid #edf0ed; border-bottom:1px solid #edf0ed; overflow:hidden; }
 .header-actions { display:flex; align-items:center; gap:6px; min-width:0; }
-.sheet-meta { max-width:170px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#78877e; font-size:11px; }
-.state-refresh { width:32px; height:32px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.sheet-meta { max-width:100px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#78877e; font-size:11px; }
+.state-refresh { width:44px; height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
 .state-refresh[disabled] { opacity:.5; }
 .spinning { animation:state-spin 900ms linear infinite; }
 @keyframes state-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce){.spinning{animation:none}}
-.back-button { width:30px; height:30px; margin-right:8px; border-radius:15px; background:#eef2ef; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.group-controls { width:100%; min-width:0; display:flex; align-items:center; gap:8px; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
-.search-controls { position:absolute; top:0; right:0; bottom:0; left:0; padding:0 16px; display:flex; align-items:center; gap:8px; opacity:0; transform:translateX(22px); pointer-events:none; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 170ms ease-out; }
+.back-button { width:44px; height:44px; margin-right:8px; border-radius:15px; background:#eef2ef; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.group-controls { width:100%; min-width:0; display:flex; align-items:center; gap:8px; transition:transform 200ms cubic-bezier(.32,.72,0,1),opacity 140ms ease-out; }
+.search-controls { position:absolute; top:0; right:0; bottom:0; left:0; padding:0 16px; display:flex; align-items:center; gap:8px; opacity:0; transform:translateX(22px); pointer-events:none; transition:transform 200ms cubic-bezier(.32,.72,0,1),opacity 140ms ease-out; }
 .filter-header.searching .group-controls { opacity:0; transform:translateX(-22px); pointer-events:none; }
 .filter-header.searching .search-controls { opacity:1; transform:none; pointer-events:auto; }
 .group-mode { width:auto; flex-shrink:0; height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:12px; display:flex; align-items:center; justify-content:center; transition:background-color 180ms ease,color 180ms ease,transform 130ms cubic-bezier(.23,1,.32,1); }
 .group-mode.active { background:#176b54; color:#fff; }
 .group-mode--pressed,.icon-button--pressed { transform:scale(.95); }
-.icon-button { width:32px; height:32px; border:1px solid #d8e1dc; border-radius:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.icon-button { width:44px; height:44px; border:1px solid #d8e1dc; border-radius:22px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .icon-button image { width:14px; height:14px; }
 .controls-spacer { flex:1; min-width:0; }
 .count { flex-shrink:0; white-space:nowrap; font-size:11px; color:#89958e; }
@@ -180,7 +196,7 @@ button::after { border:0; }
 .search-field image { width:14px; height:14px; flex-shrink:0; }
 .search-field input { flex:1; min-width:0; height:100%; font-size:13px; color:#24382d; }
 .drawer-content { min-height:0; flex:1; display:flex; flex-direction:column; position:relative; overflow:hidden; }
-.nav-pane { position:absolute; top:0; right:0; bottom:0; left:0; display:flex; flex-direction:column; background:#fcfdfc; transition:transform 260ms cubic-bezier(.32,.72,0,1),opacity 260ms cubic-bezier(.32,.72,0,1); will-change:transform; }
+.nav-pane { position:absolute; top:0; right:0; bottom:0; left:0; display:flex; flex-direction:column; background:#fcfdfc; transition:transform 200ms cubic-bezier(.32,.72,0,1),opacity 200ms cubic-bezier(.32,.72,0,1); will-change:transform; }
 .nav-pane.pane-before { transform:translateX(-12%); opacity:.8; pointer-events:none; }
 .nav-pane.pane-after { transform:translateX(26%); opacity:0; pointer-events:none; }
 .device-timeline-host { height:0; min-height:0; flex:1; overflow:hidden; }

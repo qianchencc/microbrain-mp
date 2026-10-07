@@ -1,0 +1,140 @@
+{
+  "date": "2026-10-07",
+  "evidence": "微信开发者工具 390×844 / SDK 3.17.2；合成 UI 数据，无真实控制或通知",
+  "pageAndSheet": [
+    {
+      "name": "Office explicit workbench entry",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "Device list to device pane",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "WeChat return closes calendar before device pane",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "Device record to same task report",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "WeChat return task to device",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "WeChat return device to list",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "WeChat return keyboard/search before page",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "Explicit whole sheet close",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "WeChat root sheet return keeps region",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "Page hide/show preserves device origin",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "Region return Office",
+      "page": "pages/agent/index"
+    },
+    {
+      "name": "Office return overview",
+      "page": "pages/agent/dashboard"
+    },
+    {
+      "name": "Overview enters Company",
+      "page": "pages/agent/index"
+    },
+    {
+      "name": "Company return overview",
+      "page": "pages/agent/dashboard"
+    },
+    {
+      "name": "New task goes Office from overview child",
+      "page": "pages/agent/index"
+    }
+  ],
+  "parameters": {
+    "results": [
+      "Open full draft device list",
+      "Search result long press opens parameters",
+      "Discard prompt cancel preserves edit",
+      "Discard confirmation returns original search",
+      "Save returns original search, not whole list",
+      "Confirmation failure retains sheet and actionable error"
+    ],
+    "modalDecisions": "wx.showModal 显示已目视；继续/放弃回调由夹具提供，未把 native.confirmModal 返回成功当作实际点击"
+  },
+  "reading": {
+    "results": [
+      "Editing mode/content restored after page unload",
+      "Cancel editing restores original unsent draft",
+      "Reading position restored instead of forced bottom"
+    ],
+    "before": 420,
+    "after": 420
+  },
+  "fallbacksAndRepeatedTap": [
+    "Direct Company entry has working overview fallback",
+    "Direct overview exits to customer service homepage",
+    "Company repeated taps add one page only",
+    "Direct workbench entry has Office parent fallback"
+  ],
+  "performance": {
+    "validSample": {
+      "sample": 1,
+      "entries": [
+        {
+          "name": "route",
+          "entryType": "navigation",
+          "startTime": 1791370497332,
+          "duration": 635,
+          "path": "pages/agent/index"
+        },
+        {
+          "name": "firstRender",
+          "entryType": "render",
+          "startTime": 1791370497894,
+          "duration": 42,
+          "path": "pages/agent/index"
+        },
+        {
+          "name": "firstPaint",
+          "entryType": "render",
+          "startTime": 1791370497967,
+          "path": "pages/agent/index"
+        },
+        {
+          "name": "firstContentfulPaint",
+          "entryType": "render",
+          "startTime": 1791370497967,
+          "path": "pages/agent/index"
+        }
+      ]
+    },
+    "limits": "其余两次性能条目不完整，不计入速度比较；夹具恢复与生产网络不可同口径比较"
+  },
+  "finalCalendarRecheck": [
+    {
+      "name": "Office explicit workbench entry",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "Device list to device pane",
+      "page": "pages/agent/region"
+    },
+    {
+      "name": "WeChat return closes calendar before device pane",
+      "page": "pages/agent/region"
+    }
+  ]
+}

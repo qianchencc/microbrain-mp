@@ -33,6 +33,8 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { onShow, onHide } from '@dcloudio/uni-app'
+import { getAgentStorageScope } from '@/utils/agent-session'
 import { listNotifications, markNotificationSeen } from '@/apis/agent'
 import DeviceSheet from './DeviceSheet.vue'
 import TaskDetailContent from './TaskDetailContent.vue'
@@ -42,7 +44,10 @@ const emit = defineEmits(['close', 'unread-count', 'reference'])
 const notifications = ref([]), selected = ref(null)
 const unreadCount = ref(0), nextCursor = ref('')
 const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref('')
-let requestId = 0
+let requestId = 0, loadedScope = '', pageVisible = true
+function resetIdentity() { notifications.value = []; selected.value = null; nextCursor.value = ''; unreadCount.value = 0; markError.value = ''; publishUnreadCount() }
+onHide(() => { pageVisible = false; ++requestId; loading.value = false; loadingMore.value = false })
+onShow(() => { pageVisible = true; if (props.open) void load(true) })
 const marking = new Set(), seenFailed = new Set()
 
 const labels = { completed: '执行完成', partial: '部分完成', failed: '执行失败', unconfirmed: '结果待核验', interrupted: '执行中断', missed: '执行错过', cancelled: '已取消', verified: '已核验', satisfied: '无需执行' }
@@ -62,14 +67,16 @@ function dateTime(value) {
 function publishUnreadCount() { emit('unread-count', unreadCount.value) }
 
 async function load(reset) {
- if (!props.open) return
+ if (!props.open || !pageVisible) return
  if (!reset && (loading.value || loadingMore.value || !nextCursor.value)) return
  const current = reset ? ++requestId : requestId
  if (reset) { loading.value = true; loadingMore.value = false; error.value = '' }
  else { loadingMore.value = true; error.value = '' }
  try {
+  const scope = getAgentStorageScope(), source = props.source
+  if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
   const result = await listNotifications({ source: props.source, limit: 30, ...(reset || !nextCursor.value ? {} : { before: nextCursor.value }) })
-  if (current !== requestId || !props.open) return
+  if (current !== requestId || !props.open || !pageVisible || source !== props.source || scope !== getAgentStorageScope()) return
   const incoming = result.notifications || []
   if (reset) notifications.value = incoming
   else {
@@ -102,7 +109,9 @@ async function onReportLoaded(taskId) {
  marking.add(notification.id)
  markError.value = ''
  try {
+  const scope = getAgentStorageScope(), source = props.source
   const result = await markNotificationSeen(notification.id, props.source)
+  if (scope !== getAgentStorageScope() || source !== props.source) return
   const item = notifications.value.find(value => value.id === notification.id)
   if (item && !item.readAt) {
    item.readAt = result.readAt
@@ -123,7 +132,8 @@ function retryMarkSeen() {
  void onReportLoaded(notification.taskId)
 }
 
-watch(() => props.open, value => {
+watch(() => [props.open, props.source], ([value, source], previous) => {
+ if (previous && source !== previous[1]) resetIdentity()
  if (value) void load(true)
  else { ++requestId; loading.value = false; loadingMore.value = false }
 })

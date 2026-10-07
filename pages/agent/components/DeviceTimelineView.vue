@@ -8,7 +8,7 @@
   </view>
   <text v-if="sampleMode" class="sample-label">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-area">
-   <RegionTimeline :key="selectedDate" calendar compact-calendar focus-items :date="selectedDate" :now="displayNow" :max-date="maxDate" :calendar-marks="marks" :calendar-error="calendarError" :items="items" @date-change="selectedDate = $event" @calendar-month="onMonth" @select="openTask">
+   <RegionTimeline ref="timeline" :key="selectedDate" calendar compact-calendar focus-items :date="selectedDate" :now="displayNow" :max-date="maxDate" :calendar-marks="marks" :calendar-error="calendarError" :items="items" @date-change="selectedDate = $event" @calendar-month="onMonth" @select="openTask">
     <template #card="{ item }"><view class="record-card"><text class="source" :class="item.sourceText === '即时' ? 'immediate' : 'scheduled'">{{ item.sourceText }}</text><text class="record-target">{{ item.label }}<text class="record-task">{{ item.taskLabel }}</text></text><text class="record-result" :class="item.resultTone">{{ item.resultText }}</text><text class="creator" :class="'cv-' + item.creatorVariant">{{ item.creatorName.slice(0, 1) }}</text></view></template>
     <template #empty>
      <view v-if="loading || error" class="empty"><text>{{ loading ? '正在读取设备记录' : error }}</text><button v-if="error" @tap="loadTimeline">重新加载</button></view>
@@ -30,6 +30,8 @@ import RegionTimeline from './RegionTimeline.vue'
 
 const props = defineProps({ device: Object, date: String, now: String, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
 const emit = defineEmits(['task'])
+const timeline = ref(null)
+defineExpose({ dismissCalendar: () => timeline.value?.dismissCalendar() || false })
 const selectedDate = ref(props.date), month = ref(props.date.slice(0, 7))
 const maxDate = computed(() => shiftDate(localDate(props.now), 7))
 const displayNow = computed(() => props.sampleMode ? `${selectedDate.value}T14:52:00+08:00` : props.now)
@@ -57,7 +59,7 @@ async function loadTimeline() {
  try {
   const result = await listDeviceTimeline(deviceId, date)
   if (current === timelineRequest) events.value = result.events || []
- } catch (cause) { if (current === timelineRequest) error.value = cause.message || '设备记录暂不可用' }
+ } catch (cause) { if (current === timelineRequest) error.value = String(cause.message || '').startsWith('request:fail') ? '设备记录暂不可用，请检查网络后重试' : cause.message || '设备记录暂不可用' }
  finally { if (current === timelineRequest) loading.value = false }
 }
 async function loadCalendar() {
