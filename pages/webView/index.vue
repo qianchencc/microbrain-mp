@@ -13,7 +13,7 @@
 	function obj2Query(obj) {
 		const keys = []
 		for (const key in obj) {
-			if (key !== 'path' && key !== 'noToken') {
+			if (key !== 'path' && key !== 'noToken' && key !== 'assistantVideo') {
 				keys.push(`${key}=${obj[key]}`)
 			}
 		}
@@ -28,6 +28,7 @@
 			}
 		},
 		onLoad: async function(option) {
+			if (option.assistantVideo === '1') uni.setNavigationBarTitle({ title: '实时画面' })
 			await checkToken()
 			if (!option.noToken) {
 				option.token = getTokenId()

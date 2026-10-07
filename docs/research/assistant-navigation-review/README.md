@@ -1,5 +1,7 @@
 # 物联助手导航检查证据
 
+本文件保留改造前证据。改造后见 [实际界面与验证](after/README.md) / [画面对照](after/index.html)；当前代码状态见 [导航改进交接](../../../plan/2026-10-07-assistant-navigation-improvement-handoff.md)。
+
 2026-10-07，源码基线 `c102a5e`。完整结论见 [检查报告](../../../plan/2026-10-07-page-navigation-audit.md)。[设计对照图](index.html)只展示导航结构候选，不是生产界面或批准规格；可直接用浏览器打开。
 
 ## 本轮画面

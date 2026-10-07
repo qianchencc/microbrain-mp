@@ -1,11 +1,6 @@
 <template>
  <view class="region-page">
-  <view class="nav" :style="{ paddingTop: navTop + 'px' }">
-   <view class="nav-row" :style="{ height: navBar + 'px', paddingRight: navInset + 'px' }">
-    <button class="nav-back" aria-label="返回" hover-class="nav-back--pressed" @tap="goBack"><uni-icons type="left" size="18" color="#315846" /></button>
-    <view class="nav-chip"><RegionChip workbench nav /></view>
-   </view>
-  </view>
+  <AssistantNav title="区域工作台" :back-label="backLabel" context @back="goBack"><RegionChip workbench nav /></AssistantNav>
   <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text>{{ tasks.length }} 条记录</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
   <text v-if="sampleMode" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-body">
@@ -26,7 +21,7 @@
    </RegionTimeline>
   </view>
   <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
-  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
+  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : emptySampleTasks" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
   <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
 </template>
@@ -45,12 +40,14 @@ import { localDate } from './timeline-geometry.mjs'
 import { calendarWindow, shiftDate, validCalendarDate } from './region-calendar.mjs'
 import { regionTimelineItems } from './region-timeline.mjs'
 import { regionSampleTasks, regionSampleTaskDetail } from './region-sample-tasks.mjs'
-import { navMetrics } from './nav-metrics.js'
+import AssistantNav from './components/AssistantNav.vue'
+import { backToParent, previousPageLabel, returnToOfficeConversation } from './navigation.mjs'
 const emptyArt = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80"><path d="M30 2c-9 12 9 22 0 38s9 26 0 38" fill="none" stroke="#c9d6ce" stroke-width="1.6"/><circle cx="31" cy="40" r="6" fill="#fff"/><circle cx="31" cy="40" r="4" fill="#ad711b"/></svg>')
-const { top: navTop, barHeight: navBar, rightInset: navInset } = navMetrics()
+const backLabel = ref('办公室 Agent')
 const error = ref(''), loading = ref(true), tasks = ref([]), sampleTasks = ref([]), sampleMode = ref(false)
 const deviceDrawerOpen = ref(false), deviceCount = ref(null)
 const deviceRefreshSignal = ref(0)
+const emptySampleTasks = Object.freeze([])
 const selectedTaskId = ref(''), sampleDetail = ref(null), sampleDate = ref('')
 const calendarMarks = ref([]), calendarMonth = ref(''), calendarError = ref(false)
 const now = ref(new Date().toISOString()), today = computed(() => localDate(now.value)), date = ref(localDate(now.value))
@@ -62,8 +59,9 @@ const sampleCalendarMarks = computed(() => {
  return sampleTasks.value.length && sampleDate.value >= from && sampleDate.value <= to
   ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(task.status)) }] : []
 })
+let viewScope = ''
 let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer, shownTimelineKey = ''
-onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || ''; initialTaskId = decodeURIComponent(query.taskId || '') })
+onLoad(query => { backLabel.value = previousPageLabel(getCurrentPages(), '办公室 Agent'); initialRegion = query.regionId || ''; initialDate = query.date || ''; initialTaskId = decodeURIComponent(query.taskId || '') })
 async function loadTimeline(silent = false) {
  const current = ++requestId, region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()
  const key = `${scope}:${region}:${selectedDate}:${sampleMode.value}`
@@ -119,20 +117,20 @@ function openTask(item) {
  selectedTaskId.value = item.id
  sampleDetail.value = sample
 }
-function goBack() { uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pages/agent/index' }) }) }
+function goBack() { backToParent('/pages/agent/index?source=office') }
 // 新建任务入口=回到对话：把当前区域固定为关注区域并预填含区域名的输入开头，真实创建仍走 Agent 确认流。
 function composeTask() {
  if (focusRegion.value) {
   selectFocusRegion(focusRegion.value.id)
   queueComposePrefill(`在 ${focusRegion.value.name} 新建任务：`)
  }
- uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pages/agent/index' }) })
+ returnToOfficeConversation()
 }
 function toggleSample() { sampleMode.value = !sampleMode.value; sampleTasks.value = []; if (sampleMode.value) sampleDate.value = date.value; selectedTaskId.value = ''; void loadVisibleTimeline(); loadCalendar() }
 async function load() {
  const currentLoad = ++loadId
  let loadedRegion = '', loadedDate = ''
- loadingDirectory = true; loading.value = !tasks.value.length; error.value = ''; sampleTasks.value = []; ++requestId
+ loadingDirectory = true; loading.value = !tasks.value.length; error.value = ''; ++requestId
  now.value = new Date().toISOString()
  try {
   await loadRegionFocus()
@@ -140,7 +138,7 @@ async function load() {
   if (initialRegion) { if (!selectFocusRegion(initialRegion)) initialTaskId = ''; initialRegion = '' }
   if (initialDate) {
    if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate
-   else initialTaskId = ''
+   else { initialTaskId = ''; uni.showToast({ title: '此安排超出当前可查看日期', icon: 'none' }) }
   }
   initialDate = ''
   loadedRegion = focusRegionId.value; loadedDate = date.value
@@ -150,10 +148,11 @@ async function load() {
    const item = tasks.value.find(task => task.id === initialTaskId || (task.occurrence && `occurrence:${task.occurrence.planId}:${task.occurrence.date}` === initialTaskId))
    initialTaskId = ''
    if (item) openTask(item)
+   else uni.showToast({ title: '记录已变化或当前无权查看', icon: 'none' })
   }
   loadCalendar()
  }
- catch (cause) { if (currentLoad === loadId) { error.value = cause.message || '区域暂不可用'; loading.value = false } }
+ catch (cause) { if (currentLoad === loadId) { error.value = cause.message === 'request:fail' ? '区域暂不可用，请检查网络后重试' : cause.message || '区域暂不可用'; loading.value = false } }
  finally {
   if (currentLoad === loadId) {
    loadingDirectory = false
@@ -182,20 +181,19 @@ function scheduleRefresh() {
 }
 watch(() => tasks.value.some(task => task.status === 'executing'), scheduleRefresh)
 onShow(() => {
+ let scope = ''
+ try { scope = getAgentStorageScope() } catch { /* 失效会话由 load 显示恢复入口 */ }
+ if (viewScope && scope !== viewScope) { tasks.value = []; sampleTasks.value = []; sampleMode.value = false; selectedTaskId.value = ''; sampleDetail.value = null; deviceDrawerOpen.value = false; calendarMarks.value = []; deviceCount.value = null }
+ viewScope = scope
  visible = true; void load().finally(scheduleRefresh)
 })
-onHide(() => { visible = false; clearTimeout(refreshTimer); deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
+onHide(() => { visible = false; clearTimeout(refreshTimer); ++requestId; ++calendarRequest; ++loadId })
 onUnload(() => { visible = false; clearTimeout(refreshTimer); deviceDrawerOpen.value = false; selectedTaskId.value = ''; ++requestId; ++calendarRequest; ++loadId })
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
 .region-page { height:100vh; box-sizing:border-box; background:#f4f7f5; color:#526759; display:flex; flex-direction:column; position:relative; }
-.nav { flex-shrink:0; background:linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom:1px solid rgba(44,75,58,.05); }
-.nav-row { display:flex; align-items:center; padding-left:10px; box-sizing:border-box; min-height:44px; }
-.nav-back { width:34px; height:34px; margin:0; padding:0; border-radius:17px; background:transparent; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
-.nav-back::after { border:0; }
-.nav-back--pressed { transform:scale(.92); }
-.nav-chip { flex:1; min-width:0; display:flex; justify-content:center; align-items:center; }
+
 .day-heading { padding:14px 23px 12px; display:flex; align-items:baseline; flex-wrap:wrap; gap:9px; color:#89958e; font-size:11px; }
 .day-title { color:#45564d; font-size:20px; font-weight:600; }
 .sample-toggle { margin:0 0 0 auto; padding:0; background:transparent; color:#176b54; font-size:11px; line-height:1.4; }

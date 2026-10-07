@@ -2,21 +2,22 @@
  <view class="agent-page">
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
-  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'" :menu-action-label="isCompany ? '' : fromDashboard ? '返回总览' : '打开公司 Agent'" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @source-action="fromDashboard ? returnToOffice() : openCompany()">
-   <button v-if="isCompany" class="source-switch" hover-class="source-switch--pressed" :hover-stay-time="60" :aria-label="returnLabel" @tap="returnToOffice"><uni-icons type="back" size="14" color="#6c7d73" /><text>{{ returnLabel }}</text></button>
-   <RegionChip v-if="!isCompany" nav @open="openRegion" />
+  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'" :back-label="returnLabel" :context="!isCompany" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @back="returnToOffice">
+   <view class="office-context"><RegionChip nav /><button class="workbench-link" hover-class="workbench-link--pressed" @tap="focusRegion && openRegion(focusRegion)"><text>{{ openingRegion ? '正在打开…' : '工作台' }}</text><uni-icons type="forward" size="12" color="#536b5c" /></button></view>
   </AgentHeader>
   <view class="conversation-shell">
-   <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" @scroll="handleScroll" @scrolltolower="nearBottom = true">
+   <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" :scroll-top="restoredScrollTop" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
-    <view v-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>查询公司环境、能耗和告警，或确认智慧空调操作。自动化与视频播放尚未接入。</view></view>
-    <view v-else-if="!turns.length" class="welcome"><text>物联助手</text><view>告诉我位置、设备和需要的操作。</view></view>
+    <view v-if="!isCompany && regionsError" class="region-notice"><text>区域暂不可用</text><button @tap="loadRegionFocus().catch(() => {})">重新读取</button></view>
+    <view v-if="!conversationId && !errorMessage" class="welcome connecting"><text>{{ isCompany ? '公司 Agent' : '办公室 Agent' }}</text><view>正在恢复对话…</view></view>
+    <view v-else-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>查询公司环境、能耗和告警，或确认智慧空调操作。自动化与视频播放尚未接入。</view></view>
+    <view v-else-if="!turns.length" class="welcome"><text>办公室 Agent</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
      <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turnIndex)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
      <view v-if="!isCompany && !regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
      <view v-if="turn.reference" class="turn-reference"><text>客户告警引用 · {{ turn.reference.content }}</text></view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
-     <AgentReplySurface :turn="turn" :busy="busy" :source="agentSource" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'"
+     <AgentReplySurface :turn="turn" :busy="busy" :source="agentSource" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
@@ -30,9 +31,9 @@
   </scroll-view>
   </view>
   <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
-  <DraftSheetLayer :source="agentSource" :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline"
+  <DraftSheetLayer v-if="sheetMounted" :source="agentSource" :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline" :error="sheetError"
    :settle-selection="settleSelection"
-   @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
+   @reconnect="reconnectSheet" @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
  </view>
@@ -43,30 +44,38 @@ import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail } from './conversation.mjs'
-import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference } from './composer-drafts.mjs'
+import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference, preserveComposerView, takeComposerView } from './composer-drafts.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
 import { mergeTaskPlan, taskNavigation } from './task-detail-view.mjs'
 import { createPresentation } from './presentation.mjs'
 import AgentComposer from './components/AgentComposer.vue'
 import AgentHeader from './components/AgentHeader.vue'
+import { backToParent, previousPageLabel } from './navigation.mjs'
 import AgentReplySurface from './components/AgentReplySurface.vue'
 import DraftSheetLayer from './components/DraftSheetLayer.vue'
 import UserMessage from './components/UserMessage.vue'
 import RegionChip from './components/RegionChip.vue'
-import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus, consumeComposePrefill } from './region-focus.js'
-function openRegion(region) { uni.navigateTo({ url: '/pages/agent/region?regionId=' + encodeURIComponent(region.id) }) }
+import { focusRegion, focusRegionId, regionsLoading, regionsError, loadRegionFocus, consumeComposePrefill } from './region-focus.js'
+const openingRegion = ref(false)
+function navigateRegion(url) {
+ if (openingRegion.value) return
+ openingRegion.value = true
+ uni.navigateTo({ url, fail: () => { openingRegion.value = false; uni.showToast({ title: '未能打开工作台，请重试', icon: 'none' }) } })
+}
+function openRegion(region) { navigateRegion('/pages/agent/region?regionId=' + encodeURIComponent(region.id)) }
 const conversationId = ref('')
 const agentSource = ref('office')
-const fromDashboard = ref(false)
 const isCompany = computed(() => agentSource.value === 'company')
-const returnLabel = computed(() => fromDashboard.value ? '返回总览' : '办公室 Agent')
+const returnLabel = ref('总览')
 const draftScope = ref('')
 const input = ref('')
 const composerReference = ref(null)
+const editingTurn = ref(null)
+let composerStash = ''
 let incomingReference, composerHydrated = false
 watch(composerReference, value => { if (draftScope.value) preserveComposerReference(draftScope.value, agentSource.value, value) }, { flush: 'sync' })
 watch(input, value => {
- if (draftScope.value) preserveComposerDraft(draftScope.value, agentSource.value, value)
+ if (draftScope.value && !editingTurn.value) preserveComposerDraft(draftScope.value, agentSource.value, value)
 }, { flush: 'sync' })
 const composer = ref(null)
 const turns = ref([])
@@ -74,19 +83,28 @@ const errorMessage = ref('')
 const isRunning = ref(false)
 const phase = ref('')
 const mutating = ref(false)
-const scrollIntoView = ref('')
+const scrollIntoView = ref(''), restoredScrollTop = ref(0)
+let currentScrollTop = 0, readingHydrated = false
 const nearBottom = ref(true)
 const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
 const busy = computed(() => isRunning.value || mutating.value || hasExecution.value)
 const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
-function openCompany() { uni.navigateTo({ url: '/pages/agent/index?source=company' }) }
-function returnToOffice() {
- uni.navigateBack({ delta: 1, fail: () => uni.redirectTo({ url: fromDashboard.value ? '/pages/agent/dashboard' : '/pages/agent/index' }) })
+function returnToOffice() { backToParent() }
+function clearIdentityView() {
+ activeRequest?.abort(); presentation?.cancel()
+ conversationId.value = ''; turns.value = []; regionChanges.value = []; draftBaselines.clear()
+ sheetDraftId.value = ''; sheetError.value = ''; isRunning.value = false; phase.value = ''
+ editingTurn.value = null; composerStash = ''; input.value = ''; composerReference.value = null
+ composerHydrated = false; readingHydrated = false; nearBottom.value = true; restoredScrollTop.value = 0; currentScrollTop = 0
 }
 function preserveCurrentComposerDraft() {
- if (draftScope.value) preserveComposerDraft(draftScope.value, agentSource.value, input.value)
- if (draftScope.value) preserveComposerReference(draftScope.value, agentSource.value, composerReference.value)
+ if (draftScope.value) preserveComposerDraft(draftScope.value, agentSource.value, editingTurn.value ? composerStash : input.value)
+ if (draftScope.value) {
+  preserveComposerReference(draftScope.value, agentSource.value, composerReference.value)
+  preserveComposerView(draftScope.value, agentSource.value, { conversationId: conversationId.value, scrollTop: currentScrollTop, nearBottom: nearBottom.value, edit: editingTurn.value ? { turnId: editingTurn.value.id, content: input.value, stash: composerStash } : null })
+ }
 }
+const sheetMounted = ref(false), sheetError = ref('')
 const sheetDraftId = ref(''), sheetBrowser = ref(false), sheetActionId = ref(''), sheetOpenRequest = ref(0)
 const sheetTurn = computed(() => turns.value.find(turn => turn.draft?.draftId === sheetDraftId.value) ?? null)
 // 面板跟随轮次上的草案对象本身（含过期态）：过期不再踢掉面板，转只读 + 面板内重新核验；
@@ -97,6 +115,7 @@ const draftBaselines = new Map()
 const sheetBaseline = computed(() => sheetTurn.value?.draft ? draftBaselines.get(sheetTurn.value.draft.draftId) ?? null : null)
 function openSheetEditor(turn, action) {
  if (!action || action.kind !== 'ac' || !turn.draft) return
+ sheetMounted.value = true; sheetError.value = ''
  sheetDraftId.value = turn.draft.draftId
  sheetBrowser.value = false
  sheetActionId.value = action.id
@@ -106,12 +125,14 @@ function openSheetEditor(turn, action) {
 // 更多设备浏览不受草案状态限制：过期/取消/已完成都可展开（只读）；仅要求草案存在
 function openSheetBrowser(turn) {
  if (!turn.draft) return
+ sheetMounted.value = true; sheetError.value = ''
  sheetDraftId.value = turn.draft.draftId
  sheetBrowser.value = true
  sheetActionId.value = ''
  sheetOpenRequest.value++
  uni.hideKeyboard()
 }
+async function reconnectSheet() { await restore(); sheetError.value = errorMessage.value }
 function closeSheet() { sheetDraftId.value = '' }
 let activeRequest, presentation, pollTimer, expiryTimer, taskPollTimer
 let disposed = false, visible = true, restoring = false, sequence = 0
@@ -130,7 +151,11 @@ function follow(force = false) {
  scrollIntoView.value = ''
  nextTick(() => { if (!disposed) scrollIntoView.value = 'agent-bottom' })
 }
-function handleScroll(event) { if (event.detail.deltaY > 5) nearBottom.value = false }
+function handleScroll(event) {
+ const top = event.detail.scrollTop || 0
+ if (top < currentScrollTop - 5 || event.detail.deltaY > 5) nearBottom.value = false
+ currentScrollTop = top
+}
 const tasksOf = turn => turn.tasks?.length ? turn.tasks : turn.task ? [turn.task] : []
 function schedule() {
  clearTimeout(pollTimer)
@@ -168,11 +193,11 @@ async function restore() {
  try {
   await waitForAgentSession()
   const scope = getAgentStorageScope()
-  if (draftScope.value && draftScope.value !== scope) { input.value = ''; composerReference.value = null; composerHydrated = false }
+  if (draftScope.value && draftScope.value !== scope) clearIdentityView()
   draftScope.value = scope
   if (!composerHydrated) {
    const savedDraft = takeComposerDraft(scope, agentSource.value)
-   if (savedDraft !== null) input.value = savedDraft
+   if (savedDraft !== null && !editingTurn.value) input.value = savedDraft
    const savedReference = takeComposerReference(scope, agentSource.value)
    if (savedReference !== undefined) composerReference.value = savedReference
    if (incomingReference) { composerReference.value = incomingReference; incomingReference = null }
@@ -182,7 +207,7 @@ async function restore() {
   const conversation = restored.conversation || await createConversation(agentSource.value)
   const returnedSource = restored.source ?? conversation.source ?? conversation.agent_source
   if (returnedSource && returnedSource !== agentSource.value) throw new Error('会话来源与当前入口不一致')
-  if (disposed) return
+  if (disposed || getAgentStorageScope() !== scope) return
   // 快照可能取于确认请求到达服务端之前（EXECUTING 提交前的待确认旧态）：
   // 跨越确认起点的快照整表丢弃，由确认结果写回或下一轮轮询收口。
   if (epoch !== confirmEpoch) { schedule(); return }
@@ -197,16 +222,24 @@ async function restore() {
   isRunning.value = Boolean(conversation.running)
   if (!isRunning.value) turns.value.forEach(turn => { turn.running = false })
   errorMessage.value = ''
+  if (!readingHydrated) {
+   const view = takeComposerView(draftScope.value, agentSource.value)
+   readingHydrated = true
+   if (view?.conversationId === conversationId.value) {
+    nearBottom.value = view.nearBottom
+    nextTick(() => { restoredScrollTop.value = view.scrollTop || 0 })
+    const turn = view.edit && turns.value.find(item => item.id === view.edit.turnId)
+    if (turn && canRecoverTurn(turn, turn === turns.value.at(-1))) { composerStash = view.edit.stash; editingTurn.value = turn; input.value = view.edit.content }
+   }
+  }
   follow()
   schedule()
   if (!isCompany.value && turns.value.some(turn => tasksOf(turn).some(task => task.repeat && task.created))) void refreshScheduledTasks()
- } catch (error) { if (!disposed) { errorMessage.value = error.message; schedule() } }
+ } catch (error) { if (!disposed) { errorMessage.value = error.message === 'request:fail' ? '暂时无法连接，请检查网络后重试' : error.message; schedule() } }
  finally { restoring = false }
 }
 // 消息编辑收编进主输入框（全页面单一键盘链路）：进入编辑暂存 composer 草稿并预填原文，
 // 取消/提交后还原草稿；编辑期间轮次被整表回读替换或失格时自动退出编辑态。
-const editingTurn = ref(null)
-let composerStash = ''
 function beginEdit(turn) {
  if (busy.value || !canRecoverTurn(turn, turns.value.at(-1) === turn)) return
  composerStash = input.value
@@ -382,6 +415,7 @@ async function restoreDraft(turn) {
  finally { mutating.value = false; schedule() }
 }
 async function confirmDraft(turn) {
+ sheetError.value = ''
  if (busy.value || turn.draft?.status !== 'PENDING_CONFIRMATION') return
  const draftId = turn.draft.draftId
  mutating.value = true
@@ -403,7 +437,7 @@ async function confirmDraft(turn) {
  } catch (error) {
   const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
   if (['REJECTED', 'INTERRUPTED'].includes(error.data?.status)) { live.result = error.data; live.draft.status = error.data.status }
-  else { errorMessage.value = error.message; resync = true }
+  else { errorMessage.value = String(error.message || '').startsWith('request:fail') ? '连接中断，未取得执行结果。请重新读取回执。' : error.message; if (sheetDraftId.value === draftId) sheetError.value = errorMessage.value; resync = true }
  } finally { confirming.delete(draftId); mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
@@ -438,7 +472,7 @@ async function discardTaskProposal(task) {
 function openTaskRegion(task) {
  const target = taskNavigation(task)
  if (!target) return
- uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(target.regionId)}&date=${encodeURIComponent(target.date)}&taskId=${encodeURIComponent(target.taskId)}` })
+ navigateRegion(`/pages/agent/region?regionId=${encodeURIComponent(target.regionId)}&date=${encodeURIComponent(target.date)}&taskId=${encodeURIComponent(target.taskId)}`)
 }
 
 async function cancelDraft(turn) {
@@ -511,8 +545,9 @@ function clearHistory() {
  } })
 }
 onLoad(options => {
- fromDashboard.value = options?.from === 'dashboard'
+ returnLabel.value = previousPageLabel(getCurrentPages())
  agentSource.value = options?.source === 'company' || options?.alertPrompt !== undefined ? 'company' : 'office'
+ uni.setNavigationBarTitle({ title: isCompany.value ? '公司 Agent' : '办公室 Agent' })
  if (options?.alertPrompt !== undefined) {
   let content = ''
   try { content = decodeURIComponent(options.alertPrompt).trim() } catch { /* malformed customer quote */ }
@@ -521,30 +556,34 @@ onLoad(options => {
  }
  restore()
 })
-onShow(() => { visible = true; if (!isCompany.value) loadRegionFocus().catch(() => {}); if (!activeRequest) restore()
+onShow(() => { visible = true; openingRegion.value = false; if (!isCompany.value) loadRegionFocus().catch(() => {}); if (!activeRequest) restore()
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 会话准备完成后由 restore 重新分区 */ }
- if (draftScope.value && draftScope.value !== scope) { input.value = ''; composerReference.value = null; composerHydrated = false }
+ if (draftScope.value && draftScope.value !== scope) clearIdentityView()
  draftScope.value = scope
  const savedDraft = takeComposerDraft(scope, agentSource.value)
- if (savedDraft !== null) input.value = savedDraft
+ if (savedDraft !== null && !editingTurn.value) input.value = savedDraft
  const savedReference = takeComposerReference(scope, agentSource.value)
  if (savedReference !== undefined) composerReference.value = savedReference
  const prefill = isCompany.value ? '' : consumeComposePrefill()
- if (prefill && !input.value.trim()) input.value = prefill })
+ if (prefill) {
+  if (!input.value.trim() && !editingTurn.value) input.value = prefill
+  else uni.showModal({ title: '已有未发送内容', content: '是否用当前区域的新建任务引导替换输入？原草稿可选择保留。', confirmText: '替换输入', cancelText: '保留草稿', success: result => { if (result.confirm) { cancelEdit(); input.value = prefill } } })
+ } })
 onHide(() => { preserveCurrentComposerDraft(); visible = false; composer.value?.interrupt(); clearTimeout(pollTimer); clearTimeout(taskPollTimer) })
 onUnload(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
 <style scoped>
 
+.region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:12px; padding:8px 0; }.region-notice button { min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:12px; }.region-notice button::after { border:0; }
+.office-context { display:flex; align-items:center; justify-content:space-between; gap:8px; }.workbench-link { height:44px; display:flex; align-items:center; gap:4px; flex-shrink:0; margin:0; padding:0 6px; background:transparent; color:#536b5c; font-size:12px; }.workbench-link::after { border:0; }.workbench-link--pressed { opacity:.65; }
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
 .agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; }
-.source-switch { display:flex; align-items:center; gap:3px; min-height:34px; margin:0 6px; padding:0 8px; border:1px solid #d9e3dc; border-radius:8px; background:#f8faf8; color:#52665a; font-size:11px; line-height:1; transition:transform 140ms cubic-bezier(.23,1,.32,1),background-color 140ms ease; }
-.source-switch::after { border:0; }.source-switch--pressed { transform:scale(.97); background:#edf3ee; }
+
 .agent-status { display:flex; align-items:center; justify-content:space-between; padding:0 32rpx; min-height:72rpx; background:#fafcfb; border-bottom:1rpx solid #e0e7e2; color:#738278; font-size:23rpx; }
 .clear { width:80rpx; height:72rpx; line-height:72rpx; padding:0; margin:0; background:transparent; }.clear::after { border:0; }
 /* scroll-view 禁止直接用 flex:1/height:0 撑高（微信 webview 已知塌陷：盒子 0 高、

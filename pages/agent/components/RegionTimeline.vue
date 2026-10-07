@@ -50,6 +50,7 @@ function closeCalendar() {
  clearTimeout(calTimer)
  calTimer = setTimeout(() => { calMounted.value = false }, 200)
 }
+defineExpose({ dismissCalendar: () => { if (!calMounted.value) return false; closeCalendar(); return true } })
 const scene = computed(() => createTimeline({ date: props.date, items: props.items, now: props.now, width: width.value, days: props.days }))
 const svgImage = computed(() => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(timelineSvg(scene.value)))
 function measure() {

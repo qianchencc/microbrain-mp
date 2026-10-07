@@ -12,13 +12,13 @@
    <view class="panel-stat panel-stat--act"><text class="panel-stat__num">{{ stats.operate }}</text><text class="panel-stat__label">拟执行</text></view>
    <view class="panel-stat"><text class="panel-stat__num">{{ stats.idle }}</text><text class="panel-stat__label">不动</text></view>
   </view>
-  <view class="panel-body">
+  <view class="panel-body" :class="{ 'panel-body--overview': tab === 'overview' }">
    <DeviceRoster v-show="tab === 'overview'" class="panel-pane" :entries="roster" :draft="draft" :observed="result?.observedStates" :active="tab === 'overview'" />
-   <scroll-view v-show="tab === 'draft'" scroll-y enhanced :show-scrollbar="false" class="panel-pane panel-pane--draft">
+   <view v-show="tab === 'draft'" class="panel-pane--draft">
     <ActionDraftCard :source="source" embedded :draft="draft" :result="result" :busy="busy"
      @select="emit('select', $event)" @configure="emit('configure', $event)" @browse="emit('browse')"
      @updated="emit('updated', $event)" @editing="emit('editing', $event)" />
-   </scroll-view>
+   </view>
   </view>
   <view v-if="pending" class="panel-foot">
    <text class="panel-foot__count">已选 {{ selectedCount }} 项</text>
@@ -73,9 +73,7 @@ const selectedCount = computed(() => props.draft.selectedActionIds?.length ?? 0)
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
-/* 操作面板 = 概览+草案一体卡：外卡 chrome + 固定体高 + 常驻底栏。
-   铁律：切页签只 v-show 不 v-if（保住草案卡 states 缓存与滚动位）；
-   body 固定 300px，两页各自内部滚动，外卡高度不随页签/内容变化。 */
+/* 草案随对话自然展开；只有长概览列表保留有界浏览区，避免两层纵向滚动争抢。切换仍用 v-show 保留选择。 */
 .panel { margin-top:12px; padding:12px; border-radius:16px; background:linear-gradient(#fdfefd,#f6f8f5); box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(26,55,43,.10),0 1px 2px rgba(28,57,42,.07),0 10px 24px rgba(28,57,42,.07); }
 .panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .panel-meta { flex:1; min-width:0; color:#63756b; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -89,7 +87,8 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .panel-stat__num { display:block; color:#17251f; font-size:18px; font-weight:650; line-height:1.15; letter-spacing:-.3px; font-variant-numeric:tabular-nums; }
 .panel-stat--act .panel-stat__num { color:#176b54; }
 .panel-stat__label { display:block; margin-top:1px; color:#8b9991; font-size:10px; }
-.panel-body { position:relative; height:300px; margin-top:10px; overflow:hidden; }
+.panel-body { position:relative; margin-top:10px; overflow:hidden; }
+.panel-body--overview { height:300px; }
 .panel-pane { position:absolute; inset:0; }
 .panel-pane--draft::-webkit-scrollbar { display:none; }
 .panel-foot { display:flex; align-items:center; justify-content:flex-end; gap:4px; margin-top:8px; padding-top:8px; border-top:.5px solid #dbe3dd; }

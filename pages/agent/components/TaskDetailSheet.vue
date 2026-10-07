@@ -13,6 +13,6 @@ defineEmits(['close', 'cancelled'])
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
-.region-name { max-width:215px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#839189; font-size:11px; }
+.region-name { max-width:120px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#839189; font-size:11px; }
 .content-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
 </style>

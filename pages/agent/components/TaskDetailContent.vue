@@ -37,12 +37,14 @@
     <text class="report-note">按已保存的执行回执汇总；上方记录如实保留受理与未核验结果</text>
    </view>
    <view class="source"><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId">对话 {{ detail.source.conversationId.slice(0, 8) }}</text></view>
-   <button v-if="detail.canCancel && !sampleTask" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="deleteTask">删除任务</button>
+   <button v-if="detail.canCancel && !sampleTask" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="deleteTask">取消任务</button>
   </view>
  </scroll-view>
 </template>
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { onShow, onHide } from '@dcloudio/uni-app'
+import { getAgentStorageScope } from '@/utils/agent-session'
 import { cancelTask, getTaskDetail, getTaskLightingStates } from '@/apis/agent'
 import { taskDetailView } from '../task-detail-view.mjs'
 import { createStateRefresh } from '../state-refresh.mjs'
@@ -65,37 +67,60 @@ const currentSummary = computed(() => {
  const unknown = lightIds.value.length - known.length
  return [on && `${on} 开启`, known.length - on && `${known.length - on} 关闭`, unknown && `${unknown} 未知`].filter(Boolean).join(' · ')
 })
-let requestId = 0, currentRequestId = 0, refreshTimer, observedTaskId = ''
+let requestId = 0, currentRequestId = 0, refreshTimer, observedTaskId = '', pageVisible = true, wasHidden = false, detailScope = ''
+function startPolling() {
+ clearInterval(refreshTimer)
+ if (props.active && pageVisible && !props.sampleTask) refreshTimer = setInterval(() => {
+  if (['scheduled', 'executing'].includes(task.value?.status)) load(true)
+ }, 10000)
+}
+onHide(() => { pageVisible = false; wasHidden = true; clearInterval(refreshTimer); stateRefresh.cancel(); ++requestId; ++currentRequestId; loading.value = false; currentLoading.value = false })
+onShow(() => {
+ pageVisible = true
+ let scope = ''
+ try { scope = getAgentStorageScope() } catch { /* 失效身份不保留上一人的报告 */ }
+ if (scope !== detailScope) { task.value = null; currentStates.value = {}; expandedPhases.value = [] }
+ if (wasHidden && props.active) { load(true); startPolling() }
+ wasHidden = false
+})
 function togglePhase(id) {
  expandedPhases.value = expandedPhases.value.includes(id) ? expandedPhases.value.filter(value => value !== id) : [...expandedPhases.value, id]
 }
 async function load(silent = false) {
  const current = ++requestId, taskId = props.taskId
- if (!props.active || !props.taskId) return
+ let scope = ''
+ try { scope = getAgentStorageScope() } catch { /* 接口仍负责展示身份错误 */ }
+ if (scope !== detailScope) { task.value = null; currentStates.value = {}; expandedPhases.value = [] }
+ detailScope = scope
+ if (!pageVisible || !props.active || !props.taskId) return
  if (!silent) { task.value = null; error.value = ''; loading.value = false }
  if (props.sampleTask) { task.value = props.sampleTask; return }
  if (!silent) loading.value = true
  try {
   const result = await getTaskDetail(taskId)
-  if (current === requestId && props.active && props.taskId === taskId) {
-   if (!result?.task) { error.value = '任务不存在或没有查看权限'; return }
+  if (current === requestId && pageVisible && props.active && props.taskId === taskId && scope === getAgentStorageScope()) {
+   if (!result?.task) { task.value = null; currentStates.value = {}; error.value = '任务不存在或没有查看权限'; return }
    const previousPhases = new Map((task.value?.phases || []).map(phase => [phase.id, phase.status]))
+   error.value = ''
    task.value = result.task
    if (result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
     if (!silent) void stateRefresh.auto()
     else if (result.task.phases.some(phase => ['pending', 'executing'].includes(previousPhases.get(phase.id)) && !['pending', 'executing'].includes(phase.status))) stateRefresh.after(1000)
    }
   }
- } catch (cause) { if (!silent && current === requestId) error.value = cause.message || '任务暂不可用' }
+ } catch (cause) { if (current === requestId) {
+  if (cause.data || !scope) { task.value = null; currentStates.value = {} }
+  error.value = String(cause.message || '').startsWith('request:fail') ? '任务暂不可用，请检查网络后重新读取' : cause.message || '任务暂不可用'
+ } }
  finally { if (!silent && current === requestId) loading.value = false }
 }
 async function loadCurrentStates(taskId = props.taskId) {
  const current = ++currentRequestId
- if (!props.active || !taskId || props.sampleTask) return
+ if (!pageVisible || !props.active || !taskId || props.sampleTask) return
  currentError.value = ''; currentLoading.value = true
  try {
   const result = await getTaskLightingStates(taskId)
-  if (current === currentRequestId && props.active && props.taskId === taskId) {
+  if (current === currentRequestId && pageVisible && props.active && props.taskId === taskId) {
    currentStates.value = Object.fromEntries((result.states || []).map(state => [state.id, state]))
   }
  } catch (cause) { if (current === currentRequestId) { currentStates.value = {}; currentError.value = cause.message || '当前状态暂不可用' } }
@@ -106,9 +131,9 @@ async function deleteTask() {
  if (!detail.value?.canCancel || cancelling.value) return
  const taskId = props.taskId, version = task.value.version
  const settledInterval = detail.value?.interval && !detail.value.phases.some(phase => phase.status === 'pending')
- const confirmed = await new Promise(resolve => uni.showModal({ title: '删除任务',
+ const confirmed = await new Promise(resolve => uni.showModal({ title: '取消任务',
   content: settledInterval ? '结束剩余区间；已发生动作不会回滚。'
-   : `${detail.value?.interval ? '未执行的检查点' : '未执行的阶段'}将取消；已经执行的设备动作不会回滚。`, confirmText: '删除任务', confirmColor: '#a15343',
+   : `${detail.value?.interval ? '未执行的检查点' : '未执行的阶段'}将取消；已经执行的设备动作不会回滚。`, confirmText: '取消任务', confirmColor: '#a15343',
   success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || !props.active || props.taskId !== taskId) return
  cancelling.value = true; actionError.value = ''
@@ -117,7 +142,7 @@ async function deleteTask() {
   await load(true)
   emit('cancelled')
  } catch (cause) {
-  actionError.value = cause.message || '删除失败，请刷新后重试'
+  actionError.value = cause.message || '取消失败，请刷新后重试'
   await load(true)
  } finally { cancelling.value = false }
 }
@@ -130,11 +155,9 @@ watch(() => [props.active, props.taskId, props.sampleTask], () => {
  expandedPhases.value = []
  if (props.active) {
   load()
-  if (!props.sampleTask) refreshTimer = setInterval(() => {
-   if (['scheduled', 'executing'].includes(task.value?.status)) load(true)
-  }, 10000)
+  startPolling()
  }
- else { ++requestId; loading.value = false; task.value = null }
+ else { ++requestId; loading.value = false } // 保留关闭动画的结果快照；下次打开由 load 重新读取。
 }, { immediate: true })
 onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId })
 </script>

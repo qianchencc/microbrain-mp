@@ -1,6 +1,6 @@
 <template>
  <view class="dashboard">
-  <view class="nav" :style="{ paddingTop: top + 'px' }"><view class="nav-row" :style="{ height: barHeight + 'px', paddingRight: rightInset + 'px' }"><button class="back" aria-label="返回服务首页" @tap="back"><uni-icons type="back" size="20" color="#345541" /></button><text>物联助手</text></view></view>
+  <AssistantNav title="物联助手" back-label="服务首页" @back="back" />
   <scroll-view class="dashboard-scroll" scroll-y enhanced :show-scrollbar="false">
    <view class="content">
     <view class="headline"><view><text class="eyebrow">COMPANY OVERVIEW</text><text class="title">公司运行总览</text></view><button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#567461" /></button></view>
@@ -36,10 +36,10 @@
     </view>
     <button class="ledger" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '台账暂不可用' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : snapshot ? '本次读取没有事件记录' : '等待台账数据' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>条记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
     <text class="ledger-note">本次读取的历史台账，不表示当前仍在报警或已经恢复</text>
-    <button class="office-gateway" hover-class="gateway-pressed" @tap="openAgent('office')"><view class="office-mark"><uni-icons type="home" size="22" color="#5b795f" /></view><view><text>办公室 Agent</text><text>办公室设备 · 对话与自动化</text></view><uni-icons type="arrow-right" size="19" color="#7a8e7e" /></button>
+    <button class="office-gateway" :disabled="Boolean(openingAgent)" hover-class="gateway-pressed" @tap="openAgent('office')"><view class="office-mark"><uni-icons type="home" size="22" color="#5b795f" /></view><view><text>办公室 Agent</text><text>办公室设备 · 对话与自动化</text></view><uni-icons type="arrow-right" size="19" color="#7a8e7e" /></button>
    </view>
   </scroll-view>
-  <view class="assistant-dock"><button class="assistant" hover-class="assistant-pressed" @tap="openAgent('company')"><AgentAvatar /><view><text>公司 Agent</text><text>查询设备、能耗与告警</text></view><uni-icons type="chatboxes" size="21" color="#d4e9d6" /></button></view>
+  <view class="assistant-dock"><button class="assistant" :disabled="Boolean(openingAgent)" hover-class="assistant-pressed" @tap="openAgent('company')"><AgentAvatar /><view><text>{{ openingAgent === 'company' ? '正在打开…' : '公司 Agent' }}</text><text>查询设备、能耗与告警</text></view><uni-icons type="chatboxes" size="21" color="#d4e9d6" /></button></view>
   <DeviceSheet :open="Boolean(observationType)" tall compact-header :title="observationTitle" @close="observationType = ''"><scroll-view class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view></DeviceSheet>
  </view>
 </template>
@@ -48,14 +48,14 @@ import { computed, ref } from 'vue'
 import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { getCompanyDashboard } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
-import { navMetrics } from './nav-metrics.js'
+import AssistantNav from './components/AssistantNav.vue'
+import { backToParent } from './navigation.mjs'
 import { dashboardCounts, metricValue, repairEnergy, energyChart } from './dashboard-view.mjs'
 import { fmtDateTime, energyStale } from './observation-view.mjs'
 import AgentAvatar from './components/AgentAvatar.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
 import ObservationCard from './components/ObservationCard.vue'
 
-const { top, barHeight, rightInset } = navMetrics()
 const snapshot = ref(null), loading = ref(false), error = ref(''), demo = ref(true), observationType = ref('')
 const counts = computed(() => dashboardCounts(snapshot.value))
 const environment = computed(() => snapshot.value?.environment.find(row => row.reading) || snapshot.value?.environment[0])
@@ -86,16 +86,21 @@ async function load() {
  } catch (cause) {
   if (current === requestId && visible) {
    snapshot.value = null; observationType.value = ''
-   error.value = cause.message || '公司数据暂不可用'
+   error.value = cause.message === 'request:fail' ? '公司数据暂不可用，请检查网络后重试' : cause.message || '公司数据暂不可用'
   }
  } finally { if (current === requestId) loading.value = false }
 }
 function openObservation(type) { if (snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
-function openAgent(source) { uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard` }) }
-function back() { uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/index/index' }) }) }
+const openingAgent = ref('')
+function openAgent(source) {
+ if (openingAgent.value) return
+ openingAgent.value = source
+ uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard`, fail: () => { openingAgent.value = ''; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
+}
+function back() { backToParent('/pages/index/index') }
 onShow(() => {
- visible = true
+ visible = true; openingAgent.value = ''
  try { if (scope && scope !== getAgentStorageScope()) { snapshot.value = null; observationType.value = '' } }
  catch { snapshot.value = null; observationType.value = '' }
  load()
@@ -107,7 +112,7 @@ onHide(hide); onUnload(hide)
 view,text,input { font-size:inherit; line-height:inherit; }
 .dashboard { height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden; background:#eef2ee; color:#293f31; font-size:12px; line-height:1.45; }
 button { margin:0; padding:0; background:transparent; font-size:inherit; line-height:inherit; } button::after { border:0; }
-.nav { flex-shrink:0; background:linear-gradient(#fcfdfb,#eef2ee); }.nav-row { display:flex; align-items:center; box-sizing:border-box; gap:6px; font-weight:650; font-size:14px; }.back { width:42px; height:42px; display:flex; align-items:center; justify-content:center; }
+
 .dashboard-scroll { flex:1; height:0; min-height:0; }.content { padding:15px 18px calc(115px + env(safe-area-inset-bottom)); }
 .headline { display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; }.eyebrow { display:block; color:#819082; font-size:8px; letter-spacing:1.8px; }.title { display:block; margin-top:5px; font-size:22px; font-weight:650; letter-spacing:-.6px; }.refresh { width:38px; height:38px; display:flex; align-items:center; justify-content:center; border:1px solid #d9e2d7; border-radius:50%; background:linear-gradient(#f9fbf7,#e8eee5); box-shadow:inset 0 1px 0 #fff; }.refresh[disabled] { opacity:.6; }
 .estate { position:relative; height:176px; padding:17px; box-sizing:border-box; overflow:hidden; border-radius:15px; background:radial-gradient(ellipse at 80% 15%,#4d7156,#224c3b 54%,#123729); color:#e4efdc; box-shadow:inset 0 1px 0 #8aa18480,inset 0 -1px 0 #102e25,0 10px 22px -14px #193d2b99; }.estate-grid { position:absolute; inset:0; opacity:.14; background-image:linear-gradient(#b2c6a520 1px,transparent 1px),linear-gradient(90deg,#b2c6a520 1px,transparent 1px); background-size:22px 22px; }.campus { position:absolute; width:210px; height:157px; right:-12px; top:13px; }.estate-top { position:relative; display:flex; align-items:center; gap:6px; color:#b9cfb7; font-size:10px; }.scope-dot { width:4px; height:4px; border-radius:50%; background:#b7ca94; }.estate-number { display:block; position:relative; margin-top:19px; font-size:47px; font-weight:450; line-height:1.1; letter-spacing:-2px; font-variant-numeric:tabular-nums; }.estate-unit { margin-left:5px; font-size:11px; letter-spacing:0; color:#b3c6aa; }.estate-label { display:block; position:relative; margin-top:5px; color:#b3c6aa; font-size:10px; }.estate-foot { position:absolute; left:17px; right:17px; bottom:12px; display:flex; justify-content:space-between; color:#93ad98; font-size:8px; }

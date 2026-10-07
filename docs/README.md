@@ -6,7 +6,7 @@
 
 - 2026-10-07 用户明确本批继续至已认可业务能力全部完成，确保实际可用、基本设计质量与风格一致；整体导航可独立推进。收件箱采用常规消息列表和原报告入口，不使用时间轴，也不再等待整体导航定案。任务引用/管理、Company 简报/自动化、统计/任务摘要及收件箱前端仍未完成；Office 区间/周期仍待实际验收。见[最新推进要求](../plan/2026-10-07-office-task-inbox-handoff.md)。
 
-- 2026-10-07 继续推进 Office 任务结束消息：后端已实现终态报告/创建者消息同批持久化、个人列表分页与单条已读、稳定账户与当前授权隔离；Runtime 72/72、类型/构建通过。前端入口待用户选择，生产导航未改、完整收件箱未交付；真实模型/设备/真机仍待验。见[进度与交接](../plan/2026-10-07-office-task-inbox-handoff.md)与[冻结切片](../plan/2026-10-07-office-task-inbox-slice.md)。
+- 2026-10-07 继续推进 Office 任务结束消息：后端已实现终态报告/创建者消息同批持久化、个人列表分页与单条已读、稳定账户与当前授权隔离；Runtime 72/72、类型/构建通过。前端入口待用户选择，该收件箱切片未改生产导航、完整收件箱未交付；真实模型/设备/真机仍待验。见[进度与交接](../plan/2026-10-07-office-task-inbox-handoff.md)与[冻结切片](../plan/2026-10-07-office-task-inbox-slice.md)。
 
 - 2026-10-07 Office 周期计划首条源码闭环已实施：每天/周一至周五/指定周几，确认后长期计划、未来发生投影、到点独立 Task 执行/报告、下一次与恢复。Runtime 69/69、前端 22/22、类型/构建及微信编译通过；微信模拟器隔离夹具走查，真实模型/设备/真机尚未验。编辑/启停/跳过/删除、Company 自动化与收件箱仍后续。见[本轮交接](../plan/2026-10-07-office-recurring-first-loop-handoff.md)。下列日期条目保留历史状态。
 
@@ -35,7 +35,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
-| 物联助手全部页面、抽屉、浮层与前进/返回/关闭/手势的检查 | [10-07 导航检查](../plan/2026-10-07-page-navigation-audit.md)、[设计对照图](./research/assistant-navigation-review/index.html)（29 类入口、25 项问题；关键模拟器走查与性能条目；仅检查，未实施导航改造） |
+| 物联助手全部页面、抽屉、浮层与前进/返回/关闭/手势的检查 | [10-07 导航检查](../plan/2026-10-07-page-navigation-audit.md)、[设计对照图](./research/assistant-navigation-review/index.html)与[导航改进交接](../plan/2026-10-07-assistant-navigation-improvement-handoff.md)、[改进后画面](./research/assistant-navigation-review/after/index.html)（29 类入口、25 项检查；导航改进已实施，模拟器夹具走查；真机手势/H5/生产延迟仍待验） |
 | 客户四项历史接口、智慧监控区域定位、人员回放分析及告警/任务收件箱边界 | [10-07 复核与交接](../plan/2026-10-07-history-interfaces-alert-inbox-handoff.md)（真实只读定位验证；人员统计由我方后端分析回放；收件箱仅任务结束消息） |
 | 模型缓存的应用恢复、压缩与真实用量 | [10-03 恢复/压缩核验](./research/2026-10-03-model-cache-recovery-compaction-verification.md)（局部诊断通过，跨进程/生产/Langfuse 落库仍未验；无生产代码改动） |
 | 双 Agent 新规格与实施切片审阅 | [核心规格](../plan/2026-10-02-dual-agent-automation-spec.md)、[16 切片图](../plan/2026-10-02-dual-agent-automation-ticket-review.md)（核心与拆分已认可，tracker 已发布；票 01 已提交 `cb2a18c`，真实升级待验收；票 02 Runtime `ddb0d5f`、59/59，前端与联调见票 02 交接；局部决定/外部依赖保留） |

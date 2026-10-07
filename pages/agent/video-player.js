@@ -15,17 +15,20 @@ export async function openVideoPlayer(device) {
   uni.showToast({ title: '播放页接入中', icon: 'none' })
   return false
  }
+ const origin = getCurrentPages().at(-1)
  try {
   const stream = await getVideoStream(device.deviceId)
+  if (getCurrentPages().at(-1) !== origin) return false
   if (!stream?.url) throw new Error('视频流暂时不可用')
   const params = [
+   `assistantVideo=1`,
    `deviceId=${encodeURIComponent(device.deviceId)}`,
    `name=${encodeURIComponent(device.name || '监控画面')}`,
    `api=${encodeURIComponent(globalConfig.agentUrl)}`,
    `url=${encodeURIComponent(stream.url)}`,
   ]
   if (device.location) params.push(`loc=${encodeURIComponent(device.location)}`)
-  uni.navigateTo({ url: `/pages/webView/index?path=${encodeURIComponent(base)}&${params.join('&')}` })
+  await new Promise((resolve, reject) => uni.navigateTo({ url: `/pages/webView/index?path=${encodeURIComponent(base)}&${params.join('&')}`, success: resolve, fail: reject }))
   return true
  } catch (error) {
   // 取流失败 ≠ 播放失败 ≠ 设备离线：就地诚实报错，不改写设备状态。

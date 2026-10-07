@@ -1,10 +1,11 @@
 <template>
+ <NativeBackBoundary :active="open" :back="onNativeBack" />
  <view class="sheet-root" :class="{ 'sheet-root--open': open }">
   <view class="sheet-mask" :style="maskStyle" @tap.stop="dismissFromMask" @touchmove.stop.prevent="blockMaskMove" />
   <view class="sheet-motion" :style="motionStyle">
    <view class="sheet-surface" :class="{ tall, expanded, 'compact-header': compactHeader }">
     <view class="handle-zone" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="onTouchStart" @touchmove.stop.prevent="onTouchMove" @touchend.stop="onTouchEnd" @touchcancel.stop="onTouchCancel"><view class="handle" /></view>
-    <view class="header-top"><slot name="header-left" /><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /></view>
+    <view class="header-top"><slot name="header-left" /><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /><button class="sheet-close" :aria-label="'关闭' + (title || '面板')" hover-class="sheet-close--pressed" @tap="requestClose"><uni-icons type="closeempty" size="22" color="#62766a" /></button></view>
     <view class="header-slot"><slot name="header" /></view>
     <view class="sheet-body"><slot /></view>
    </view>
@@ -13,9 +14,23 @@
 </template>
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import NativeBackBoundary from './NativeBackBoundary.vue'
 
-const props = defineProps({ open: Boolean, openRequest: { type: Number, default: 0 }, title: String, subtitle: String, meta: String, tall: Boolean, expanded: Boolean, compactHeader: Boolean, busy: Boolean })
+const props = defineProps({ open: Boolean, openRequest: { type: Number, default: 0 }, title: String, subtitle: String, meta: String, tall: Boolean, expanded: Boolean, compactHeader: Boolean, busy: Boolean, beforeClose: Function, back: Function })
 const emit = defineEmits(['close'])
+let closingRequest = false
+async function requestClose() {
+ if (!props.open || closingRequest) return
+ closingRequest = true
+ let allowed = false
+ try { allowed = !props.beforeClose || await props.beforeClose(); if (allowed) emit('close') }
+ finally { closingRequest = false; if (!allowed && props.open) { dragY.value = 0; phase.value = 'settling'; settlePhase('open', settleDuration) } }
+}
+async function onNativeBack() {
+ if (!props.open) return
+ if (props.back) await props.back()
+ else await requestClose()
+}
 const open = computed(() => Boolean(props.open))
 const windowHeight = uni.getSystemInfoSync().windowHeight || 600
 const dismissThreshold = Math.round(windowHeight * 0.78 * 0.25)
@@ -127,7 +142,7 @@ function finishDrag() {
  dragging.value = false
  if (dismiss) {
   phase.value = 'exiting'
-  emit('close')
+  requestClose()
   return
  }
  phase.value = 'settling'
@@ -146,7 +161,7 @@ function onTouchCancel() {
 function dismissFromMask() {
  if (!open.value) return
  phase.value = 'exiting'
- emit('close')
+ requestClose()
 }
 function blockMaskMove() { return false }
 
@@ -173,6 +188,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .handle-zone--pressed .handle { width:44px; background:#9eafa5; transform:scaleY(1.15); }
 .header-slot { position:relative; z-index:2; overflow:visible; }
 .header-top { display:flex; align-items:center; padding:2px 20px 8px; }
+.sheet-close { width:44px; height:44px; flex-shrink:0; margin:0 -8px 0 4px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:14px; background:transparent; }.sheet-close::after { border:0; }.sheet-close--pressed { background:#e7eee8; }
 .header-copy { flex:1; min-width:0; overflow:hidden; }
 .title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
 .title { display:block; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:19px; font-weight:600; color:#24382d; }

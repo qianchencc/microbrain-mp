@@ -43,11 +43,19 @@
 - 工作台只在真实时间轴成功返回且完成视图更新后调用 `acknowledgeRegion`；加载失败、样例模式、隐藏页面或被新请求替代的结果不得清除异常提示。
 - `TaskDetailContent` 根节点是 `height:0;flex:1` 的 scroll-view，必须经宿主类（`content-host`/`task-content-host`，`flex:1;min-height:0;display:flex`）挂进 flex 容器；直接放进普通容器会塌成 0 高、详情空白（2026-09-28 抽屉栈重构踩过）。抽屉内 列表→设备→任务 三级导航栈见 `plan/2026-09-28-region-chrome-nav-motion.md`。
 
-- Company 正式入口位于 A 仪表盘底部；从仪表盘进入两端对话后返回总览，旧 Office 直达入口仍可通过菜单进入 Company。路由 source 仅在页面创建时固定，API 显式传递，本端恢复拒绝错来源。Company 不消费 Office 区域/任务/播放入口。见 `plan/2026-10-03-company-readonly-handoff.md`（仓库根）。
+- Company 正式入口位于 A 仪表盘底部；从仪表盘进入两端对话后返回总览，两端同级入口统一位于总览，会话菜单只负责会话操作。路由 source 仅在页面创建时固定，API 显式传递，本端恢复拒绝错来源。Company 不消费 Office 区域/任务/播放入口。见 `plan/2026-10-03-company-readonly-handoff.md`（仓库根）。
 - 微信页面卸载会销毁页面包的模块级内存；跨来源导航草稿须放 app globalData，并按 getAgentStorageScope() + source 分区，身份变化清空，不保存长期凭据。Company 返回后重进必须做真实输入/点击验收，纯 helper 断言不能证明此行为。
 
-- 物联助手菜单入口为 `dashboard.vue`。A 首屏的数量只表示 Company 当前接入观察目录；告警是本次读取的历史台账，不代表实时报警。`totalActivePower` 展示 kW 最新功率，不能累加成日用电 kWh；维修演示的小时 kWh 独立标记、图形由样例数据计算，不进入 Agent/执行上下文。详情复用 ObservationCard/DeviceSheet，切换身份或读取失败清理旧概览；正常刷新保留布局。对话 `from=dashboard` 只决定返回位置，不授予来源或设备权限。
+- 物联助手菜单入口为 `dashboard.vue`。A 首屏的数量只表示 Company 当前接入观察目录；告警是本次读取的历史台账，不代表实时报警。`totalActivePower` 展示 kW 最新功率，不能累加成日用电 kWh；维修演示的小时 kWh 独立标记、图形由样例数据计算，不进入 Agent/执行上下文。详情复用 ObservationCard/DeviceSheet，切换身份或读取失败清理旧概览；正常刷新保留布局。对话 `from=dashboard` 是入口标记；返回以真实页面栈为准，不授予来源或设备权限。
 
 - Company 智慧空调复用现有草案/参数抽屉；页面 source 必须传到 AgentReplySurface → ActionPanel → ActionDraftCard 及 DraftSheetLayer，选择/确认/还原/取消/状态/参数/重核/收尾请求都显式带 Company。不能仅取消 readOnly 遮罩而让 API 缺省落到 Office；来源校验仍由服务端持久化会话决定。Company 观察视频及定时任务仍未接入。
 
 - 周期卡与虚拟发生（2026-10-07）：`repeat` 提案确认仍走原任务接口，之后按 planId 读取 `getTaskPlan`；`mergeTaskPlan` 不改原提案 actions。未来发生 ID 含冒号，深链参数必须 encode/decode；实际 Task 的 occurrence 元数据用于替换旧虚拟链接。现有 Sheet/B6 共用，报告导航使用实际 latestTask.id。验收边界见 `plan/2026-10-07-office-recurring-first-loop-handoff.md`。
+
+## 导航与状态恢复（2026-10-07）
+
+- 修改页面返回、Sheet、搜索、参数或日历时先读 `plan/2026-10-07-assistant-navigation-improvement-spec.md` 与对应 handoff。三个路由共用 `AssistantNav`；实际历史决定上一页，无历史由 `navigation.mjs` redirect 到默认父页。工作台新建任务定位 Office，source 在页面创建时固定。
+- `NativeBackBoundary` 只承接微信返回，视觉仍由 DeviceSheet 的 transform/opacity 绘制。设备抽屉统一消费 日历→设备/任务 pane→搜索→关闭；日历通过暴露的 dismiss 方法交给所属抽屉，避免再独立挂返回容器。左侧返回退局部一层，右侧 X 关闭整层。
+- onHide 暂停请求/刷新并保留浏览位置；onUnload 释放。恢复前与异步响应写入前都复核身份 scope；换身份立即清除旧会话、任务、目录和编辑状态。同身份的旧内容只用于退出动画/暂存，授权拒绝应清除，网络失败须显示重试。
+- 对话阅读位置、原新消息草稿和正在编辑的旧消息分开，按 scope+source 存 app globalData，并以 conversationId/turnId 校验恢复。参数脏值离开需明确放弃；保存返回原搜索/列表，失败留在原处。确认失败保留面板并读取权威回执。
+- 跨页入口有防连点与立即反馈；草案编辑抽屉首次使用才挂载。微信自动化要等待真实页面栈变化并核对画面；组件选择器成功不等于点击成功，夹具不能作为真实设备/真机证据。
