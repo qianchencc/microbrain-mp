@@ -3,6 +3,7 @@
 ## Environment
 
 - Build under test: `2bbdf65` (`fix(agent): explicitly hide the retained arrangements pane in WeChat`). The DevTools project was rebuilt from the main checkout, then the Company Agent page was re-launched so it loaded the matching `data-v-1db54032` bundle.
+- Runtime reference-label fix: `33c6dae`, deployed before the final reference-label check.
 - WeChat DevTools simulator: iPhone 12/13 Pro profile, WeChat 8.0.5, SDK 3.17.2, `windowWidth=390`, `windowHeight=753`.
 - The Runtime task was read-only: task `9caf6fb6-103d-4980-b7db-2d8c612f4d56`, label `验收只读环境简报`, `actions=[]`.
 
@@ -13,7 +14,8 @@
 - The saved report shows one completed checkpoint at `19:34`, one environment device, and a generated report at `19:42`. The observations are `27°C`, `48%` humidity, `PM2.5 11`, `PM10 10`, and `PM1.0 17`; the source was a device observation.
 - Opened the real Company notification `3c49a795-89d7-49a0-adea-f6a4900b651c`. The detail matched the same task and report. Loading the report marked it seen: returning to the inbox changed the count from `1` to `0`, retained the row, and removed its unread marker.
 - In fresh Company conversation `7cad31c7-36cd-45a3-a7c6-968a7b53130a`, entered a safe unsent draft, opened the inbox report, and tapped **引用任务并询问**. The sheet closed; the exact draft and `{type: "task", taskId: "9caf6fb6-103d-4980-b7db-2d8c612f4d56", label: "验收只读环境简报"}` reference remained in the composer. No message was sent until this preservation check passed.
-- Sent that read-only explanation once. The captured Company `POST /agent/conversations/<id>/messages?source=company` contained the exact task reference. The completed response summarized the saved observation time and values. No task proposal, change card, or device-control card appeared.
+- Sent a read-only explanation after the draft/reference check. The captured Company `POST /agent/conversations/<id>/messages?source=company` contained the exact task reference. The completed response summarized the saved observation time and values. No task proposal, change card, or device-control card appeared.
+- After Runtime fix `33c6dae`, sent one more safe explanation request in the same fresh conversation. The new turn displayed `任务引用 · 验收只读环境简报`, using the trusted task label. The historical turn created before the fix still displays `原记录`; it was not rewritten. The new response continued to describe saved readings only.
 
 ## Screenshots
 
@@ -21,7 +23,7 @@
 - [Arrangements report](screenshots/company-task-report-redacted-390.png): same task and saved observations; the creator display string is replaced with `成员` in the rendered component data only. The arrangements list is hidden while the report is open.
 - [Unread inbox](screenshots/company-inbox-unread-390.png) and [read inbox](screenshots/company-inbox-read-390.png): the same row before and after opening the report, with unread count `1 → 0`.
 - [Inbox report](screenshots/company-inbox-report-redacted-390.png): same task and report. Only the creator display string was replaced with `成员` in the rendered component data for capture.
-- [Preserved draft and reference](screenshots/company-reference-draft-390.png) and [completed explanation](screenshots/company-reference-explanation-390.png).
+- [Preserved draft and reference](screenshots/company-reference-draft-390.png), [first explanation before the label fix](screenshots/company-reference-explanation-before-label-fix-390.png), and [new-turn label after the Runtime fix](screenshots/company-reference-label-fixed-390.png).
 
 The display-name changes above were transient DevTools component `setData` overrides for screenshots only. They did not change the Runtime response, task, notification, or persisted conversation reference.
 
