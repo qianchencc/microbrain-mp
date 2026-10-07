@@ -26,8 +26,8 @@
    </RegionTimeline>
   </view>
   <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
-  <RegionDeviceDrawer :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
-  <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
+  <RegionDeviceDrawer @reference="referenceTask" :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : []" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
+  <TaskDetailSheet :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @reference="referenceTask" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
 </template>
 <script setup>
@@ -39,6 +39,7 @@ import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionChip from './components/RegionChip.vue'
 import RegionTimeline from './components/RegionTimeline.vue'
 import RegionDeviceDrawer from './components/RegionDeviceDrawer.vue'
+import { preserveComposerReference } from './composer-drafts.mjs'
 import TaskDetailSheet from './components/TaskDetailSheet.vue'
 import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion, queueComposePrefill } from './region-focus.js'
 import { localDate } from './timeline-geometry.mjs'
@@ -119,6 +120,7 @@ function openTask(item) {
  selectedTaskId.value = item.id
  sampleDetail.value = sample
 }
+function referenceTask(reference) { preserveComposerReference(getAgentStorageScope(), 'office', reference); selectedTaskId.value = ''; uni.navigateBack({ fail: () => uni.redirectTo({ url: '/pages/agent/index' }) }) }
 function goBack() { uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pages/agent/index' }) }) }
 // 新建任务入口=回到对话：把当前区域固定为关注区域并预填含区域名的输入开头，真实创建仍走 Agent 确认流。
 function composeTask() {

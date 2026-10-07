@@ -22,16 +22,17 @@ export function repeatText(repeat) {
 }
 
 export function mergeTaskPlan(task, plan) {
+ task.planStatus = plan.status
  task.planId = plan.planId
  task.nextAt = plan.nextAt
  task.nextOccurrenceId = plan.nextOccurrenceId
  task.latestTask = plan.latestTask
- task.status = plan.nextAt ? 'scheduled' : plan.latestTask?.status || 'completed'
+ task.status = ['paused', 'deleted'].includes(plan.status) ? plan.status : plan.nextAt ? 'scheduled' : plan.latestTask?.status || 'completed'
 }
 
 export function taskPlanSnapshot(plan) {
  if (!plan) return null
- return { ...plan, id: plan.planId, status: plan.nextAt ? 'scheduled' : plan.latestTask?.status || 'completed', report: null, canCancel: false }
+ return { ...plan, id: plan.planId, status: ['paused', 'deleted'].includes(plan.status) ? plan.status : plan.nextAt ? 'scheduled' : plan.latestTask?.status || 'completed', report: null, canCancel: false }
 }
 
 export function taskNavigation(task) {

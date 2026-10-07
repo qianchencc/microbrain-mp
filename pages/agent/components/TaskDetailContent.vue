@@ -44,6 +44,7 @@
     <button class="latest-report-link" @tap="openLatestReport">查看最近一次报告</button>
    </view>
    <view class="source"><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId">对话 {{ detail.source.conversationId.slice(0, 8) }}</text></view>
+   <view v-if="!sampleTask" class="reference-actions"><button class="task-reference" @tap="referenceCurrent">{{ plan ? '询问或管理这个计划' : '引用任务并询问' }}</button><button v-if="task?.occurrence" class="task-reference secondary" @tap="referencePlan">管理整个周期</button></view>
    <button v-if="detail.canCancel && !sampleTask" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="deleteTask">删除任务</button>
   </view>
  </scroll-view>
@@ -57,7 +58,7 @@ import { creatorVariant } from '../region-device-view.mjs'
 import ObservationCard from './ObservationCard.vue'
 
 const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, source: { type: String, default: 'office' } })
-const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'plan-return'])
+const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'plan-return', 'reference'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
@@ -65,9 +66,14 @@ const currentStates = ref({}), currentLoading = ref(false), currentError = ref('
 const expandedPhases = ref([])
 const detail = computed(() => {
  const view = taskDetailView(task.value || taskPlanSnapshot(plan.value))
- if (plan.value && view) return { ...view, statusText: plan.value.nextAt ? '已启用' : '周期结束' }
+ if (plan.value && view) return { ...view, statusText: ({ enabled: plan.value.nextAt ? '已启用' : '周期结束', paused: '已停用', deleted: '已删除' })[plan.value.status] || (plan.value.nextAt ? '已启用' : '周期结束') }
  return view
 })
+function referenceCurrent() {
+ if (plan.value) emit('reference', { type: 'task_plan', planId: plan.value.planId, label: plan.value.label })
+ else if (task.value) emit('reference', { type: 'task', taskId: task.value.id, label: task.value.label })
+}
+function referencePlan() { if (task.value?.occurrence?.planId) emit('reference', { type: 'task_plan', planId: task.value.occurrence.planId, label: task.value.label }) }
 const latestReport = computed(() => taskDetailView(plan.value?.latestTask)?.report || null)
 // 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于创建者标记显示“我”。
 const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
@@ -190,8 +196,10 @@ watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.s
  else { ++requestId; loading.value = false; task.value = null; plan.value = null }
 }, { immediate: true })
 onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId; ++requestId })
+defineExpose({ returnToPlan })
 </script>
 <style scoped>
+.reference-actions { margin-top:16px; display:flex; flex-direction:column; gap:8px; }.task-reference { min-height:42px; width:100%; display:flex; align-items:center; justify-content:center; border:1px solid #cadcd1; border-radius:9px; background:linear-gradient(#fafffb,#edf5ef); color:#176b54; font-size:12px; }.task-reference.secondary { background:transparent; color:#6a7f70; }
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:12px auto 0; padding:0; background:transparent; color:#176b54; font-size:12px; }
 button::after { border:0; }

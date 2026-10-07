@@ -42,7 +42,7 @@
     </scroll-view>
    </view>
    <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceObservationView v-if="isObservationKind(devicePane.kind)" class="device-timeline-host" :device="devicePane" :reading="readings[devicePane.id]" /><DeviceTimelineView v-else class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
-   <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskDetailContent class="task-content-host" :active="Boolean(taskPane)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" /></view>
+   <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskDetailContent class="task-content-host" :active="Boolean(taskPane)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" @reference="$emit('reference', $event)" /></view>
   </view>
  </DeviceSheet>
 </template>
@@ -59,7 +59,7 @@ import { isObservationKind, regionDeviceGroups } from '../region-device-view.mjs
 import { createStateRefresh } from '../state-refresh.mjs'
 
 const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, refreshSignal: Number, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
-const emit = defineEmits(['close', 'count', 'cancelled'])
+const emit = defineEmits(['close', 'count', 'cancelled', 'reference'])
 const modes = [{ key: 'kind', label: '类型' }, { key: 'location', label: '位置' }, { key: 'status', label: '状态' }]
 const devices = ref([]), readings = ref({}), loading = ref(false), stateLoading = ref(false)
 const error = ref(''), stateError = ref(''), groupBy = ref('kind'), query = ref(''), searching = ref(false), searchFocused = ref(false)

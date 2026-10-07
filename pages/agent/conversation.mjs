@@ -64,12 +64,13 @@ export function applyEvent(turn, event) {
 	if (event.type === 'observation.reported') { turn.observations.push({ observedAt: event.observedAt, blocks: event.blocks || [] }); turn.traceOpen = false }
 	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.roster = event.inventory || null; turn.traceOpen = false }
 	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
-	if (event.type === 'task.proposed' || event.type === 'task.cancellation.proposed') {
-		if (!turn.tasks.some(task => (task.cancellationId || task.taskId) === (event.task.cancellationId || event.task.taskId))) turn.tasks.push(event.task)
+	if (event.type === 'task.proposed' || event.type === 'task.cancellation.proposed' || event.type === 'task.change.proposed') {
+		if (!turn.tasks.some(task => (task.changeId || task.cancellationId || task.taskId) === (event.task.changeId || event.task.cancellationId || event.task.taskId))) turn.tasks.push(event.task)
 		turn.task = turn.tasks[0]
 		turn.traceOpen = false
 	}
 	if (event.type === 'task.resolved') for (const task of turn.tasks) if (task.taskId === event.taskId && !task.cancellationId) task.status = event.status
+	if (event.type === 'task.change.resolved') for (const task of turn.tasks) if (task.changeId === event.changeId) task.status = event.status
 	if (event.type === 'task.cancellation.resolved') for (const task of turn.tasks) if (task.cancellationId === event.cancellationId) task.status = event.status
 	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.streaming = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
 	if (event.type === 'run.failed') {
@@ -124,7 +125,7 @@ export function restoreTurns(savedTurns = []) {
 	const taskIds = new Set()
 	for (const turn of [...turns].reverse()) {
 		turn.tasks = turn.tasks.filter(task => {
-			const key = task.cancellationId || task.taskId
+			const key = task.changeId || task.cancellationId || task.taskId
 			if (taskIds.has(key)) return false
 			taskIds.add(key)
 			return true

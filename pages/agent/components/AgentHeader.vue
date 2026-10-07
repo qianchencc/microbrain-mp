@@ -12,14 +12,15 @@
  </view>
 </template>
 <script setup>
-const props = defineProps({ status: String, agentName: { type: String, default: '物联 Agent' }, menuActionLabel: { type: String, default: '' }, inboxEnabled: Boolean, inboxUnreadCount: { type: Number, default: 0 }, disabled: Boolean, error: Boolean })
-const emit = defineEmits(['clear', 'source-action', 'open-inbox'])
+const props = defineProps({ status: String, agentName: { type: String, default: '物联 Agent' }, menuActionLabel: { type: String, default: '' }, inboxEnabled: Boolean, tasksEnabled: Boolean, inboxUnreadCount: { type: Number, default: 0 }, disabled: Boolean, error: Boolean })
+const emit = defineEmits(['clear', 'source-action', 'open-inbox', 'open-tasks'])
 import { navMetrics } from '../nav-metrics.js'
 
 const { top, barHeight, rightInset } = navMetrics()
 function openMenu() {
  const actions = []
  if (!props.disabled) actions.push({ label: '清除当前会话', event: 'clear' })
+ if (props.tasksEnabled) actions.push({ label: '我的安排与周期计划', event: 'open-tasks' })
  if (props.inboxEnabled) actions.push({ label: props.inboxUnreadCount ? `任务收件箱（${props.inboxUnreadCount} 条未读）` : '任务收件箱', event: 'open-inbox' })
  if (props.menuActionLabel) actions.push({ label: props.menuActionLabel, event: 'source-action' })
  const itemList = actions.map(action => action.label)

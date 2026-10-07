@@ -32,8 +32,8 @@ export const confirmTask = (taskId, version, source = 'office') => request(withC
 export const discardTask = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/discard`, source), 'POST')
 export const confirmTaskChange = (changeId, source = 'office') => request(withConversationSource(`/agent/task-changes/${encodeURIComponent(changeId)}/confirm`, source), 'POST')
 export const discardTaskChange = (changeId, source = 'office') => request(withConversationSource(`/agent/task-changes/${encodeURIComponent(changeId)}/discard`, source), 'POST')
-export const confirmTaskCancellation = cancellationId => request(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/confirm`, 'POST')
-export const discardTaskCancellation = cancellationId => request(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/discard`, 'POST')
+export const confirmTaskCancellation = (cancellationId, source = 'office') => request(withConversationSource(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/confirm`, source), 'POST')
+export const discardTaskCancellation = (cancellationId, source = 'office') => request(withConversationSource(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/discard`, source), 'POST')
 export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${encodeURIComponent(deviceId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 // 视频取流：返回短时效播放地址（wss），不缓存；页面与组件不接触凭据。
 export const getVideoStream = deviceId => request(`/agent/devices/${encodeURIComponent(deviceId)}/video-stream`, 'GET')

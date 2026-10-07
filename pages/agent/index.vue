@@ -2,7 +2,7 @@
  <view class="agent-page">
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
-  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'" :menu-action-label="isCompany ? '' : fromDashboard ? '返回总览' : '打开公司 Agent'" inbox-enabled :inbox-unread-count="inboxUnreadCount" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @source-action="fromDashboard ? returnToOffice() : openCompany()" @open-inbox="openInbox">
+  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'" :menu-action-label="isCompany ? '' : fromDashboard ? '返回总览' : '打开公司 Agent'" inbox-enabled :inbox-unread-count="inboxUnreadCount" @open-tasks="tasksOpen = true" tasks-enabled :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @source-action="fromDashboard ? returnToOffice() : openCompany()" @open-inbox="openInbox">
    <button v-if="isCompany" class="source-switch" hover-class="source-switch--pressed" :hover-stay-time="60" :aria-label="returnLabel" @tap="returnToOffice"><uni-icons type="back" size="14" color="#6c7d73" /><text>{{ returnLabel }}</text></button>
    <RegionChip v-if="!isCompany" nav @open="openRegion" />
   </AgentHeader>
@@ -14,7 +14,7 @@
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
      <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turnIndex)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
      <view v-if="!isCompany && !regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
-     <view v-if="turn.reference" class="turn-reference"><text>客户告警引用 · {{ turn.reference.content }}</text></view>
+     <view v-if="turn.reference" class="turn-reference"><text>{{ turn.reference.type === 'customer_alert' ? '客户告警引用' : turn.reference.type === 'task_plan' ? '周期计划引用' : '任务引用' }} · {{ turn.reference.label || turn.reference.content || '原记录' }}</text></view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
      <AgentReplySurface :turn="turn" :busy="busy" :source="agentSource" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'"
       @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
@@ -35,14 +35,15 @@
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
-  <TaskInboxSheet :open="inboxOpen" :source="agentSource" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
-  <TaskDetailSheet v-if="isCompany" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="agentSource" @close="closeCompanyTask" />
+  <TaskListSheet :open="tasksOpen" :source="agentSource" @close="tasksOpen = false" @reference="referenceTask" />
+  <TaskInboxSheet @reference="referenceTask" :open="inboxOpen" :source="agentSource" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
+  <TaskDetailSheet @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="agentSource" @close="closeCompanyTask" />
  </view>
 </template>
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, listNotifications, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
+import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskChange, discardTaskChange, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, listNotifications, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail } from './conversation.mjs'
 import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference } from './composer-drafts.mjs'
@@ -55,6 +56,7 @@ import AgentReplySurface from './components/AgentReplySurface.vue'
 import DraftSheetLayer from './components/DraftSheetLayer.vue'
 import UserMessage from './components/UserMessage.vue'
 import RegionChip from './components/RegionChip.vue'
+import TaskListSheet from './components/TaskListSheet.vue'
 import TaskInboxSheet from './components/TaskInboxSheet.vue'
 import TaskDetailSheet from './components/TaskDetailSheet.vue'
 import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus, consumeComposePrefill } from './region-focus.js'
@@ -63,9 +65,11 @@ const conversationId = ref('')
 const agentSource = ref('office')
 const fromDashboard = ref(false)
 const isCompany = computed(() => agentSource.value === 'company')
+const tasksOpen = ref(false)
 const inboxOpen = ref(false), inboxUnreadCount = ref(0)
 const companyTaskId = ref(''), companyPlanId = ref('')
 let inboxCountRequest = 0
+function referenceTask(reference) { composerReference.value = { ...reference }; inboxOpen.value = false; tasksOpen.value = false; closeCompanyTask(); composer.value?.focus?.() }
 function openInbox() { inboxOpen.value = true }
 function closeCompanyTask() { companyTaskId.value = ''; companyPlanId.value = '' }
 function setInboxUnreadCount(value) { inboxUnreadCount.value = Number(value) || 0 }
@@ -177,7 +181,7 @@ async function refreshScheduledTasks() {
  schedule()
 }
 watch(mutating, schedule)
-watch(() => turns.value.map(turn => [turn.draft?.draftId, turn.draft?.status, ...tasksOf(turn).map(task => `${task.cancellationId || task.taskId}:${task.status}`)].join(':')).join('|'), () => schedule())
+watch(() => turns.value.map(turn => [turn.draft?.draftId, turn.draft?.status, ...tasksOf(turn).map(task => `${task.changeId || task.cancellationId || task.taskId}:${task.status}`)].join(':')).join('|'), () => schedule())
 async function restore() {
  if (restoring || activeRequest || confirming.size || disposed) return
  restoring = true
@@ -185,7 +189,7 @@ async function restore() {
  try {
   await waitForAgentSession()
   const scope = getAgentStorageScope()
-  if (draftScope.value && draftScope.value !== scope) { input.value = ''; composerReference.value = null; composerHydrated = false }
+  if (draftScope.value && draftScope.value !== scope) { input.value = ''; composerReference.value = null; composerHydrated = false; inboxOpen.value = false; tasksOpen.value = false; closeCompanyTask() }
   draftScope.value = scope
   if (!composerHydrated) {
    const savedDraft = takeComposerDraft(scope, agentSource.value)
@@ -427,14 +431,15 @@ async function confirmDraft(turn) {
 }
 async function confirmTaskProposal(task) {
  if (busy.value || task?.status !== 'PENDING_CONFIRMATION') return
- const taskId = task.taskId, cancellationId = task.cancellationId
- const key = cancellationId || taskId
+ const taskId = task.taskId, cancellationId = task.cancellationId, changeId = task.changeId
+ const key = changeId || cancellationId || taskId
  mutating.value = true; confirming.add(key); confirmEpoch++
  let resync = false
  try {
-  const result = cancellationId ? await confirmTaskCancellation(cancellationId) : await confirmScheduledTask(taskId, task.version, agentSource.value)
-  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.cancellationId || item.taskId) === key)
-  if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt } } }
+  const result = changeId ? await confirmTaskChange(changeId, agentSource.value) : cancellationId ? await confirmTaskCancellation(cancellationId, agentSource.value) : await confirmScheduledTask(taskId, task.version, agentSource.value)
+  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.changeId || item.cancellationId || item.taskId) === key)
+  if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId && !changeId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt } } }
+  if (changeId) resync = true
   if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
  } catch (error) {
   errorMessage.value = error.data?.message || error.message
@@ -444,16 +449,18 @@ async function confirmTaskProposal(task) {
 }
 async function discardTaskProposal(task) {
  if (busy.value || task?.status !== 'PENDING_CONFIRMATION') return
- const taskId = task.taskId, cancellationId = task.cancellationId
+ const taskId = task.taskId, cancellationId = task.cancellationId, changeId = task.changeId
  mutating.value = true
  try {
-  const result = cancellationId ? await discardTaskCancellation(cancellationId) : await discardScheduledTask(taskId, agentSource.value)
-  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.cancellationId || item.taskId) === (cancellationId || taskId))
+  const result = changeId ? await discardTaskChange(changeId, agentSource.value) : cancellationId ? await discardTaskCancellation(cancellationId, agentSource.value) : await discardScheduledTask(taskId, agentSource.value)
+  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.changeId || item.cancellationId || item.taskId) === (changeId || cancellationId || taskId))
   if (live) live.status = result.status
  } catch (error) { errorMessage.value = error.data?.message || error.message }
  finally { mutating.value = false; schedule() }
 }
 function openTaskRegion(task) {
+ const periodic = task?.planId || (task?.repeat && !task?.occurrence ? task?.taskId || task?.id : '')
+ if (periodic && !task.occurrence) { companyTaskId.value = ''; companyPlanId.value = periodic; return }
  if (isCompany.value) {
   const planId = task?.planId || (task?.repeat && !task?.occurrence ? task?.taskId || task?.id : '')
   if (planId && !task.occurrence) {
@@ -544,6 +551,10 @@ function clearHistory() {
 onLoad(options => {
  fromDashboard.value = options?.from === 'dashboard'
  agentSource.value = options?.source === 'company' || options?.alertPrompt !== undefined ? 'company' : 'office'
+ if (options?.taskReference) {
+  try { const ref = JSON.parse(decodeURIComponent(options.taskReference)); if ((ref.type === 'task' && typeof ref.taskId === 'string') || (ref.type === 'task_plan' && typeof ref.planId === 'string')) incomingReference = ref }
+  catch { uni.showToast({ title: '任务引用无效', icon: 'none' }) }
+ }
  if (options?.alertPrompt !== undefined) {
   let content = ''
   try { content = decodeURIComponent(options.alertPrompt).trim() } catch { /* malformed customer quote */ }
@@ -555,7 +566,7 @@ onLoad(options => {
 onShow(() => { visible = true; if (!isCompany.value) loadRegionFocus().catch(() => {}); if (!activeRequest) restore()
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 会话准备完成后由 restore 重新分区 */ }
- if (draftScope.value && draftScope.value !== scope) { input.value = ''; composerReference.value = null; composerHydrated = false }
+ if (draftScope.value && draftScope.value !== scope) { input.value = ''; composerReference.value = null; composerHydrated = false; inboxOpen.value = false; tasksOpen.value = false; closeCompanyTask() }
  draftScope.value = scope
  const savedDraft = takeComposerDraft(scope, agentSource.value)
  if (savedDraft !== null) input.value = savedDraft

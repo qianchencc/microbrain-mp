@@ -36,10 +36,19 @@
     </view>
     <button class="ledger" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '台账暂不可用' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : snapshot ? '本次读取没有事件记录' : '等待台账数据' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>条记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
     <text class="ledger-note">本次读取的历史台账，不表示当前仍在报警或已经恢复</text>
+    <view class="panel automation">
+     <view class="panel-head"><text>自动化安排</text><button class="text-action" @tap="tasksOpen = true">查看安排 <uni-icons type="right" size="10" color="#829386" /></button></view>
+     <view class="automation-counts"><text>{{ snapshot?.automation?.enabledPlans ?? '—' }}<text>个启用计划</text></text><text>{{ snapshot?.automation?.active ?? '—' }}<text>项正在执行</text></text></view>
+     <text v-if="!snapshot?.automation" class="fineprint">{{ snapshot?.errors?.some(row => row.area === 'automation') ? '任务摘要暂不可用' : '正在读取任务安排' }}</text>
+     <button v-for="task in snapshot?.automation?.upcoming || []" :key="task.id" class="automation-row" @tap="tasksOpen = true"><text>{{ task.label }}</text><text>{{ fmtDateTime(task.interval?.startsAt || task.phases[0]?.at) }}</text></button>
+     <text v-if="snapshot?.automation && !snapshot.automation.upcoming.length" class="fineprint">未来一周没有待执行安排</text>
+     <view v-if="snapshot?.automation?.latestResults?.length" class="recent-results"><text class="fineprint">最近结果</text><button v-for="task in snapshot.automation.latestResults" :key="task.id" class="automation-row" @tap="tasksOpen = true"><text>{{ task.label }}</text><text>{{ resultLabel(task.status) }}</text></button></view>
+    </view>
     <button class="office-gateway" hover-class="gateway-pressed" @tap="openAgent('office')"><view class="office-mark"><uni-icons type="home" size="22" color="#5b795f" /></view><view><text>办公室 Agent</text><text>办公室设备 · 对话与自动化</text></view><uni-icons type="arrow-right" size="19" color="#7a8e7e" /></button>
    </view>
   </scroll-view>
   <view class="assistant-dock"><button class="assistant" hover-class="assistant-pressed" @tap="openAgent('company')"><AgentAvatar /><view><text>公司 Agent</text><text>查询设备、能耗与告警</text></view><uni-icons type="chatboxes" size="21" color="#d4e9d6" /></button></view>
+  <TaskListSheet :open="tasksOpen" source="company" @close="tasksOpen = false" @reference="referenceTask" />
   <DeviceSheet :open="Boolean(observationType)" tall compact-header :title="observationTitle" @close="observationType = ''"><scroll-view class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view></DeviceSheet>
  </view>
 </template>
@@ -51,11 +60,13 @@ import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session
 import { navMetrics } from './nav-metrics.js'
 import { dashboardCounts, metricValue, repairEnergy, energyChart } from './dashboard-view.mjs'
 import { fmtDateTime, energyStale } from './observation-view.mjs'
+import TaskListSheet from './components/TaskListSheet.vue'
 import AgentAvatar from './components/AgentAvatar.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
 import ObservationCard from './components/ObservationCard.vue'
 
 const { top, barHeight, rightInset } = navMetrics()
+const tasksOpen = ref(false)
 const snapshot = ref(null), loading = ref(false), error = ref(''), demo = ref(true), observationType = ref('')
 const counts = computed(() => dashboardCounts(snapshot.value))
 const environment = computed(() => snapshot.value?.environment.find(row => row.reading) || snapshot.value?.environment[0])
@@ -92,6 +103,8 @@ async function load() {
 }
 function openObservation(type) { if (snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
+function resultLabel(status) { return ({ completed: '已完成', partial: '部分完成', failed: '失败', missed: '已错过', cancelled: '已取消', unconfirmed: '结果未确认' })[status] || status }
+function referenceTask(reference) { tasksOpen.value = false; uni.navigateTo({ url: `/pages/agent/index?source=company&from=dashboard&taskReference=${encodeURIComponent(JSON.stringify(reference))}` }) }
 function openAgent(source) { uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard` }) }
 function back() { uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/index/index' }) }) }
 onShow(() => {
@@ -104,6 +117,8 @@ function hide() { visible = false; ++requestId; loading.value = false }
 onHide(hide); onUnload(hide)
 </script>
 <style scoped>
+.automation-counts { display:flex; gap:28px; margin:8px 0 12px; }.automation-counts > text { font-size:25px; font-weight:600; }.automation-counts > text > text { display:block; font-size:11px; font-weight:400; color:#6e8375; margin-top:2px; }.automation-row { width:100%; min-height:42px; display:flex; align-items:center; justify-content:space-between; gap:14px; text-align:left; }.automation-row > text:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.automation-row > text:last-child { flex-shrink:0; font-size:11px; color:#718677; }.recent-results { margin-top:10px; padding-top:10px; border-top:1px solid #dee6dd; }
+
 view,text,input { font-size:inherit; line-height:inherit; }
 .dashboard { height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden; background:#eef2ee; color:#293f31; font-size:12px; line-height:1.45; }
 button { margin:0; padding:0; background:transparent; font-size:inherit; line-height:inherit; } button::after { border:0; }

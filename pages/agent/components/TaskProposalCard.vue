@@ -24,7 +24,7 @@
    <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy" @tap="$emit('confirm')">{{ isCancellation ? '确认取消' : task.repeat ? '创建周期计划' : '创建任务' }}</button>
   </view>
   <view v-else-if="isCreated" class="task-created">
-   <button v-if="!task.repeat || task.nextAt" class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看下一次安排' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
+   <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看周期计划' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
    <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="#176b54" /></button>
   </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>
@@ -43,7 +43,7 @@ const isCreated = computed(() => isCancellation.value ? state.value === 'confirm
  : Boolean(props.task.created) || ['scheduled', 'executing', 'completed', 'partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(state.value))
 const stateText = computed(() => isCancellation.value
  ? ({ pending_confirmation: '待确认', confirmed: '已取消', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束'
- : props.task.repeat && isCreated.value ? props.task.nextAt === undefined ? '已创建' : props.task.nextAt ? '已启用' : props.task.latestTask?.status === 'executing' ? '本次进行中' : props.task.latestTask?.status === 'scheduled' ? '本次待执行' : '周期结束'
+ : props.task.repeat && isCreated.value ? props.task.planStatus === 'paused' ? '已停用' : props.task.planStatus === 'deleted' ? '已删除' : props.task.nextAt === undefined ? '已创建' : props.task.nextAt ? '已启用' : props.task.latestTask?.status === 'executing' ? '本次进行中' : props.task.latestTask?.status === 'scheduled' ? '本次待执行' : '周期结束'
  : state.value === 'executing' && props.task.interval
   ? props.task.executionActive ? '设备执行中' : '区间进行中'
   : (props.source === 'company'

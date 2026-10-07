@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" tall compact-header :title="selected ? '任务报告' : '任务收件箱'" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="selected ? '任务报告' : '任务收件箱'" @close="closeSheet">
   <template #header-left>
    <button v-if="selected" class="back-button" aria-label="返回收件箱" @tap="backToList"><uni-icons type="back" size="15" color="#63776a" /></button>
   </template>
@@ -26,7 +26,7 @@
     <view v-else-if="notifications.length && !nextCursor" class="list-footer">已显示全部消息</view>
    </scroll-view>
    <view v-if="selected && markError" class="mark-error"><text>报告已打开，但未读状态未更新</text><button @tap="retryMarkSeen">重试</button></view>
-   <TaskDetailContent v-if="selected" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" />
+   <TaskDetailContent v-if="selected" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @reference="$emit('reference', $event)" />
   </view>
  </DeviceSheet>
 </template>
@@ -38,7 +38,7 @@ import DeviceSheet from './DeviceSheet.vue'
 import TaskDetailContent from './TaskDetailContent.vue'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
-const emit = defineEmits(['close', 'unread-count'])
+const emit = defineEmits(['close', 'unread-count', 'reference'])
 const notifications = ref([]), selected = ref(null)
 const unreadCount = ref(0), nextCursor = ref('')
 const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref('')
@@ -93,6 +93,7 @@ function openReport(notification) {
  seenFailed.delete(notification.id)
 }
 function backToList() { selected.value = null; markError.value = '' }
+function nativeBack() { if (selected.value) backToList(); else closeSheet() }
 function closeSheet() { backToList(); emit('close') }
 
 async function onReportLoaded(taskId) {

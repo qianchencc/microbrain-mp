@@ -128,3 +128,17 @@ test('同轮两项任务分别保留确认状态', () => {
 	const [restored] = restoreTurns([{ id: 'turn', content: turn.content, events: [], tasks: turn.tasks }])
 	assert.deepEqual(restored.tasks.map(task => task.taskId), ['meeting', 'closing'])
 })
+
+test('任务身份引用和两次修改收据分别恢复，后来的引用不覆盖原轮', () => {
+ const turn = createTurn('ref-turn', '解释任务结果')
+ const reference = { type: 'task', taskId: 'actual-task' }
+ applyEvent(turn, { type: 'run.started', reference })
+ applyEvent(turn, { type: 'task.change.proposed', changeId: 'change-a', task: { kind: 'change', changeId: 'change-a', target: reference, status: 'PENDING_CONFIRMATION' } })
+ applyEvent(turn, { type: 'task.change.resolved', changeId: 'change-a', status: 'CONFIRMED' })
+ assert.equal(turn.tasks[0].status, 'CONFIRMED')
+ const restored = restoreTurns([{ id: 'first', content: '改本次', events: [{ type: 'run.started', reference }, { type: 'task.change.proposed', task: turn.tasks[0] }] },
+  { id: 'second', content: '改周期', events: [{ type: 'run.started', reference: { type: 'task_plan', planId: 'plan-a' } }, { type: 'task.change.proposed', task: { kind: 'change', changeId: 'change-b', status: 'CANCELLED' } }] }])
+ assert.deepEqual(restored.map(item => item.tasks[0].changeId), ['change-a', 'change-b'])
+ assert.equal(restored[0].reference.taskId, 'actual-task')
+ assert.equal(restored[1].reference.planId, 'plan-a')
+})

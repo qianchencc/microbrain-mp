@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" tall compact-header :title="sheetTitle" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="sheetTitle" @close="closeSheet">
   <template #header-left>
    <button v-if="selectedTask || selectedPlan" class="back-button" aria-label="返回安排列表" @tap="backToList"><uni-icons type="back" size="15" color="#63776a" /></button>
   </template>
@@ -42,7 +42,7 @@
     </scroll-view>
    </view>
 
-   <view v-else-if="selectedPlan" class="detail-pane">
+   <view v-else-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在核验当前计划与报告</text>
     <scroll-view class="detail-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="plan-summary">
       <view class="summary-heading"><view class="status-mark" :class="planIsEnabled(selectedPlan) ? 'status-mark--active' : 'status-mark--paused'" /><text class="plan-label">{{ selectedPlan.label || '未命名周期安排' }}</text></view>
@@ -69,7 +69,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { listAgentTasks, listTaskPlans } from '@/apis/agent'
+import { getTaskPlan, listAgentTasks, listTaskPlans } from '@/apis/agent'
 import { repeatText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 import SlidingSegments from './SlidingSegments.vue'
@@ -84,14 +84,14 @@ const views = [
 ]
 const view = ref('upcoming')
 const tasks = ref([]), plans = ref([])
-const loading = ref(false), error = ref('')
+const loading = ref(false), error = ref(''), planLoading = ref(false)
 const selectedTask = ref(null), selectedPlan = ref(null), returnPlan = ref(null)
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
 const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value ? '周期计划' : '我的安排')
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : '周期安排')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : '暂无周期计划')
-let requestId = 0
+let requestId = 0, planRequest = 0
 let loadedTaskView = ''
 
 function startOfDay(date) {
@@ -173,10 +173,18 @@ function openTask(task) {
  selectedTask.value = task
  selectedPlan.value = null
 }
-function openPlan(plan) {
- selectedPlan.value = plan
- selectedTask.value = null
- returnPlan.value = null
+async function openPlan(plan) {
+ const current = ++planRequest, source = props.source
+ selectedPlan.value = plan; selectedTask.value = null; returnPlan.value = null
+ planLoading.value = true
+ try {
+  const result = await getTaskPlan(plan.planId, source)
+  if (current === planRequest && props.open && props.source === source && selectedPlan.value?.planId === plan.planId) {
+   if (!result.plan) throw new Error('计划不存在或已无权查看')
+   selectedPlan.value = result.plan
+  }
+ } catch (cause) { if (current === planRequest && props.open) { selectedPlan.value = null; error.value = cause.message || '周期计划暂不可用' } }
+ finally { if (current === planRequest) planLoading.value = false }
 }
 function openLatestReport() {
  const task = selectedPlan.value?.latestTask
@@ -185,6 +193,7 @@ function openLatestReport() {
  openTask(task)
 }
 function backToList() {
+ ++planRequest; planLoading.value = false
  if (returnPlan.value) {
   selectedPlan.value = returnPlan.value
   returnPlan.value = null
@@ -194,7 +203,9 @@ function backToList() {
  selectedTask.value = null
  selectedPlan.value = null
 }
+function nativeBack() { if (selectedTask.value || selectedPlan.value) backToList(); else closeSheet() }
 function closeSheet() {
+ ++planRequest; planLoading.value = false
  selectedTask.value = null
  selectedPlan.value = null
  returnPlan.value = null
