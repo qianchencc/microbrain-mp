@@ -7,7 +7,7 @@
    <button v-if="!selectedTask && !selectedPlan" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
   </template>
   <view class="arrangements-content">
-   <view v-show="!selectedTask && !selectedPlan" class="list-pane">
+   <view class="list-pane" :style="{ display: selectedTask || selectedPlan ? 'none' : 'flex' }">
     <view class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
     <scroll-view class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="list-summary"><text>{{ listSummary }}</text><text>{{ visibleRows.length }} 项</text></view>
