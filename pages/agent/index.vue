@@ -2,7 +2,7 @@
  <view class="agent-page">
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
-  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'" :menu-action-label="isCompany ? '' : fromDashboard ? '返回总览' : '打开公司 Agent'" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @source-action="fromDashboard ? returnToOffice() : openCompany()">
+  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '物联 Agent'" :menu-action-label="isCompany ? '' : fromDashboard ? '返回总览' : '打开公司 Agent'" inbox-enabled :inbox-unread-count="inboxUnreadCount" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @source-action="fromDashboard ? returnToOffice() : openCompany()" @open-inbox="openInbox">
    <button v-if="isCompany" class="source-switch" hover-class="source-switch--pressed" :hover-stay-time="60" :aria-label="returnLabel" @tap="returnToOffice"><uni-icons type="back" size="14" color="#6c7d73" /><text>{{ returnLabel }}</text></button>
    <RegionChip v-if="!isCompany" nav @open="openRegion" />
   </AgentHeader>
@@ -35,12 +35,13 @@
    @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
+  <TaskInboxSheet :open="inboxOpen" :source="agentSource" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
  </view>
 </template>
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
+import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, listNotifications, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail } from './conversation.mjs'
 import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference } from './composer-drafts.mjs'
@@ -53,12 +54,24 @@ import AgentReplySurface from './components/AgentReplySurface.vue'
 import DraftSheetLayer from './components/DraftSheetLayer.vue'
 import UserMessage from './components/UserMessage.vue'
 import RegionChip from './components/RegionChip.vue'
+import TaskInboxSheet from './components/TaskInboxSheet.vue'
 import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus, consumeComposePrefill } from './region-focus.js'
 function openRegion(region) { uni.navigateTo({ url: '/pages/agent/region?regionId=' + encodeURIComponent(region.id) }) }
 const conversationId = ref('')
 const agentSource = ref('office')
 const fromDashboard = ref(false)
 const isCompany = computed(() => agentSource.value === 'company')
+const inboxOpen = ref(false), inboxUnreadCount = ref(0)
+let inboxCountRequest = 0
+function openInbox() { inboxOpen.value = true }
+function setInboxUnreadCount(value) { inboxUnreadCount.value = Number(value) || 0 }
+async function refreshInboxCount() {
+ const current = ++inboxCountRequest
+ try {
+  const result = await listNotifications({ source: agentSource.value, limit: 1 })
+  if (current === inboxCountRequest && !disposed) setInboxUnreadCount(result.unreadCount)
+ } catch { /* 收件箱读取失败不影响会话 */ }
+}
 const returnLabel = computed(() => fromDashboard.value ? '返回总览' : '办公室 Agent')
 const draftScope = ref('')
 const input = ref('')
@@ -200,6 +213,7 @@ async function restore() {
   follow()
   schedule()
   if (!isCompany.value && turns.value.some(turn => tasksOf(turn).some(task => task.repeat && task.created))) void refreshScheduledTasks()
+  void refreshInboxCount()
  } catch (error) { if (!disposed) { errorMessage.value = error.message; schedule() } }
  finally { restoring = false }
 }

@@ -42,14 +42,14 @@
  </scroll-view>
 </template>
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { cancelTask, getTaskDetail, getTaskLightingStates } from '@/apis/agent'
 import { taskDetailView } from '../task-detail-view.mjs'
 import { createStateRefresh } from '../state-refresh.mjs'
 import { creatorVariant } from '../region-device-view.mjs'
 
-const props = defineProps({ active: Boolean, taskId: String, sampleTask: Object })
-const emit = defineEmits(['cancelled'])
+const props = defineProps({ active: Boolean, taskId: String, sampleTask: Object, source: { type: String, default: 'office' } })
+const emit = defineEmits(['cancelled', 'loaded'])
 const task = ref(null), loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
 const expandedPhases = ref([])
@@ -58,7 +58,7 @@ const detail = computed(() => taskDetailView(task.value))
 const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
 const creatorMark = computed(() => detailMine.value ? '我' : (detail.value?.creator?.displayName || '').slice(0, 1))
 const ownerVariant = computed(() => creatorVariant(detail.value?.creator?.displayName, detailMine.value))
-const lightIds = computed(() => [...new Set((detail.value?.phases || []).flatMap(phase => phase.devices.filter(device => device.kind === 'lighting').map(device => device.id)))])
+const lightIds = computed(() => props.source === 'office' ? [...new Set((detail.value?.phases || []).flatMap(phase => phase.devices.filter(device => device.kind === 'lighting').map(device => device.id)))] : [])
 const currentSummary = computed(() => {
  const known = lightIds.value.filter(id => typeof currentStates.value[id]?.state === 'boolean')
  const on = known.filter(id => currentStates.value[id].state).length
@@ -71,27 +71,33 @@ function togglePhase(id) {
 }
 async function load(silent = false) {
  const current = ++requestId, taskId = props.taskId
+ let loaded = false
  if (!props.active || !props.taskId) return
  if (!silent) { task.value = null; error.value = ''; loading.value = false }
  if (props.sampleTask) { task.value = props.sampleTask; return }
  if (!silent) loading.value = true
  try {
-  const result = await getTaskDetail(taskId)
+  const result = await getTaskDetail(taskId, props.source)
   if (current === requestId && props.active && props.taskId === taskId) {
    if (!result?.task) { error.value = '任务不存在或没有查看权限'; return }
    const previousPhases = new Map((task.value?.phases || []).map(phase => [phase.id, phase.status]))
    task.value = result.task
-   if (result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
+   loaded = true
+   if (props.source === 'office' && result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
     if (!silent) void stateRefresh.auto()
     else if (result.task.phases.some(phase => ['pending', 'executing'].includes(previousPhases.get(phase.id)) && !['pending', 'executing'].includes(phase.status))) stateRefresh.after(1000)
    }
   }
  } catch (cause) { if (!silent && current === requestId) error.value = cause.message || '任务暂不可用' }
  finally { if (!silent && current === requestId) loading.value = false }
+ if (loaded) {
+  await nextTick()
+  if (current === requestId && props.active && props.taskId === taskId) emit('loaded', taskId)
+ }
 }
 async function loadCurrentStates(taskId = props.taskId) {
  const current = ++currentRequestId
- if (!props.active || !taskId || props.sampleTask) return
+ if (!props.active || !taskId || props.sampleTask || props.source !== 'office') return
  currentError.value = ''; currentLoading.value = true
  try {
   const result = await getTaskLightingStates(taskId)
@@ -113,7 +119,7 @@ async function deleteTask() {
  if (!confirmed || !props.active || props.taskId !== taskId) return
  cancelling.value = true; actionError.value = ''
  try {
-  await cancelTask(taskId, version)
+  await cancelTask(taskId, version, props.source)
   await load(true)
   emit('cancelled')
  } catch (cause) {
@@ -121,10 +127,11 @@ async function deleteTask() {
   await load(true)
  } finally { cancelling.value = false }
 }
-watch(() => [props.active, props.taskId, props.sampleTask], () => {
+watch(() => [props.active, props.taskId, props.sampleTask, props.source], () => {
  clearInterval(refreshTimer)
  stateRefresh.cancel(); ++currentRequestId; currentLoading.value = false; currentError.value = ''
  if (observedTaskId !== props.taskId || props.sampleTask) currentStates.value = {}
+ if (props.source !== 'office') currentStates.value = {}
  observedTaskId = props.taskId
  actionError.value = ''
  expandedPhases.value = []
@@ -136,7 +143,7 @@ watch(() => [props.active, props.taskId, props.sampleTask], () => {
  }
  else { ++requestId; loading.value = false; task.value = null }
 }, { immediate: true })
-onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId })
+onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId; ++requestId })
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }

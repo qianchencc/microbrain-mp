@@ -12,23 +12,22 @@
  </view>
 </template>
 <script setup>
-const props = defineProps({ status: String, agentName: { type: String, default: '物联 Agent' }, menuActionLabel: { type: String, default: '' }, disabled: Boolean, error: Boolean })
-const emit = defineEmits(['clear', 'source-action'])
+const props = defineProps({ status: String, agentName: { type: String, default: '物联 Agent' }, menuActionLabel: { type: String, default: '' }, inboxEnabled: Boolean, inboxUnreadCount: { type: Number, default: 0 }, disabled: Boolean, error: Boolean })
+const emit = defineEmits(['clear', 'source-action', 'open-inbox'])
 import { navMetrics } from '../nav-metrics.js'
 
 const { top, barHeight, rightInset } = navMetrics()
 function openMenu() {
- const itemList = []
- if (!props.disabled) itemList.push('清除当前会话')
- if (props.menuActionLabel) itemList.push(props.menuActionLabel)
+ const actions = []
+ if (!props.disabled) actions.push({ label: '清除当前会话', event: 'clear' })
+ if (props.inboxEnabled) actions.push({ label: props.inboxUnreadCount ? `任务收件箱（${props.inboxUnreadCount} 条未读）` : '任务收件箱', event: 'open-inbox' })
+ if (props.menuActionLabel) actions.push({ label: props.menuActionLabel, event: 'source-action' })
+ const itemList = actions.map(action => action.label)
  if (!itemList.length) {
   uni.showToast({ title: '暂无可清除的会话', icon: 'none' })
   return
  }
- uni.showActionSheet({ itemList, success: ({ tapIndex }) => {
-  if (props.menuActionLabel && tapIndex === itemList.length - 1) emit('source-action')
-  else if (!props.disabled && tapIndex === 0) emit('clear')
- } })
+ uni.showActionSheet({ itemList, success: ({ tapIndex }) => emit(actions[tapIndex]?.event) })
 }
 </script>
 <style scoped>
