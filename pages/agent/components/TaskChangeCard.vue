@@ -19,10 +19,11 @@
      <text v-for="target in version.targets.items" :key="target" class="target-item">{{ target }}</text>
      <text v-if="version.targets.omitted" class="target-more">另有 {{ version.targets.omitted }} 项</text>
     </view>
+    <view v-if="version.key === 'before' && change.operation === 'edit'" class="change-arrow"><uni-icons type="down" size="13" color="#98a59d" /></view>
    </view>
-   <view class="change-arrow"><uni-icons type="down" size="13" color="#98a59d" /></view>
   </view>
 
+  <text v-if="operationEffect" class="change-effect">{{ operationEffect }}</text>
   <text v-if="changesFutureOnly" class="change-note">仅影响未来周期安排；已生成任务与历史记录不变。</text>
   <text v-else-if="change.operation === 'delete' && scopeText === '本任务'" class="change-note">已完成的阶段和历史结果不会回滚。</text>
   <view v-if="pending" class="change-actions">
@@ -55,9 +56,15 @@ const confirmText = computed(() => ({ edit: '确认修改', pause: '确认暂停
 const statusText = computed(() => ({ pending_confirmation: '待确认', confirmed: '已确认', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束')
 const receiptText = computed(() => ({ confirmed: '变更已确认', cancelled: '本次提案已放弃', expired: '本次提案已过期' })[state.value] || '本次提案已结束')
 const changesFutureOnly = computed(() => ['pause', 'delete'].includes(props.change.operation) && scopeText.value === '整个周期')
+const operationEffect = computed(() => ({
+ pause: '确认后停用周期，未来不再发生；已经生成的任务继续。',
+ resume: '确认后启用周期，从下一次未来安排继续；不补执行过去的发生。',
+ delete: '确认后删除周期计划，未来不再发生；已经生成的任务与历史报告保留。',
+ skip: '确认后仅跳过这一次安排，其他日期与周期规则保持不变。',
+})[props.change.operation] || '')
 const versions = computed(() => [
  { key: 'before', label: '当前安排', template: props.change.before, targets: targetSummary(props.change.before) },
- { key: 'after', label: '提案安排', template: props.change.after, targets: targetSummary(props.change.after) },
+ ...(props.change.operation === 'edit' ? [{ key: 'after', label: '提案安排', template: props.change.after, targets: targetSummary(props.change.after) }] : []),
 ])
 
 function scheduleText(template) {
@@ -109,6 +116,7 @@ button::after { border:0; }
 .target-more { color:#919d95; }
 .change-arrow { height:14px; display:flex; align-items:center; justify-content:center; }
 .change-note { display:block; padding:8px 9px; border-left:2px solid #b58c4b; background:#f8f4eb; color:#806338; font-size:10px; line-height:1.5; }
+.change-effect { display:block; padding:10px; border-left:2px solid #4a9272; background:#edf5ef; color:#436850; font-size:12px; line-height:1.5; }
 .change-receipt { display:block; padding:9px 3px 1px; border-top:1px solid #e0e8e1; color:#718176; font-size:11px; }
 .change-actions { display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:7px; padding:11px 3px 1px; border-top:1px solid #dfe7e1; }
 .change-actions button { min-height:42px; padding:0 12px; border-radius:9px; font-size:12px; line-height:42px; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 150ms ease,opacity 150ms ease; }
