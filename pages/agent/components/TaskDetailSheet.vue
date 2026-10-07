@@ -1,14 +1,17 @@
 <template>
- <DeviceSheet :open="open" tall compact-header title="任务" @close="$emit('close')">
-  <template #header-right><text class="region-name">{{ regionName }}</text></template>
-  <TaskDetailContent class="content-host" :active="open" :task-id="taskId" :sample-task="sampleTask" @cancelled="$emit('cancelled')" />
+ <DeviceSheet :open="open" tall compact-header :title="planId ? (viewingReport ? '最近一次报告' : '周期安排') : '任务'" @close="$emit('close')">
+  <template #header-right><text v-if="regionName" class="region-name">{{ regionName }}</text></template>
+  <TaskDetailContent class="content-host" :active="open" :task-id="taskId" :plan-id="planId" :source="source" :sample-task="sampleTask" @cancelled="$emit('cancelled')" @report-open="viewingReport = true" @plan-return="viewingReport = false" />
  </DeviceSheet>
 </template>
 <script setup>
+import { ref, watch } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import TaskDetailContent from './TaskDetailContent.vue'
 
-defineProps({ open: Boolean, taskId: String, sampleTask: Object, regionName: String })
+const props = defineProps({ open: Boolean, taskId: String, planId: String, source: { type: String, default: 'office' }, sampleTask: Object, regionName: String })
+const viewingReport = ref(false)
+watch(() => [props.open, props.taskId, props.planId], () => { viewingReport.value = false })
 defineEmits(['close', 'cancelled'])
 </script>
 <style scoped>

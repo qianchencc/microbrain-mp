@@ -36,6 +36,7 @@
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
   <TaskInboxSheet :open="inboxOpen" :source="agentSource" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
+  <TaskDetailSheet v-if="isCompany" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="agentSource" @close="closeCompanyTask" />
  </view>
 </template>
 <script setup>
@@ -55,6 +56,7 @@ import DraftSheetLayer from './components/DraftSheetLayer.vue'
 import UserMessage from './components/UserMessage.vue'
 import RegionChip from './components/RegionChip.vue'
 import TaskInboxSheet from './components/TaskInboxSheet.vue'
+import TaskDetailSheet from './components/TaskDetailSheet.vue'
 import { focusRegion, focusRegionId, regionsLoading, loadRegionFocus, consumeComposePrefill } from './region-focus.js'
 function openRegion(region) { uni.navigateTo({ url: '/pages/agent/region?regionId=' + encodeURIComponent(region.id) }) }
 const conversationId = ref('')
@@ -62,8 +64,10 @@ const agentSource = ref('office')
 const fromDashboard = ref(false)
 const isCompany = computed(() => agentSource.value === 'company')
 const inboxOpen = ref(false), inboxUnreadCount = ref(0)
+const companyTaskId = ref(''), companyPlanId = ref('')
 let inboxCountRequest = 0
 function openInbox() { inboxOpen.value = true }
+function closeCompanyTask() { companyTaskId.value = ''; companyPlanId.value = '' }
 function setInboxUnreadCount(value) { inboxUnreadCount.value = Number(value) || 0 }
 async function refreshInboxCount() {
  const current = ++inboxCountRequest
@@ -149,7 +153,7 @@ function schedule() {
  clearTimeout(pollTimer)
  if (visible && !disposed && (hasExecution.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
  clearTimeout(taskPollTimer)
- if (!isCompany.value && visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
+ if (visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
  clearTimeout(expiryTimer)
  const pending = turns.value.filter(turn => turn.draft?.status === 'PENDING_CONFIRMATION')
  const pendingTasks = turns.value.flatMap(turn => tasksOf(turn)).filter(task => task.status === 'PENDING_CONFIRMATION')
@@ -165,7 +169,7 @@ async function refreshScheduledTasks() {
  const active = turns.value.flatMap(turn => tasksOf(turn)).filter(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase()))
  await Promise.allSettled(active.map(async task => {
   const id = task.taskId
-  const result = task.repeat ? await getTaskPlan(id) : await getTaskDetail(id)
+  const result = task.repeat ? await getTaskPlan(id, agentSource.value) : await getTaskDetail(id, agentSource.value)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => item.taskId === id && !item.cancellationId)
   if (live && result.plan) mergeTaskPlan(live, result.plan)
   if (live && result.task) mergeTaskDetail(live, result.task)
@@ -212,7 +216,7 @@ async function restore() {
   errorMessage.value = ''
   follow()
   schedule()
-  if (!isCompany.value && turns.value.some(turn => tasksOf(turn).some(task => task.repeat && task.created))) void refreshScheduledTasks()
+  if (turns.value.some(turn => tasksOf(turn).some(task => task.repeat && task.created))) void refreshScheduledTasks()
   void refreshInboxCount()
  } catch (error) { if (!disposed) { errorMessage.value = error.message; schedule() } }
  finally { restoring = false }
@@ -428,7 +432,7 @@ async function confirmTaskProposal(task) {
  mutating.value = true; confirming.add(key); confirmEpoch++
  let resync = false
  try {
-  const result = cancellationId ? await confirmTaskCancellation(cancellationId) : await confirmScheduledTask(taskId, task.version)
+  const result = cancellationId ? await confirmTaskCancellation(cancellationId) : await confirmScheduledTask(taskId, task.version, agentSource.value)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.cancellationId || item.taskId) === key)
   if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt } } }
   if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
@@ -443,13 +447,26 @@ async function discardTaskProposal(task) {
  const taskId = task.taskId, cancellationId = task.cancellationId
  mutating.value = true
  try {
-  const result = cancellationId ? await discardTaskCancellation(cancellationId) : await discardScheduledTask(taskId)
+  const result = cancellationId ? await discardTaskCancellation(cancellationId) : await discardScheduledTask(taskId, agentSource.value)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.cancellationId || item.taskId) === (cancellationId || taskId))
   if (live) live.status = result.status
  } catch (error) { errorMessage.value = error.data?.message || error.message }
  finally { mutating.value = false; schedule() }
 }
 function openTaskRegion(task) {
+ if (isCompany.value) {
+  const planId = task?.planId || (task?.repeat && !task?.occurrence ? task?.taskId || task?.id : '')
+  if (planId && !task.occurrence) {
+   companyTaskId.value = ''
+   companyPlanId.value = planId
+   return
+  }
+  const taskId = task?.taskId || task?.id
+  if (!taskId) return
+  companyPlanId.value = ''
+  companyTaskId.value = taskId
+  return
+ }
  const target = taskNavigation(task)
  if (!target) return
  uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(target.regionId)}&date=${encodeURIComponent(target.date)}&taskId=${encodeURIComponent(target.taskId)}` })

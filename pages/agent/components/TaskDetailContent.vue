@@ -1,14 +1,15 @@
 <template>
  <scroll-view class="task-scroll" scroll-y enhanced :show-scrollbar="false">
   <view v-if="loading" class="message">正在读取任务</view>
-  <view v-else-if="error" class="message"><text>{{ error }}</text><button @tap="load()">重新加载</button></view>
+  <view v-else-if="error" class="message"><text>{{ error }}</text><button @tap="load()">重新加载</button><button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button></view>
   <view v-else-if="detail" class="task-detail">
+   <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button>
    <text class="task-name">{{ detail.label }}</text>
    <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
    <text v-if="detail.occurrence" class="task-when">{{ detail.occurrence.virtual ? '未来安排 · 尚未开始' : '本次发生' }} · {{ detail.occurrence.date }}</text>
    <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">下一次 · {{ detail.nextText }}</text>
    <text class="task-when">{{ detail.whenText }}</text>
-   <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ detail.creator?.displayName || '成员' }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
+   <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ plan ? '周期计划' : `${detail.creator?.displayName || '成员'} 创建 · ${detail.createdText}` }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
    <text v-if="currentError" class="current-error">状态暂不可用</text>
    <text v-if="actionError" class="action-error">{{ actionError }}</text>
@@ -17,6 +18,7 @@
     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
      <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><text class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+     <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" read-only />
      <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
      <button v-if="phase.devices.length > 1" class="phase-devices" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
       <view class="phase-avatars"><view v-for="device in phase.devices.slice(0, 5)" :key="device.id" class="phase-avatar"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="12" color="#7c8d82" /></view></view>
@@ -34,7 +36,12 @@
    <view v-if="detail.report" class="task-report">
     <text class="report-title">执行报告 · {{ detail.report.generatedText }}</text>
     <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 个检查点 · {{ detail.report.devicesVisible }} 台设备</text>
-    <text class="report-note">按已保存的执行回执汇总；上方记录如实保留受理与未核验结果</text>
+    <text class="report-note">{{ source === 'company' ? '根据已保存的任务结果汇总' : '按已保存的执行回执汇总；上方记录如实保留受理与未核验结果' }}</text>
+   </view>
+   <view v-if="plan && latestReport" class="task-report">
+    <text class="report-title">最近一次执行 · {{ latestReport.generatedText }}</text>
+    <text class="report-summary">{{ latestReport.outcomeText }} · {{ latestReport.checkpoints }} 个检查点 · {{ latestReport.devicesVisible }} 台设备</text>
+    <button class="latest-report-link" @tap="openLatestReport">查看最近一次报告</button>
    </view>
    <view class="source"><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId">对话 {{ detail.source.conversationId.slice(0, 8) }}</text></view>
    <button v-if="detail.canCancel && !sampleTask" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="deleteTask">删除任务</button>
@@ -43,17 +50,25 @@
 </template>
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { cancelTask, getTaskDetail, getTaskLightingStates } from '@/apis/agent'
-import { taskDetailView } from '../task-detail-view.mjs'
+import { cancelTask, getTaskDetail, getTaskLightingStates, getTaskPlan } from '@/apis/agent'
+import { taskDetailView, taskPlanSnapshot } from '../task-detail-view.mjs'
 import { createStateRefresh } from '../state-refresh.mjs'
 import { creatorVariant } from '../region-device-view.mjs'
+import ObservationCard from './ObservationCard.vue'
 
-const props = defineProps({ active: Boolean, taskId: String, sampleTask: Object, source: { type: String, default: 'office' } })
-const emit = defineEmits(['cancelled', 'loaded'])
-const task = ref(null), loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
+const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, source: { type: String, default: 'office' } })
+const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'plan-return'])
+const task = ref(null), plan = ref(null), returnPlan = ref(null)
+const activeTaskId = ref(''), activePlanId = ref('')
+const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
 const expandedPhases = ref([])
-const detail = computed(() => taskDetailView(task.value))
+const detail = computed(() => {
+ const view = taskDetailView(task.value || taskPlanSnapshot(plan.value))
+ if (plan.value && view) return { ...view, statusText: plan.value.nextAt ? '已启用' : '周期结束' }
+ return view
+})
+const latestReport = computed(() => taskDetailView(plan.value?.latestTask)?.report || null)
 // 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于创建者标记显示“我”。
 const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
 const creatorMark = computed(() => detailMine.value ? '我' : (detail.value?.creator?.displayName || '').slice(0, 1))
@@ -70,53 +85,81 @@ function togglePhase(id) {
  expandedPhases.value = expandedPhases.value.includes(id) ? expandedPhases.value.filter(value => value !== id) : [...expandedPhases.value, id]
 }
 async function load(silent = false) {
- const current = ++requestId, taskId = props.taskId
+ const current = ++requestId, taskId = activeTaskId.value, planId = activePlanId.value
  let loaded = false
- if (!props.active || !props.taskId) return
- if (!silent) { task.value = null; error.value = ''; loading.value = false }
+ if (!props.active || (!taskId && !planId)) return
+ if (!silent) { task.value = null; plan.value = null; error.value = ''; loading.value = false }
  if (props.sampleTask) { task.value = props.sampleTask; return }
  if (!silent) loading.value = true
  try {
-  const result = await getTaskDetail(taskId, props.source)
-  if (current === requestId && props.active && props.taskId === taskId) {
-   if (!result?.task) { error.value = '任务不存在或没有查看权限'; return }
-   const previousPhases = new Map((task.value?.phases || []).map(phase => [phase.id, phase.status]))
-   task.value = result.task
-   loaded = true
-   if (props.source === 'office' && result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
-    if (!silent) void stateRefresh.auto()
-    else if (result.task.phases.some(phase => ['pending', 'executing'].includes(previousPhases.get(phase.id)) && !['pending', 'executing'].includes(phase.status))) stateRefresh.after(1000)
+  if (planId) {
+   const result = await getTaskPlan(planId, props.source)
+   if (current === requestId && props.active && activePlanId.value === planId) {
+    if (!result?.plan) { error.value = '周期计划不存在或没有查看权限'; return }
+    plan.value = result.plan
+   }
+  } else {
+   const result = await getTaskDetail(taskId, props.source)
+   if (current === requestId && props.active && activeTaskId.value === taskId) {
+    if (!result?.task) { error.value = '任务不存在或没有查看权限'; return }
+    const previousPhases = new Map((task.value?.phases || []).map(phase => [phase.id, phase.status]))
+    task.value = result.task
+    loaded = true
+    if (props.source === 'office' && result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
+     if (!silent) void stateRefresh.auto()
+     else if (result.task.phases.some(phase => ['pending', 'executing'].includes(previousPhases.get(phase.id)) && !['pending', 'executing'].includes(phase.status))) stateRefresh.after(1000)
+    }
    }
   }
- } catch (cause) { if (!silent && current === requestId) error.value = cause.message || '任务暂不可用' }
+ } catch (cause) { if (!silent && current === requestId) error.value = cause.message || (planId ? '周期计划暂不可用' : '任务暂不可用') }
  finally { if (!silent && current === requestId) loading.value = false }
  if (loaded) {
   await nextTick()
-  if (current === requestId && props.active && props.taskId === taskId) emit('loaded', taskId)
+  if (current === requestId && props.active && activeTaskId.value === taskId) emit('loaded', taskId)
  }
 }
-async function loadCurrentStates(taskId = props.taskId) {
+async function loadCurrentStates(taskId = activeTaskId.value) {
  const current = ++currentRequestId
  if (!props.active || !taskId || props.sampleTask || props.source !== 'office') return
  currentError.value = ''; currentLoading.value = true
  try {
   const result = await getTaskLightingStates(taskId)
-  if (current === currentRequestId && props.active && props.taskId === taskId) {
+  if (current === currentRequestId && props.active && activeTaskId.value === taskId) {
    currentStates.value = Object.fromEntries((result.states || []).map(state => [state.id, state]))
   }
  } catch (cause) { if (current === currentRequestId) { currentStates.value = {}; currentError.value = cause.message || '当前状态暂不可用' } }
  finally { if (current === currentRequestId) currentLoading.value = false }
 }
-const stateRefresh = createStateRefresh(loadCurrentStates)
+const stateRefresh = createStateRefresh(() => loadCurrentStates(activeTaskId.value))
+function openLatestReport() {
+ if (!plan.value?.latestTask?.id) return
+ returnPlan.value = plan.value
+ activePlanId.value = ''
+ activeTaskId.value = plan.value.latestTask.id
+ emit('report-open')
+ void load()
+}
+function returnToPlan() {
+ if (!returnPlan.value) return
+ ++requestId
+ plan.value = returnPlan.value
+ returnPlan.value = null
+ task.value = null
+ activeTaskId.value = ''
+ activePlanId.value = plan.value.planId
+ error.value = ''
+ loading.value = false
+ emit('plan-return')
+}
 async function deleteTask() {
  if (!detail.value?.canCancel || cancelling.value) return
- const taskId = props.taskId, version = task.value.version
+ const taskId = activeTaskId.value, version = task.value.version
  const settledInterval = detail.value?.interval && !detail.value.phases.some(phase => phase.status === 'pending')
  const confirmed = await new Promise(resolve => uni.showModal({ title: '删除任务',
   content: settledInterval ? '结束剩余区间；已发生动作不会回滚。'
    : `${detail.value?.interval ? '未执行的检查点' : '未执行的阶段'}将取消；已经执行的设备动作不会回滚。`, confirmText: '删除任务', confirmColor: '#a15343',
   success: result => resolve(result.confirm), fail: () => resolve(false) }))
- if (!confirmed || !props.active || props.taskId !== taskId) return
+ if (!confirmed || !props.active || activeTaskId.value !== taskId) return
  cancelling.value = true; actionError.value = ''
  try {
   await cancelTask(taskId, version, props.source)
@@ -127,21 +170,24 @@ async function deleteTask() {
   await load(true)
  } finally { cancelling.value = false }
 }
-watch(() => [props.active, props.taskId, props.sampleTask, props.source], () => {
+watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.source], () => {
  clearInterval(refreshTimer)
  stateRefresh.cancel(); ++currentRequestId; currentLoading.value = false; currentError.value = ''
- if (observedTaskId !== props.taskId || props.sampleTask) currentStates.value = {}
+ activeTaskId.value = props.taskId || ''
+ activePlanId.value = props.planId || ''
+ returnPlan.value = null
+ if (observedTaskId !== activeTaskId.value || props.sampleTask) currentStates.value = {}
  if (props.source !== 'office') currentStates.value = {}
- observedTaskId = props.taskId
+ observedTaskId = activeTaskId.value || activePlanId.value
  actionError.value = ''
  expandedPhases.value = []
  if (props.active) {
   load()
   if (!props.sampleTask) refreshTimer = setInterval(() => {
-   if (['scheduled', 'executing'].includes(task.value?.status)) load(true)
+   if (activePlanId.value || ['scheduled', 'executing'].includes(task.value?.status)) load(true)
   }, 10000)
  }
- else { ++requestId; loading.value = false; task.value = null }
+ else { ++requestId; loading.value = false; task.value = null; plan.value = null }
 }, { immediate: true })
 onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId; ++requestId })
 </script>
@@ -154,6 +200,7 @@ button::after { border:0; }
 .message text { display:block; }
 .task-detail { padding:10px 20px 34px; }
 .task-name { display:block; color:#263c2e; font-size:18px; font-weight:700; line-height:1.35; }
+.plan-back { display:flex; align-items:center; gap:4px; min-height:30px; margin:0 0 8px; color:#63776a; font-size:11px; }
 .task-when { display:block; margin-top:5px; color:#75877b; font-size:12px; }
 .owner-line { display:flex; align-items:center; gap:8px; margin-top:13px; }
 .owner-mark { width:25px; height:25px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#3a9478,#11553f); color:#fff; font-size:11px; font-weight:600; }
@@ -210,6 +257,7 @@ button::after { border:0; }
 .result.ok { color:#397b61; }.result.warn { color:#a27128; }.result.fail { color:#a15343; }.result.wait { color:#839189; }
 .no-devices { display:block; padding:12px 0; color:#839189; font-size:11px; }
 .task-report { margin-top:14px; padding:12px 14px; border:1px solid #e0e9e1; border-radius:10px; background:linear-gradient(#fdfefd,#f6f8f5); box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.05); }
+.latest-report-link { width:100%; margin:8px 0 0; color:#176b54; font-size:11px; text-align:left; }
 .report-title { display:block; color:#4d7663; font-size:11px; font-weight:700; }
 .report-summary { display:block; margin-top:5px; color:#263c2e; font-size:12px; font-weight:600; }
 .report-note { display:block; margin-top:5px; color:#85958a; font-size:11px; }

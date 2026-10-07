@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
 import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
-import { taskDetailView } from '../pages/agent/task-detail-view.mjs'
+import { readTargetText, taskDetailView, taskPlanSnapshot, targetText } from '../pages/agent/task-detail-view.mjs'
 import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/region-sample-tasks.mjs'
 
 test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 34px', () => {
@@ -123,4 +123,31 @@ test('周期安排区分未来发生与实际报告，并导航到同一发生',
  assert.equal(taskDetailView(actual).report.outcomeText, '已执行')
  assert.equal(taskDetailView(actual).repeatText, repeatText(card.repeat))
  assert.deepEqual(taskNavigation(actual), { taskId: 'actual-1', date: '2026-10-12', regionId: 'office-1' })
+})
+
+test('Company 只读检查显示读取目标、已读取结果和持久化观察块', () => {
+ const blocks = [{ type: 'environment', devices: [{ deviceId: 'env-1', name: '展示厅温度' }] }]
+ const phase = { id: 'read-1', at: '2026-10-09T10:00:00.000Z', status: 'completed', endedAt: '2026-10-09T10:00:12.000Z',
+  devices: [{ id: 'env-1', kind: 'environment', name: '展示厅温度', target: { observe: true }, outcome: 'observed', details: {} }] }
+ const detail = taskDetailView({ id: 'report-1', agentSource: 'company', label: '展示厅简报', status: 'completed', createdAt: '2026-10-09T09:00:00.000Z',
+  phases: [phase], report: { generatedAt: phase.endedAt, outcome: 'completed', phases: [{ id: phase.id, at: phase.at, status: phase.status, observations: blocks, devices: phase.devices }] } })
+ assert.equal(targetText('environment', { observe: true }), '读取环境数据')
+ assert.equal(readTargetText('safety'), '读取告警台账')
+ assert.equal(detail.phases[0].devices[0].resultText, '已读取')
+ assert.deepEqual(detail.phases[0].observations, blocks)
+ assert.equal(detail.report.outcomeText, '已完成')
+ const byTime = taskDetailView({ ...detail, phases: [{ ...phase, id: 'different-id' }], report: { ...detail.report, phases: [{ id: 'old-id', at: phase.at, observations: blocks, devices: phase.devices }] } })
+ assert.deepEqual(byTime.phases[0].observations, blocks)
+})
+
+test('Company 周期详情保留下一次安排的只读检查快照', () => {
+ const plan = { planId: 'plan-company-1', label: '每日巡检', repeat: { frequency: 'daily' },
+  nextAt: '2026-10-10T10:00:00.000Z', phases: [{ id: 'occurrence:plan-company-1:0', at: '2026-10-10T10:00:00.000Z', status: 'pending',
+   devices: [{ id: 'meter-1', kind: 'energy', name: '展示厅电表', target: { observe: true }, outcome: 'pending', details: {} }] }] }
+ const snapshot = taskPlanSnapshot(plan)
+ assert.equal(snapshot.id, plan.planId)
+ assert.equal(snapshot.status, 'scheduled')
+ assert.equal(snapshot.report, null)
+ assert.deepEqual(snapshot.phases, plan.phases)
+ assert.equal(taskDetailView(snapshot).phases[0].devices[0].targetText, '读取最新能耗')
 })

@@ -6,10 +6,15 @@
   <text v-if="task.repeat && isCreated && task.nextAt" class="task-interval">下一次 · {{ taskTime(task.nextAt) }}</text>
   <text v-if="task.interval" class="task-interval">{{ intervalText }}</text>
   <view class="task-phases">
-   <view v-for="(phase, index) in task.phases" :key="phase.at" class="task-phase">
+  <view v-for="(phase, index) in task.phases" :key="phase.at" class="task-phase">
     <view class="phase-time"><view class="phase-node" :class="{ ending: !task.interval && index === 1 }" /><text>{{ phaseTitle(index) }} · {{ taskTime(phase.at) }}</text></view>
     <view v-for="action in phase.actions" :key="action.deviceId" class="task-device">
      <view class="device-cell"><image v-if="artworkOf(action)" class="device-art" :src="artworkOf(action)" mode="aspectFit" /><text class="device-name">{{ action.deviceName }}</text></view><text class="device-target">{{ targetText(action.kind, action.command) }}</text>
+    </view>
+    <text v-if="source === 'company' && phase.read?.alertDays" class="read-window">安全台账 · 近 {{ phase.read.alertDays }} 天</text>
+    <view v-for="device in source === 'company' ? phase.read?.devices || [] : []" :key="device.id" class="task-device read-device">
+     <view class="device-cell"><image class="device-art" :src="artworkOf(device)" mode="aspectFit" /><text class="device-name">{{ device.name }}</text></view><text class="device-target">{{ readTargetText(device.kind) }}</text>
+     <text v-if="device.location" class="device-location">{{ device.location }}</text>
     </view>
    </view>
   </view>
@@ -19,7 +24,7 @@
    <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy" @tap="$emit('confirm')">{{ isCancellation ? '确认取消' : task.repeat ? '创建周期计划' : '创建任务' }}</button>
   </view>
   <view v-else-if="isCreated" class="task-created">
-   <button v-if="!task.repeat || task.nextAt" class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看下一次安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
+   <button v-if="!task.repeat || task.nextAt" class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看下一次安排' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
    <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="#176b54" /></button>
   </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>
@@ -27,10 +32,10 @@
 </template>
 <script setup>
 import { computed } from 'vue'
-import { repeatText, taskTime, targetText } from '../task-detail-view.mjs'
+import { readTargetText, repeatText, taskTime, targetText } from '../task-detail-view.mjs'
 import { resolveDeviceArtwork } from '../device-art/catalog.js'
 
-const props = defineProps({ task: { type: Object, required: true }, busy: Boolean })
+const props = defineProps({ task: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean })
 defineEmits(['confirm', 'discard', 'open'])
 const isCancellation = computed(() => props.task.kind === 'cancellation')
 const state = computed(() => String(props.task.status || '').toLowerCase())
@@ -41,14 +46,16 @@ const stateText = computed(() => isCancellation.value
  : props.task.repeat && isCreated.value ? props.task.nextAt === undefined ? '已创建' : props.task.nextAt ? '已启用' : props.task.latestTask?.status === 'executing' ? '本次进行中' : props.task.latestTask?.status === 'scheduled' ? '本次待执行' : '周期结束'
  : state.value === 'executing' && props.task.interval
   ? props.task.executionActive ? '设备执行中' : '区间进行中'
-  : ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '明确报错', failed: '明确报错', unconfirmed: '明确报错', cancelled: '已取消', missed: '明确报错', interrupted: '明确报错', expired: '已过期' })[state.value] || '已结束')
+  : (props.source === 'company'
+   ? ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '执行失败', unconfirmed: '结果待核验', cancelled: '已取消', missed: '执行错过', interrupted: '执行中断', expired: '已过期' })
+   : ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '明确报错', failed: '明确报错', unconfirmed: '明确报错', cancelled: '已取消', missed: '明确报错', interrupted: '明确报错', expired: '已过期' }))[state.value] || '已结束')
 const intervalText = computed(() => {
  if (!props.task.interval) return ''
  const start = taskTime(props.task.interval.startsAt), end = taskTime(props.task.interval.endsAt)
  const span = start.slice(0, 10) === end.slice(0, 10) ? `${start} 至 ${end.slice(-5)}` : `${start} 至 ${end}`
  return `${span} · ${props.task.phases?.length || 0} 个检查点`
 })
-const artworkOf = action => resolveDeviceArtwork({ kind: action.kind, deviceName: action.deviceName }).src
+const artworkOf = device => resolveDeviceArtwork({ kind: device.kind, deviceName: device.deviceName || device.name }).src
 function phaseTitle(index) {
  if (isCancellation.value) return state.value === 'confirmed' ? '已取消' : '将取消'
  if (props.task.interval) return `检查点${index + 1}`
@@ -77,6 +84,8 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .device-art { width:18px; height:18px; flex-shrink:0; }
 .device-name { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .device-target { flex-shrink:0; max-width:100%; color:#5c7865; }
+.read-window { display:block; margin:2px 0 3px 16px; color:#917044; font-size:10px; }
+.device-location { width:100%; margin-left:16px; color:#8b9991; font-size:10px; }
 .task-note { display:block; padding:0 3px 10px; color:#8b796c; font-size:11px; }
 .task-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:13px 3px 3px; border-top:.5px solid #dbe3dd; }
 .task-actions button { display:flex; align-items:center; justify-content:center; min-width:0; min-height:44px; margin:0; padding:0 12px; border-radius:10px; font-size:12px; line-height:44px; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 160ms ease,box-shadow 160ms ease,opacity 160ms ease; }
