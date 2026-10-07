@@ -55,7 +55,7 @@ const operationText = computed(() => {
 const confirmText = computed(() => ({ edit: '确认修改', pause: '确认暂停', resume: '确认恢复', delete: '确认删除', skip: '确认跳过' })[props.change.operation] || '确认变更')
 const statusText = computed(() => ({ pending_confirmation: '待确认', confirmed: '已确认', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束')
 const receiptText = computed(() => ({ confirmed: '变更已确认', cancelled: '本次提案已放弃', expired: '本次提案已过期' })[state.value] || '本次提案已结束')
-const changesFutureOnly = computed(() => ['pause', 'delete'].includes(props.change.operation) && scopeText.value === '整个周期')
+const changesFutureOnly = computed(() => props.change.operation === 'edit' && scopeText.value === '整个周期')
 const operationEffect = computed(() => ({
  pause: '确认后停用周期，未来不再发生；已经生成的任务继续。',
  resume: '确认后启用周期，从下一次未来安排继续；不补执行过去的发生。',
