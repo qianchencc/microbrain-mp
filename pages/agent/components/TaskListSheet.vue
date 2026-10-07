@@ -173,7 +173,9 @@ async function load() {
   }
  } catch (cause) {
   if (current === requestId && props.open && view.value === kind) {
-   if (cause.data || !scope) resetIdentity()
+   let currentScope = ''
+   try { currentScope = getAgentStorageScope() } catch { /* 失效身份不得保留旧列表 */ }
+   if (cause.data || !scope || scope !== currentScope) resetIdentity()
    error.value = cause.message || '安排暂不可用'
   }
  } finally {

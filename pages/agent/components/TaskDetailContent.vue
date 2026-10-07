@@ -141,7 +141,9 @@ async function load(silent = false) {
    }
   }
  } catch (cause) { if (current === requestId && pageVisible && scope === detailScope) {
-  if (cause.data || !scope) { task.value = null; plan.value = null; currentStates.value = {} }
+  let currentScope = ''
+  try { currentScope = getAgentStorageScope() } catch { /* 失效身份不得保留旧报告 */ }
+  if (cause.data || !scope || scope !== currentScope) { task.value = null; plan.value = null; currentStates.value = {} }
   error.value = String(cause.message || '').startsWith('request:fail') ? '任务暂不可用，请检查网络后重新读取' : cause.message || (planId ? '周期计划暂不可用' : '任务暂不可用')
  } }
  finally { if (!silent && current === requestId) loading.value = false }
