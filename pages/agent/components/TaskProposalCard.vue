@@ -1,7 +1,9 @@
 <template>
  <view class="task-card">
-  <view class="task-head"><text class="task-kicker">{{ isCancellation ? '取消任务' : '定时任务' }}</text><text class="task-state" :class="state">{{ stateText }}</text></view>
+  <view class="task-head"><text class="task-kicker">{{ isCancellation ? '取消任务' : task.repeat ? '周期计划' : '定时任务' }}</text><text class="task-state" :class="state">{{ stateText }}</text></view>
   <text class="task-name">{{ task.label }}</text>
+  <text v-if="task.repeat" class="task-repeat">{{ repeatText(task.repeat) }}</text>
+  <text v-if="task.repeat && isCreated && task.nextAt" class="task-interval">下一次 · {{ taskTime(task.nextAt) }}</text>
   <text v-if="task.interval" class="task-interval">{{ intervalText }}</text>
   <view class="task-phases">
    <view v-for="(phase, index) in task.phases" :key="phase.at" class="task-phase">
@@ -14,15 +16,18 @@
   <text v-if="isCancellation" class="task-note">已执行的设备动作不会回滚</text>
   <view v-if="state === 'pending_confirmation'" class="task-actions">
    <button class="task-secondary" hover-class="task-quiet--pressed" :disabled="busy" @tap="$emit('discard')">放弃</button>
-   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy" @tap="$emit('confirm')">{{ isCancellation ? '确认取消' : '创建任务' }}</button>
+   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy" @tap="$emit('confirm')">{{ isCancellation ? '确认取消' : task.repeat ? '创建周期计划' : '创建任务' }}</button>
   </view>
-  <button v-else-if="isCreated" class="task-link" @tap="$emit('open')">在区域面板查看 <uni-icons type="right" size="13" color="#176b54" /></button>
+  <view v-else-if="isCreated" class="task-created">
+   <button v-if="!task.repeat || task.nextAt" class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看下一次安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
+   <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="#176b54" /></button>
+  </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>
  </view>
 </template>
 <script setup>
 import { computed } from 'vue'
-import { taskTime, targetText } from '../task-detail-view.mjs'
+import { repeatText, taskTime, targetText } from '../task-detail-view.mjs'
 import { resolveDeviceArtwork } from '../device-art/catalog.js'
 
 const props = defineProps({ task: { type: Object, required: true }, busy: Boolean })
@@ -33,6 +38,7 @@ const isCreated = computed(() => isCancellation.value ? state.value === 'confirm
  : Boolean(props.task.created) || ['scheduled', 'executing', 'completed', 'partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(state.value))
 const stateText = computed(() => isCancellation.value
  ? ({ pending_confirmation: '待确认', confirmed: '已取消', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束'
+ : props.task.repeat && isCreated.value ? props.task.nextAt === undefined ? '已创建' : props.task.nextAt ? '已启用' : props.task.latestTask?.status === 'executing' ? '本次进行中' : props.task.latestTask?.status === 'scheduled' ? '本次待执行' : '周期结束'
  : state.value === 'executing' && props.task.interval
   ? props.task.executionActive ? '设备执行中' : '区间进行中'
   : ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '明确报错', failed: '明确报错', unconfirmed: '明确报错', cancelled: '已取消', missed: '明确报错', interrupted: '明确报错', expired: '已过期' })[state.value] || '已结束')
@@ -57,6 +63,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-state { color:#176b54; font-size:11px; font-weight:600; }
 .task-state.partial,.task-state.unconfirmed,.task-state.expired,.task-state.cancelled,.task-state.failed { color:#9c7040; }
 .task-name { display:block; margin:5px 3px 0; font-size:16px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
+.task-repeat { display:block; margin:7px 3px 0; color:#536e5c; font-size:12px; line-height:1.5; }
 .task-interval { display:block; margin:6px 3px 10px; color:#8b9991; font-size:11px; }
 .task-name + .task-phases,.task-interval + .task-phases { margin-top:10px; }
 .task-phases { border-top:.5px solid #dbe3dd; }

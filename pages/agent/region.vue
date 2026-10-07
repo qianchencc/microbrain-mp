@@ -63,7 +63,7 @@ const sampleCalendarMarks = computed(() => {
   ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(task.status)) }] : []
 })
 let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer, shownTimelineKey = ''
-onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || ''; initialTaskId = query.taskId || '' })
+onLoad(query => { initialRegion = query.regionId || ''; initialDate = query.date || ''; initialTaskId = decodeURIComponent(query.taskId || '') })
 async function loadTimeline(silent = false) {
  const current = ++requestId, region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()
  const key = `${scope}:${region}:${selectedDate}:${sampleMode.value}`
@@ -147,7 +147,7 @@ async function load() {
   const loadedRequest = await loadVisibleTimeline()
   if (currentLoad !== loadId || !visible) return
   if (loadedRequest && initialTaskId) {
-   const item = tasks.value.find(task => task.id === initialTaskId)
+   const item = tasks.value.find(task => task.id === initialTaskId || (task.occurrence && `occurrence:${task.occurrence.planId}:${task.occurrence.date}` === initialTaskId))
    initialTaskId = ''
    if (item) openTask(item)
   }

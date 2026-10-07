@@ -20,6 +20,7 @@ export const listRegionDevices = regionId => request(`/agent/regions/${encodeURI
 export const listRegionDeviceStates = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/device-states`, 'GET')
 export const listRegionTimeline = (regionId, date) => request(`/agent/regions/${encodeURIComponent(regionId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 export const listRegionCalendar = (regionId, from, to) => request(`/agent/regions/${encodeURIComponent(regionId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
+export const getTaskPlan = planId => request(`/agent/task-plans/${encodeURIComponent(planId)}`, 'GET')
 export const getTaskDetail = taskId => request(`/agent/tasks/${encodeURIComponent(taskId)}`, 'GET')
 export const getTaskLightingStates = taskId => request(`/agent/tasks/${encodeURIComponent(taskId)}/lighting-states`, 'GET')
 export const cancelTask = (taskId, version) => request(`/agent/tasks/${encodeURIComponent(taskId)}/cancel`, 'POST', { version })

@@ -25,7 +25,7 @@
      @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
      @configure="$emit('configure', $event)" @browse="$emit('browse')" />
     <TaskProposalCard v-if="source !== 'company'" v-for="task in turn.tasks || (turn.task ? [turn.task] : [])" :key="task.cancellationId || task.taskId" :task="task" :busy="busy"
-     @confirm="$emit('confirm-task', task)" @discard="$emit('discard-task', task)" @open="$emit('open-task', task)" />
+     @confirm="$emit('confirm-task', task)" @discard="$emit('discard-task', task)" @open="$emit('open-task', $event || task)" />
    </template>
    <view v-else-if="turn.draft || turn.tasks?.length || turn.task || turn.result" class="read-only-boundary">此来源当前仅开放只读查询，操作能力尚未接入。</view>
    <view v-if="!readOnly && turn.result && turn.result.summary" class="execution-summary" aria-live="polite">

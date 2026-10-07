@@ -42,7 +42,7 @@ export function deviceTimelineItems(events) {
    at: interval?.startsAt ?? first.at,
    endAt: interval?.endsAt ?? (steps.length > 1 ? last.at : undefined),
    label: targets.join(' → '), taskLabel: first.taskLabel,
-   sourceText: first.sourceType === 'sample' ? '演示' : first.sourceType === 'immediate_draft' ? '即时' : '定时',
+   sourceText: first.sourceType === 'recurring_plan' ? '周期' : first.sourceType === 'sample' ? '演示' : first.sourceType === 'immediate_draft' ? '即时' : '定时',
    resultText: result.text, resultTone: result.tone, creatorName: first.creatorName,
    creatorVariant: creatorVariant(first.creatorName, false),
    faded: first.taskStatus === 'cancelled' || (interval ? allSettled && taskTerminal : allSettled),

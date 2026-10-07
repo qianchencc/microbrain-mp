@@ -10,6 +10,31 @@ export function executionResult(device) {
  return '明确报错'
 }
 
+export function repeatText(repeat) {
+ if (!repeat) return ''
+ const days = ['日', '一', '二', '三', '四', '五', '六', '日']
+ const label = repeat.frequency === 'daily' ? '每天' : repeat.frequency === 'weekdays' ? '周一至周五 · 不含节假日调整'
+  : `每周${[...(repeat.weekdays || [])].sort((a, b) => a - b).map(day => days[day]).join('、')}`
+ return label + (repeat.until ? ` · 至 ${repeat.until}` : '')
+}
+
+export function mergeTaskPlan(task, plan) {
+ task.planId = plan.planId
+ task.nextAt = plan.nextAt
+ task.nextOccurrenceId = plan.nextOccurrenceId
+ task.latestTask = plan.latestTask
+ task.status = plan.nextAt ? 'scheduled' : plan.latestTask?.status || 'completed'
+}
+
+export function taskNavigation(task) {
+ const at = task.repeat && !task.occurrence ? task.nextAt : task.interval?.startsAt ?? task.phases?.[0]?.at
+ const id = task.repeat && !task.occurrence
+  ? task.nextOccurrenceId || (at ? `occurrence:${task.planId || task.taskId}:${taskTime(at).slice(0, 10)}` : '')
+  : task.taskId || task.id
+ if (!at || !id || !task.regionIds?.length) return null
+ return { taskId: id, date: taskTime(at).slice(0, 10), regionId: task.regionIds[0] }
+}
+
 export function taskTime(instant) {
  if (!instant) return ''
  const local = new Date(Date.parse(instant) + 8 * 3600000).toISOString()
@@ -76,9 +101,9 @@ export function taskDetailView(task) {
   checkpoints: task.report.phases.length,
   devicesVisible: new Set(task.report.phases.flatMap(phase => phase.devices.map(device => device.id))).size,
  } : null
- return { ...task, phases, whenText, report, createdText: taskTime(task.createdAt),
-  statusText: interval && task.status === 'executing'
+ return { ...task, phases, whenText, report, repeatText: repeatText(task.repeat), nextText: task.nextAt ? taskTime(task.nextAt) : '', createdText: taskTime(task.createdAt),
+  statusText: task.occurrence?.virtual ? '未来安排' : interval && task.status === 'executing'
    ? task.executionActive ? '设备执行中' : '区间进行中'
    : statusText[task.status] || task.status,
-  sourceText: task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? 'Agent 即时操作' : 'Agent 定时任务' }
+  sourceText: task.source?.type === 'recurring_plan' ? 'Agent 周期计划' : task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? 'Agent 即时操作' : 'Agent 定时任务' }
 }

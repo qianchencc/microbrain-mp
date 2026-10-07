@@ -49,3 +49,5 @@
 - 物联助手菜单入口为 `dashboard.vue`。A 首屏的数量只表示 Company 当前接入观察目录；告警是本次读取的历史台账，不代表实时报警。`totalActivePower` 展示 kW 最新功率，不能累加成日用电 kWh；维修演示的小时 kWh 独立标记、图形由样例数据计算，不进入 Agent/执行上下文。详情复用 ObservationCard/DeviceSheet，切换身份或读取失败清理旧概览；正常刷新保留布局。对话 `from=dashboard` 只决定返回位置，不授予来源或设备权限。
 
 - Company 智慧空调复用现有草案/参数抽屉；页面 source 必须传到 AgentReplySurface → ActionPanel → ActionDraftCard 及 DraftSheetLayer，选择/确认/还原/取消/状态/参数/重核/收尾请求都显式带 Company。不能仅取消 readOnly 遮罩而让 API 缺省落到 Office；来源校验仍由服务端持久化会话决定。Company 观察视频及定时任务仍未接入。
+
+- 周期卡与虚拟发生（2026-10-07）：`repeat` 提案确认仍走原任务接口，之后按 planId 读取 `getTaskPlan`；`mergeTaskPlan` 不改原提案 actions。未来发生 ID 含冒号，深链参数必须 encode/decode；实际 Task 的 occurrence 元数据用于替换旧虚拟链接。现有 Sheet/B6 共用，报告导航使用实际 latestTask.id。验收边界见 `plan/2026-10-07-office-recurring-first-loop-handoff.md`。

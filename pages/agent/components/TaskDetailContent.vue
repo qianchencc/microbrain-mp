@@ -4,6 +4,9 @@
   <view v-else-if="error" class="message"><text>{{ error }}</text><button @tap="load()">重新加载</button></view>
   <view v-else-if="detail" class="task-detail">
    <text class="task-name">{{ detail.label }}</text>
+   <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
+   <text v-if="detail.occurrence" class="task-when">{{ detail.occurrence.virtual ? '未来安排 · 尚未开始' : '本次发生' }} · {{ detail.occurrence.date }}</text>
+   <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">下一次 · {{ detail.nextText }}</text>
    <text class="task-when">{{ detail.whenText }}</text>
    <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ detail.creator?.displayName || '成员' }} 创建 · {{ detail.createdText }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>

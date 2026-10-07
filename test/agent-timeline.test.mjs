@@ -106,3 +106,21 @@ test('独立区间任务使用保存边界，未到终点不淡化', () => {
   report: { ...report, phases: [report.phases[0], otherPhase] } }).report.devicesVisible, 2, '不同设备仍分别计入报告台数')
  assert.ok(terminal.report.generatedText.startsWith('2026-10-05 16:00'))
 })
+
+test('周期安排区分未来发生与实际报告，并导航到同一发生', async () => {
+ const { repeatText, taskNavigation, mergeTaskPlan } = await import('../pages/agent/task-detail-view.mjs')
+ assert.equal(repeatText({ frequency: 'weekdays' }), '周一至周五 · 不含节假日调整')
+ assert.equal(repeatText({ frequency: 'weekly', weekdays: [1, 5], until: '2026-10-16' }), '每周一、五 · 至 2026-10-16')
+ const card = { taskId: 'plan-1', repeat: { frequency: 'weekdays' }, phases: [{ at: '2026-10-09T10:00:00Z', actions: [] }], regionIds: ['office-1'] }
+ mergeTaskPlan(card, { planId: 'plan-1', nextAt: '2026-10-12T10:00:00Z', nextOccurrenceId: 'occurrence:plan-1:2026-10-12', latestTask: { id: 'actual-1', status: 'completed' } })
+ assert.deepEqual(taskNavigation(card), { taskId: 'occurrence:plan-1:2026-10-12', date: '2026-10-12', regionId: 'office-1' })
+ assert.equal(card.phases[0].at, '2026-10-09T10:00:00Z', '计划刷新不改写原提案快照')
+ const future = { id: 'occurrence:plan-1:2026-10-12', label: '关灯', status: 'scheduled', repeat: card.repeat,
+  occurrence: { planId: 'plan-1', date: '2026-10-12', virtual: true }, phases: [{ at: '2026-10-12T10:00:00Z', devices: [] }] }
+ assert.equal(taskDetailView(future).statusText, '未来安排')
+ const actual = { ...future, id: 'actual-1', status: 'completed', occurrence: { ...future.occurrence, virtual: false },
+  nextAt: '2026-10-13T10:00:00Z', report: { generatedAt: '2026-10-12T10:00:12Z', outcome: 'completed', phases: [{ devices: [] }] }, regionIds: ['office-1'] }
+ assert.equal(taskDetailView(actual).report.outcomeText, '已执行')
+ assert.equal(taskDetailView(actual).repeatText, repeatText(card.repeat))
+ assert.deepEqual(taskNavigation(actual), { taskId: 'actual-1', date: '2026-10-12', regionId: 'office-1' })
+})

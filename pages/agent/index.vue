@@ -40,12 +40,12 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
+import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail } from './conversation.mjs'
 import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference } from './composer-drafts.mjs'
 import { createDraftBaseline } from './action-draft-presentation.js'
-import { taskTime } from './task-detail-view.mjs'
+import { mergeTaskPlan, taskNavigation } from './task-detail-view.mjs'
 import { createPresentation } from './presentation.mjs'
 import AgentComposer from './components/AgentComposer.vue'
 import AgentHeader from './components/AgentHeader.vue'
@@ -152,8 +152,9 @@ async function refreshScheduledTasks() {
  const active = turns.value.flatMap(turn => tasksOf(turn)).filter(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase()))
  await Promise.allSettled(active.map(async task => {
   const id = task.taskId
-  const result = await getTaskDetail(id)
+  const result = task.repeat ? await getTaskPlan(id) : await getTaskDetail(id)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => item.taskId === id && !item.cancellationId)
+  if (live && result.plan) mergeTaskPlan(live, result.plan)
   if (live && result.task) mergeTaskDetail(live, result.task)
  }))
  schedule()
@@ -198,6 +199,7 @@ async function restore() {
   errorMessage.value = ''
   follow()
   schedule()
+  if (!isCompany.value && turns.value.some(turn => tasksOf(turn).some(task => task.repeat && task.created))) void refreshScheduledTasks()
  } catch (error) { if (!disposed) { errorMessage.value = error.message; schedule() } }
  finally { restoring = false }
 }
@@ -414,7 +416,7 @@ async function confirmTaskProposal(task) {
  try {
   const result = cancellationId ? await confirmTaskCancellation(cancellationId) : await confirmScheduledTask(taskId, task.version)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.cancellationId || item.taskId) === key)
-  if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId) live.created = true }
+  if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt } } }
   if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
  } catch (error) {
   errorMessage.value = error.data?.message || error.message
@@ -434,11 +436,11 @@ async function discardTaskProposal(task) {
  finally { mutating.value = false; schedule() }
 }
 function openTaskRegion(task) {
- const at = task?.interval?.startsAt ?? task?.phases?.[0]?.at
- if (!task?.taskId || !task.regionIds?.length || !at) return
- const date = taskTime(at).slice(0, 10)
- uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(task.regionIds[0])}&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(task.taskId)}` })
+ const target = taskNavigation(task)
+ if (!target) return
+ uni.navigateTo({ url: `/pages/agent/region?regionId=${encodeURIComponent(target.regionId)}&date=${encodeURIComponent(target.date)}&taskId=${encodeURIComponent(target.taskId)}` })
 }
+
 async function cancelDraft(turn) {
  if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
  mutating.value = true
