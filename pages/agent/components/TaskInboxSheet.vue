@@ -72,8 +72,10 @@ async function load(reset) {
  const current = reset ? ++requestId : requestId
  if (reset) { loading.value = true; loadingMore.value = false; error.value = '' }
  else { loadingMore.value = true; error.value = '' }
+ let scope = ''
  try {
-  const scope = getAgentStorageScope(), source = props.source
+  scope = getAgentStorageScope()
+  const source = props.source
   if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
   const result = await listNotifications({ source: props.source, limit: 30, ...(reset || !nextCursor.value ? {} : { before: nextCursor.value }) })
   if (current !== requestId || !props.open || !pageVisible || source !== props.source || scope !== getAgentStorageScope()) return
@@ -88,7 +90,10 @@ async function load(reset) {
   nextCursor.value = result.nextCursor || ''
   publishUnreadCount()
  } catch (cause) {
-  if (current === requestId) error.value = cause.message || '收件箱暂不可用'
+  if (current === requestId) {
+   if (cause.data || !scope) resetIdentity()
+   error.value = cause.message || '收件箱暂不可用'
+  }
  } finally {
   if (current === requestId) { loading.value = false; loadingMore.value = false }
  }

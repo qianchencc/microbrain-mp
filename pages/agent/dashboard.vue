@@ -104,12 +104,12 @@ async function load() {
 function openObservation(type) { if (snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
 function resultLabel(status) { return ({ completed: '已完成', partial: '部分完成', failed: '失败', missed: '已错过', cancelled: '已取消', unconfirmed: '结果未确认' })[status] || status }
-function referenceTask(reference) { tasksOpen.value = false; uni.navigateTo({ url: `/pages/agent/index?source=company&from=dashboard&taskReference=${encodeURIComponent(JSON.stringify(reference))}` }) }
+function referenceTask(reference) { if (openingAgent.value) return; tasksOpen.value = false; openAgent('company', reference) }
 const openingAgent = ref('')
-function openAgent(source) {
+function openAgent(source, reference) {
  if (openingAgent.value) return
  openingAgent.value = source
- uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard`, fail: () => { openingAgent.value = ''; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
+ uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard${reference ? '&taskReference=' + encodeURIComponent(JSON.stringify(reference)) : ''}`, fail: () => { openingAgent.value = ''; if (reference) tasksOpen.value = true; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
 }
 function back() { backToParent('/pages/index/index') }
 onShow(() => {

@@ -158,8 +158,10 @@ async function load() {
  if (kind !== 'plans') loadedTaskView = kind
  loading.value = true
  error.value = ''
+ let scope = ''
  try {
-  const scope = getAgentStorageScope(), source = props.source
+  scope = getAgentStorageScope()
+  const source = props.source
   if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
   if (kind === 'plans') {
    const result = await listTaskPlans({ source: props.source })
@@ -170,7 +172,10 @@ async function load() {
    if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) tasks.value = selectTaskRows(result?.tasks, kind)
   }
  } catch (cause) {
-  if (current === requestId && props.open && view.value === kind) error.value = cause.message || '安排暂不可用'
+  if (current === requestId && props.open && view.value === kind) {
+   if (cause.data || !scope) resetIdentity()
+   error.value = cause.message || '安排暂不可用'
+  }
  } finally {
   if (current === requestId) loading.value = false
  }
