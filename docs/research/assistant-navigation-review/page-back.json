@@ -1,0 +1,14 @@
+{
+  "scenario": "总览 → 区域工作台 → 打开设备抽屉 → wx.navigateBack",
+  "before": [
+    "pages/index/index",
+    "pages/agent/dashboard",
+    "pages/agent/region"
+  ],
+  "after": [
+    "pages/index/index",
+    "pages/agent/dashboard"
+  ],
+  "result": "页面返回退出了工作台，而非仅关闭抽屉",
+  "limit": "模拟器 API 返回；未实测手机物理返回键或边缘手势"
+}

@@ -1,0 +1,209 @@
+{
+  "date": "2026-10-07",
+  "baseline": "c102a5e",
+  "environment": {
+    "platform": "WeChat Developer Tools",
+    "model": "iPhone 12/13 (Pro)",
+    "width": 390,
+    "height": 844,
+    "SDKVersion": "3.17.2",
+    "runtimePort3200Listening": false
+  },
+  "notes": [
+    "开发模拟器，只记录 navigation/render 原始条目；不是点击响应总耗时或业务加载耗时",
+    "index 路由同时用于 Company/Office，来源对应关系见 README，不从 path 猜来源",
+    "没有拦截请求，没有记录凭据或用户消息"
+  ],
+  "entries": [
+    {
+      "name": "largestContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/dashboard",
+      "startTime": 1791364496622
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/index",
+      "startTime": 1791364558280,
+      "duration": 679
+    },
+    {
+      "name": "firstRender",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364558847,
+      "duration": 64
+    },
+    {
+      "name": "firstPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364558907
+    },
+    {
+      "name": "firstContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364558959
+    },
+    {
+      "name": "largestContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364558959
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/dashboard",
+      "startTime": 1791364633125
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/index",
+      "startTime": 1791364634053,
+      "duration": 708
+    },
+    {
+      "name": "firstRender",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364634681,
+      "duration": 47
+    },
+    {
+      "name": "firstPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364634693
+    },
+    {
+      "name": "firstContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364634761
+    },
+    {
+      "name": "largestContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364634761
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/region",
+      "startTime": 1791364646151,
+      "duration": 712
+    },
+    {
+      "name": "firstRender",
+      "type": "render",
+      "path": "pages/agent/region",
+      "startTime": 1791364646746,
+      "duration": 71
+    },
+    {
+      "name": "firstPaint",
+      "type": "render",
+      "path": "pages/agent/region",
+      "startTime": 1791364646811
+    },
+    {
+      "name": "firstContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/region",
+      "startTime": 1791364646863
+    },
+    {
+      "name": "largestContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/region",
+      "startTime": 1791364646879
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/index",
+      "startTime": 1791364705345
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/dashboard",
+      "startTime": 1791364737806
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/index",
+      "startTime": 1791364754889,
+      "duration": 1958
+    },
+    {
+      "name": "firstRender",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364756718,
+      "duration": 74
+    },
+    {
+      "name": "firstPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364756847
+    },
+    {
+      "name": "firstContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364756847
+    },
+    {
+      "name": "largestContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364756863
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/dashboard",
+      "startTime": 1791364811744
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/index",
+      "startTime": 1791364812822,
+      "duration": 656
+    },
+    {
+      "name": "firstRender",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364813384,
+      "duration": 56
+    },
+    {
+      "name": "firstPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364813478
+    },
+    {
+      "name": "firstContentfulPaint",
+      "type": "render",
+      "path": "pages/agent/index",
+      "startTime": 1791364813478
+    },
+    {
+      "name": "route",
+      "type": "navigation",
+      "path": "pages/agent/dashboard",
+      "startTime": 1791364813697
+    }
+  ]
+}
