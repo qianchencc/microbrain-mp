@@ -7,7 +7,7 @@
    <button v-if="!selectedTask && !selectedPlan" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
   </template>
   <view class="arrangements-content">
-   <view v-if="!selectedTask && !selectedPlan" class="list-pane">
+   <view v-show="!selectedTask && !selectedPlan" class="list-pane">
     <view class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
     <scroll-view class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="list-summary"><text>{{ listSummary }}</text><text>{{ visibleRows.length }} 项</text></view>
@@ -42,7 +42,7 @@
     </scroll-view>
    </view>
 
-   <view v-else-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在核验当前计划与报告</text>
+   <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在核验当前计划与报告</text>
     <scroll-view class="detail-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="plan-summary">
       <view class="summary-heading"><view class="status-mark" :class="planIsEnabled(selectedPlan) ? 'status-mark--active' : 'status-mark--paused'" /><text class="plan-label">{{ selectedPlan.label || '未命名周期安排' }}</text></view>
@@ -60,7 +60,7 @@
     <view class="detail-actions"><button class="reference-button" @tap="referencePlan"><uni-icons type="chatbubble" size="15" color="#fff" /><text>{{ selectedPlan.canManage ? '询问/管理这个计划' : '询问这个计划' }}</text></button></view>
    </view>
 
-   <view v-else class="detail-pane">
+   <view v-if="selectedTask" class="detail-pane">
     <TaskDetailContent class="task-content-host" :active="open" :task-id="selectedTaskId" :source="source" @reference="emit('reference', $event)" />
    </view>
   </view>
