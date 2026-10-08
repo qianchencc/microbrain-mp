@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- 2026-10-08 用户认可配置后台方案并明确控制台归属后端。Runtime 独立分支 `codex/runtime-admin-console` 已完成 monorepo、shadcn 页面、管理员配置/版本/恢复和实际消费者接线，提交 `8653b02`；82/82、类型/构建及桌面/390px浏览器通过。原后端安全业务仍未提交，本轮保留它，尚未集成或重启真实3200。见[后端交接](../../iot-agent-runtime-admin/plan/2026-10-08-backend-admin-console-handoff.md)，小程序仅记录进度，不新增控制台代码。
+
 - 2026-10-08 用户最终明确页面分层：员工 Agent 走“我的办公室”，大 Agent 走“智慧xx”，不再追问上游权限配置。当前 Company 空调直读底层型号目录需由我方对齐智慧页面；安全台账详情/引用在另一会话实现与 QA 中，未记为完成。现有任务、页面/Runtime接口和最小客户材料清单见[对齐记录](../plan/2026-10-08-page-interface-task-alignment.md)，Company 来源修正已登记票 17。
 
 - 2026-10-08 新增遗漏的 Runtime 配置后台任务：已核对环境配置、模块硬编码、管理员边界和生效机制，建议 Runtime 仓库 monorepo + React/Vite/shadcn；后台尚未实施，范围与源码证据见[审查与交接](../plan/2026-10-08-runtime-admin-dashboard-audit-handoff.md)。此后台与小程序业务仪表盘区分。
