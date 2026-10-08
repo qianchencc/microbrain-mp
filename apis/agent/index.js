@@ -15,7 +15,7 @@ const request = (url, method, data, timeout) => requestJson(globalConfig.agentUr
 export const createConversation = (source = 'office') => request('/agent/conversations', 'POST', conversationSourceBody(source))
 export const getCompanyDashboard = section => request('/agent/dashboard?source=company' + (section ? '&section=' + encodeURIComponent(section) : ''), 'GET')
 export const getSafetyEvent = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
-export const listRegions = () => request('/agent/regions', 'GET')
+export const listRegions = section => request('/agent/regions' + (section ? '?section=' + encodeURIComponent(section) : ''), 'GET')
 export const markRegionSeen = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/seen`, 'POST')
 export const listRegionDevices = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/devices`, 'GET')
 export const listRegionDeviceStates = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/device-states`, 'GET')
@@ -37,7 +37,8 @@ export const confirmTaskCancellation = (cancellationId, source = 'office') => re
 export const discardTaskCancellation = (cancellationId, source = 'office') => request(withConversationSource(`/agent/task-cancellations/${encodeURIComponent(cancellationId)}/discard`, source), 'POST')
 export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${encodeURIComponent(deviceId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 // 视频取流：返回短时效播放地址（wss），不缓存；页面与组件不接触凭据。
-export const getVideoStream = deviceId => request(`/agent/devices/${encodeURIComponent(deviceId)}/video-stream`, 'GET')
+// Company 监控走智慧页面取流出口，Office 视频走既有 view 动作——必须带 source 区分目录。
+export const getVideoStream = (deviceId, source = 'office') => request(withConversationSource(`/agent/devices/${encodeURIComponent(deviceId)}/video-stream`, source), 'GET')
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const restoreConversation = (source = 'office') => request(withConversationSource('/agent/conversations/current', source), 'GET')
 export const clearConversation = (id, source = 'office') => request(withConversationSource(`/agent/conversations/${id}`, source), 'DELETE')

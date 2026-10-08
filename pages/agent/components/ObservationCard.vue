@@ -88,7 +88,7 @@ const viewLabel = d => videoViewLabel(onlineOf(d.online), playerReady, fetchingI
 async function view(d) {
  if (viewDisabled(d)) return
  fetchingId.value = d.deviceId
- try { await openVideoPlayer({ deviceId: d.deviceId, name: d.name, location: d.location }) }
+ try { await openVideoPlayer({ deviceId: d.deviceId, name: d.name, location: d.location, source: props.source }) }
  finally { fetchingId.value = '' }
 }
 

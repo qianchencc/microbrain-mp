@@ -17,7 +17,7 @@ export async function openVideoPlayer(device) {
  }
  const origin = getCurrentPages().at(-1)
  try {
-  const stream = await getVideoStream(device.deviceId)
+  const stream = await getVideoStream(device.deviceId, device.source || 'office')
   if (getCurrentPages().at(-1) !== origin) return false
   if (!stream?.url) throw new Error('视频流暂时不可用')
   const params = [
