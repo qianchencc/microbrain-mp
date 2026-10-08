@@ -36,13 +36,14 @@
  </view>
 </template>
 <script setup>
+import { referenceTitle as titleOfReference } from '../safety-event.mjs'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { createVoiceInput } from '../voice-input.mjs'
 import { createFieldEchoGuard } from '../field-echo-guard.mjs'
 import { resolveKeyboardDock } from '../keyboard-dock.mjs'
 const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean, editing: Boolean, placeholder: String, reference: Object })
 const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice', 'keyboard', 'cancel-edit', 'remove-reference'])
-const referenceTitle = computed(() => props.reference?.type === 'task_plan' ? '周期计划引用' : props.reference?.type === 'task' ? '任务引用' : '客户告警引用')
+const referenceTitle = computed(() => titleOfReference(props.reference))
 function showReference() { uni.showModal({ title: referenceTitle.value, content: props.reference.label || props.reference.content || '发送时读取同一记录的最新事实，可直接询问结果或说明修改意图。', showCancel: false }) }
 const focused = ref(false), voiceMode = ref(false), phase = ref('idle'), cancelling = ref(false), focusRequest = ref(false)
 // 字段非受控：打字（含拼音组合中态）不写回 :value，只向上同步；

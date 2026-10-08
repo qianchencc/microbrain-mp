@@ -15,10 +15,10 @@
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
      <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turnIndex)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
      <view v-if="!isCompany && !regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
-     <view v-if="turn.reference" class="turn-reference"><text>{{ turn.reference.type === 'customer_alert' ? '客户告警引用' : turn.reference.type === 'task_plan' ? '周期计划引用' : '任务引用' }} · {{ turn.reference.label || turn.reference.content || '原记录' }}</text></view>
+     <view v-if="turn.reference" class="turn-reference"><text>{{ referenceTitle(turn.reference) }} · {{ turn.reference.label || turn.reference.content || '原记录' }}</text></view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
      <AgentReplySurface :turn="turn" :busy="busy" :source="agentSource" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'"
-      @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
+      @select-alert="openSafetyEvent" @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
       @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)"
@@ -36,6 +36,7 @@
    @reconnect="reconnectSheet" @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
+  <DeviceSheet v-if="eventMounted" :open="eventOpen" tall compact-header title="安全台账详情" @close="eventOpen = false"><SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="eventOpen" @reference="referenceEvent" /></DeviceSheet>
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" :source="agentSource" @close="tasksOpen = false" @reference="referenceTask" />
   <TaskInboxSheet v-if="inboxMounted" @reference="referenceTask" :open="inboxOpen" :source="agentSource" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
   <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="agentSource" @close="closeCompanyTask" />
@@ -51,6 +52,9 @@ import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, ta
 import { createDraftBaseline } from './action-draft-presentation.js'
 import { mergeTaskPlan, taskNavigation } from './task-detail-view.mjs'
 import { createPresentation } from './presentation.mjs'
+import DeviceSheet from './components/DeviceSheet.vue'
+import SafetyEventDetail from './components/SafetyEventDetail.vue'
+import { safetyEventReference, referenceTitle } from './safety-event.mjs'
 import AgentComposer from './components/AgentComposer.vue'
 import AgentHeader from './components/AgentHeader.vue'
 import { backToParent, previousPageLabel } from './navigation.mjs'
@@ -72,6 +76,9 @@ function openRegion(region) { navigateRegion('/pages/agent/region?regionId=' + e
 const conversationId = ref('')
 const agentSource = ref('office')
 const isCompany = computed(() => agentSource.value === 'company')
+const selectedEvent = ref(null), eventOpen = ref(false), eventMounted = ref(false)
+function openSafetyEvent(snapshot) { if (!isCompany.value) return; selectedEvent.value = snapshot; eventMounted.value = true; eventOpen.value = true }
+function referenceEvent(reference) { eventOpen.value = false; composerReference.value = { ...reference }; composer.value?.focus?.() }
 const tasksOpen = ref(false)
 const inboxOpen = ref(false), inboxUnreadCount = ref(0)
 const companyTaskId = ref(''), companyPlanId = ref('')
@@ -116,6 +123,7 @@ const busy = computed(() => isRunning.value || mutating.value || hasExecution.va
 const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
 function returnToOffice() { backToParent() }
 function clearIdentityView() {
+ selectedEvent.value = null; eventOpen.value = false
  activeRequest?.abort(); presentation?.cancel()
  conversationId.value = ''; turns.value = []; regionChanges.value = []; draftBaselines.clear()
  sheetDraftId.value = ''; sheetError.value = ''; isRunning.value = false; phase.value = ''
@@ -594,6 +602,10 @@ onLoad(options => {
   try { const ref = JSON.parse(decodeURIComponent(options.taskReference)); if ((ref.type === 'task' && typeof ref.taskId === 'string') || (ref.type === 'task_plan' && typeof ref.planId === 'string')) incomingReference = ref }
   catch { uni.showToast({ title: '任务引用无效', icon: 'none' }) }
  }
+ if (options?.safetyReference !== undefined && isCompany.value) {
+  try { const value = JSON.parse(decodeURIComponent(options.safetyReference)); const ref = safetyEventReference(value); if (!ref) throw new Error('invalid'); incomingReference = { ...ref, ...(typeof value.label === 'string' ? { label: value.label.slice(0, 300) } : {}) } }
+  catch { uni.showToast({ title: '安全台账引用无效', icon: 'none' }) }
+ }
  uni.setNavigationBarTitle({ title: isCompany.value ? '公司 Agent' : '办公室 Agent' })
  if (options?.alertPrompt !== undefined) {
   let content = ''
@@ -621,6 +633,7 @@ onHide(() => { preserveCurrentComposerDraft(); visible = false; composer.value?.
 onUnload(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
 <style scoped>
+.event-host { flex:1;min-height:0;display:flex;flex-direction:column; }
 
 .region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:12px; padding:8px 0; }.region-notice button { min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:12px; }.region-notice button::after { border:0; }
 .office-context { display:flex; align-items:center; justify-content:space-between; gap:8px; }.workbench-link { height:44px; display:flex; align-items:center; gap:4px; flex-shrink:0; margin:0; padding:0 6px; background:transparent; color:#536b5c; font-size:12px; }.workbench-link::after { border:0; }.workbench-link--pressed { opacity:.65; }

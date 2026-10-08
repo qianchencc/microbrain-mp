@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createTurn, applyEvent, restoreTurns, restartTurn, mergeTaskDetail } from '../pages/agent/conversation.mjs'
 
 test('告警引用固定在原轮，恢复和编辑重试不替换成后来的引用', () => {
-	const reference = { type: 'customer_alert', content: '客户告警A：展示厅水浸' }
+	for (const reference of [{ type: 'customer_alert', content: '客户告警A：展示厅水浸' }, { type: 'safety_event', ledger: 'gas', eventId: 'event-a', deviceId: 'device-a', label: '燃气记录' }]) {
 	const turn = restoreTurns([{ id: 'turn-a', content: '如何处理？', events: [
 		{ type: 'run.started', reference }, { type: 'run.completed' },
 	] }])[0]
@@ -11,6 +11,7 @@ test('告警引用固定在原轮，恢复和编辑重试不替换成后来的�
 	restartTurn(turn, '现场确认前怎么处理？')
 	assert.deepEqual(turn.reference, reference)
 	assert.equal(turn.content, '现场确认前怎么处理？')
+	}
 })
 
 test('恢复以持久化草案和收尾为准，同一草案修订只出现一次', () => {

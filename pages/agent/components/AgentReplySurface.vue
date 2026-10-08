@@ -18,7 +18,7 @@
    </view>
 
    <AssistantMarkdown v-if="turn.text" :content="turn.text" />
-   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" :read-only="readOnly || source === 'company'" />
+   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" :source="source" @select-alert="$emit('select-alert', $event)" :read-only="readOnly || source === 'company'" />
    <template v-if="!readOnly">
     <ActionPanel :source="source" v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
      @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
@@ -53,7 +53,7 @@ import TaskProposalCard from './TaskProposalCard.vue'
 import TaskChangeCard from './TaskChangeCard.vue'
 
 defineProps({ turn: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean, readOnly: Boolean, agentName: { type: String, default: '物联 Agent' } })
-defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task'])
+defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task', 'select-alert'])
 </script>
 
 <style scoped>

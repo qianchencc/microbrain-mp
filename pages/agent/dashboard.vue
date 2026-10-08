@@ -49,7 +49,11 @@
   </scroll-view>
   <view class="assistant-dock"><button class="assistant" :disabled="Boolean(openingAgent)" hover-class="assistant-pressed" @tap="openAgent('company')"><AgentAvatar /><view><text>{{ openingAgent === 'company' ? '正在打开…' : '公司 Agent' }}</text><text>查询设备、能耗与告警</text></view><uni-icons type="chatboxes" size="21" color="#d4e9d6" /></button></view>
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" @close="tasksOpen = false" @reference="referenceTask" />
-  <DeviceSheet v-if="observationMounted" :open="Boolean(observationType)" tall compact-header :title="observationTitle" @close="observationType = ''"><scroll-view class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view></DeviceSheet>
+  <DeviceSheet v-if="observationMounted" :open="Boolean(observationType)" :back="observationBack" tall compact-header :title="selectedEvent ? '安全台账详情' : observationTitle" @close="observationType = ''">
+   <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" hover-class="event-back--pressed" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
+   <scroll-view class="observation-scroll" :style="{ display: selectedEvent ? 'none' : 'block' }" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" source="company" read-only @select-alert="selectedEvent = $event" /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view>
+   <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="Boolean(observationType)" @reference="referenceEvent" />
+  </DeviceSheet>
  </view>
 </template>
 <script setup>
@@ -65,13 +69,15 @@ import TaskListSheet from './components/TaskListSheet.vue'
 import AgentAvatar from './components/AgentAvatar.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
 import ObservationCard from './components/ObservationCard.vue'
+import SafetyEventDetail from './components/SafetyEventDetail.vue'
 
+const selectedEvent = ref(null)
 const tasksOpen = ref(false)
 const snapshot = ref(null), loading = ref(false), error = ref(''), demo = ref(true), observationType = ref('')
 const energyLoading = ref(false)
 const tasksMounted = ref(false), observationMounted = ref(false)
 watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync' })
-watch(observationType, type => { if (type) observationMounted.value = true }, { flush: 'sync' })
+watch(observationType, type => { selectedEvent.value = null; if (type) observationMounted.value = true }, { flush: 'sync' })
 const counts = computed(() => dashboardCounts(snapshot.value))
 const environment = computed(() => snapshot.value?.environment.find(row => row.reading) || snapshot.value?.environment[0])
 const energy = computed(() => snapshot.value?.energy.find(row => Number.isFinite(row.reading?.totalActivePower)))
@@ -120,12 +126,14 @@ async function load() {
 function openObservation(type) { if (snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
 function resultLabel(status) { return ({ completed: '已完成', partial: '部分完成', failed: '失败', missed: '已错过', cancelled: '已取消', unconfirmed: '结果未确认' })[status] || status }
+function observationBack() { if (selectedEvent.value) selectedEvent.value = null; else observationType.value = '' }
+function referenceEvent(reference) { openAgent('company', reference) }
 function referenceTask(reference) { if (openingAgent.value) return; tasksOpen.value = false; openAgent('company', reference) }
 const openingAgent = ref('')
 function openAgent(source, reference) {
  if (openingAgent.value) return
  openingAgent.value = source
- uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard${reference ? '&taskReference=' + encodeURIComponent(JSON.stringify(reference)) : ''}`, fail: () => { openingAgent.value = ''; if (reference) tasksOpen.value = true; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
+ uni.navigateTo({ success: () => { if (reference?.type === 'safety_event') selectedEvent.value = null }, url: `/pages/agent/index?source=${source}&from=dashboard${reference ? (reference.type === 'safety_event' ? '&safetyReference=' : '&taskReference=') + encodeURIComponent(JSON.stringify(reference)) : ''}`, fail: () => { openingAgent.value = ''; if (reference && reference.type !== 'safety_event') tasksOpen.value = true; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
 }
 function back() { backToParent('/pages/index/index') }
 onShow(() => {
@@ -138,6 +146,7 @@ function hide() { visible = false; ++requestId; loading.value = false; energyLoa
 onHide(hide); onUnload(hide)
 </script>
 <style scoped>
+.event-host { flex:1;min-height:0;display:flex;flex-direction:column; }.event-back { display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0; }.event-back--pressed { opacity:.65; }
 .automation-counts { display:flex; gap:28px; margin:8px 0 12px; }.automation-counts > text { font-size:25px; font-weight:600; }.automation-counts > text > text { display:block; font-size:11px; font-weight:400; color:#6e8375; margin-top:2px; }.automation-row { width:100%; min-height:42px; display:flex; align-items:center; justify-content:space-between; gap:14px; text-align:left; }.automation-row > text:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.automation-row > text:last-child { flex-shrink:0; font-size:11px; color:#718677; }.recent-results { margin-top:10px; padding-top:10px; border-top:1px solid #dee6dd; }
 
 view,text,input { font-size:inherit; line-height:inherit; }

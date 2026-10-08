@@ -1,6 +1,6 @@
 # 安全台账详情与对话引用实施计划
 
-2026-10-08。状态：用户已认可体验方向；本轮完成范围与实施顺序整理，业务代码尚未实施。
+2026-10-08。状态：已实施并完成公开回归、真实网关只读与微信模拟器验收；效果、证据和真机未验边界见[闭环交接](2026-10-08-safety-ledger-detail-reference-handoff.md)。下文保留冻结规格。
 
 ## 本轮交付
 
@@ -56,4 +56,4 @@
 - 公共 HTTP、前端行为测试、类型检查、构建、微信编译和 diff 检查通过；真实网关只读取得一条记录并核对详情和引用回答，完成一次完整 NDJSON 终态。
 - 记录真实网关、夹具、模拟器与真机各自证据；仅做只读查询与用户主动模型追问，不触发设备控制、告警处置或通知发送。
 
-本地票据：`.scratch/safety-ledger-reference/issues/01-detail-and-reference.md`。下一阶段执行 `implement → tdd → code-review`，完成后按项目要求在 `plan/` 回填交接。
+本地票据：`.scratch/safety-ledger-reference/issues/01-detail-and-reference.md`。已执行 `implement → tdd → code-review`，结果按项目要求回填到上述 `plan/` 交接。

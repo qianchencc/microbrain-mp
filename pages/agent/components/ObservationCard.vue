@@ -52,11 +52,10 @@
     </template>
 
     <template v-else-if="block.type === 'alerts'">
-     <view v-for="(a, i) in block.records || []" :key="i" class="arow">
-      <text class="at">{{ fmtDateTime(a.occurredAt) || '时间未知' }}</text>
-      <text class="anm">{{ a.deviceName }}<text v-if="a.location"> · {{ a.location }}</text></text>
-      <text class="tag" :class="{ un: !a.report }">{{ a.report ? '已上报' : '未上报' }}</text>
-     </view>
+     <button v-for="(a, i) in block.records || []" :key="a.ledger && a.eventId ? a.ledger + ':' + a.eventId : i" class="arow" :disabled="source !== 'company'" hover-class="arow--pressed" @tap="$emit('select-alert', { record: a, observedAt: observation.observedAt })">
+      <view class="alert-copy"><text class="anm">{{ a.deviceName }}<text v-if="a.location && a.location !== a.deviceName"> · {{ a.location }}</text></text><text class="at">{{ fmtDateTime(a.occurredAt) || '记录时间未知' }}</text></view>
+      <text class="tag" :class="{ un: a.report === false, unknown: a.report == null }">{{ a.report === true ? '已上报' : a.report === false ? '未上报' : '标记未知' }}</text><uni-icons v-if="source === 'company'" type="right" size="12" color="#95a296" />
+     </button>
      <text class="meta">{{ alertsMeta(block) }}</text>
     </template>
    </view>
@@ -69,7 +68,8 @@ import { computed, ref } from 'vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
-const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean })
+const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, source: { type: String, default: 'office' } })
+defineEmits(['select-alert'])
 const fetchingId = ref('')
 const playerReady = videoPlayerReady()
 const observed = computed(() => fmtDateTime(props.observation.observedAt))
@@ -99,7 +99,7 @@ function alertsMeta(block) {
  else if (records.length) parts.push(`本次读取 ${block.total ?? records.length} 条`)
  else parts.push(block.windowDays ? `近 ${block.windowDays} 天无记录` : '本次查询无记录')
  if (block.latest?.time) parts.push(`最新一条 ${fmtDateTime(block.latest.time)}（${ageHint(block.latest.time)}）`)
- parts.push('平台处置标记不代表已恢复')
+ parts.push('平台上报标记不代表已恢复')
  return parts.join(' · ')
 }
 </script>
@@ -138,10 +138,11 @@ button::after { border:0; }
 .meta { display:block; margin-top:7px; color:#8b9a91; font-size:10px; line-height:1.5; }
 .meta.stale { color:#a27128; }
 .meta--wide { flex:1; min-width:0; margin-top:0; }
-.arow { display:flex; align-items:center; gap:7px; margin-top:8px; min-width:0; }
+.arow { display:flex; align-items:center; gap:9px; width:100%; min-height:52px; padding:8px 0; box-sizing:border-box; text-align:left; border-bottom:1px solid #e5ece3; border-radius:0; color:inherit; }.arow:last-of-type { border-bottom:0; }.arow--pressed { background:#eaf1e7; }.alert-copy { flex:1; min-width:0; }.alert-copy .anm { display:block; max-width:100%; font-size:12px; }.alert-copy .at { display:block; margin-top:3px; }
 .at { flex-shrink:0; color:#6d7e73; font-size:10px; font-variant-numeric:tabular-nums; }
 .anm { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#2c4435; font-size:11px; font-weight:600; }
 .tag { flex-shrink:0; padding:2px 7px; border-radius:8px; background:#e4f2ea; color:#1d6b4e; font-size:9px; font-weight:600; }
+.tag.unknown { background:#edf0eb; color:#829087; }
 .tag.un { background:#f1ead7; color:#8a6a24; }
 @media(prefers-reduced-motion:reduce) { .vbtn { transition:none; } }
 </style>
