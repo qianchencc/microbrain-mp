@@ -15,7 +15,7 @@
     <view class="device-strip"><view v-for="cell in deviceCells" :key="cell.kind" class="device-cell"><view class="device-label"><uni-icons :type="cell.icon" size="13" color="#6e8876" /><text>{{ cell.label }}</text></view><text class="device-value">{{ snapshot ? counts[cell.kind] : '—' }}<text>台</text></text></view></view>
     <view class="panel environment">
      <view class="panel-head"><text>环境观测</text><button class="text-action" @tap="openObservation('environment')">查看 <uni-icons type="right" size="10" color="#829386" /></button></view>
-     <text class="sensor-name">{{ environment?.name || (snapshot ? '暂无环境读数' : '等待环境读数') }}</text>
+     <text class="sensor-name">{{ environment?.name || (snapshot ? '暂无环境读数' : loading ? '等待环境读数' : '环境读数暂不可用') }}</text>
      <view class="environment-grid"><view v-for="cell in environmentCells" :key="cell.key"><text class="env-value">{{ metricValue(environment?.reading?.[cell.key]) }}<text>{{ cell.unit }}</text></text><text class="env-label">{{ cell.label }}</text></view></view>
      <text class="fineprint">{{ environment?.reading?.source === 'shadow' ? '平台影子值 · 可能不是该房间的实测值' : environment?.reading ? '设备观测 · 不代表全公司平均值' : '未取得有效读数' }}</text>
     </view>
@@ -39,7 +39,7 @@
     <view class="panel automation">
      <view class="panel-head"><text>自动化安排</text><button class="text-action" @tap="tasksOpen = true">查看安排 <uni-icons type="right" size="10" color="#829386" /></button></view>
      <view class="automation-counts"><text>{{ snapshot?.automation?.enabledPlans ?? '—' }}<text>个启用计划</text></text><text>{{ snapshot?.automation?.active ?? '—' }}<text>项正在执行</text></text></view>
-     <text v-if="!snapshot?.automation" class="fineprint">{{ snapshot?.errors?.some(row => row.area === 'automation') ? '任务摘要暂不可用' : '正在读取任务安排' }}</text>
+     <text v-if="!snapshot?.automation" class="fineprint">{{ loading ? '正在读取任务安排' : '任务摘要暂不可用' }}</text>
      <button v-for="task in snapshot?.automation?.upcoming || []" :key="task.id" class="automation-row" @tap="tasksOpen = true"><text>{{ task.label }}</text><text>{{ fmtDateTime(task.interval?.startsAt || task.phases[0]?.at) }}</text></button>
      <text v-if="snapshot?.automation && !snapshot.automation.upcoming.length" class="fineprint">未来一周没有待执行安排</text>
      <view v-if="snapshot?.automation?.latestResults?.length" class="recent-results"><text class="fineprint">最近结果</text><button v-for="task in snapshot.automation.latestResults" :key="task.id" class="automation-row" @tap="tasksOpen = true"><text>{{ task.label }}</text><text>{{ resultLabel(task.status) }}</text></button></view>
@@ -81,7 +81,7 @@ watch(observationType, type => { selectedEvent.value = null; if (type) observati
 const counts = computed(() => dashboardCounts(snapshot.value))
 const environment = computed(() => snapshot.value?.environment.find(row => row.reading) || snapshot.value?.environment[0])
 const energy = computed(() => snapshot.value?.energy.find(row => Number.isFinite(row.reading?.totalActivePower)))
-const alertsUnavailable = computed(() => snapshot.value?.errors?.some(row => row.area === 'alerts'))
+const alertsUnavailable = computed(() => Boolean(error.value) || snapshot.value?.errors?.some(row => row.area === 'alerts'))
 const latestAlert = computed(() => snapshot.value?.alerts?.records[0])
 const clock = computed(() => fmtDateTime(snapshot.value?.observedAt).slice(5))
 const chart = energyChart(repairEnergy.hours)
