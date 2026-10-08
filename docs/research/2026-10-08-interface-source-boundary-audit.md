@@ -28,7 +28,21 @@ Office 官方定义现在可正常读取：[Swagger](https://ncim.577119.com/mic
 
 真实只读核对：当前身份在空调、门禁、照明、监控各有 1 条角色用户关系，返回的 `accountId` 均与当前账户一致；相应角色分别有 4、5、8、5 条区域绑定。未传 `areaFullCode` 的四类 `devicePage` 分别返回 53、47、156、35 台；这是同一身份下另一套目录，不等于员工 12 台范围。当前账户的 Office、perception 个人分组均为空，但 Company 目录仍有 102 台，说明当前代码没有用个人分组构造 Company 范围；这不证明分组是权限，也不证明 102 台越权。
 
-另一组智慧 H5 页面也不能与服务一一对应：已读取的 `/lighting/` 资产使用 `/perception/device/page`，`/access/` 使用 `/transit/device/page`，`/video/` 使用 `/perception/device/page/v2`，它们的交互仍落到 `iot-center`。owner H5 的区域树页面则使用上述 `office/app/device/*`。**“智慧”这个页面名称不足以指定唯一授权入口。**
+必须区分小程序菜单与独立应用：当前小程序 `config/menu.json` 中，“智慧空调/照明/门禁/监控”和“我的办公室”均配置 `name=owner`，分别打开 `/owner/#/pages/{aircold,light,access,monitor,office}/index`。小程序开发版使用这份菜单，正式版菜单来自 SSO 资源接口，不把独立应用路由冒充该小程序菜单。已读取的 `/lighting/` 资产使用 `/perception/device/page`，`/access/` 使用 `/transit/device/page`，`/video/` 使用 `/perception/device/page/v2`，它们是另外的独立应用，**不能据此回答本小程序“智慧xx”页面的接口**。上一轮答复混入了这些独立应用，现纠正。
+
+### 当前小程序五个入口的实际 owner 页面接口
+
+下列路径仍省略 `/micro-api/api`。证据为 `config/menu.json`、owner 生产 `office.CAekgwnh.js`、`index.DST4_--l.js` 与五个页面 bundle；仅读取代码，没有点击控制或取流。
+
+| 页面 | 区域/设备查询 | 操作出口 |
+|---|---|---|
+| 智慧空调 | `/office/app/device/ac/myAreaList` → `/office/app/device/ac/devicePage?areaFullCode=...`；详情 `/office/app/device/ac/detail/{id}` | `/office/app/device/ac/down`，传 `acAreaDeviceId` |
+| 智慧照明 | `/office/app/device/lighting/myAreaList` → `/office/app/device/lighting/devicePage?areaFullCode=...` | `/office/app/device/lighting/down`，传 `lightingAreaDeviceId` |
+| 智慧门禁 | `/office/app/device/access/myAreaList` → `/office/app/device/access/devicePage?areaFullCode=...`；首页原生 `AccessCon` 也使用此族 | `/office/app/device/access/down`，传 `accessAreaDeviceId` |
+| 智慧监控 | `/office/app/device/monitor/myAreaList` → `/office/app/device/monitor/devicePage?areaFullCode=...` | `/office/app/device/monitor/down` 取得实时播放地址，传 `monitorAreaDeviceId` |
+| 我的办公室 | `/office/office/member/my/office` → 按办公室 `elementId` 查询：空调 `/office/app/device/ac/myOffice/pageByAc?type=AirCold`；其余 `/office/device/page`，照明 `type=LIGHTING`，门禁/视频 `type=SECURITY_PROTECTION&subClass=ACCESS/VIDEO`；成员 `/office/office/member/my/office/member` | 空调同用 `/office/app/device/ac/down`，此模式传 `deviceInfoId`，详情 `/office/app/device/ac/myOffice/detail/{deviceInfoId}`；照明/门禁直接使用返回的 `hubDeviceId + deviceActionList.actionId` 调 `/iot-center/interactive/{deviceId}/{actionId}/down` |
+
+所以这两组页面的目录都在 `office`，区别是**智慧区域树 `myAreaList + areaFullCode`** 与**办公室成员 `my/office + elementId`**。不能把“小程序智慧xx走 iot-center，而我的办公室走 office”当作实际目录分界。状态与控制可以另走 `iot-center`，不会改变目录所属链路；现行 Agent 的控制出口也不必与旧页面逐项相同。
 
 当前 Company 空调适配器只传登录身份和租户，按 `modelCode=YQ_AIR_CONDITION` 拉 `iot-center/device/page`，以型号、编码与 `airCondition/acDetail` 动作筛选能力，没有显式查询用户设备分配或区域角色关系。上游可能在服务端按身份过滤，但本轮没有跨账号或正式契约证据证明它；动作存在也不是个人控制权限的证明。因此“Company 按人分配设备”的预期尚未完成接口对应，不能把 55 台空调/102 台目录标为已验证的个人授权范围。
 
