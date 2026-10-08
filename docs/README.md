@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- 2026-10-08 新增遗漏的 Runtime 配置后台任务：已核对环境配置、模块硬编码、管理员边界和生效机制，建议 Runtime 仓库 monorepo + React/Vite/shadcn；后台尚未实施，范围与源码证据见[审查与交接](../plan/2026-10-08-runtime-admin-dashboard-audit-handoff.md)。此后台与小程序业务仪表盘区分。
+
 - 2026-10-08 安全台账“单条详情→引用到 Company→围绕同一记录回答”方向已认可，单个业务切片的范围、事件身份、返回/加载体验与验收顺序已整理，业务代码尚未实施。见[实施计划](../plan/2026-10-08-safety-ledger-detail-reference-plan.md)。
 
 - 2026-10-08 修复切页时提前挂载关闭抽屉，以及总览串行/重复读取；总览改为summary/energy分段展示，其他概览先返回，慢电表独立等待。测量、回归和实际微信操作见[页面性能交接](../plan/2026-10-08-navigation-performance-handoff.md)。电表上游仍偏慢，页面出现与数据返回分别验收。
