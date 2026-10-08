@@ -8,11 +8,11 @@
     <view class="event-field"><text>记录时间</text><text>{{ fmtDateTime(record.occurredAt) || '未提供' }}</text></view>
     <view class="event-field"><text>台账来源</text><text>{{ record.ledger === 'gas' ? '燃气台账' : record.ledger === 'flooding' ? '烟感 / 水浸台账' : '未提供' }}</text></view>
     <text class="event-note">这是平台历史台账。上报标记不代表已恢复，当前是否仍在报警需另行核实。</text>
-    <text class="event-observed">{{ verified ? '核验于' : '此前读取于' }} {{ fmtDateTime(observedAt) || '时间未提供' }}</text>
+    <text class="event-observed">{{ verified ? '最新读取于' : '此前读取于' }} {{ fmtDateTime(observedAt) || '时间未提供' }}</text>
    </view>
-   <view class="event-state" aria-live="polite"><text>{{ loading ? '正在核验这条记录，可先查看或返回' : error }}</text><button v-if="error && reference" class="event-retry" hover-class="event-pressed" @tap="load">重试</button></view>
+   <view class="event-state" aria-live="polite"><text>{{ loading ? '正在更新记录' : error }}</text><button v-if="error && reference" class="event-retry" hover-class="event-pressed" @tap="load">重试</button></view>
   </scroll-view>
-  <view class="event-actions"><button class="event-reference" :disabled="!verified || loading" hover-class="event-pressed" @tap="quote"><uni-icons type="chatbubble" size="16" color="#fff" /><text>引用到对话</text></button><text class="event-action-note">保留现有输入，由你决定何时发送</text></view>
+  <view class="event-actions"><button class="event-reference" :disabled="!referenceAllowed" hover-class="event-pressed" @tap="quote"><uni-icons type="chatbubble" size="16" color="#fff" /><text>引用到对话</text></button><text class="event-action-note">保留现有输入，由你决定何时发送</text></view>
  </view>
 </template>
 <script setup>
@@ -27,10 +27,12 @@ const props = defineProps({ snapshot: { type: Object, required: true }, active: 
 const emit = defineEmits(['reference'])
 const record = ref(props.snapshot.record), observedAt = ref(props.snapshot.observedAt)
 const loading = ref(false), error = ref(''), verified = ref(false)
+const referenceAllowed = ref(false)
 const reference = computed(() => safetyEventReference(props.snapshot.record))
-let requestId = 0, visible = true, verifiedScope = ''
-function invalidate() { ++requestId; loading.value = false; verified.value = false }
+let requestId = 0, visible = true, referenceScope = ''
+function invalidate() { ++requestId; loading.value = false; verified.value = false; referenceAllowed.value = false }
 async function load() {
+ if (loading.value) return
  const current = ++requestId
  verified.value = false; error.value = ''
  if (!props.active || !visible) return
@@ -40,20 +42,21 @@ async function load() {
  let scope
  try {
   scope = getAgentStorageScope()
+  referenceScope = scope; referenceAllowed.value = true
   const result = await getSafetyEvent(target)
   if (current !== requestId || !visible || !props.active || scope !== getAgentStorageScope()) return
   const next = safetyEventReference(result.record)
   if (!next || next.eventId !== target.eventId || next.ledger !== target.ledger || next.deviceId !== target.deviceId) throw new Error('返回的记录身份不匹配，请重试')
-  record.value = result.record; observedAt.value = result.observedAt; verifiedScope = scope; verified.value = true
+  record.value = result.record; observedAt.value = result.observedAt; verified.value = true
  } catch (cause) {
   if (current === requestId && visible && props.active) {
-   if (scope !== getAgentStorageScope() || ['SAFETY_EVENT_UNAVAILABLE', 'UNAUTHORIZED'].includes(cause.data?.code)) record.value = {}
+   if (scope !== getAgentStorageScope() || ['SAFETY_EVENT_UNAVAILABLE', 'UNAUTHORIZED'].includes(cause.data?.code)) { record.value = {}; referenceAllowed.value = false }
    error.value = cause.message || '记录暂不可用，请稍后重试'
   }
  } finally { if (current === requestId) loading.value = false }
 }
 function quote() {
- if (!verified.value || loading.value || verifiedScope !== getAgentStorageScope()) return
+ if (!referenceAllowed.value || referenceScope !== getAgentStorageScope()) return
  emit('reference', { ...reference.value, label: `${record.value.deviceName} · ${fmtDateTime(record.value.occurredAt)}` })
 }
 watch(() => [props.active, props.snapshot], () => {

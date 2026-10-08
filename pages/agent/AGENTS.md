@@ -1,7 +1,7 @@
 # Agent Page Notes
 
 - 客户告警跳转的alertPrompt只进入Company；草稿与引用分开保存，编辑/重试用原turn.reference，当前输入的新引用保持不动。run.started携带原引用供恢复；入口与验收边界见 `plan/2026-10-04-customer-alert-reference-handoff.md`，客户正式回调契约仍待对接。
-- 安全台账结构化引用与上述自由文本桥分开：事件身份是 ledger＋eventId，并核对 deviceId；共用 SafetyEventDetail 即时展示快照，核验成功才可引用。仪表盘保留列表节点，返回详情用显式 display:none/block；首次挂载必须触发读取。网络错误保留标注过的旧快照，401/404 清理记录，迟到响应核对 requestId/身份/active。范围见 `plan/2026-10-08-safety-ledger-detail-reference-plan.md`。
+- 安全台账结构化引用与上述自由文本桥分开：事件身份是 ledger＋eventId，并核对 deviceId；共用 SafetyEventDetail 即时展示带读取时间的快照，稳定身份可立即引用，后台更新不阻塞按钮；发送消息时 Runtime 再按当前目录核验记录，引用本身不代表核验成功或控制授权。仪表盘保留列表节点，返回详情用显式 display:none/block；首次挂载必须触发读取。网络错误保留标注过的旧快照，401/404 清理记录并禁用引用，迟到响应核对 requestId/身份/active。现行行为见 `plan/2026-10-08-independent-reads-lan-handoff.md`。
 
 - 微信分块事件的 `data` 是 `ArrayBuffer`，中文 UTF-8 字节可能跨 chunk；所有 NDJSON 解析继续复用 `apis/agent/ndjson.mjs`。
 - 正文事件是 `message.delta`（增量，后端已合并）+ `message.completed`（权威终稿）；终稿覆盖累积文本，`tool.started` 会收起工具前的中间评注。
@@ -18,7 +18,7 @@
 - Agent 头像（`AgentAvatar.vue` + `avatar.js`）使用固定预计算 SVG body/eyes 分层，不按会话随机；保留扫视、眨眼、运行呼吸和 reduced-motion 完整行为；不得降级为通用图标方块，也不得重新引入 blobatar 依赖。
 - 草案面板沿用 `DraftSheetLayer` + `DeviceSheet` 的本地 Sheet 底座：根节点常驻但关闭态 `pointer-events:none`，面板 `transform` 与遮罩 `opacity` 都由 Vue 的 `open/dragY` 状态驱动；横杆只在触摸期间直接跟手，松手后回弹或退场。不要重新接入 `uni-popup`/`uni-transition` 或 WXS `callMethod` 桥接；此前的异步生命周期和双层位移曾造成孤立遮罩及横杆失效。改动后在客户微信环境核对连续开合、横杆拖拽、遮罩同步与底部安全区；不以源码正则断言替代交互验收。
 - 客户小程序是生产 Agent 主线；本目录必须复用客户会话，不得恢复独立 miniapp 的固定 `local-development`/`LOCAL` 身份。
-- 开发阶段客户登录、用户、园区和物联网接口继续走客户公网；仅 Agent Runtime 指向本机 `127.0.0.1:3200`——它是唯一 Runtime 实例，直连真实客户网关，不存在模拟数据源。`trial/release` 不得依赖本机地址。
+- 开发阶段客户登录、用户、园区和物联网接口继续走客户公网；仅 Agent Runtime 指向 Mac 当前局域网 IP 的3200端口，后端监听0.0.0.0供手机预览。换网后核对IP并重新编译；唯一 Runtime 直连真实客户网关，不存在模拟数据源。`trial/release` 不得依赖本机地址。
 - Agent 页面进入前等待 `utils/agent-session.js` 的会话与园区上下文；页面和组件不得自行拼接 Authorization 或 tenantCode。
 - 本目录已是生产 Agent 页面；新业务只在客户主线实现。独立 miniapp 已于 2026-09-24 迁出为同级仓库 `agent-miniapp`，仅用于复现问题，回补时只同步能够证明必要的最小修复。
 - 修改独立的区域时间轴原型 `proto-region-panel.html` 时，先读 `docs/research/proto-region-panel/b6-timeline-design.md`：它记录唯一设计稿、B4 冻结边界及 B6 的区间、节点、刻痕和时间文字契约。原型不是生产区域面板，多区间重叠仍属探索状态。

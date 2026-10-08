@@ -7,15 +7,15 @@
     <view class="estate">
      <view class="estate-grid" /><image class="campus" src="/static/agent-campus.svg" mode="aspectFit" />
      <view class="estate-top"><text class="scope-dot" /><text>微脑 · 当前接入范围</text></view>
-     <text class="estate-number">{{ snapshot ? snapshot.devices.length : '—' }}<text class="estate-unit">台</text></text><text class="estate-label">已接入观察设备</text>
+     <text class="estate-number">{{ snapshot ? snapshot.devices.length : '—' }}<text class="estate-unit">台</text></text><text class="estate-label">{{ loadedSections.length >= 3 ? '已接入观察设备' : '已取得的观察设备' }}</text>
      <view class="estate-foot"><text>{{ snapshot ? '查询于 ' + clock : loading ? '正在读取公司数据' : '数据尚未取得' }}</text><text>园区示意</text></view>
     </view>
     <view v-if="error" class="notice"><text>{{ error }}</text><button @tap="load">重试</button></view>
-    <view v-else-if="snapshot?.errors?.length" class="notice"><text>部分读数暂不可用，已取得的信息保留</text><button @tap="showErrors">查看</button></view>
-    <view class="device-strip"><view v-for="cell in deviceCells" :key="cell.kind" class="device-cell"><view class="device-label"><uni-icons :type="cell.icon" size="13" color="#6e8876" /><text>{{ cell.label }}</text></view><text class="device-value">{{ snapshot ? counts[cell.kind] : '—' }}<text>台</text></text></view></view>
+    <view v-else-if="snapshot?.errors?.length" class="notice"><text>部分观测暂不可用</text><button @tap="showErrors">查看</button></view>
+    <view class="device-strip"><view v-for="cell in deviceCells" :key="cell.kind" class="device-cell"><view class="device-label"><uni-icons :type="cell.icon" size="13" color="#6e8876" /><text>{{ cell.label }}</text></view><text class="device-value">{{ loadedSections.includes(cell.kind === 'safety' ? 'alerts' : cell.kind) ? counts[cell.kind] : '—' }}<text>台</text></text></view></view>
     <view class="panel environment">
-     <view class="panel-head"><text>环境观测</text><button class="text-action" @tap="openObservation('environment')">查看 <uni-icons type="right" size="10" color="#829386" /></button></view>
-     <text class="sensor-name">{{ environment?.name || (snapshot ? '暂无环境读数' : loading ? '等待环境读数' : '环境读数暂不可用') }}</text>
+     <view class="panel-head"><text>环境观测</text><button class="text-action" :disabled="!loadedSections.includes('environment')" @tap="openObservation('environment')">查看 <uni-icons type="right" size="10" color="#829386" /></button></view>
+     <text class="sensor-name">{{ environment?.name || (loading ? '正在更新环境读数' : loadedSections.includes('environment') ? '暂无环境读数' : '环境读数暂不可用') }}</text>
      <view class="environment-grid"><view v-for="cell in environmentCells" :key="cell.key"><text class="env-value">{{ metricValue(environment?.reading?.[cell.key]) }}<text>{{ cell.unit }}</text></text><text class="env-label">{{ cell.label }}</text></view></view>
      <text class="fineprint">{{ environment?.reading?.source === 'shadow' ? '平台影子值 · 可能不是该房间的实测值' : environment?.reading ? '设备观测 · 不代表全公司平均值' : '未取得有效读数' }}</text>
     </view>
@@ -31,15 +31,15 @@
       <text class="sensor-name">{{ energy?.name || (energyLoading ? '正在读取电表读数' : '暂无有效电表读数') }}</text>
       <text class="energy-value">{{ metricValue(energy?.reading?.totalActivePower) }}<text>kW</text></text>
       <text class="fineprint" :class="{ 'demo-note': energyStale(energy?.reading) }">{{ energy?.reading ? '最新已知功率 · ' + (fmtDateTime(energy.reading.readTime) || '上报时间未知') + (energyStale(energy.reading) ? ' · 陈旧/时间未知' : '') : energyLoading ? '其他概览可先查看，电表读数随后补入' : '本次未取得有效读数' }}</text>
-      <button class="meter-link" :disabled="energyLoading" @tap="openObservation('energy')">查看 {{ snapshot ? counts.energy : '—' }} 个计量点 <uni-icons type="right" size="11" color="#567461" /></button>
+      <button class="meter-link" :disabled="!loadedSections.includes('energy')" @tap="openObservation('energy')">查看 {{ loadedSections.includes('energy') ? counts.energy : '—' }} 个计量点 <uni-icons type="right" size="11" color="#567461" /></button>
      </template>
     </view>
-    <button class="ledger" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '台账暂不可用' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : snapshot ? '本次读取没有事件记录' : '等待台账数据' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>条记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
+    <button class="ledger" :disabled="!snapshot?.alerts || alertsUnavailable" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '台账暂不可用' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : alertsLoading ? '正在更新台账' : '本次读取没有事件记录' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>条记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
     <text class="ledger-note">本次读取的历史台账，不表示当前仍在报警或已经恢复</text>
     <view class="panel automation">
      <view class="panel-head"><text>自动化安排</text><button class="text-action" @tap="tasksOpen = true">查看安排 <uni-icons type="right" size="10" color="#829386" /></button></view>
      <view class="automation-counts"><text>{{ snapshot?.automation?.enabledPlans ?? '—' }}<text>个启用计划</text></text><text>{{ snapshot?.automation?.active ?? '—' }}<text>项正在执行</text></text></view>
-     <text v-if="!snapshot?.automation" class="fineprint">{{ loading ? '正在读取任务安排' : '任务摘要暂不可用' }}</text>
+     <text v-if="!snapshot?.automation" class="fineprint">{{ automationLoading ? '正在更新任务安排' : '任务摘要暂不可用' }}</text>
      <button v-for="task in snapshot?.automation?.upcoming || []" :key="task.id" class="automation-row" @tap="tasksOpen = true"><text>{{ task.label }}</text><text>{{ fmtDateTime(task.interval?.startsAt || task.phases[0]?.at) }}</text></button>
      <text v-if="snapshot?.automation && !snapshot.automation.upcoming.length" class="fineprint">未来一周没有待执行安排</text>
      <view v-if="snapshot?.automation?.latestResults?.length" class="recent-results"><text class="fineprint">最近结果</text><button v-for="task in snapshot.automation.latestResults" :key="task.id" class="automation-row" @tap="tasksOpen = true"><text>{{ task.label }}</text><text>{{ resultLabel(task.status) }}</text></button></view>
@@ -75,13 +75,14 @@ const selectedEvent = ref(null)
 const tasksOpen = ref(false)
 const snapshot = ref(null), loading = ref(false), error = ref(''), demo = ref(true), observationType = ref('')
 const energyLoading = ref(false)
+const alertsLoading = ref(false), automationLoading = ref(false), loadedSections = ref([]), sectionErrors = ref({})
 const tasksMounted = ref(false), observationMounted = ref(false)
 watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync' })
 watch(observationType, type => { selectedEvent.value = null; if (type) observationMounted.value = true }, { flush: 'sync' })
 const counts = computed(() => dashboardCounts(snapshot.value))
-const environment = computed(() => snapshot.value?.environment.find(row => row.reading) || snapshot.value?.environment[0])
-const energy = computed(() => snapshot.value?.energy.find(row => Number.isFinite(row.reading?.totalActivePower)))
-const alertsUnavailable = computed(() => Boolean(error.value) || snapshot.value?.errors?.some(row => row.area === 'alerts'))
+const environment = computed(() => snapshot.value?.environment?.find(row => row.reading) || snapshot.value?.environment?.[0])
+const energy = computed(() => snapshot.value?.energy?.find(row => Number.isFinite(row.reading?.totalActivePower)))
+const alertsUnavailable = computed(() => Boolean(sectionErrors.value.alerts) || snapshot.value?.errors?.some(row => row.area === 'alerts'))
 const latestAlert = computed(() => snapshot.value?.alerts?.records[0])
 const clock = computed(() => fmtDateTime(snapshot.value?.observedAt).slice(5))
 const chart = energyChart(repairEnergy.hours)
@@ -91,37 +92,46 @@ const observationTitle = computed(() => ({ environment: '环境观测', energy: 
 const observation = computed(() => {
  if (!snapshot.value || !observationType.value || (observationType.value === 'alerts' && alertsUnavailable.value)) return null
  const type = observationType.value
- return { observedAt: type === 'energy' ? snapshot.value.energyObservedAt : snapshot.value.observedAt, blocks: [type === 'alerts' ? { type, ...snapshot.value.alerts } : { type, devices: snapshot.value[type] }] }
+ return { observedAt: snapshot.value[type + 'ObservedAt'], blocks: [type === 'alerts' ? { type, ...snapshot.value.alerts } : { type, devices: snapshot.value[type] || [] }] }
 })
 let requestId = 0, scope = '', visible = false
 async function load() {
  const current = ++requestId
- loading.value = true; energyLoading.value = true; error.value = ''
+ loading.value = true; energyLoading.value = true; alertsLoading.value = true; automationLoading.value = true; error.value = ''; sectionErrors.value = {}
  try {
   await waitForAgentSession()
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
-  if (nextScope !== scope) { snapshot.value = null; observationType.value = ''; scope = nextScope }
-  let energyResult
-  await Promise.all([
-   getCompanyDashboard('summary').then(result => {
-    if (current !== requestId || !visible || getAgentStorageScope() !== nextScope) return
-    const previous = snapshot.value
-    snapshot.value = { ...result, energy: energyResult?.energy || previous?.energy || [], energyObservedAt: energyResult?.observedAt || previous?.energyObservedAt, errors: [...result.errors, ...(energyResult?.errors || previous?.errors.filter(row => row.area === 'energy') || [])] }
-   }),
-   getCompanyDashboard('energy').then(result => {
-    if (current !== requestId || !visible || getAgentStorageScope() !== nextScope) return
-    energyResult = result; energyLoading.value = false
-    if (snapshot.value) snapshot.value = { ...snapshot.value, energy: result.energy, energyObservedAt: result.observedAt, errors: [...snapshot.value.errors.filter(row => row.area !== 'energy'), ...result.errors] }
-   }),
-  ])
+  if (nextScope !== scope) { snapshot.value = null; loadedSections.value = []; observationType.value = ''; scope = nextScope }
+  await Promise.allSettled(['environment', 'energy', 'alerts', 'automation'].map(async section => {
+   const active = () => current === requestId && visible && getAgentStorageScope() === nextScope
+   try {
+    const result = await getCompanyDashboard(section)
+    if (!active()) return
+    const previous = snapshot.value || { devices: [], errors: [] }
+    const kind = section === 'alerts' ? 'safety' : section
+    const devices = section === 'automation' ? previous.devices : [...previous.devices.filter(row => row.kind !== kind), ...result.devices]
+    const errors = [...previous.errors.filter(row => row.area !== section), ...result.errors]
+    for (const [area, message] of Object.entries(sectionErrors.value)) if (!errors.some(row => row.area === area)) errors.push({ area, message })
+    snapshot.value = { ...previous, ...result, devices, [section + 'ObservedAt']: result.observedAt, errors }
+    if (section !== 'automation' && !loadedSections.value.includes(section)) loadedSections.value.push(section)
+   } catch (cause) {
+    if (!active()) return
+    sectionErrors.value[section] = cause.message || '暂不可用'
+    if (snapshot.value) snapshot.value = { ...snapshot.value, errors: [...snapshot.value.errors.filter(row => row.area !== section), { area: section, message: sectionErrors.value[section] }] }
+    if (cause.data?.code === 'UNAUTHORIZED') { snapshot.value = null; loadedSections.value = []; error.value = cause.message; ++requestId; loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false }
+   } finally {
+    if (current === requestId) ({ environment: loading, energy: energyLoading, alerts: alertsLoading, automation: automationLoading })[section].value = false
+   }
+  }))
+  if (current === requestId && !snapshot.value) error.value = '公司数据暂不可用，请重试'
  } catch (cause) {
   if (current === requestId && visible) {
-   ++requestId; loading.value = false; energyLoading.value = false
-   snapshot.value = null; observationType.value = ''
+   ++requestId; loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false
+   snapshot.value = null; loadedSections.value = []; observationType.value = ''
    error.value = cause.message === 'request:fail' ? '公司数据暂不可用，请检查网络后重试' : cause.message || '公司数据暂不可用'
   }
- } finally { if (current === requestId) { loading.value = false; energyLoading.value = false } }
+ } finally { if (current === requestId) { loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false } }
 }
 function openObservation(type) { if (snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
@@ -138,11 +148,11 @@ function openAgent(source, reference) {
 function back() { backToParent('/pages/index/index') }
 onShow(() => {
  visible = true; openingAgent.value = ''
- try { if (scope && scope !== getAgentStorageScope()) { snapshot.value = null; observationType.value = '' } }
- catch { snapshot.value = null; observationType.value = '' }
+ try { if (scope && scope !== getAgentStorageScope()) { snapshot.value = null; loadedSections.value = []; observationType.value = '' } }
+ catch { snapshot.value = null; loadedSections.value = []; observationType.value = '' }
  load()
 })
-function hide() { visible = false; ++requestId; loading.value = false; energyLoading.value = false }
+function hide() { visible = false; ++requestId; loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false }
 onHide(hide); onUnload(hide)
 </script>
 <style scoped>

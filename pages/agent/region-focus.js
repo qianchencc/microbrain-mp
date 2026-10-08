@@ -23,13 +23,19 @@ export async function loadRegionFocus() {
  regionsError.value = ''
  const promise = (async () => {
   try {
-   const result = await listRegions()
+   const result = await listRegions('directory')
    if (request !== sequence || scope !== getAgentStorageScope()) return
    regions.value = result.regions || []
    const saved = uni.getStorageSync(storageKey(scope))
    focusRegionId.value = regions.value.find(region => region.id === saved)?.id || regions.value[0]?.id || ''
    uni.setStorageSync(storageKey(scope), focusRegionId.value)
    loadedAt = Date.now()
+   // Names are already usable; device-level attention must not gate selection.
+   listRegions().then(latest => {
+    if (request !== sequence || scope !== getAgentStorageScope()) return
+    const attention = new Map((latest.regions || []).map(region => [region.id, region.attention]))
+    regions.value = regions.value.map(region => ({ ...region, attention: attention.get(region.id) }))
+   }).catch(() => {})
   } catch (error) {
    if (request === sequence) { regions.value = []; focusRegionId.value = ''; regionsError.value = error.message || '区域暂不可用' }
    throw error
