@@ -6,9 +6,9 @@
 
 - 2026-10-08 后端配置控制台已合入 Runtime 主仓库（`746fcde`），本机入口 http://127.0.0.1:3200/admin/，已接原真实模型/Langfuse、客户网关与同一任务库。管理员登录、真实模型纯文本测试、网关只读概览和保存后重启生效通过；能耗缓存现为10分钟。见[真实启用交接](../../iot-agent-runtime/plan/2026-10-08-backend-admin-live-handoff.md)。控制台不属于小程序。
 
-- 2026-10-08 用户最终明确页面分层：员工 Agent 走“我的办公室”，大 Agent 走“智慧xx”，不再追问上游权限配置。当前 Company 空调直读底层型号目录需由我方对齐智慧页面；安全台账详情/引用已实施并完成真实只读与微信模拟器验收，真机边界见本轮交接。现有任务、页面/Runtime接口和最小客户材料清单见[对齐记录](../plan/2026-10-08-page-interface-task-alignment.md)，Company 来源修正已登记票 17。
+- 2026-10-08 用户最终明确页面分层：员工 Agent 走“我的办公室”，大 Agent 走“智慧xx”，不再追问上游权限配置。Company 空调已按智慧空调区域树/设备页确定成员，保留 hub 身份与原 Task/Plan/报告；真实只读返回 49 台，排除底层目录额外 6 台。Runtime84/84与mp27/27通过，详细结果见[来源对齐交接](../plan/2026-10-08-company-smart-ac-source-handoff.md)；安全台账详情/引用已实施并完成真实只读与微信模拟器验收，真机边界见本轮交接。现有任务、页面/Runtime接口和最小客户材料清单见[对齐记录](../plan/2026-10-08-page-interface-task-alignment.md)，Company 来源修正票 17 已实施；完整Company/旧引用GET升级前后503，实际验收待复核，真实控制/真机仍独立验收。
 
-- 2026-10-08 新增遗漏的 Runtime 配置后台任务：已核对环境配置、模块硬编码、管理员边界和生效机制，建议 Runtime 仓库 monorepo + React/Vite/shadcn；后台尚未实施，范围与源码证据见[审查与交接](../plan/2026-10-08-runtime-admin-dashboard-audit-handoff.md)。此后台与小程序业务仪表盘区分。
+- 2026-10-08 新增遗漏的 Runtime 配置后台任务：已核对环境配置、模块硬编码、管理员边界和生效机制，建议 Runtime 仓库 monorepo + React/Vite/shadcn；该条为首次调查记录；当前已真实启用，范围与源码证据见[审查与交接](../plan/2026-10-08-runtime-admin-dashboard-audit-handoff.md)。此后台与小程序业务仪表盘区分。
 
 - 2026-10-08 安全台账“单条详情→引用到 Company→围绕同一记录回答”已实施；真实网关只读、微信模拟器点击/返回/草稿/引用/重试及故障恢复通过。Runtime 82/82、最后窄修正后安全2/2与类型/构建通过，mp27/27、微信编译通过。实际证据、快照即时显示与独立核验、真机/窄屏/硬超时未验边界见[闭环交接](../plan/2026-10-08-safety-ledger-detail-reference-handoff.md)；范围见[实施计划](../plan/2026-10-08-safety-ledger-detail-reference-plan.md)。
 

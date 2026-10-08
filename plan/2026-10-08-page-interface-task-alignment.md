@@ -1,6 +1,6 @@
 # 当前开发任务、页面接口与客户沟通对齐
 
-2026-10-08。本轮为 ask-matt 任务与源码复核，记录用户已确定的页面分层；不修改业务代码，不接管并行安全台账实现，不启动模型、设备控制或调度。
+2026-10-08。首轮为 ask-matt 任务与源码复核；后续用户授权自行推进，票 17 已实施智慧空调成员来源对齐，真实只读49台、排除底层额外6台，回归Runtime84/84与mp27/27通过。实施与上线结果见[来源对齐交接](2026-10-08-company-smart-ac-source-handoff.md)。以下首次核对基线只作历史证据。
 
 核对时 mp HEAD `e06ab15`、Runtime HEAD `fbd1028`；两仓均有另一会话的安全台账详情/引用未提交改动。本记录的“进行中”不替代该会话最终测试、提交或验收报告。
 
@@ -20,12 +20,12 @@
 |---|---|---|
 | Office 即时控制、一次性区间、多检查点、周期与管理 | 已有源码与回归；部分真实设备/真机验收仍独立保留 | 不恢复成“周期未实现”；员工目录仍走我的办公室 |
 | 两端 Task/Plan 引用、报告、我的安排、任务结束收件箱 | 已实施；10-07 有真实 Company 只读报告及微信返回/引用/已读证据 | 同源查询规则保留；收件箱不接设备告警来源 |
-| Company 空调即时/定时/周期、只读简报 | 已实现执行规则；设备发现与最新智慧页面分层有偏差 | 登记智慧空调来源对齐，不推倒已完成任务模型 |
+| Company 空调即时/定时/周期、只读简报 | 已实现；票17修正设备发现来源 | 智慧区域/房间设备页决定成员，底层仅绑定能力，保留任务模型与hub身份 |
 | 仪表盘、页面导航与分段加载 | 已实施；能源慢请求独立加载 | 保留真实/维修演示分开；当前功率/陈旧读数不冒充历史用电量 |
-| 安全台账列表→单条详情→引用→用户发送→同记录解释 | 另一会话正在实现与验收，两仓未提交 | 不要求新增客户接口。读取到的 QA 日志仍有选择器等待失败，完整端到端尚未关闭 |
+| 安全台账列表→单条详情→引用→用户发送→同记录解释 | 已提交并完成真实只读与微信模拟器验收 | 最终结果见安全闭环交接，首次QA失败是历史证据 |
 | Company 智慧照明/门禁/监控 | 上游已有 owner 页面接口；当前 Company 最终目录尚未接入这三类 | 属我方后续能力接线，不当作接口不存在，也不自动开放尚未适配的控制 |
 | 电量历史统计、环境趋势、回放与我方人员分析 | 未完成，四类正式接口文档待交付 | 按文档/样例逐项实现；不再索取海康人数接口 |
-| Runtime 配置后台 | 另一个已登记任务：完成调查，范围待收口，未迁移/实现 | 不属于客户业务接口疑问；不与安全或来源修正混成一批 |
+| Runtime 配置后台 | 已合入并在唯一3200启用 | 入口为后端/admin/，与客户业务接口分层区分 |
 
 10-07 已实施清单及测试证据引用 [业务补齐交接](2026-10-07-business-completion-handoff.md)，本轮没有重跑并行实现的测试。安全切片规格见 [实施计划](2026-10-08-safety-ledger-detail-reference-plan.md)。读取的 `/tmp/safety-event-qa/native.log` 在 11:20 记录等待 `event-reference` 按钮超时；这只能说明该次验收脚本未通过，不证明 Runtime 记录查询失败，也不能据此替另一会话关闭票据。
 
@@ -36,10 +36,10 @@
 | 我方页面/组件 | Runtime 入口与实际上游 | 判断 |
 |---|---|---|
 | 员工对话、区域工作台、设备抽屉/时间轴 | 会话 `source=office`；`/agent/regions/*`；`loadDeviceCatalog` 先 `/office/office/member/my/office`，再按 elementId 读空调专用与通用设备分页 | 目录符合我的办公室分层。关联分页只回填 controlRef；状态与控制可以内部使用 provider 接口，不增加目录成员 |
-| 公司对话、Company 任务/计划 | 会话 `source=company`；`loadCompanyDeviceCatalog` = 环境/能源/安全观察＋iot-center 的 `YQ_AIR_CONDITION` 型号目录 | **空调发现需修正**为智慧空调 `myAreaList → devicePage(areaFullCode)`。当前按底层动作启用控制也需随页面设备绑定重核；不再向客户询问背后授权模型 |
+| 公司对话、Company 任务/计划 | 会话 `source=company`；`loadCompanyDeviceCatalog` = 环境/能源/安全观察＋智慧空调 `myAreaList → devicePage(areaFullCode)` | 票17已修正成员来源；hub绑定原已核验状态/动作，空/失败不补范围；不再向客户询问背后授权模型 |
 | 公司仪表盘 | `/agent/dashboard?source=company&section=summary/energy`；观察目录＋同源任务摘要 | source 与分段加载正确。环境来自已接环境设备/影子兜底，能源 equipment/realTimeRead，安全 perception/FIRE 与两台账；缺完整历史统计仍是已知事实 |
 | 我的安排、任务详情、收件箱 | `/agent/tasks`、`/task-plans`、`/notifications` 均携 source；报告/已读保持原来源 | 接线沿已实现规则；Company 目录修正必须同步影响查询、确认和 scanner 重核，不只改首页候选 |
-| 安全详情与结构化引用（进行中） | `/agent/safety-events/:id?source=company&ledger=...&deviceId=...`；读当前安全目录，再以台账＋事件＋设备身份查同一记录 | 符合 Company 查询与主动引用职责；不增加告警发送/处置平台。个人已读仍仅针对任务消息 |
+| 安全详情与结构化引用（已实施） | `/agent/safety-events/:id?source=company&ledger=...&deviceId=...`；读当前安全目录，再以台账＋事件＋设备身份查同一记录 | 符合 Company 查询与主动引用职责；不增加告警发送/处置平台。个人已读仍仅针对任务消息 |
 | 视频观察入口 | 前端 `getVideoStream` 没有 source；`openVideoStream` 当前按 Office 目录找设备；`videoPlayerUrl` 为空 | 当前保留 Office 视频能力，不是 Company 监控接线。接智慧监控时必须带/核对来源与本端目录，并接自建 H5，不能直接复用 Office 取流范围 |
 
 源码入口：`apis/agent/index.js`、`pages/agent/dashboard.vue`、`region.vue`、`components/TaskListSheet.vue`、`TaskInboxSheet.vue`、`SafetyEventDetail.vue`、`video-player.js`；Runtime `src/app.ts:259`、`src/iot/adapter.ts:327` / `:657`、`src/iot/observation.ts:149`、`src/tasks/scanner.ts:31`、`src/dashboard/routes.ts` 与在途 `src/safety/events.ts`。
@@ -70,7 +70,7 @@
 ## 接下来按闭环推进
 
 1. 让在途安全切片完成真实查询/微信详情与引用、回归与两仓提交；本轮不触碰其业务文件，也不改写其验收结果。
-2. 先做 Company **智慧空调来源对齐**一个切片：页面目录→已有检索/提案→确认→同源后台执行/报告与原对象查询；复用稳定 ID 映射，公开行为验证，不重新设计任务/权限系统。登记票 17，无客户模型前置。
+2. Company **智慧空调来源对齐**切片已实施：页面目录→已有检索/提案→确认→同源后台执行/报告与原对象查询；复用稳定 ID 映射，公开行为验证，不重新设计任务/权限系统。登记票 17，无客户模型前置。
 3. 智慧照明/门禁/监控分别进入能力切片；监控同时解决 Company 取流来源与 H5 链路。四项历史文档到位后推进趋势/统计/回放/人员分析，不拿到一个流 URL 就标为人数分析完成。
 
 建议 skills：`ask-matt` 对齐后沿已冻结票进入 `implement`；实现时 `tdd` 验证最窄公开行为，必要时 `code-review`；本轮领域细化使用 `domain-modeling`，交接遵守项目要求保存在 plan/。
