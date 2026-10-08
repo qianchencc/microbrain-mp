@@ -37,7 +37,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
-| 从接口区分员工 Agent、公司 Agent 与仪表盘：范围、控制引用、空间和统计口径 | [10-08 真实接口盘点](./research/2026-10-08-interface-source-boundary-audit.md)与[交接](../plan/2026-10-08-interface-source-boundary-handoff.md)（Office 12 台、Company 102 台、仪表盘观察 47 台为本开发身份样本；关联分页仅作控制映射） |
+| 从接口区分员工 Agent、公司 Agent 与仪表盘：范围、控制引用、空间和统计口径 | [10-08 真实接口盘点](./research/2026-10-08-interface-source-boundary-audit.md)与[交接](../plan/2026-10-08-interface-source-boundary-handoff.md)（补查办公室成员、区域角色、个人分组；Company 102 台为接入计数，按人授权语义尚未证实；Office 关联分页仅作控制映射） |
 | 物联助手全部页面、抽屉、浮层与前进/返回/关闭/手势的检查 | [10-07 导航检查](../plan/2026-10-07-page-navigation-audit.md)、[设计对照图](./research/assistant-navigation-review/index.html)与[导航改进交接](../plan/2026-10-07-assistant-navigation-improvement-handoff.md)、[改进后画面](./research/assistant-navigation-review/after/index.html)（29 类入口、25 项检查；导航改进已实施，模拟器夹具走查；真机手势/H5/生产延迟仍待验） |
 | 客户四项历史接口、智慧监控区域定位、人员回放分析及告警/任务收件箱边界 | [10-07 复核与交接](../plan/2026-10-07-history-interfaces-alert-inbox-handoff.md)（真实只读定位验证；人员统计由我方后端分析回放；收件箱仅任务结束消息） |
 | 模型缓存的应用恢复、压缩与真实用量 | [10-03 恢复/压缩核验](./research/2026-10-03-model-cache-recovery-compaction-verification.md)（局部诊断通过，跨进程/生产/Langfuse 落库仍未验；无生产代码改动） |
