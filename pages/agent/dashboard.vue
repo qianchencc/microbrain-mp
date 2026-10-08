@@ -28,10 +28,10 @@
       <text class="fineprint demo-note">24 小时演示样例 · 非实际采集；真实接口仍读取</text>
      </template>
      <template v-else>
-      <text class="sensor-name">{{ energy?.name || '暂无有效电表读数' }}</text>
+      <text class="sensor-name">{{ energy?.name || (energyLoading ? '正在读取电表读数' : '暂无有效电表读数') }}</text>
       <text class="energy-value">{{ metricValue(energy?.reading?.totalActivePower) }}<text>kW</text></text>
-      <text class="fineprint" :class="{ 'demo-note': energyStale(energy?.reading) }">{{ energy?.reading ? '最新已知功率 · ' + (fmtDateTime(energy.reading.readTime) || '上报时间未知') + (energyStale(energy.reading) ? ' · 陈旧/时间未知' : '') : '本次未取得有效读数' }}</text>
-      <button class="meter-link" @tap="openObservation('energy')">查看 {{ snapshot ? counts.energy : '—' }} 个计量点 <uni-icons type="right" size="11" color="#567461" /></button>
+      <text class="fineprint" :class="{ 'demo-note': energyStale(energy?.reading) }">{{ energy?.reading ? '最新已知功率 · ' + (fmtDateTime(energy.reading.readTime) || '上报时间未知') + (energyStale(energy.reading) ? ' · 陈旧/时间未知' : '') : energyLoading ? '其他概览可先查看，电表读数随后补入' : '本次未取得有效读数' }}</text>
+      <button class="meter-link" :disabled="energyLoading" @tap="openObservation('energy')">查看 {{ snapshot ? counts.energy : '—' }} 个计量点 <uni-icons type="right" size="11" color="#567461" /></button>
      </template>
     </view>
     <button class="ledger" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '台账暂不可用' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : snapshot ? '本次读取没有事件记录' : '等待台账数据' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>条记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
@@ -48,12 +48,12 @@
    </view>
   </scroll-view>
   <view class="assistant-dock"><button class="assistant" :disabled="Boolean(openingAgent)" hover-class="assistant-pressed" @tap="openAgent('company')"><AgentAvatar /><view><text>{{ openingAgent === 'company' ? '正在打开…' : '公司 Agent' }}</text><text>查询设备、能耗与告警</text></view><uni-icons type="chatboxes" size="21" color="#d4e9d6" /></button></view>
-  <TaskListSheet :open="tasksOpen" source="company" @close="tasksOpen = false" @reference="referenceTask" />
-  <DeviceSheet :open="Boolean(observationType)" tall compact-header :title="observationTitle" @close="observationType = ''"><scroll-view class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view></DeviceSheet>
+  <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" @close="tasksOpen = false" @reference="referenceTask" />
+  <DeviceSheet v-if="observationMounted" :open="Boolean(observationType)" tall compact-header :title="observationTitle" @close="observationType = ''"><scroll-view class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view></DeviceSheet>
  </view>
 </template>
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { getCompanyDashboard } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
@@ -68,6 +68,10 @@ import ObservationCard from './components/ObservationCard.vue'
 
 const tasksOpen = ref(false)
 const snapshot = ref(null), loading = ref(false), error = ref(''), demo = ref(true), observationType = ref('')
+const energyLoading = ref(false)
+const tasksMounted = ref(false), observationMounted = ref(false)
+watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync' })
+watch(observationType, type => { if (type) observationMounted.value = true }, { flush: 'sync' })
 const counts = computed(() => dashboardCounts(snapshot.value))
 const environment = computed(() => snapshot.value?.environment.find(row => row.reading) || snapshot.value?.environment[0])
 const energy = computed(() => snapshot.value?.energy.find(row => Number.isFinite(row.reading?.totalActivePower)))
@@ -81,25 +85,37 @@ const observationTitle = computed(() => ({ environment: '环境观测', energy: 
 const observation = computed(() => {
  if (!snapshot.value || !observationType.value || (observationType.value === 'alerts' && alertsUnavailable.value)) return null
  const type = observationType.value
- return { observedAt: snapshot.value.observedAt, blocks: [type === 'alerts' ? { type, ...snapshot.value.alerts } : { type, devices: snapshot.value[type] }] }
+ return { observedAt: type === 'energy' ? snapshot.value.energyObservedAt : snapshot.value.observedAt, blocks: [type === 'alerts' ? { type, ...snapshot.value.alerts } : { type, devices: snapshot.value[type] }] }
 })
 let requestId = 0, scope = '', visible = false
 async function load() {
  const current = ++requestId
- loading.value = true; error.value = ''
+ loading.value = true; energyLoading.value = true; error.value = ''
  try {
   await waitForAgentSession()
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
   if (nextScope !== scope) { snapshot.value = null; observationType.value = ''; scope = nextScope }
-  const result = await getCompanyDashboard()
-  if (current === requestId && visible && getAgentStorageScope() === nextScope) snapshot.value = result
+  let energyResult
+  await Promise.all([
+   getCompanyDashboard('summary').then(result => {
+    if (current !== requestId || !visible || getAgentStorageScope() !== nextScope) return
+    const previous = snapshot.value
+    snapshot.value = { ...result, energy: energyResult?.energy || previous?.energy || [], energyObservedAt: energyResult?.observedAt || previous?.energyObservedAt, errors: [...result.errors, ...(energyResult?.errors || previous?.errors.filter(row => row.area === 'energy') || [])] }
+   }),
+   getCompanyDashboard('energy').then(result => {
+    if (current !== requestId || !visible || getAgentStorageScope() !== nextScope) return
+    energyResult = result; energyLoading.value = false
+    if (snapshot.value) snapshot.value = { ...snapshot.value, energy: result.energy, energyObservedAt: result.observedAt, errors: [...snapshot.value.errors.filter(row => row.area !== 'energy'), ...result.errors] }
+   }),
+  ])
  } catch (cause) {
   if (current === requestId && visible) {
+   ++requestId; loading.value = false; energyLoading.value = false
    snapshot.value = null; observationType.value = ''
    error.value = cause.message === 'request:fail' ? '公司数据暂不可用，请检查网络后重试' : cause.message || '公司数据暂不可用'
   }
- } finally { if (current === requestId) loading.value = false }
+ } finally { if (current === requestId) { loading.value = false; energyLoading.value = false } }
 }
 function openObservation(type) { if (snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
@@ -118,7 +134,7 @@ onShow(() => {
  catch { snapshot.value = null; observationType.value = '' }
  load()
 })
-function hide() { visible = false; ++requestId; loading.value = false }
+function hide() { visible = false; ++requestId; loading.value = false; energyLoading.value = false }
 onHide(hide); onUnload(hide)
 </script>
 <style scoped>

@@ -241,7 +241,7 @@ watch(() => props.source, () => {
 watch(() => [props.open, props.source, view.value], ([isOpen]) => {
  if (isOpen) void load()
  else { ++requestId; loading.value = false }
-})
+}, { immediate: true })
 </script>
 
 <style scoped>

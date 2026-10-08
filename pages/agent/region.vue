@@ -21,8 +21,8 @@
    </RegionTimeline>
   </view>
   <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
-  <RegionDeviceDrawer @reference="referenceTask" :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : emptySampleTasks" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
-  <TaskDetailSheet @reference="referenceTask" :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
+  <RegionDeviceDrawer v-if="deviceDrawerMounted" @reference="referenceTask" :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : emptySampleTasks" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
+  <TaskDetailSheet v-if="taskDetailMounted" @reference="referenceTask" :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
 </template>
 <script setup>
@@ -50,6 +50,9 @@ const deviceDrawerOpen = ref(false), deviceCount = ref(null)
 const deviceRefreshSignal = ref(0)
 const emptySampleTasks = Object.freeze([])
 const selectedTaskId = ref(''), sampleDetail = ref(null), sampleDate = ref('')
+const deviceDrawerMounted = ref(false), taskDetailMounted = ref(false)
+watch(deviceDrawerOpen, open => { if (open) deviceDrawerMounted.value = true }, { flush: 'sync' })
+watch(selectedTaskId, id => { if (id) taskDetailMounted.value = true }, { flush: 'sync' })
 const calendarMarks = ref([]), calendarMonth = ref(''), calendarError = ref(false)
 const now = ref(new Date().toISOString()), today = computed(() => localDate(now.value)), date = ref(localDate(now.value))
 const maxDate = computed(() => shiftDate(today.value, 7))

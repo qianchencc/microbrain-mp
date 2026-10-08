@@ -36,9 +36,9 @@
    @reconnect="reconnectSheet" @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
-  <TaskListSheet :open="tasksOpen" :source="agentSource" @close="tasksOpen = false" @reference="referenceTask" />
-  <TaskInboxSheet @reference="referenceTask" :open="inboxOpen" :source="agentSource" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
-  <TaskDetailSheet @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="agentSource" @close="closeCompanyTask" />
+  <TaskListSheet v-if="tasksMounted" :open="tasksOpen" :source="agentSource" @close="tasksOpen = false" @reference="referenceTask" />
+  <TaskInboxSheet v-if="inboxMounted" @reference="referenceTask" :open="inboxOpen" :source="agentSource" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
+  <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="agentSource" @close="closeCompanyTask" />
  </view>
 </template>
 <script setup>
@@ -75,6 +75,10 @@ const isCompany = computed(() => agentSource.value === 'company')
 const tasksOpen = ref(false)
 const inboxOpen = ref(false), inboxUnreadCount = ref(0)
 const companyTaskId = ref(''), companyPlanId = ref('')
+const tasksMounted = ref(false), inboxMounted = ref(false), companyTaskMounted = ref(false)
+watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync' })
+watch(inboxOpen, open => { if (open) inboxMounted.value = true }, { flush: 'sync' })
+watch(() => Boolean(companyTaskId.value || companyPlanId.value), open => { if (open) companyTaskMounted.value = true }, { flush: 'sync' })
 let inboxCountRequest = 0
 function referenceTask(reference) { composerReference.value = { ...reference }; inboxOpen.value = false; tasksOpen.value = false; closeCompanyTask(); composer.value?.focus?.() }
 function openInbox() { inboxOpen.value = true }

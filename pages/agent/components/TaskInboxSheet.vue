@@ -143,7 +143,7 @@ watch(() => [props.open, props.source], ([value, source], previous) => {
  if (previous && source !== previous[1]) resetIdentity()
  if (value) void load(true)
  else { ++requestId; loading.value = false; loadingMore.value = false }
-})
+}, { immediate: true })
 </script>
 
 <style scoped>
