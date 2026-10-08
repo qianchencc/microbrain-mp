@@ -4,9 +4,11 @@
 
 ## 当前状态
 
+- 2026-10-08 用户最终明确页面分层：员工 Agent 走“我的办公室”，大 Agent 走“智慧xx”，不再追问上游权限配置。当前 Company 空调直读底层型号目录需由我方对齐智慧页面；安全台账详情/引用在另一会话实现与 QA 中，未记为完成。现有任务、页面/Runtime接口和最小客户材料清单见[对齐记录](../plan/2026-10-08-page-interface-task-alignment.md)，Company 来源修正已登记票 17。
+
 - 2026-10-08 新增遗漏的 Runtime 配置后台任务：已核对环境配置、模块硬编码、管理员边界和生效机制，建议 Runtime 仓库 monorepo + React/Vite/shadcn；后台尚未实施，范围与源码证据见[审查与交接](../plan/2026-10-08-runtime-admin-dashboard-audit-handoff.md)。此后台与小程序业务仪表盘区分。
 
-- 2026-10-08 安全台账“单条详情→引用到 Company→围绕同一记录回答”方向已认可，单个业务切片的范围、事件身份、返回/加载体验与验收顺序已整理，业务代码尚未实施。见[实施计划](../plan/2026-10-08-safety-ledger-detail-reference-plan.md)。
+- 2026-10-08 安全台账“单条详情→引用到 Company→围绕同一记录回答”方向已认可，业务实现与真实微信 QA 正在另一会话收尾，完整验收尚未关闭。范围、事件身份、返回/加载体验与验收顺序见[实施计划](../plan/2026-10-08-safety-ledger-detail-reference-plan.md)；最终证据以该切片回传为准。
 
 - 2026-10-08 修复切页时提前挂载关闭抽屉，以及总览串行/重复读取；总览改为summary/energy分段展示，其他概览先返回，慢电表独立等待。测量、回归和实际微信操作见[页面性能交接](../plan/2026-10-08-navigation-performance-handoff.md)。电表上游仍偏慢，页面出现与数据返回分别验收。
 
@@ -39,7 +41,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
-| 从接口区分员工 Agent、公司 Agent 与仪表盘：范围、控制引用、空间和统计口径 | [10-08 真实接口盘点](./research/2026-10-08-interface-source-boundary-audit.md)与[交接](../plan/2026-10-08-interface-source-boundary-handoff.md)（补查办公室成员、区域角色、个人分组；Company 102 台为接入计数，按人授权语义尚未证实；Office 关联分页仅作控制映射） |
+| 从接口区分员工 Agent、公司 Agent 与仪表盘：范围、控制引用、空间和统计口径 | [10-08 真实接口盘点](./research/2026-10-08-interface-source-boundary-audit.md)与[当前任务/页面对齐](../plan/2026-10-08-page-interface-task-alignment.md)（按用户确定的“我的办公室/智慧xx”页面分层；Company 来源偏差属我方接线，权限机制不再列为客户疑问） |
 | 物联助手全部页面、抽屉、浮层与前进/返回/关闭/手势的检查 | [10-07 导航检查](../plan/2026-10-07-page-navigation-audit.md)、[设计对照图](./research/assistant-navigation-review/index.html)与[导航改进交接](../plan/2026-10-07-assistant-navigation-improvement-handoff.md)、[改进后画面](./research/assistant-navigation-review/after/index.html)（29 类入口、25 项检查；导航改进已实施，模拟器夹具走查；真机手势/H5/生产延迟仍待验） |
 | 客户四项历史接口、智慧监控区域定位、人员回放分析及告警/任务收件箱边界 | [10-07 复核与交接](../plan/2026-10-07-history-interfaces-alert-inbox-handoff.md)（真实只读定位验证；人员统计由我方后端分析回放；收件箱仅任务结束消息） |
 | 模型缓存的应用恢复、压缩与真实用量 | [10-03 恢复/压缩核验](./research/2026-10-03-model-cache-recovery-compaction-verification.md)（局部诊断通过，跨进程/生产/Langfuse 落库仍未验；无生产代码改动） |
