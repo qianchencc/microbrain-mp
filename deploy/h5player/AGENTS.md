@@ -8,3 +8,5 @@
 - Gate actual controls on SDK evidence. Live and playback differ; a successful WSS response alone is not decoded video. Latest actual acceptance: plan/2026-10-09-shared-video-live-handoff.md.
 
 - Verified playback uses JS_Play(url, { playURL: url, mode: 1 }, 0, beginTime, endTime). Keep Shanghai timestamps and the same window on retry; never label a recording LIVE. Evidence: plan/2026-10-09-shared-video-playback-handoff.md.
+
+- SDK JS_Play may reject a string code; pluginErrorHandler supplies server status and can fail during playback. Capture only safe codes/status, show the actual failure stage, and ignore retired instance callbacks. A server rejection is not a decoder error; unknown codes retain uncertainty. See plan/2026-10-09-video-error-details-handoff.md.

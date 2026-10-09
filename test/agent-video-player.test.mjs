@@ -14,7 +14,7 @@ function player({ source = 'company', fetch: fetchImpl, play = async () => {}, s
   return elements.get(id)
  }
  const window = { addEventListener: (name, fn) => listeners.set(name, fn), wx: { miniProgram: { navigateBack: () => states.push('back') } },
-  JSPlugin: class { constructor() { this.stops = 0; instances.push(this) } JS_SetWindowControlCallback(callbacks) { this.callbacks = callbacks; return Promise.resolve() } async JS_Play(url, options, ...args) { this.url = url; this.options = options; this.args = args; await play(url, options); this.callbacks.firstFrameDisplay(0, 640, 368) } JS_Stop() { this.stops++; return stop() } } }
+  JSPlugin: class { constructor() { this.stops = 0; instances.push(this) } JS_SetWindowControlCallback(callbacks) { this.callbacks = callbacks; return Promise.resolve() } async JS_Play(url, options, ...args) { this.url = url; this.options = options; this.args = args; await play(url, options, this.callbacks); this.callbacks.firstFrameDisplay(0, 640, 368) } JS_Stop() { this.stops++; return stop() } } }
  if (sdkMissing) delete window.JSPlugin
  const query = new URLSearchParams({ deviceId: 'camera-1', source, api: 'https://runtime.test/api', token: 'secret', tenantCode: 'XSJ', mode, beginTime, endTime });
  const context = { window, URL, URLSearchParams, AbortController, Promise,
@@ -59,7 +59,41 @@ test('playback preserves its recording window and uses verified SDK playback arg
  assert.equal(p.elements.get('footState').textContent, '回放结束')
  const wrongMode = player({ mode: 'playback', fetch: async () => ({ ok: true, json: async () => ({ url: 'wss://private.test/live', mode: 'live' }) }) }); await flush()
  assert.equal(wrongMode.instances[0].url, undefined)
- assert.match(wrongMode.elements.get('errSub').textContent, /未取得可播放录像/)
+ assert.match(wrongMode.elements.get('errSub').textContent, /窗口与所选期间不一致/)
+})
+
+test('media server rejection identifies the failed stage and preserves safe diagnostic codes', async () => {
+ const p = player({ mode: 'playback', play: async (_url, _options, callbacks) => {
+  callbacks.pluginErrorHandler(0, '0x01730ec1', { statusCode: 1, statusString: 'ERROR', subStatusCode: 'server', errorMsg: 'Bearer secret wss://private.test/session' })
+  throw '0x01730ec1'
+ } }); await flush()
+ assert.equal(p.elements.get('errTitle').textContent, '上游录像服务未能开始播放')
+ assert.match(p.elements.get('errDetail').textContent, /0x01730ec1/)
+ assert.match(p.elements.get('errDetail').textContent, /server/)
+ assert.match(p.elements.get('errDetail').textContent, /2026-10-08 00:00/)
+ assert.doesNotMatch(p.elements.get('errSub').textContent, /解码失败|没有录像|离线/)
+ assert.doesNotMatch(p.elements.get('errDetail').textContent, /secret|wss:|Bearer/)
+ p.elements.get('btnBack2').listeners.click(); await flush(); assert.deepEqual(p.states, ['back'])
+})
+
+test('fetch, authorization, unavailable recording and SDK decoding failures show different actionable messages', async () => {
+ const network = player({ fetch: async () => { throw new TypeError('fetch failed https://private.test?token=secret') } }); await flush()
+ assert.equal(network.elements.get('errTitle').textContent, '无法连接取流服务')
+ assert.doesNotMatch(network.elements.get('errDetail').textContent, /secret|https:/)
+ const expired = player({ fetch: async () => ({ ok: false, status: 401 }) }); await flush()
+ assert.equal(expired.elements.get('errTitle').textContent, '会话或设备范围无法核验')
+ assert.match(expired.elements.get('errDetail').textContent, /HTTP：401/)
+ const empty = player({ mode: 'playback', fetch: async () => ({ ok: false, status: 404, json: async () => ({ code: 'VIDEO_RECORDING_UNAVAILABLE' }) }) }); await flush()
+ assert.equal(empty.elements.get('errTitle').textContent, '未取得可播放录像')
+ assert.match(empty.elements.get('errSub').textContent, /仍需平台核实/)
+ const decoded = player(); await flush()
+ decoded.instances[0].callbacks.pluginErrorHandler(0, '0x12f910033', {})
+ await flush()
+ assert.equal(decoded.elements.get('errTitle').textContent, '播放器无法处理视频流')
+ assert.equal(decoded.instances[0].stops, 1)
+ decoded.elements.get('btnRetry').listeners.click(); await flush()
+ decoded.instances[0].callbacks.pluginErrorHandler(0, '0x01730ec1', { subStatusCode: 'server' }); await flush()
+ assert.equal(decoded.elements.get('footState').textContent, '播放中', '旧SDK错误不能覆盖重试后的新画面')
 })
 
 test('recording selection spans Shanghai midnight and rejects reversed or overlong windows', () => {
@@ -94,9 +128,10 @@ test('return during stream fetch prevents late playback, and failed fetching all
  assert.equal(p.instances.length, 1)
  assert.equal(p.instances[0].url, undefined)
  assert.equal(p.instances[0].stops, 1)
- const unavailable = player({ fetch: async () => ({ ok: false, status: 503 }) }); await flush()
+ const unavailable = player({ fetch: async () => ({ ok: false, status: 503, json: async () => ({ code: 'VIDEO_STREAM_UNAVAILABLE' }) }) }); await flush()
  assert.equal(unavailable.elements.get('footState').textContent, '不可用')
- assert.match(unavailable.elements.get('errSub').textContent, /不代表摄像头离线/)
+ assert.equal(unavailable.elements.get('errTitle').textContent, '视频取流暂不可用')
+ assert.doesNotMatch(unavailable.elements.get('errSub').textContent, /摄像头已离线|没有录像/)
  unavailable.elements.get('btnBack2').listeners.click(); await flush(); assert.deepEqual(unavailable.states, ['back'])
 })
 
