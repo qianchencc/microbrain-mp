@@ -15,6 +15,7 @@ const request = (url, method, data, timeout) => requestJson(globalConfig.agentUr
 export const createConversation = (source = 'office') => request('/agent/conversations', 'POST', conversationSourceBody(source))
 export const getCompanyDashboard = section => request('/agent/dashboard?source=company' + (section ? '&section=' + encodeURIComponent(section) : ''), 'GET')
 export const getSafetyEvent = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
+export const getSafetyEventCameras = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}/cameras?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
 export const listRegions = section => request('/agent/regions' + (section ? '?section=' + encodeURIComponent(section) : ''), 'GET')
 export const markRegionSeen = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/seen`, 'POST')
 export const listRegionDevices = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/devices`, 'GET')

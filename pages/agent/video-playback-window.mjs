@@ -1,8 +1,11 @@
 import { fmtShanghaiDateTime } from './observation-view.mjs'
 
 export function defaultPlaybackDates(now = Date.now()) {
- const from = fmtShanghaiDateTime(new Date(now - 30 * 60000).toISOString())
- const to = fmtShanghaiDateTime(new Date(now).toISOString())
+ return playbackWindowDates({ beginTime: new Date(now - 30 * 60000).toISOString(), endTime: new Date(now).toISOString() })
+}
+export function playbackWindowDates(window) {
+ const from = fmtShanghaiDateTime(window.beginTime)
+ const to = fmtShanghaiDateTime(window.endTime)
  return { fromDate: from.slice(0, 10), fromTime: from.slice(11), toDate: to.slice(0, 10), toTime: to.slice(11) }
 }
 export function playbackDates(values) {

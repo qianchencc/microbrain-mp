@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import vm from 'node:vm'
-import { defaultPlaybackDates, playbackDates } from '../pages/agent/video-playback-window.mjs'
+import { defaultPlaybackDates, playbackDates, playbackWindowDates } from '../pages/agent/video-playback-window.mjs'
 import { videoPageUrl } from '../pages/webView/video-query.mjs'
 
 const flush = async () => { for (let n = 0; n < 8; n++) await new Promise(resolve => setImmediate(resolve)) }
@@ -63,6 +63,8 @@ test('playback preserves its recording window and uses verified SDK playback arg
 })
 
 test('recording selection spans Shanghai midnight and rejects reversed or overlong windows', () => {
+ const review = { beginTime: '2026-10-08T15:45:00Z', endTime: '2026-10-08T16:15:00Z' }
+ assert.deepEqual(playbackDates(playbackWindowDates(review)), { beginTime: '2026-10-08T23:45:00+08:00', endTime: '2026-10-09T00:15:00+08:00' })
  const dates = defaultPlaybackDates(Date.parse('2026-10-08T16:10:00Z'))
  assert.deepEqual(dates, { fromDate: '2026-10-08', fromTime: '23:40', toDate: '2026-10-09', toTime: '00:10' })
  assert.deepEqual(playbackDates(dates), { beginTime: '2026-10-08T23:40:00+08:00', endTime: '2026-10-09T00:10:00+08:00' })
@@ -78,7 +80,7 @@ test('miniapp WebView handoff preserves decoded plus-offset timestamps and speci
  assert.equal(params.get('endTime'), '2026-10-08T02:00:00+08:00')
  assert.equal(params.get('token'), 'secret+&%')
  assert.equal(params.get('name'), '监控A+1&2')
- const literal = new URL(videoPageUrl({ path: 'https://customer.test/player', deviceId: 'cam%2F1', name: '监控%2F1' })).searchParams
+ const literal = new URL(videoPageUrl({ path: 'https://customer.test/player', videoTarget: encodeURIComponent(JSON.stringify({ deviceId: 'cam%2F1', name: '监控%2F1' })) })).searchParams
  assert.equal(literal.get('deviceId'), 'cam%2F1')
  assert.equal(literal.get('name'), '监控%2F1')
 })
@@ -129,8 +131,14 @@ test('video navigation carries source and device without waiting for stream fetc
  globalThis.uni = { navigateTo: options => { navigation = options.url; options.success() }, showToast() {} }
  try {
   const module = await import('data:text/javascript,' + encodeURIComponent(source))
-  assert.equal(await module.openVideoPlayer({ deviceId: 'camera-1', source: 'company' }), true)
+  assert.equal(await module.openVideoPlayer({ deviceId: 'camera-1', name: '监控%2F1 + A&B', source: 'company' }), true)
   assert.ok(navigation.includes('source=company'))
+  const options = Object.fromEntries(new URL(navigation, 'https://mini.test').searchParams)
+  for (const target of [options.videoTarget, encodeURIComponent(options.videoTarget)]) {
+   const query = new URL(videoPageUrl({ ...options, videoTarget: target })).searchParams
+   assert.equal(query.get('name'), '监控%2F1 + A&B')
+   assert.equal(query.get('deviceId'), 'camera-1')
+  }
   assert.equal(new URL(navigation, 'https://mini.test').searchParams.has('url'), false)
  } finally { globalThis.uni = oldUni; globalThis.getCurrentPages = oldPages }
 })

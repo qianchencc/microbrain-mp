@@ -12,10 +12,10 @@
 </template>
 <script setup>
 import { reactive, ref } from 'vue'
-import { defaultPlaybackDates, playbackDates } from '../video-playback-window.mjs'
-defineProps({ device: { type: Object, required: true }, ready: Boolean, busy: Boolean })
+import { defaultPlaybackDates, playbackDates, playbackWindowDates } from '../video-playback-window.mjs'
+const props = defineProps({ device: { type: Object, required: true }, ready: Boolean, busy: Boolean })
 const emit = defineEmits(['open'])
-const dates = reactive(defaultPlaybackDates()), error = ref('')
+const dates = reactive(props.device.beginTime && props.device.endTime ? playbackWindowDates(props.device) : defaultPlaybackDates()), error = ref('')
 function open() { error.value = ''; try { emit('open', playbackDates(dates)) } catch (cause) { error.value = cause.message } }
 </script>
 <style scoped>

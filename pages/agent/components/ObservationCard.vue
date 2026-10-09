@@ -9,7 +9,9 @@
     <view v-else-if="block.type === 'video_playback'" class="recording">
      <text class="recording-name">{{ block.report.name }}</text><text class="meta">{{ block.report.location }}</text>
      <text class="recording-window">{{ fmtShanghaiDateTime(block.report.beginTime) }} — {{ fmtShanghaiDateTime(block.report.endTime) }}</text>
+     <text v-if="block.report.safetyContext" class="meta">{{ block.report.safetyContext.label }} · {{ fmtShanghaiDateTime(block.report.safetyContext.occurredAt) }}<text>；{{ block.report.safetyContext.basis }}</text></text>
      <text class="meta">录像是否存在以实际播放结果为准</text>
+     <button class="omore" @tap="selectPlayback(block.report)">调整录像期间</button>
      <button class="vbtn recording-open" :disabled="!playerReady || fetchingId === block.report.deviceId" hover-class="vbtn--pressed" @tap="viewPlayback(block.report)">{{ playerReady ? '查看这段录像' : '播放页接入中' }}</button>
     </view>
     <template v-else-if="block.type === 'video'">
@@ -72,8 +74,8 @@
     </button>
    </view>
   </view>
-  <view v-if="inlinePlayback && playbackDevice" class="inline-playback"><button class="omore" @tap="playbackDevice = null">收起录像期间</button><VideoPlaybackForm :key="playbackDevice.deviceId" :device="playbackDevice" :ready="playerReady" :busy="Boolean(fetchingId)" @open="viewPlayback({ ...playbackDevice, ...$event })" /></view>
-  <DeviceSheet v-if="!inlinePlayback && playbackMounted" :open="Boolean(playbackDevice)" title="录像回放" @close="playbackDevice = null"><VideoPlaybackForm v-if="playbackDevice" :key="playbackDevice.deviceId" :device="playbackDevice" :ready="playerReady" :busy="Boolean(fetchingId)" @open="viewPlayback({ ...playbackDevice, ...$event })" /></DeviceSheet>
+  <view v-if="inlinePlayback && playbackDevice" class="inline-playback"><button class="omore" @tap="playbackDevice = null">收起录像期间</button><VideoPlaybackForm :key="playbackDevice.deviceId + (playbackDevice.beginTime || '')" :device="playbackDevice" :ready="playerReady" :busy="Boolean(fetchingId)" @open="viewPlayback({ ...playbackDevice, ...$event })" /></view>
+  <DeviceSheet v-if="!inlinePlayback && playbackMounted" :open="Boolean(playbackDevice)" title="录像回放" @close="playbackDevice = null"><VideoPlaybackForm v-if="playbackDevice" :key="playbackDevice.deviceId + (playbackDevice.beginTime || '')" :device="playbackDevice" :ready="playerReady" :busy="Boolean(fetchingId)" @open="viewPlayback({ ...playbackDevice, ...$event })" /></DeviceSheet>
  </view>
 </template>
 

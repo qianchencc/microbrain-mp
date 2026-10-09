@@ -18,14 +18,12 @@ export async function openVideoPlayer(device) {
    `assistantVideo=1`,
    `source=${device.source === 'company' ? 'company' : 'office'}`,
    `mode=${device.mode === 'playback' ? 'playback' : 'live'}`,
-   `deviceId=${encodeURIComponent(device.deviceId)}`,
-   `name=${encodeURIComponent(device.name || '监控画面')}`,
+   `videoTarget=${encodeURIComponent(JSON.stringify({ deviceId: device.deviceId, name: device.name || '监控画面', loc: device.location || '' }))}`,
    `api=${encodeURIComponent(globalConfig.videoPlayerApiUrl || globalConfig.agentUrl)}`,
   ]
   if (device.mode === 'playback') {
    params.push(`beginTime=${encodeURIComponent(device.beginTime)}`, `endTime=${encodeURIComponent(device.endTime)}`)
   }
-  if (device.location) params.push(`loc=${encodeURIComponent(device.location)}`)
   await new Promise((resolve, reject) => uni.navigateTo({ url: `/pages/webView/index?path=${encodeURIComponent(base)}&${params.join('&')}`, success: resolve, fail: reject }))
   return true
  } catch (error) {
