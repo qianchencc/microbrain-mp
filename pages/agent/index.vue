@@ -2,9 +2,8 @@
  <view class="agent-page">
   <!-- disabled 仅表示无会话可清；busy 时保留入口作逃生口（服务端 409 才是权威），
        否则 isRunning 卡死时用户没有任何自救手段（2026-09-17 预览整页失联） -->
-  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'" :back-label="returnLabel" inbox-enabled :inbox-unread-count="inboxUnreadCount" tasks-enabled @open-tasks="tasksOpen = true" @open-inbox="openInbox" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @back="returnToOffice">
+  <AgentHeader :status="statusText" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'" :back-label="returnLabel" :workbench="!isCompany" :workbench-busy="openingRegion" inbox-enabled :inbox-unread-count="inboxUnreadCount" tasks-enabled @open-tasks="tasksOpen = true" @open-inbox="openInbox" @workbench="focusRegion && openRegion(focusRegion)" :disabled="!conversationId" :error="Boolean(errorMessage)" @clear="clearHistory" @back="returnToOffice">
    <template #title><RegionChip v-if="!isCompany" nav /><text v-else class="header-fallback-title">公司 Agent</text></template>
-   <template #action><button v-if="!isCompany" class="workbench-link" hover-class="workbench-link--pressed" @tap="focusRegion && openRegion(focusRegion)"><text>{{ openingRegion ? '正在打开…' : '工作台' }}</text><uni-icons type="forward" size="12" color="#536b5c" /></button></template>
   </AgentHeader>
   <view class="conversation-shell">
    <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" :scroll-top="restoredScrollTop" @scroll="handleScroll" @scrolltolower="nearBottom = true">
@@ -663,7 +662,7 @@ onUnload(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(p
 .event-host { flex:1;min-height:0;display:flex;flex-direction:column; }.event-back { display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0; }
 
 .region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:12px; padding:8px 0; }.region-notice button { min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:12px; }.region-notice button::after { border:0; }
-.header-fallback-title { font-size:15px; font-weight:600; color:#293f31; }.workbench-link { height:44px; display:flex; align-items:center; gap:4px; flex-shrink:0; margin:0; padding:0 6px; background:transparent; color:#536b5c; font-size:12px; }.workbench-link::after { border:0; }.workbench-link--pressed { opacity:.65; }
+.header-fallback-title { font-size:15px; font-weight:600; color:#293f31; }
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
