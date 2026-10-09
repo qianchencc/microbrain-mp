@@ -59,6 +59,8 @@
 
 ## 导航与状态恢复（2026-10-07）
 
+- 安全历史列表与详情共用单层 Sheet，历史组件宿主也须 `flex:1;min-height:0;display:flex`，否则筛选可见而 scroll-view 高度为零。三类独立台账及旧 flooding 引用规则见 `plan/2026-10-09-safety-history-handoff.md`；目录/摘要失败不应禁用独立历史入口。
+
 - 修改页面返回、Sheet、搜索、参数或日历时先读 `plan/2026-10-07-assistant-navigation-improvement-spec.md` 与对应 handoff。三个路由共用 `AssistantNav`；实际历史决定上一页，无历史由 `navigation.mjs` redirect 到默认父页。工作台新建任务定位 Office，source 在页面创建时固定。
 - `NativeBackBoundary` 只承接微信返回，视觉仍由 DeviceSheet 的 transform/opacity 绘制。设备抽屉统一消费 日历→设备/任务 pane→搜索→关闭；日历通过暴露的 dismiss 方法交给所属抽屉，避免再独立挂返回容器。左侧返回退局部一层，右侧 X 关闭整层。
 - onHide 暂停请求/刷新并保留浏览位置；onUnload 释放。恢复前与异步响应写入前都复核身份 scope；换身份立即清除旧会话、任务、目录和编辑状态。同身份的旧内容只用于退出动画/暂存，授权拒绝应清除，网络失败须显示重试。

@@ -1,5 +1,5 @@
 export function safetyEventReference(record) {
- if (!record || !['gas', 'flooding'].includes(record.ledger) || typeof record.eventId !== 'string' || !record.eventId.trim()
+ if (!record || !['gas', 'flooding', 'smoke'].includes(record.ledger) || typeof record.eventId !== 'string' || !record.eventId.trim()
   || typeof record.deviceId !== 'string' || !record.deviceId.trim()) return null
  return { type: 'safety_event', ledger: record.ledger, eventId: record.eventId, deviceId: record.deviceId }
 }

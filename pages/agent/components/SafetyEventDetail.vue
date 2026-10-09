@@ -6,7 +6,7 @@
     <text class="event-name">{{ record.deviceName || '设备名称未提供' }}</text>
     <view class="event-field"><text>安装位置</text><text>{{ record.location || '未提供' }}</text></view>
     <view class="event-field"><text>记录时间</text><text>{{ fmtDateTime(record.occurredAt) || '未提供' }}</text></view>
-    <view class="event-field"><text>台账来源</text><text>{{ record.ledger === 'gas' ? '燃气台账' : record.ledger === 'flooding' ? '烟感 / 水浸台账' : '未提供' }}</text></view>
+    <view class="event-field"><text>台账来源</text><text>{{ record.ledger === 'gas' ? '燃气台账' : record.ledger === 'smoke' ? '烟感台账' : record.ledger === 'flooding' ? '水浸台账（含历史混表）' : '未提供' }}</text></view>
     <text class="event-note">这是平台历史台账。上报标记不代表已恢复，当前是否仍在报警需另行核实。</text>
     <text class="event-observed">{{ verified ? '最新读取于' : '此前读取于' }} {{ fmtDateTime(observedAt) || '时间未提供' }}</text>
    </view>

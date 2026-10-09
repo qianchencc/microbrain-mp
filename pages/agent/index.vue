@@ -18,7 +18,7 @@
      <view v-if="turn.reference" class="turn-reference"><text>{{ referenceTitle(turn.reference) }} · {{ turn.reference.label || turn.reference.content || '原记录' }}</text></view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
      <AgentReplySurface :turn="turn" :busy="busy" :source="agentSource" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'"
-      @select-alert="openSafetyEvent" @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
+      @select-alert="openSafetyEvent" @browse-alerts="openSafetyHistory" @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
       @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)"
@@ -36,7 +36,11 @@
    @reconnect="reconnectSheet" @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
-  <DeviceSheet v-if="eventMounted" :open="eventOpen" tall compact-header title="安全台账详情" @close="eventOpen = false"><SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="eventOpen" @reference="referenceEvent" /></DeviceSheet>
+  <DeviceSheet v-if="eventMounted" :open="eventOpen" :back="eventBack" tall compact-header :title="selectedEvent ? '安全台账详情' : '安全事件台账'" @close="eventOpen = false">
+   <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
+   <SafetyHistoryList class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="eventOpen && !selectedEvent" @select="openSafetyEvent" />
+   <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="eventOpen" @reference="referenceEvent" />
+  </DeviceSheet>
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" :source="agentSource" @close="tasksOpen = false" @reference="referenceTask" />
   <TaskInboxSheet v-if="inboxMounted" @reference="referenceTask" :open="inboxOpen" :source="agentSource" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
   <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="agentSource" @close="closeCompanyTask" />
@@ -54,6 +58,7 @@ import { mergeTaskPlan, taskNavigation } from './task-detail-view.mjs'
 import { createPresentation } from './presentation.mjs'
 import DeviceSheet from './components/DeviceSheet.vue'
 import SafetyEventDetail from './components/SafetyEventDetail.vue'
+import SafetyHistoryList from './components/SafetyHistoryList.vue'
 import { safetyEventReference, referenceTitle } from './safety-event.mjs'
 import AgentComposer from './components/AgentComposer.vue'
 import AgentHeader from './components/AgentHeader.vue'
@@ -78,6 +83,8 @@ const agentSource = ref('office')
 const isCompany = computed(() => agentSource.value === 'company')
 const selectedEvent = ref(null), eventOpen = ref(false), eventMounted = ref(false)
 function openSafetyEvent(snapshot) { if (!isCompany.value) return; selectedEvent.value = snapshot; eventMounted.value = true; eventOpen.value = true }
+function openSafetyHistory() { if (!isCompany.value) return; selectedEvent.value = null; eventMounted.value = true; eventOpen.value = true }
+function eventBack() { if (!selectedEvent.value) return false; selectedEvent.value = null; return true }
 function referenceEvent(reference) { eventOpen.value = false; composerReference.value = { ...reference }; composer.value?.focus?.() }
 const tasksOpen = ref(false)
 const inboxOpen = ref(false), inboxUnreadCount = ref(0)
@@ -633,7 +640,7 @@ onHide(() => { preserveCurrentComposerDraft(); visible = false; composer.value?.
 onUnload(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 </script>
 <style scoped>
-.event-host { flex:1;min-height:0;display:flex;flex-direction:column; }
+.event-host { flex:1;min-height:0;display:flex;flex-direction:column; }.event-back { display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0; }
 
 .region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:12px; padding:8px 0; }.region-notice button { min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:12px; }.region-notice button::after { border:0; }
 .office-context { display:flex; align-items:center; justify-content:space-between; gap:8px; }.workbench-link { height:44px; display:flex; align-items:center; gap:4px; flex-shrink:0; margin:0; padding:0 6px; background:transparent; color:#536b5c; font-size:12px; }.workbench-link::after { border:0; }.workbench-link--pressed { opacity:.65; }

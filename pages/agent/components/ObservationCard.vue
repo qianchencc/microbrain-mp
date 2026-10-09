@@ -57,6 +57,7 @@
       <text class="tag" :class="{ un: a.report === false, unknown: a.report == null }">{{ a.report === true ? '已上报' : a.report === false ? '未上报' : '标记未知' }}</text><uni-icons v-if="source === 'company'" type="right" size="12" color="#95a296" />
      </button>
      <text class="meta">{{ alertsMeta(block) }}</text>
+     <button v-if="source === 'company'" class="omore" hover-class="omore--pressed" @tap="$emit('browse-alerts')">按类别和日期查看历史 <uni-icons type="right" size="11" color="#5f7a6b" /></button>
     </template>
     <button v-if="restOf(block, index) || isExpanded(index)" class="omore" hover-class="omore--pressed" :aria-expanded="isExpanded(index)" @tap="toggleBlock(index)">
      <text>{{ isExpanded(index) ? '收起列表' : `还有 ${restOf(block, index)} ${block.type === 'alerts' ? '条' : '台'} · 展开` }}</text>
@@ -73,7 +74,7 @@ import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
 const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, source: { type: String, default: 'office' } })
-defineEmits(['select-alert'])
+defineEmits(['select-alert', 'browse-alerts'])
 const fetchingId = ref('')
 const playerReady = videoPlayerReady()
 const observed = computed(() => fmtDateTime(props.observation.observedAt))

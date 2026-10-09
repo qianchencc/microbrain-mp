@@ -34,7 +34,7 @@
       <button class="meter-link" :disabled="!loadedSections.includes('energy')" @tap="openObservation('energy')">查看 {{ loadedSections.includes('energy') ? counts.energy : '—' }} 个计量点 <uni-icons type="right" size="11" color="#567461" /></button>
      </template>
     </view>
-    <button class="ledger" :disabled="!snapshot?.alerts || alertsUnavailable" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '台账暂不可用' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : alertsLoading ? '正在更新台账' : '本次读取没有事件记录' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>条记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
+    <button class="ledger" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '摘要暂不可用 · 可查看历史' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : alertsLoading ? '正在更新摘要 · 可查看历史' : '按类别和日期查看历史' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>本次记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
     <text class="ledger-note">本次读取的历史台账，不表示当前仍在报警或已经恢复</text>
     <view class="panel automation">
      <view class="panel-head"><text>自动化安排</text><button class="text-action" @tap="tasksOpen = true">查看安排 <uni-icons type="right" size="10" color="#829386" /></button></view>
@@ -51,7 +51,8 @@
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" @close="tasksOpen = false" @reference="referenceTask" />
   <DeviceSheet v-if="observationMounted" :open="Boolean(observationType)" :back="observationBack" tall compact-header :title="selectedEvent ? '安全台账详情' : observationTitle" @close="observationType = ''">
    <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" hover-class="event-back--pressed" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
-   <scroll-view class="observation-scroll" :style="{ display: selectedEvent ? 'none' : 'block' }" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" source="company" read-only @select-alert="selectedEvent = $event" /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view>
+   <SafetyHistoryList v-if="observationType === 'alerts'" class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="observationType === 'alerts' && !selectedEvent" @select="selectedEvent = $event" />
+   <scroll-view v-else class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" source="company" read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view>
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="Boolean(observationType)" @reference="referenceEvent" />
   </DeviceSheet>
  </view>
@@ -70,6 +71,7 @@ import AgentAvatar from './components/AgentAvatar.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
 import ObservationCard from './components/ObservationCard.vue'
 import SafetyEventDetail from './components/SafetyEventDetail.vue'
+import SafetyHistoryList from './components/SafetyHistoryList.vue'
 
 const selectedEvent = ref(null)
 const tasksOpen = ref(false)
@@ -133,7 +135,7 @@ async function load() {
   }
  } finally { if (current === requestId) { loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false } }
 }
-function openObservation(type) { if (snapshot.value) observationType.value = type }
+function openObservation(type) { if (type === 'alerts' || snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
 function resultLabel(status) { return ({ completed: '已完成', partial: '部分完成', failed: '失败', missed: '已错过', cancelled: '已取消', unconfirmed: '结果未确认' })[status] || status }
 function observationBack() { if (selectedEvent.value) selectedEvent.value = null; else observationType.value = '' }

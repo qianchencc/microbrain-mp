@@ -39,6 +39,10 @@ export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${
 // 视频取流：返回短时效播放地址（wss），不缓存；页面与组件不接触凭据。
 // Company 监控走智慧页面取流出口，Office 视频走既有 view 动作——必须带 source 区分目录。
 export const getVideoStream = (deviceId, source = 'office') => request(withConversationSource(`/agent/devices/${encodeURIComponent(deviceId)}/video-stream`, source), 'GET')
+export const listSafetyHistory = (query = {}) => {
+ const params = Object.entries(query).filter(([, value]) => value != null && value !== '').map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&')
+ return request(`/agent/safety-events?source=company&${params}`, 'GET')
+}
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const restoreConversation = (source = 'office') => request(withConversationSource('/agent/conversations/current', source), 'GET')
 export const clearConversation = (id, source = 'office') => request(withConversationSource(`/agent/conversations/${id}`, source), 'DELETE')
