@@ -48,9 +48,16 @@ const getAgentBaseUrl = () => {
 }
 
 // 自建 H5 监控播放页部署位：客户确认 ncim 静态路径后填入（如 ipAddress + '/owner/h5player/index.html'）。
+// 开发期经本机 frpc 隧道暴露 9415 视频服务（~/frp/frpc.toml），HTTPS 供微信 webView 访问；
 // 为空时「查看画面」按钮置灰显示“播放页接入中”，不跳取流。
 const getAgentVideoPlayerUrl = () => {
-	return ''
+	return isDev ? 'https://mp-video.qianc.ltd/player.html' : ''
+}
+
+// 播放页内取流回连的 Runtime 基址：HTTPS 页面不能请求 HTTP Runtime（混合内容），
+// 开发期经隧道 /api 代理到本机 3200；生产与 agentUrl 同客户域。
+const getAgentVideoApiUrl = () => {
+	return isDev ? 'https://mp-video.qianc.ltd/api' : getAgentBaseUrl()
 }
 
 export default {
@@ -61,5 +68,6 @@ export default {
 	ssoUrl: getSsoBaseUrl(),
 	fileAddr: getFileBaseUrl(),
 	agentUrl: getAgentBaseUrl(),
-	videoPlayerUrl: getAgentVideoPlayerUrl()
+	videoPlayerUrl: getAgentVideoPlayerUrl(),
+	videoPlayerApiUrl: getAgentVideoApiUrl()
 }

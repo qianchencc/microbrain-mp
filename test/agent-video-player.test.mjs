@@ -2,24 +2,27 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import vm from 'node:vm'
+import { defaultPlaybackDates, playbackDates } from '../pages/agent/video-playback-window.mjs'
+import { videoPageUrl } from '../pages/webView/video-query.mjs'
 
 const flush = async () => { for (let n = 0; n < 8; n++) await new Promise(resolve => setImmediate(resolve)) }
 const script = await readFile(new URL('../deploy/h5player/player.js', import.meta.url), 'utf8')
-function player({ source = 'company', fetch: fetchImpl, play = async () => {}, stop = async () => {}, sdkMissing = false } = {}) {
+function player({ source = 'company', fetch: fetchImpl, play = async () => {}, stop = async () => {}, sdkMissing = false, mode = 'live', beginTime = '2026-10-08T00:00:00+08:00', endTime = '2026-10-08T02:00:00+08:00' } = {}) {
  const elements = new Map(), listeners = new Map(), instances = [], requests = [], states = [], history = []
  const element = id => {
   if (!elements.has(id)) elements.set(id, { style: {}, dataset: {}, innerHTML: '', textContent: '', listeners: {}, classList: { add() {}, remove() {}, toggle() {} }, addEventListener(name, fn) { this.listeners[name] = fn }, getBoundingClientRect: () => ({ width: 390, height: 700 }) })
   return elements.get(id)
  }
  const window = { addEventListener: (name, fn) => listeners.set(name, fn), wx: { miniProgram: { navigateBack: () => states.push('back') } },
-  JSPlugin: class { constructor() { this.stops = 0; instances.push(this) } JS_SetWindowControlCallback(callbacks) { this.callbacks = callbacks; return Promise.resolve() } async JS_Play(url, options) { this.url = url; await play(url, options); this.callbacks.firstFrameDisplay(0, 640, 368) } JS_Stop() { this.stops++; return stop() } } }
+  JSPlugin: class { constructor() { this.stops = 0; instances.push(this) } JS_SetWindowControlCallback(callbacks) { this.callbacks = callbacks; return Promise.resolve() } async JS_Play(url, options, ...args) { this.url = url; this.options = options; this.args = args; await play(url, options); this.callbacks.firstFrameDisplay(0, 640, 368) } JS_Stop() { this.stops++; return stop() } } }
  if (sdkMissing) delete window.JSPlugin
+ const query = new URLSearchParams({ deviceId: 'camera-1', source, api: 'https://runtime.test/api', token: 'secret', tenantCode: 'XSJ', mode, beginTime, endTime });
  const context = { window, URL, URLSearchParams, AbortController, Promise,
-  location: { origin: 'https://customer.test', href: `https://customer.test/player?deviceId=camera-1&source=${source}&api=https%3A%2F%2Fruntime.test%2Fapi&token=secret&tenantCode=XSJ`, search: `?deviceId=camera-1&source=${source}&api=https%3A%2F%2Fruntime.test%2Fapi&token=secret&tenantCode=XSJ` },
+  location: { origin: 'https://customer.test', href: 'https://customer.test/player?' + query, search: '?' + query },
   history: { length: 1, replaceState: (_a, _b, url) => history.push(String(url)) },
   document: { hidden: false, getElementById: element, querySelector: element, addEventListener: (name, fn) => listeners.set(name, fn), createElement: () => ({}), head: { appendChild: script => script.onerror() } },
   setTimeout: () => 1, clearTimeout() {},
-  fetch: async (url, init) => { requests.push({ url, init }); return fetchImpl ? fetchImpl(url, init) : { ok: true, json: async () => ({ url: `wss://private.test/${requests.length}` }) } } }
+  fetch: async (url, init) => { requests.push({ url, init }); return fetchImpl ? fetchImpl(url, init) : { ok: true, json: async () => ({ url: `wss://private.test/${requests.length}`, mode, beginTime, endTime }) } } }
  vm.runInNewContext(script, context)
  return { elements, listeners, instances, requests, states, history, context }
 }
@@ -28,7 +31,7 @@ test('shared player retry keeps source and session, fetches a fresh URL and rele
  for (const source of ['company', 'office']) {
   const p = player({ source }); await flush()
   assert.equal(p.elements.get('footState').textContent, '播放中')
-  assert.ok(p.requests[0].url.endsWith('?source=' + source))
+  assert.equal(new URL(p.requests[0].url).searchParams.get('source'), source)
   assert.equal(p.requests[0].init.headers.Tenantcode, 'XSJ')
   assert.equal(p.requests[0].init.headers.Authorization, 'Bearer secret')
   assert.equal(p.history[0].includes('secret'), false)
@@ -39,6 +42,45 @@ test('shared player retry keeps source and session, fetches a fresh URL and rele
   assert.equal(p.instances[1].stops, 1)
   assert.deepEqual(p.states, ['back'])
  }
+})
+
+test('playback preserves its recording window and uses verified SDK playback arguments, without LIVE labeling', async () => {
+ const p = player({ mode: 'playback' }); await flush()
+ const query = new URL(p.requests[0].url).searchParams
+ assert.equal(query.get('mode'), 'playback')
+ assert.equal(query.get('beginTime'), '2026-10-08T00:00:00+08:00')
+ assert.equal(p.instances[0].options.mode, 1)
+ assert.deepEqual(p.instances[0].args, [0, '2026-10-08T00:00:00+08:00', '2026-10-08T02:00:00+08:00'])
+ assert.equal(p.elements.get('liveBadge').textContent, '录像')
+ assert.equal(p.elements.get('footState').textContent, '录像播放中')
+ p.elements.get('btnRelink').listeners.click(); await flush()
+ assert.equal(new URL(p.requests[1].url).searchParams.get('endTime'), query.get('endTime'))
+ p.instances[1].callbacks.StreamEnd(); await flush()
+ assert.equal(p.elements.get('footState').textContent, '回放结束')
+ const wrongMode = player({ mode: 'playback', fetch: async () => ({ ok: true, json: async () => ({ url: 'wss://private.test/live', mode: 'live' }) }) }); await flush()
+ assert.equal(wrongMode.instances[0].url, undefined)
+ assert.match(wrongMode.elements.get('errSub').textContent, /未取得可播放录像/)
+})
+
+test('recording selection spans Shanghai midnight and rejects reversed or overlong windows', () => {
+ const dates = defaultPlaybackDates(Date.parse('2026-10-08T16:10:00Z'))
+ assert.deepEqual(dates, { fromDate: '2026-10-08', fromTime: '23:40', toDate: '2026-10-09', toTime: '00:10' })
+ assert.deepEqual(playbackDates(dates), { beginTime: '2026-10-08T23:40:00+08:00', endTime: '2026-10-09T00:10:00+08:00' })
+ assert.throws(() => playbackDates({ ...dates, toDate: '2026-10-12' }), /最多查看三天/)
+ assert.throws(() => playbackDates({ ...dates, toDate: '2026-10-07' }), /结束时间/)
+})
+
+test('miniapp WebView handoff preserves decoded plus-offset timestamps and special characters', () => {
+ const url = videoPageUrl({ path: 'https://customer.test/player', source: 'company', mode: 'playback', deviceId: 'camera-1', name: '监控A+1&2', api: 'https://runtime.test/api',
+  beginTime: '2026-10-08T00:00:00+08:00', endTime: encodeURIComponent('2026-10-08T02:00:00+08:00'), token: 'secret+&%', tenantCode: 'XSJ' })
+ const params = new URL(url).searchParams
+ assert.equal(params.get('beginTime'), '2026-10-08T00:00:00+08:00')
+ assert.equal(params.get('endTime'), '2026-10-08T02:00:00+08:00')
+ assert.equal(params.get('token'), 'secret+&%')
+ assert.equal(params.get('name'), '监控A+1&2')
+ const literal = new URL(videoPageUrl({ path: 'https://customer.test/player', deviceId: 'cam%2F1', name: '监控%2F1' })).searchParams
+ assert.equal(literal.get('deviceId'), 'cam%2F1')
+ assert.equal(literal.get('name'), '监控%2F1')
 })
 
 test('return during stream fetch prevents late playback, and failed fetching allows return', async () => {

@@ -6,12 +6,18 @@
 
     <EnvironmentTrend v-if="block.type === 'environment_history'" :report="block.report" />
     <MeterHistoryReport v-else-if="block.type === 'energy_history'" :report="block.report" />
+    <view v-else-if="block.type === 'video_playback'" class="recording">
+     <text class="recording-name">{{ block.report.name }}</text><text class="meta">{{ block.report.location }}</text>
+     <text class="recording-window">{{ fmtShanghaiDateTime(block.report.beginTime) }} — {{ fmtShanghaiDateTime(block.report.endTime) }}</text>
+     <text class="meta">录像是否存在以实际播放结果为准</text>
+     <button class="vbtn recording-open" :disabled="!playerReady || fetchingId === block.report.deviceId" hover-class="vbtn--pressed" @tap="viewPlayback(block.report)">{{ playerReady ? '查看这段录像' : '播放页接入中' }}</button>
+    </view>
     <template v-else-if="block.type === 'video'">
-     <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="orow">
+     <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="orow video-row">
       <view class="dot" :class="dotOf(d.online)" />
       <text class="nm">{{ d.name }}</text>
       <text class="loc">{{ d.location }}</text>
-      <button class="vbtn" :disabled="viewDisabled(d)" hover-class="vbtn--pressed" @tap="view(d)">{{ viewLabel(d) }}</button>
+      <view class="video-actions"><button class="vbtn" :disabled="viewDisabled(d)" hover-class="vbtn--pressed" @tap="view(d)">{{ viewLabel(d) }}</button><button class="vbtn recording-link" :disabled="!playerReady" hover-class="vbtn--pressed" @tap="selectPlayback(d)">录像回放</button></view>
      </view>
     </template>
     <text v-if="block.type === 'video'" class="meta">状态查询于 {{ observed || '时间未知' }}</text>
@@ -66,6 +72,8 @@
     </button>
    </view>
   </view>
+  <view v-if="inlinePlayback && playbackDevice" class="inline-playback"><button class="omore" @tap="playbackDevice = null">收起录像期间</button><VideoPlaybackForm :key="playbackDevice.deviceId" :device="playbackDevice" :ready="playerReady" :busy="Boolean(fetchingId)" @open="viewPlayback({ ...playbackDevice, ...$event })" /></view>
+  <DeviceSheet v-if="!inlinePlayback && playbackMounted" :open="Boolean(playbackDevice)" title="录像回放" @close="playbackDevice = null"><VideoPlaybackForm v-if="playbackDevice" :key="playbackDevice.deviceId" :device="playbackDevice" :ready="playerReady" :busy="Boolean(fetchingId)" @open="viewPlayback({ ...playbackDevice, ...$event })" /></DeviceSheet>
  </view>
 </template>
 
@@ -73,12 +81,17 @@
 import { computed, ref } from 'vue'
 import EnvironmentTrend from './EnvironmentTrend.vue'
 import MeterHistoryReport from './MeterHistoryReport.vue'
+import DeviceSheet from './DeviceSheet.vue'
+import VideoPlaybackForm from './VideoPlaybackForm.vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
-import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
+import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
-const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, source: { type: String, default: 'office' } })
+const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
 defineEmits(['select-alert', 'browse-alerts'])
 const fetchingId = ref('')
+const playbackDevice = ref(null)
+const playbackMounted = ref(false)
+function selectPlayback(device) { playbackMounted.value = true; playbackDevice.value = device }
 const playerReady = videoPlayerReady()
 const observed = computed(() => fmtDateTime(props.observation.observedAt))
 
@@ -103,9 +116,9 @@ function restOf(block, index) {
  return Math.max(0, total - ROW_LIMIT)
 }
 
-const LABELS = { energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
+const LABELS = { video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
 const blockLabel = block => LABELS[block.type] || '观察'
-const blockCount = block => block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
+const blockCount = block => block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
 const sourceOf = reading => environmentSource(reading)
@@ -118,6 +131,12 @@ async function view(d) {
  if (viewDisabled(d)) return
  fetchingId.value = d.deviceId
  try { await openVideoPlayer({ deviceId: d.deviceId, name: d.name, location: d.location, source: props.source }) }
+ finally { fetchingId.value = '' }
+}
+async function viewPlayback(report) {
+ if (!playerReady || fetchingId.value) return
+ fetchingId.value = report.deviceId
+ try { await openVideoPlayer({ ...report, source: props.source, mode: 'playback' }) }
  finally { fetchingId.value = '' }
 }
 
@@ -177,5 +196,6 @@ button::after { border:0; }
 .tag { flex-shrink:0; padding:2px 7px; border-radius:8px; background:#e4f2ea; color:#1d6b4e; font-size:9px; font-weight:600; }
 .tag.unknown { background:#edf0eb; color:#829087; }
 .tag.un { background:#f1ead7; color:#8a6a24; }
+.recording-name,.recording-window { display:block; }.recording-name { font-size:13px;font-weight:600; }.recording-window { font-size:11px;color:#607c64;line-height:1.7;margin:9px 0; }.recording-open { margin-top:12px; }.video-row { display:grid;grid-template-columns:6px minmax(0,1fr);row-gap:5px; }.video-row .loc,.video-actions { grid-column:2; }.video-actions { display:flex;gap:8px;margin-top:3px; }.video-actions .vbtn { margin:0; }
 @media(prefers-reduced-motion:reduce) { .vbtn,.omore uni-icons { transition:none; } }
 </style>

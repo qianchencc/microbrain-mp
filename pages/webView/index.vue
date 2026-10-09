@@ -8,6 +8,7 @@
 	import { getTokenId, checkToken } from '@/utils/auth'
 	import { useUserStoreHook } from '@/store/modules/user'
 	import { getAgentStorageScope } from '@/utils/agent-session'
+	import { videoPageUrl } from './video-query.mjs'
 	// import { joinGroup } from '@/apis/group/index.js'
 	import { DOMAIN } from '@/config/settings'
 
@@ -33,7 +34,7 @@
 		onLoad: async function(option) {
 			this.assistantVideo = option.assistantVideo === '1'
 			if (this.assistantVideo) {
-				uni.setNavigationBarTitle({ title: '实时画面' })
+				uni.setNavigationBarTitle({ title: option.mode === 'playback' ? '录像回放' : '实时画面' })
 				uni.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
 			}
 			await checkToken()
@@ -44,7 +45,7 @@
 				option.timestamp = new Date().getTime()
 			}
 			// 额外参数, 请encodeURIComponent
-			this.url = option.path + '?' + obj2Query(option)
+			this.url = this.assistantVideo ? videoPageUrl(option) : option.path + '?' + obj2Query(option)
 			if (!this.assistantVideo) console.log('webView url ------------------->', this.url)
 			// #ifdef APP-NVUE
 			this.eventChannel = this.$scope.eventChannel // 兼容APP-NVUE

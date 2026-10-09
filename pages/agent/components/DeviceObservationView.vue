@@ -14,6 +14,8 @@
     <view class="obs-head">实时画面</view>
     <view class="obs-line"><view class="dot" :class="videoDot" /><text>{{ videoText }}</text></view>
     <button class="view-btn" :disabled="playDisabled" hover-class="view-btn--pressed" @tap="openPlayer">{{ playLabel }}</button>
+    <button class="view-btn" :disabled="!playerReady" hover-class="view-btn--pressed" @tap="showPlayback = !showPlayback">{{ showPlayback ? '收起录像期间' : '录像回放' }}</button>
+    <VideoPlaybackForm v-if="showPlayback" :device="device" :ready="playerReady" :busy="fetching" @open="openRecording" />
    </view>
    <view v-else-if="device.kind === 'environment'" class="obs-block">
     <view class="obs-head">环境读数<text v-if="envSource" class="src" :class="{ shadow: isShadow }">{{ envSource }}</text></view>
@@ -45,10 +47,12 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
+import VideoPlaybackForm from './VideoPlaybackForm.vue'
 import { ageHint, energyCurrentCells, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, safetySubtypeOfName, safetySubtypeText, videoOnline, videoStateText, videoViewLabel } from '../observation-view.mjs'
 
-const props = defineProps({ device: Object, reading: Object })
+const props = defineProps({ device: Object, reading: Object, source: { type: String, default: 'office' } })
 const fetching = ref(false)
+const showPlayback = ref(false)
 const playerReady = videoPlayerReady()
 const state = computed(() => props.reading?.state ?? null)
 
@@ -60,7 +64,13 @@ const playDisabled = computed(() => !playerReady || online.value !== true || fet
 async function openPlayer() {
  if (playDisabled.value) return
  fetching.value = true
- try { await openVideoPlayer({ deviceId: props.device.id, name: props.device.name, location: props.device.location }) }
+ try { await openVideoPlayer({ deviceId: props.device.id, name: props.device.name, location: props.device.location, source: props.source }) }
+ finally { fetching.value = false }
+}
+async function openRecording(window) {
+ if (!playerReady || fetching.value) return
+ fetching.value = true
+ try { await openVideoPlayer({ deviceId: props.device.id, name: props.device.name, location: props.device.location, source: props.source, mode: 'playback', ...window }) }
  finally { fetching.value = false }
 }
 
