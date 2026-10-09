@@ -7,8 +7,8 @@ const ENV_KEYS = [
  ['temp', '温度', '°C'],
  ['humidity', '湿度', '%'],
  ['pm25', 'PM2.5', ''],
- ['pm10', 'PM10', ''],
- ['pm101', 'PM1.0', ''],
+ ['pm101', 'PM10', ''],
+ ['pm10', 'PM1.0', ''],
 ]
 
 const finite = value => typeof value === 'number' && Number.isFinite(value) ? value : null

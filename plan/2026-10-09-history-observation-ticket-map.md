@@ -2,6 +2,8 @@
 
 日期：2026-10-09。状态：九票已发布，票01已实施并完成真实网关/微信模拟器验收，手机仍待验；见[票01交接](2026-10-09-safety-history-handoff.md)。其余票按下面发布时前置继续推进。票据拆分是已认可业务的实施粒度，不将所有未决项写成用户已批准。
 
+票02已实施真实环境历史、PM修正与同窗口 Company 追问；手机/日期触摸/视觉复验待验，见[票02交接](2026-10-09-environment-history-handoff.md)。
+
 权威范围：[业务规格](2026-10-09-history-observation-spec.md)。接口实测、旧代码偏差和十个情境：[接入方案](2026-10-09-history-interfaces-business-integration.md)。本地 tracker 为 `.scratch/history-observation-integration/`；规格与票据正文归档 Git，tracker 只记录状态/回传并指向正文，避免因本地目录被忽略而失去实施材料。
 
 ## 九个完整闭环

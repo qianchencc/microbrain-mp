@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { isObservationKind, regionDeviceGroups } from '../pages/agent/region-device-view.mjs'
 import { applyEvent, createTurn, restoreTurns } from '../pages/agent/conversation.mjs'
-import { energyStale, videoViewLabel } from '../pages/agent/observation-view.mjs'
+import { energyStale, videoViewLabel, environmentCells } from '../pages/agent/observation-view.mjs'
 
 const videoDevice = { id: 'video-1', kind: 'video', name: '视频监控-26楼走廊', location: '26楼运营走廊' }
 const envDevice = { id: 'env-1', kind: 'environment', name: '环境传感器-26楼', location: '26楼' }
@@ -21,6 +21,12 @@ const readings = {
 const devices = [videoDevice, envDevice, energyDevice, safetyDevice, lightDevice]
 const all = groups => groups.flatMap(group => group.items)
 const itemOf = (groups, id) => all(groups).find(item => item.id === id)
+
+test('实时原始 PM 字段按客户定义显示，历史原值不会被标签修正重写', () => {
+ const reading = { pm101: 20, pm10: 4, pm25: 7 }
+ assert.deepEqual(environmentCells(reading).map(cell => [cell.label, cell.value]), [['PM2.5', '7'], ['PM10', '20'], ['PM1.0', '4']])
+ assert.deepEqual(reading, { pm101: 20, pm10: 4, pm25: 7 })
+})
 
 test('观察设备状态语义：视频在线/离线不冒充开-关，四类观察只读呈现', () => {
  const groups = regionDeviceGroups(devices, readings, 'kind', '')
