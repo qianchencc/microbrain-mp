@@ -7,7 +7,7 @@
  </template>
  <RegionCalendar v-else-if="calendar" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" @select="selectDate" @month-change="$emit('calendar-month', $event)" />
  <view class="timeline-stage">
- <scroll-view class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" scroll-with-animation :scroll-top="scrollTop" :scroll-into-view="focusId">
+ <scroll-view class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" :scroll-with-animation="scrollAnimated" :scroll-top="scrollTop" :scroll-into-view="focusId" :upper-threshold="240" :lower-threshold="240" @scroll="onScroll" @scrolltoupper="$emit('reach-start')" @scrolltolower="$emit('reach-end')">
   <view class="timeline" :style="{ height: scene.height + 'px' }">
    <image class="timeline-art" :src="svgImage" mode="scaleToFill" :style="{ width: width + 'px', height: scene.height + 'px' }" @error="renderError = '时间轴暂未加载，请重新进入'" />
    <text v-for="(label, index) in scene.labels" :key="'label-' + index" class="time-label" :class="label.kind" :style="{ top: label.displayY + 'px' }">{{ label.text }}</text>
@@ -28,12 +28,15 @@
 
 <script setup>
 import { computed, getCurrentInstance, nextTick, onMounted, ref, watch } from 'vue'
-import { createTimeline, localDate } from '../timeline-geometry.mjs'
+import { createTimeline, localDate, HOUR_PX, TOP_PAD } from '../timeline-geometry.mjs'
 import { timelineSvg } from '../timeline-svg.mjs'
 import RegionCalendar from './RegionCalendar.vue'
 
-const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, bottomPad: { type: Number, default: 0 }, calendarMarks: { type: Array, default: () => [] }, calendarError: Boolean, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, days: { type: Number, default: 1 } })
-const emit = defineEmits(['select', 'date-change', 'calendar-month'])
+const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, bottomPad: { type: Number, default: 0 }, calendarMarks: { type: Array, default: () => [] }, calendarError: Boolean, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, start: String, days: { type: Number, default: 1 } })
+const emit = defineEmits(['select', 'date-change', 'calendar-month', 'visible-date', 'reach-start', 'reach-end'])
+const DAY_MS = 86400000, DAY_PX = 24 * HOUR_PX
+const dayStart = value => Date.parse(`${value}T00:00:00+08:00`)
+const windowStart = computed(() => props.start || props.date)
 const instance = getCurrentInstance()
 const width = ref(uni.getSystemInfoSync().windowWidth - 32)
 const scrollTop = ref(0)
@@ -54,7 +57,17 @@ function closeCalendar() {
  calTimer = setTimeout(() => { calMounted.value = false }, 200)
 }
 defineExpose({ dismissCalendar: () => { if (!calMounted.value) return false; closeCalendar(); return true } })
-const scene = computed(() => createTimeline({ date: props.date, items: props.items, now: props.now, width: width.value, days: props.days }))
+const scrollAnimated = ref(true)
+let lastScrollTop = 0, emittedDay = ''
+function onScroll(event) {
+ const y = Number(event?.detail?.scrollTop)
+ if (Number.isFinite(y)) lastScrollTop = y
+ if (props.days < 2 || !windowStart.value) return
+ const index = Math.min(props.days - 1, Math.max(0, Math.floor((lastScrollTop + 160) / DAY_PX)))
+ const day = localDate(dayStart(windowStart.value) + index * DAY_MS)
+ if (day !== emittedDay) { emittedDay = day; emit('visible-date', day) }
+}
+const scene = computed(() => createTimeline({ date: windowStart.value, items: props.items, now: props.now, width: width.value, days: props.days }))
 const svgImage = computed(() => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(timelineSvg(scene.value)))
 function measure() {
  uni.createSelectorQuery().in(instance.proxy).select('.timeline').boundingClientRect(result => {
@@ -70,7 +83,11 @@ function focusDate() {
   else focusId.value = id
   return
  }
- const targetTop = localDate(props.now) === props.date ? Math.max(0, Math.min(scene.value.height - 400, scene.value.nowY - 220)) : 0
+ const dayIndex = Math.round((dayStart(props.date) - dayStart(windowStart.value)) / DAY_MS)
+ let targetTop = null
+ if (localDate(props.now) === props.date && scene.value.nowVisible) targetTop = Math.max(0, Math.min(scene.value.height - 400, scene.value.nowY - 220))
+ else if (dayIndex >= 0 && dayIndex < props.days) targetTop = Math.max(0, TOP_PAD + dayIndex * DAY_PX - 30)
+ if (targetTop === null) return
  if (scrollTop.value === targetTop) { scrollTop.value = targetTop + .5; nextTick(() => { scrollTop.value = targetTop }) }
  else scrollTop.value = targetTop
 }
@@ -80,8 +97,17 @@ function selectDate(value) {
  nextTick(focusDate)
 }
 onMounted(async () => { await nextTick(); measure(); focusDate() })
-watch(() => props.date, focusDate)
+// 日期变化若是滚动上报的回声（emittedDay），视口已经停在那天，不再二次定位。
+watch(() => props.date, value => { if (value !== emittedDay) focusDate() })
 watch(() => props.items.length, (length, previous) => { if (length && !previous) nextTick(focusDate) })
+// 窗口向上 prepend 时画布整体下移 delta*DAY_PX，补偿 scrollTop 让视口停在原内容上。
+watch(windowStart, (next, previous) => {
+ if (!next || !previous) return
+ const delta = Math.round((dayStart(previous) - dayStart(next)) / DAY_MS)
+ if (delta <= 0) return
+ scrollAnimated.value = false
+ nextTick(() => { scrollTop.value = lastScrollTop + delta * DAY_PX; nextTick(() => { scrollAnimated.value = true }) })
+})
 </script>
 
 <style scoped>

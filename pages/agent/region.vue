@@ -4,10 +4,7 @@
   <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text>{{ tasks.length }} 条记录</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
   <text v-if="sampleMode" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-body">
-   <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample-' : 'real-') + date" calendar :bottom-pad="78" :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :now="displayNow" @date-change="date = $event" @calendar-month="onCalendarMonth" @select="openTask">
-    <template #empty>
-     <view v-if="loading || error" class="notice"><text>{{ loading ? '正在读取任务记录' : error }}</text><button v-if="error" @tap="load">重新加载</button></view>
-    </template>
+   <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample' : 'real')" calendar :bottom-pad="78" :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :start="windowStart || date" :days="windowDays" :now="displayNow" @date-change="date = $event" @visible-date="onVisibleDate" @reach-start="extendTop" @reach-end="extendBottom" @calendar-month="onCalendarMonth" @select="openTask">
     <template #card="{ item }">
      <view class="task-row" :class="{ cancelled: item.status === 'cancelled' }">
      <text class="task-label"><text v-if="item.warning" class="warning-dot" /><text v-if="item.failure" class="failure-mark">×</text>{{ item.label }}</text>
@@ -18,10 +15,11 @@
      </view>
     </template>
    </RegionTimeline>
+   <view v-if="loading || error" class="notice-layer"><view class="notice"><text>{{ loading ? '正在读取任务记录' : error }}</text><button v-if="error" @tap="load">重新加载</button></view></view>
   </view>
   <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
-  <RegionDeviceDrawer v-if="deviceDrawerMounted" @reference="referenceTask" :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : emptySampleTasks" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
-  <TaskDetailSheet v-if="taskDetailMounted" @reference="referenceTask" :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="loadTimeline(true); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
+  <RegionDeviceDrawer v-if="deviceDrawerMounted" @reference="referenceTask" :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : emptySampleTasks" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="reloadWindow(); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
+  <TaskDetailSheet v-if="taskDetailMounted" @reference="referenceTask" :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="reloadWindow(); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
 </template>
 <script setup>
@@ -43,7 +41,13 @@ import { regionSampleTasks, regionSampleTaskDetail } from './region-sample-tasks
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent, previousPageLabel, returnToOfficeConversation } from './navigation.mjs'
 const backLabel = ref('办公室 Agent')
-const error = ref(''), loading = ref(true), tasks = ref([]), sampleTasks = ref([]), sampleMode = ref(false)
+const error = ref(''), loading = ref(true), sampleTasks = ref([]), sampleMode = ref(false)
+// 任务按天缓存、按窗口渲染：滚动跨天时窗口向两侧扩展，选中日跟随视口。
+const WINDOW_LEAD = 2, WINDOW_TRAIL = 3, DAY_STALE_MS = 30000
+const windowStart = ref(''), windowDays = ref(1)
+const dayTasks = ref({}), dayDone = new Set(), dayReq = {}, dayLoadedAt = {}
+const windowDates = computed(() => windowStart.value ? Array.from({ length: windowDays.value }, (_, i) => shiftDate(windowStart.value, i)) : [date.value])
+const tasks = computed(() => sampleMode.value ? (date.value === sampleDate.value ? sampleTasks.value : []) : (dayTasks.value[date.value] || []))
 const deviceDrawerOpen = ref(false), deviceCount = ref(null)
 const deviceRefreshSignal = ref(0)
 const emptySampleTasks = Object.freeze([])
@@ -55,52 +59,98 @@ const calendarMarks = ref([]), calendarMonth = ref(''), calendarError = ref(fals
 const now = ref(new Date().toISOString()), today = computed(() => localDate(now.value)), date = ref(localDate(now.value))
 const maxDate = computed(() => shiftDate(today.value, 7))
 const displayNow = computed(() => sampleMode.value ? `${date.value}T14:52:00+08:00` : now.value)
-const items = computed(() => regionTimelineItems(tasks.value))
+const items = computed(() => regionTimelineItems(sampleMode.value ? (windowDates.value.includes(sampleDate.value) ? sampleTasks.value : []) : windowDates.value.flatMap(d => dayTasks.value[d] || [])))
 const sampleCalendarMarks = computed(() => {
  const { from, to } = calendarWindow(calendarMonth.value || date.value.slice(0, 7))
  return sampleTasks.value.length && sampleDate.value >= from && sampleDate.value <= to
   ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(task.status)) }] : []
 })
 let viewScope = ''
-let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer, shownTimelineKey = ''
+let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer
 onLoad(query => { backLabel.value = previousPageLabel(getCurrentPages(), '办公室 Agent'); initialRegion = query.regionId || ''; initialDate = query.date || ''; initialTaskId = decodeURIComponent(query.taskId || '') })
-async function loadTimeline(silent = false) {
- const current = ++requestId, region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()
- const key = `${scope}:${region}:${selectedDate}:${sampleMode.value}`
- if (!silent) { if (key !== shownTimelineKey) tasks.value = []; error.value = ''; loading.value = true }
+function ensureWindow() {
+ const end = windowStart.value ? shiftDate(windowStart.value, windowDays.value - 1) : ''
+ if (!windowStart.value || date.value < windowStart.value || date.value > end) {
+  windowStart.value = shiftDate(date.value, -WINDOW_LEAD)
+  let days = WINDOW_LEAD + 1 + WINDOW_TRAIL
+  while (days > 1 && shiftDate(windowStart.value, days - 1) > maxDate.value) days--
+  windowDays.value = days
+  const keep = new Set(windowDates.value)
+  dayTasks.value = Object.fromEntries(Object.entries(dayTasks.value).filter(([d]) => keep.has(d)))
+  for (const d of dayDone) if (!keep.has(d)) dayDone.delete(d)
+ }
+}
+async function loadDay(d, { silent = false, force = false } = {}) {
+ const region = focusRegionId.value, scope = getAgentStorageScope()
+ if (!region || sampleMode.value) return false
+ if (!force && dayDone.has(d) && Date.now() - (dayLoadedAt[d] || 0) < DAY_STALE_MS) return true
+ const token = (dayReq[d] = (dayReq[d] || 0) + 1)
+ const selected = d === date.value
+ if (selected && !silent) { error.value = ''; loading.value = true }
  try {
-  if (!region) return
-  if (sampleMode.value) {
-   sampleTasks.value = []
-   const result = await listRegionDevices(region)
-   if (current === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope() && sampleMode.value) {
-    sampleTasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
-    tasks.value = selectedDate === sampleDate.value ? sampleTasks.value : []
-    shownTimelineKey = key
-   }
-   return
-  }
-  const result = await listRegionTimeline(region, selectedDate)
-  if (current === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope()) {
-   const previous = new Map(tasks.value.flatMap(task => task.phases.map(phase => [phase.id, phase.status])))
-   const next = result.tasks || []
+  const result = await listRegionTimeline(region, d)
+  if (token !== dayReq[d] || region !== focusRegionId.value || scope !== getAgentStorageScope()) return false
+  const next = result.tasks || []
+  if (selected) {
+   const previous = new Map((dayTasks.value[d] || []).flatMap(task => task.phases.map(phase => [phase.id, phase.status])))
    if (next.some(task => task.phases.some(phase => ['pending', 'executing'].includes(previous.get(phase.id)) && !['pending', 'executing'].includes(phase.status)))) deviceRefreshSignal.value++
-   tasks.value = next
-   shownTimelineKey = key
-   return current
+   error.value = ''
   }
- } catch (cause) { if (!silent && current === requestId && scope === getAgentStorageScope()) error.value = cause.message || (sampleMode.value ? '演示设备目录暂不可用' : '任务记录暂不可用') }
- finally { if (!silent && current === requestId) loading.value = false }
+  dayTasks.value = { ...dayTasks.value, [d]: next }
+  dayDone.add(d)
+  dayLoadedAt[d] = Date.now()
+  return true
+ } catch (cause) {
+  if (token === dayReq[d] && scope === getAgentStorageScope() && selected) error.value = cause.message || '任务记录暂不可用'
+  return false
+ } finally { if (selected && token === dayReq[d]) loading.value = false }
+}
+async function loadSample() {
+ const region = focusRegionId.value, scope = getAgentStorageScope(), current = ++requestId
+ loading.value = true; error.value = ''; sampleTasks.value = []
+ try {
+  if (!region) return false
+  const result = await listRegionDevices(region)
+  if (current !== requestId || region !== focusRegionId.value || scope !== getAgentStorageScope() || !sampleMode.value) return false
+  sampleTasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
+  return true
+ } catch (cause) { if (current === requestId && scope === getAgentStorageScope()) error.value = cause.message || '演示设备目录暂不可用'; return false }
+ finally { if (current === requestId) loading.value = false }
 }
 async function loadVisibleTimeline() {
  const region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()
- const loadedRequest = await loadTimeline()
- if (!loadedRequest) return
- await nextTick()
- if (visible && !sampleMode.value && loadedRequest === requestId && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope()) {
-  void acknowledgeRegion(region).catch(() => {})
-  return loadedRequest
+ ensureWindow()
+ let loaded = false
+ if (sampleMode.value) loaded = await loadSample()
+ else {
+  windowDates.value.filter(d => d !== selectedDate).forEach(d => { void loadDay(d, { silent: true }) })
+  loaded = await loadDay(selectedDate)
  }
+ if (!loaded) return
+ await nextTick()
+ if (visible && !sampleMode.value && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope()) {
+  void acknowledgeRegion(region).catch(() => {})
+  return true
+ }
+ return loaded
+}
+function reloadWindow() {
+ windowDates.value.forEach(d => { if (dayDone.has(d) || d === date.value) void loadDay(d, { silent: true, force: true }) })
+}
+function onVisibleDate(value) { if (value && value !== date.value) date.value = value }
+function extendTop() {
+ if (!windowStart.value) return
+ const prev = shiftDate(windowStart.value, -1)
+ windowStart.value = prev
+ windowDays.value++
+ void loadDay(prev, { silent: true })
+}
+function extendBottom() {
+ if (!windowStart.value) return
+ const next = shiftDate(windowStart.value, windowDays.value)
+ if (next > maxDate.value) return
+ windowDays.value++
+ void loadDay(next, { silent: true })
 }
 function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7), silent = false) {
  const current = ++calendarRequest, region = focusRegionId.value, scope = getAgentStorageScope()
@@ -145,6 +195,7 @@ async function load() {
   }
   initialDate = ''
   loadedRegion = focusRegionId.value; loadedDate = date.value
+  dayDone.clear()
   loadCalendar()
   const loadedRequest = await loadVisibleTimeline()
   if (currentLoad !== loadId || !visible) return
@@ -167,7 +218,7 @@ async function load() {
   }
  }
 }
-watch(focusRegionId, () => { deviceCount.value = null; sampleTasks.value = []; selectedTaskId.value = ''; if (visible && !loadingDirectory) { initialTaskId = ''; void loadVisibleTimeline(); loadCalendar() } })
+watch(focusRegionId, () => { deviceCount.value = null; sampleTasks.value = []; dayTasks.value = {}; dayDone.clear(); windowStart.value = ''; selectedTaskId.value = ''; if (visible && !loadingDirectory) { initialTaskId = ''; void loadVisibleTimeline(); loadCalendar() } })
 watch(date, () => { selectedTaskId.value = ''; if (visible && !loadingDirectory) { initialTaskId = ''; void loadVisibleTimeline() } })
 function scheduleRefresh() {
  clearTimeout(refreshTimer)
@@ -176,7 +227,7 @@ function scheduleRefresh() {
   if (!visible) return
   if (!sampleMode.value && !loadingDirectory) {
    now.value = new Date().toISOString()
-   await loadTimeline(true)
+   await loadDay(date.value, { silent: true, force: true })
    loadCalendar(calendarMonth.value || date.value.slice(0, 7), true)
   }
   scheduleRefresh()
@@ -186,7 +237,7 @@ watch(() => tasks.value.some(task => task.status === 'executing'), scheduleRefre
 onShow(() => {
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 失效会话由 load 显示恢复入口 */ }
- if (viewScope && scope !== viewScope) { tasks.value = []; sampleTasks.value = []; sampleMode.value = false; selectedTaskId.value = ''; sampleDetail.value = null; deviceDrawerOpen.value = false; calendarMarks.value = []; deviceCount.value = null }
+ if (viewScope && scope !== viewScope) { dayTasks.value = {}; dayDone.clear(); windowStart.value = ''; sampleTasks.value = []; sampleMode.value = false; selectedTaskId.value = ''; sampleDetail.value = null; deviceDrawerOpen.value = false; calendarMarks.value = []; deviceCount.value = null }
  viewScope = scope
  visible = true; void load().finally(scheduleRefresh)
 })
@@ -204,6 +255,8 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .sample-notice { margin:0 23px 6px; color:#ad711b; font-size:11px; }
 .timeline-body { position:relative; flex:1; min-height:0; margin:0 16px; overflow:hidden; }
 @keyframes fadeIn { from { opacity:0; } }
+.notice-layer { position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; }
+.notice-layer button { pointer-events:auto; }
 .notice { padding:70px 24px; text-align:center; font-size:13px; color:#89958e; animation:fadeIn 160ms ease-out backwards; }
 .notice button { margin-top:18px; background:transparent; font-size:13px; color:#176b54; }
 .notice button::after { border:0; }

@@ -1,5 +1,5 @@
 export const HOUR_PX = 34
-const TOP_PAD = 44
+export const TOP_PAD = 44
 const DAY_MS = 86400000
 const round = value => Math.round(value * 10) / 10
 const midnight = date => Date.parse(`${date}T00:00:00+08:00`)
@@ -102,5 +102,5 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
  if (nowVisible) disk(xOf(nowY), nowY, 7.5, 5.2, '#ad711b')
  const showNowLabel = nowVisible && labels.every(label => Math.abs(label.displayY - nowY) >= 25)
  const dates = Array.from({ length: days }, (_, day) => ({ date: localDate(midnight(date) + day * DAY_MS), y: TOP_PAD + day * 24 * HOUR_PX }))
- return { width, height: Math.max(height, previousBottom + TOP_PAD), shapes, labels, cards, dates, nowY, nowText: localTime(now), showNowLabel }
+ return { width, height: Math.max(height, previousBottom + TOP_PAD), shapes, labels, cards, dates, nowY, nowVisible, nowText: localTime(now), showNowLabel }
 }
