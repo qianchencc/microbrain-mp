@@ -15,6 +15,8 @@
  history.replaceState(null, '', clean);
  $('camName').textContent = q.get('name') || '监控画面';
  const localTime = value => { const time = Date.parse(value); return Number.isFinite(time) ? new Date(time + 8 * 3600 * 1000).toISOString().slice(0,16).replace('T',' ') : ''; };
+ // 客户SDK以北京时间钟面+Z定位录像；此标记仅用于SDK，不是业务/API的UTC时间。
+ const sdkPlaybackTime = value => new Date(Date.parse(value) + 8 * 3600 * 1000).toISOString().slice(0,19) + 'Z';
  $('camSub').textContent = playback ? `${localTime(beginTime)} — ${localTime(endTime)}` : (q.get('loc') ? q.get('loc') + ' · ' : '') + '实时预览';
  if (playback) { $('liveBadge').textContent = '录像'; $('liveBadge').classList.add('recorded'); $('btnRetry').textContent = '重新播放'; $('btnRelink').textContent = '重新播放'; }
  let state = 'boot', plugin = null, aborter = null, generation = 0, closed = false;
@@ -155,7 +157,7 @@
    if (closed || current !== generation) return;
    setState('connecting', '正在建立播放通道');
    phase = 'connecting';
-   if (playback) await instance.JS_Play(stream.url, { playURL: stream.url, mode: 1 }, 0, beginTime, endTime);
+   if (playback) await instance.JS_Play(stream.url, { playURL: stream.url, mode: 1 }, 0, sdkPlaybackTime(beginTime), sdkPlaybackTime(endTime));
    else await instance.JS_Play(stream.url, { playURL: stream.url, mode: 0 }, 0);
    if (closed || current !== generation) { await release(instance).catch(() => {}); return; }
   } catch (error) {

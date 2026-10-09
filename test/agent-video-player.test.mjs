@@ -50,7 +50,7 @@ test('playback preserves its recording window and uses verified SDK playback arg
  assert.equal(query.get('mode'), 'playback')
  assert.equal(query.get('beginTime'), '2026-10-08T00:00:00+08:00')
  assert.equal(p.instances[0].options.mode, 1)
- assert.deepEqual(p.instances[0].args, [0, '2026-10-08T00:00:00+08:00', '2026-10-08T02:00:00+08:00'])
+ assert.deepEqual(p.instances[0].args, [0, '2026-10-08T00:00:00Z', '2026-10-08T02:00:00Z'])
  assert.equal(p.elements.get('liveBadge').textContent, '录像')
  assert.equal(p.elements.get('footState').textContent, '录像播放中')
  p.elements.get('btnRelink').listeners.click(); await flush()
@@ -60,6 +60,17 @@ test('playback preserves its recording window and uses verified SDK playback arg
  const wrongMode = player({ mode: 'playback', fetch: async () => ({ ok: true, json: async () => ({ url: 'wss://private.test/live', mode: 'live' }) }) }); await flush()
  assert.equal(wrongMode.instances[0].url, undefined)
  assert.match(wrongMode.elements.get('errSub').textContent, /窗口与所选期间不一致/)
+})
+
+test('SDK playback uses the verified Shanghai clock marker while API instants and retries stay unchanged', async () => {
+ const p = player({ mode: 'playback', beginTime: '2026-10-08T15:45:00Z', endTime: '2026-10-08T16:15:00Z' }); await flush()
+ const query = new URL(p.requests[0].url).searchParams
+ assert.equal(query.get('beginTime'), '2026-10-08T15:45:00Z')
+ assert.equal(query.get('endTime'), '2026-10-08T16:15:00Z')
+ assert.deepEqual(p.instances[0].args, [0, '2026-10-08T23:45:00Z', '2026-10-09T00:15:00Z'])
+ p.elements.get('btnRetry').listeners.click(); await flush()
+ assert.deepEqual(p.instances[1].args, p.instances[0].args)
+ assert.equal(new URL(p.requests[1].url).searchParams.get('beginTime'), query.get('beginTime'))
 })
 
 test('media server rejection identifies the failed stage and preserves safe diagnostic codes', async () => {
