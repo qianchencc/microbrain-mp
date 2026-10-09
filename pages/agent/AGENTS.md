@@ -55,6 +55,8 @@
 
 - 2026-10-07 业务补齐：收件箱为常规个人结束消息列表，打开同源原报告成功后标记已读；“我的安排”列表复用同一详情宿主，Company 不跳 Office 区域。Task/Plan 引用只固定身份、保留原输入且不自动发送，发送时 Runtime 读取真实最新事实；恢复/重试保持原轮引用。修改卡承载明确作用域与差异，确认/放弃经 task-changes 同源接口。
 
+- 任务入口性能（2026-10-09）：工作台在区域/日期确定后同时读取日历与时间轴，不等时间轴返回才发起日历请求；两路仍独立校验身份、区域、可见性与请求代次。安排/周期/收件箱的等待主要来自Runtime fresh目录的串行读取，已并行并只合并同身份同来源在途GET，不以旧权限缓存替代。实测与真机边界见 `plan/2026-10-09-task-entry-performance-handoff.md`。
+
 ## 导航与状态恢复（2026-10-07）
 
 - 修改页面返回、Sheet、搜索、参数或日历时先读 `plan/2026-10-07-assistant-navigation-improvement-spec.md` 与对应 handoff。三个路由共用 `AssistantNav`；实际历史决定上一页，无历史由 `navigation.mjs` redirect 到默认父页。工作台新建任务定位 Office，source 在页面创建时固定。

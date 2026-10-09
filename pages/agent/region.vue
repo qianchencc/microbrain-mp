@@ -147,6 +147,7 @@ async function load() {
   }
   initialDate = ''
   loadedRegion = focusRegionId.value; loadedDate = date.value
+  loadCalendar()
   const loadedRequest = await loadVisibleTimeline()
   if (currentLoad !== loadId || !visible) return
   if (loadedRequest && initialTaskId) {
@@ -155,7 +156,6 @@ async function load() {
    if (item) openTask(item)
    else uni.showToast({ title: '记录已变化或当前无权查看', icon: 'none' })
   }
-  loadCalendar()
  }
  catch (cause) { if (currentLoad === loadId) { error.value = cause.message === 'request:fail' ? '区域暂不可用，请检查网络后重试' : cause.message || '区域暂不可用'; loading.value = false } }
  finally {
