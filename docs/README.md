@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- 2026-10-09 用户基本认可新历史接口的业务方向，已完成正式规格与九个完整闭环票据的准备。首批安全台账、环境趋势、双端直播、原始电量历史可开始；统计口径、汇总集合与人数分析保留局部门槛。业务未实施，见[规格](../plan/2026-10-09-history-observation-spec.md)、[交付地图](../plan/2026-10-09-history-observation-ticket-map.md)与[准备交接](../plan/2026-10-09-history-observation-preparation-handoff.md)。
+
 - 2026-10-09 客户新历史接口的业务接入准备已完成：仪表盘/Company 补环境趋势、电量历史统计和独立烟感台账；摄像头直播/回放为双 Agent 共用能力、各按本端目录授权。交接取流可用，本轮只读补核历史查询与 Swagger；发现 PM 标签反转、水浸混表、电量正反向口径及 H5 重试参数缺口。新增业务尚未实施，场景、顺序与验收见[接入方案](../plan/2026-10-09-history-interfaces-business-integration.md)。
 
 - 2026-10-09 已复现双Agent安排/周期/收件箱及Office工作台5.6–7秒读取等待，修复独立目录串行、重复在途GET和日历串行加载；授权仍fresh核验。真实3200实测Office约1.68秒、Company约2.46秒，Runtime103/103、MP27/27、类型/构建与微信编译通过；真机总耗时未重测，见[任务入口性能交接](../plan/2026-10-09-task-entry-performance-handoff.md)。
@@ -49,7 +51,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
-| 新环境/电量历史、独立烟感台账、双 Agent 摄像头直播与回放：业务场景、接线和缺口 | [10-09 接入方案](../plan/2026-10-09-history-interfaces-business-integration.md)（只读准备；六接口可用与产品交付区分；人数分析仍需独立证明） |
+| 新环境/电量历史、独立烟感台账、双 Agent 摄像头直播与回放：业务场景、接线和缺口 | [接入方案](../plan/2026-10-09-history-interfaces-business-integration.md)、[正式规格](../plan/2026-10-09-history-observation-spec.md)、[九票地图](../plan/2026-10-09-history-observation-ticket-map.md)与[交接](../plan/2026-10-09-history-observation-preparation-handoff.md)（方向基本认可，准备已完成；未实施，人数分析仍需独立证明） |
 | 从优秀编码智能体反思物联 Agent：检索契约、指代、恢复、提示词与真实验收 | [10-09 设计审查](./research/2026-10-09-iot-agent-design-audit.md)、[正向设计与证明方案](./research/2026-10-09-iot-agent-target-design.md)、[外部源码调查](./research/2026-10-09-coding-agent-reliability-primary-sources.md)与[交接](../plan/2026-10-09-agent-design-audit-handoff.md)（只读研究；原“后者”对等复现成功结论撤回；设计候选未实施/验证） |
 | 从接口区分员工 Agent、公司 Agent 与仪表盘：范围、控制引用、空间和统计口径 | [10-08 真实接口盘点](./research/2026-10-08-interface-source-boundary-audit.md)与[当前任务/页面对齐](../plan/2026-10-08-page-interface-task-alignment.md)（按用户确定的“我的办公室/智慧xx”页面分层；Company 来源偏差属我方接线，权限机制不再列为客户疑问） |
 | 物联助手全部页面、抽屉、浮层与前进/返回/关闭/手势的检查 | [10-07 导航检查](../plan/2026-10-07-page-navigation-audit.md)、[设计对照图](./research/assistant-navigation-review/index.html)与[导航改进交接](../plan/2026-10-07-assistant-navigation-improvement-handoff.md)、[改进后画面](./research/assistant-navigation-review/after/index.html)（29 类入口、25 项检查；导航改进已实施，模拟器夹具走查；真机手势/H5/生产延迟仍待验） |

@@ -2,6 +2,12 @@
 
 更新：2026-10-09。
 
+## 2026-10-09 历史能力：规格与票据已准备
+
+用户基本认可接入方向，已按 to-spec/to-tickets 发布 [正式规格](2026-10-09-history-observation-spec.md)和 [九票交付地图](2026-10-09-history-observation-ticket-map.md)，正文归档于 plan/history-observation-tickets，本地状态在 `.scratch/history-observation-integration/`。旧父票保持原状态，不重复重建任务/周期/收件箱。
+
+无代码前置的 frontier 为 01 安全历史引用、02 环境趋势、03 双端直播、05 原始电量历史；实际建议先做 01。04 回放依赖 03，06 单表统计依赖 05/E01，07 公司比较报表依赖 06/E03，08 事件监控依赖 01/04，09 人数分析依赖 04/E04。E02 影响视频客户域/真机关闭；E01/E03/E04 未满足的票保持 needs-info，不拖住其他历史读取。完整代码量/实际操作关闭标准与下一轮入口见 [准备交接](2026-10-09-history-observation-preparation-handoff.md)。本轮无新业务实现。
+
 ## 2026-10-09 客户新历史接口：业务接入准备
 
 客户六组接口已有真实查询/取流交接证据；本轮补核 Swagger 和小页历史读取，接入方案见 [场景、接线、预期效果与验收](2026-10-09-history-interfaces-business-integration.md)。旧“等待四类接口”的可调用性缺口已有证据更新，环境趋势、电量统计和回放产品本身尚未实施。仪表盘与 Company 消费环境/能耗/安全历史；摄像头由双 Agent 共用播放器，各自核验本端目录，不合并来源。
