@@ -1,0 +1,1 @@
+{"receipt":"微脑已接受 83 项控制指令。","calls":[{"method":"POST","path":"/api/agent/action-drafts/92c0817f-b4a1-4f48-94e0-9e2b140bb046/confirm?source=company","data":{"revision":1}}]}
