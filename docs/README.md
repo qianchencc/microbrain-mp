@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- 2026-10-09 客户新历史接口的业务接入准备已完成：仪表盘/Company 补环境趋势、电量历史统计和独立烟感台账；摄像头直播/回放为双 Agent 共用能力、各按本端目录授权。交接取流可用，本轮只读补核历史查询与 Swagger；发现 PM 标签反转、水浸混表、电量正反向口径及 H5 重试参数缺口。新增业务尚未实施，场景、顺序与验收见[接入方案](../plan/2026-10-09-history-interfaces-business-integration.md)。
+
 - 2026-10-09 已复现双Agent安排/周期/收件箱及Office工作台5.6–7秒读取等待，修复独立目录串行、重复在途GET和日历串行加载；授权仍fresh核验。真实3200实测Office约1.68秒、Company约2.46秒，Runtime103/103、MP27/27、类型/构建与微信编译通过；真机总耗时未重测，见[任务入口性能交接](../plan/2026-10-09-task-entry-performance-handoff.md)。
 
 - 2026-10-08 总览改为环境/计量/台账/任务摘要独立返回，Office区域名不等全设备目录，安全台账详情快照可立即引用、发送时后端核验；已修正消防目录`type=FIRE`参数。唯一真实3200已监听局域网，小程序开发包地址同步并重编译；Runtime94/94与MP27/27通过，手机及实际控制待用户验收。见[本轮交接](../plan/2026-10-08-independent-reads-lan-handoff.md)与[真实业务场景](../plan/2026-10-08-real-business-acceptance.md)。
@@ -47,6 +49,7 @@
 
 | 任务 | 权威入口 |
 |---|---|
+| 新环境/电量历史、独立烟感台账、双 Agent 摄像头直播与回放：业务场景、接线和缺口 | [10-09 接入方案](../plan/2026-10-09-history-interfaces-business-integration.md)（只读准备；六接口可用与产品交付区分；人数分析仍需独立证明） |
 | 从优秀编码智能体反思物联 Agent：检索契约、指代、恢复、提示词与真实验收 | [10-09 设计审查](./research/2026-10-09-iot-agent-design-audit.md)、[正向设计与证明方案](./research/2026-10-09-iot-agent-target-design.md)、[外部源码调查](./research/2026-10-09-coding-agent-reliability-primary-sources.md)与[交接](../plan/2026-10-09-agent-design-audit-handoff.md)（只读研究；原“后者”对等复现成功结论撤回；设计候选未实施/验证） |
 | 从接口区分员工 Agent、公司 Agent 与仪表盘：范围、控制引用、空间和统计口径 | [10-08 真实接口盘点](./research/2026-10-08-interface-source-boundary-audit.md)与[当前任务/页面对齐](../plan/2026-10-08-page-interface-task-alignment.md)（按用户确定的“我的办公室/智慧xx”页面分层；Company 来源偏差属我方接线，权限机制不再列为客户疑问） |
 | 物联助手全部页面、抽屉、浮层与前进/返回/关闭/手势的检查 | [10-07 导航检查](../plan/2026-10-07-page-navigation-audit.md)、[设计对照图](./research/assistant-navigation-review/index.html)与[导航改进交接](../plan/2026-10-07-assistant-navigation-improvement-handoff.md)、[改进后画面](./research/assistant-navigation-review/after/index.html)（29 类入口、25 项检查；导航改进已实施，模拟器夹具走查；真机手势/H5/生产延迟仍待验） |
