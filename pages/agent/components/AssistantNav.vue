@@ -2,7 +2,7 @@
  <view class="assistant-nav" :style="{ paddingTop: top + 'px' }">
   <view class="nav-line" :style="{ height: barHeight + 'px', paddingRight: rightInset + 'px' }">
    <button class="nav-back" :aria-label="'返回' + backLabel" hover-class="nav-pressed" @tap="$emit('back')"><uni-icons type="back" size="21" color="#315846" /></button>
-   <text class="nav-title">{{ title }}</text>
+   <view class="nav-title"><slot name="title"><text class="nav-title-text">{{ title }}</text></slot></view>
    <view class="nav-action"><slot name="action" /></view>
   </view>
   <view v-if="context" class="nav-context"><slot /></view>
@@ -20,7 +20,8 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .nav-line { display:flex; align-items:center; padding-left:8px; box-sizing:border-box; min-height:44px; }
 .nav-back { width:44px; height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin:0; padding:0; background:transparent; border-radius:14px; }
 .nav-back::after { border:0; }.nav-pressed { background:#e7eee8; }
-.nav-title { flex:1; min-width:0; margin-left:4px; font-size:15px; font-weight:600; color:#293f31; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.nav-title { flex:1; min-width:0; margin-left:4px; display:flex; align-items:center; }
+.nav-title-text { flex:1; min-width:0; font-size:15px; font-weight:600; color:#293f31; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .nav-action { flex-shrink:0; display:flex; align-items:center; }
 .nav-context { padding:2px 18px 10px; }
 </style>

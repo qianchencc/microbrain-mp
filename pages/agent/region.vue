@@ -1,13 +1,12 @@
 <template>
  <view class="region-page">
-  <AssistantNav title="区域工作台" :back-label="backLabel" context @back="goBack"><RegionChip workbench nav /></AssistantNav>
+  <AssistantNav :back-label="backLabel" @back="goBack"><template #title><RegionChip workbench nav /></template></AssistantNav>
   <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text>{{ tasks.length }} 条记录</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
   <text v-if="sampleMode" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-body">
    <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample-' : 'real-') + date" calendar :bottom-pad="78" :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :now="displayNow" @date-change="date = $event" @calendar-month="onCalendarMonth" @select="openTask">
     <template #empty>
      <view v-if="loading || error" class="notice"><text>{{ loading ? '正在读取任务记录' : error }}</text><button v-if="error" @tap="load">重新加载</button></view>
-     <view v-else class="empty"><image class="empty-art" :src="emptyArt" mode="aspectFit" /><text class="empty-title">这一天还没有任务记录</text><text>在物联 Agent 中确认设备操作后，</text><text>结果会显示在这里。</text></view>
     </template>
     <template #card="{ item }">
      <view class="task-row" :class="{ cancelled: item.status === 'cancelled' }">
@@ -43,7 +42,6 @@ import { regionTimelineItems } from './region-timeline.mjs'
 import { regionSampleTasks, regionSampleTaskDetail } from './region-sample-tasks.mjs'
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent, previousPageLabel, returnToOfficeConversation } from './navigation.mjs'
-const emptyArt = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 80"><path d="M30 2c-9 12 9 22 0 38s9 26 0 38" fill="none" stroke="#c9d6ce" stroke-width="1.6"/><circle cx="31" cy="40" r="6" fill="#fff"/><circle cx="31" cy="40" r="4" fill="#ad711b"/></svg>')
 const backLabel = ref('办公室 Agent')
 const error = ref(''), loading = ref(true), tasks = ref([]), sampleTasks = ref([]), sampleMode = ref(false)
 const deviceDrawerOpen = ref(false), deviceCount = ref(null)
@@ -205,11 +203,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .sample-toggle::after { border:0; }
 .sample-notice { margin:0 23px 6px; color:#ad711b; font-size:11px; }
 .timeline-body { position:relative; flex:1; min-height:0; margin:0 16px; overflow:hidden; }
-.empty { padding:70px 24px 0; text-align:center; font-size:12px; line-height:1.8; color:#89958e; animation:fadeIn 160ms ease-out backwards; }
 @keyframes fadeIn { from { opacity:0; } }
-.empty-art { display:block; width:60px; height:80px; margin:0 auto 14px; }
-.empty text { display:block; }
-.empty-title { color:#526759; font-size:14px; font-weight:600; margin-bottom:5px; }
 .notice { padding:70px 24px; text-align:center; font-size:13px; color:#89958e; animation:fadeIn 160ms ease-out backwards; }
 .notice button { margin-top:18px; background:transparent; font-size:13px; color:#176b54; }
 .notice button::after { border:0; }
@@ -237,5 +231,5 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .dock-seg--pressed { transform:scale(.96); }
 .primary-plus { font-size:15px; font-weight:500; line-height:1; }
 .device-count { font-size:11px; color:#7b8d80; font-weight:600; }
-@media (prefers-reduced-motion:reduce) { .empty,.notice,.nav-back,.dock-seg { transition:none; animation:none; } }
+@media (prefers-reduced-motion:reduce) { .notice,.nav-back,.dock-seg { transition:none; animation:none; } }
 </style>

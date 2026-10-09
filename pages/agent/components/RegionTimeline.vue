@@ -6,8 +6,8 @@
   <view v-if="calMounted" class="cal-float" :class="{ 'cal-out': !calShown }"><RegionCalendar :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" compact @select="selectDate" @month-change="$emit('calendar-month', $event)" /></view>
  </template>
  <RegionCalendar v-else-if="calendar" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" @select="selectDate" @month-change="$emit('calendar-month', $event)" />
- <view v-if="!items.length" class="timeline-empty"><slot name="empty" /></view>
- <scroll-view v-else class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" scroll-with-animation :scroll-top="scrollTop" :scroll-into-view="focusId">
+ <view class="timeline-stage">
+ <scroll-view class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" scroll-with-animation :scroll-top="scrollTop" :scroll-into-view="focusId">
   <view class="timeline" :style="{ height: scene.height + 'px' }">
    <image class="timeline-art" :src="svgImage" mode="scaleToFill" :style="{ width: width + 'px', height: scene.height + 'px' }" @error="renderError = '时间轴暂未加载，请重新进入'" />
    <text v-for="(label, index) in scene.labels" :key="'label-' + index" class="time-label" :class="label.kind" :style="{ top: label.displayY + 'px' }">{{ label.text }}</text>
@@ -20,6 +20,9 @@
   </view>
   <view v-if="bottomPad" class="timeline-tail" :style="{ height: bottomPad + 'px' }" />
  </scroll-view>
+ <!-- 空态提示盖在时间轴上而不占位替换：无记录时仍看到当天脊柱；层不拦截点按，重试等按钮单独放行 -->
+ <view v-if="!items.length" class="timeline-empty"><slot name="empty" /></view>
+ </view>
  </view>
 </template>
 
@@ -91,8 +94,10 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .cal-scrim { position:absolute; top:0; right:0; bottom:0; left:0; z-index:7; }
 .cal-float { position:absolute; top:42px; left:12px; right:12px; z-index:8; border-radius:14px; background:linear-gradient(#fefffe,#f7f9f7); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),0 12px 30px rgba(28,57,42,.18); overflow:hidden; transition:opacity 190ms cubic-bezier(.23,1,.32,1),transform 190ms cubic-bezier(.23,1,.32,1); }
 .cal-float.cal-out { opacity:0; transform:translateY(-6px) scale(.97); pointer-events:none; }
+.timeline-stage { flex:1; min-height:0; position:relative; display:flex; flex-direction:column; }
 .timeline-scroll { flex:1; min-height:0; }
-.timeline-empty { flex:1; min-height:0; }
+.timeline-empty { position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; }
+.timeline-empty :deep(button) { pointer-events:auto; }
 .timeline { position:relative; }
 .timeline-art { position:absolute; left:0; top:0; pointer-events:none; }
 .time-label { position:absolute; left:0; width:36px; text-align:right; font-size:9px; font-weight:600; color:#aab7ae; transform:translateY(-50%); line-height:1.2; font-variant-numeric:tabular-nums; }
