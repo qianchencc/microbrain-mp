@@ -1,0 +1,541 @@
+{
+  "capturedAt": "2026-10-09T01:48:37.149672+00:00",
+  "runtimeBaseline": "b9c4031",
+  "method": "SQLite mode=ro; completed turns only; minimal field export; no credentials or full model reasoning",
+  "sampling": "Purposive incident sample, not a production success-rate estimate",
+  "sessions": [
+    {
+      "label": "original_failure",
+      "conversationId": "7433d1a7-346e-4fd4-bc73-3756683670c3",
+      "source": "company",
+      "compactionCount": 0,
+      "turns": [
+        {
+          "turnId": "bd589787-73c2-4c94-91a2-8443f91201fb",
+          "startedAt": "2026-10-09T01:30:34.404Z",
+          "user": "26楼办公区楼道的灯，5分钟后帮我开一下",
+          "events": [
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 81 个设备候选",
+              "timestamp": "2026-10-09T01:30:51.662Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 81 个设备候选",
+              "timestamp": "2026-10-09T01:30:59.793Z"
+            },
+            {
+              "type": "message.completed",
+              "content": "在26楼的照明里没有直接匹配“楼道”的设备，相近的有这些，需要您确认一下具体指哪一处：\n\n- 26楼前台01 过道灯带 / 过道射灯\n- 2回路过道格栅灯\n\n请告诉我是哪一组（或其他具体位置），确认后我再安排5分钟后开启的任务。",
+              "timestamp": "2026-10-09T01:31:10.591Z"
+            },
+            {
+              "type": "run.completed",
+              "outcome": "message",
+              "timestamp": "2026-10-09T01:31:10.591Z"
+            }
+          ]
+        },
+        {
+          "turnId": "51bf765c-7544-4f74-acff-e797acea8fd8",
+          "startedAt": "2026-10-09T01:31:18.523Z",
+          "user": "后者",
+          "events": [
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 81 个设备候选",
+              "timestamp": "2026-10-09T01:31:31.554Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 7 个设备候选",
+              "timestamp": "2026-10-09T01:31:45.494Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 3 个设备候选",
+              "timestamp": "2026-10-09T01:31:55.900Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 16 个设备候选",
+              "timestamp": "2026-10-09T01:32:04.640Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 4 个设备候选",
+              "timestamp": "2026-10-09T01:32:11.979Z"
+            },
+            {
+              "type": "message.completed",
+              "content": "本次检索没有继续产生新结果，请补充更具体的位置或设备类型。",
+              "timestamp": "2026-10-09T01:32:16.442Z"
+            },
+            {
+              "type": "run.completed",
+              "outcome": "stopped",
+              "reason": "no_progress",
+              "timestamp": "2026-10-09T01:32:16.443Z"
+            }
+          ]
+        }
+      ],
+      "modelVisibleProjections": [
+        {
+          "sessionSeq": 4,
+          "handle": "s1",
+          "totalMatches": 81,
+          "deviceDetailCount": 10,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 40,
+          "status": null
+        },
+        {
+          "sessionSeq": 6,
+          "handle": null,
+          "totalMatches": 81,
+          "deviceDetailCount": 0,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": null,
+          "locationGroupCount": 0,
+          "status": "duplicate_result"
+        },
+        {
+          "sessionSeq": 11,
+          "handle": "s3",
+          "totalMatches": 81,
+          "deviceDetailCount": 10,
+          "matchedHints": [
+            {
+              "deviceHandle": "d3_19",
+              "matchedNameHints": [
+                "过道格栅灯"
+              ]
+            }
+          ],
+          "missingDetailForMatchedHandles": [
+            "d3_19"
+          ],
+          "groupsComplete": true,
+          "locationGroupCount": 40,
+          "status": null
+        },
+        {
+          "sessionSeq": 13,
+          "handle": "s4",
+          "totalMatches": 7,
+          "deviceDetailCount": 7,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 7,
+          "status": null
+        },
+        {
+          "sessionSeq": 15,
+          "handle": "s5",
+          "totalMatches": 3,
+          "deviceDetailCount": 3,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 3,
+          "status": null
+        },
+        {
+          "sessionSeq": 17,
+          "handle": "s6",
+          "totalMatches": 16,
+          "deviceDetailCount": 16,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 8,
+          "status": null
+        },
+        {
+          "sessionSeq": 19,
+          "handle": "s7",
+          "totalMatches": 4,
+          "deviceDetailCount": 4,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 2,
+          "status": null
+        }
+      ]
+    },
+    {
+      "label": "claimed_success_and_user_correction",
+      "conversationId": "2a166df5-beaa-44ea-96e4-119bba1ac916",
+      "source": "company",
+      "compactionCount": 0,
+      "turns": [
+        {
+          "turnId": "f775d6bd-6bd5-4cd8-a9e6-dacc780ee1fd",
+          "startedAt": "2026-10-09T01:36:16.521Z",
+          "user": "26楼办公区楼道的灯，5分钟后帮我开一下",
+          "events": [
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 81 个设备候选",
+              "timestamp": "2026-10-09T01:36:31.289Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 81 个设备候选",
+              "timestamp": "2026-10-09T01:36:39.374Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 81 个设备候选",
+              "timestamp": "2026-10-09T01:36:50.207Z"
+            },
+            {
+              "type": "message.completed",
+              "content": "26楼没有名称中带“楼道”的照明设备，最接近的是前台附近的过道灯具，我再缩小范围确认一下。请稍等。",
+              "timestamp": "2026-10-09T01:36:57.828Z"
+            },
+            {
+              "type": "run.completed",
+              "outcome": "message",
+              "timestamp": "2026-10-09T01:36:57.829Z"
+            }
+          ]
+        },
+        {
+          "turnId": "b1bfa0f0-1317-4d18-af2f-a903b087d5bc",
+          "startedAt": "2026-10-09T01:36:57.970Z",
+          "user": "后者",
+          "events": [
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 7 个设备候选",
+              "timestamp": "2026-10-09T01:37:16.818Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "propose_task",
+              "status": "completed",
+              "timestamp": "2026-10-09T01:37:31.930Z"
+            },
+            {
+              "type": "message.completed",
+              "content": "26楼没有名为“楼道”的照明，已按前台01的过道灯具生成定时任务：约5分钟后（09:42）打开过道灯带和过道射灯，请在任务卡片中确认，如只想开其中一路可在卡内调整。",
+              "timestamp": "2026-10-09T01:37:39.543Z"
+            },
+            {
+              "type": "run.awaiting_confirmation",
+              "timestamp": "2026-10-09T01:37:39.544Z"
+            }
+          ]
+        },
+        {
+          "turnId": "59fdf9df-5697-470f-af5e-54ca7c72ead6",
+          "startedAt": "2026-10-09T01:43:17.475Z",
+          "user": "26楼过道办公区这里的灯，能get吗",
+          "events": [
+            {
+              "type": "message.completed",
+              "content": "可以找到并控制它们：26楼的过道灯位于前台01，共两路（过道灯带、过道射灯），刚才的定时开灯任务就是针对这两路的。\n\n不过照明设备目前不支持读取实时开关状态，我只能对它们做开关操作，无法查询当前是开着还是关着。",
+              "timestamp": "2026-10-09T01:43:41.177Z"
+            },
+            {
+              "type": "run.completed",
+              "outcome": "message",
+              "timestamp": "2026-10-09T01:43:41.178Z"
+            }
+          ]
+        },
+        {
+          "turnId": "373e4fcf-aad3-481e-a798-a125e8ebad2d",
+          "startedAt": "2026-10-09T01:45:09.623Z",
+          "user": "这并不是办公区的",
+          "events": [
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 81 个设备候选",
+              "timestamp": "2026-10-09T01:45:24.475Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 3 个设备候选",
+              "timestamp": "2026-10-09T01:45:38.632Z"
+            },
+            {
+              "type": "message.completed",
+              "content": "抱歉定位错了。26楼没有名称中带“楼道”的办公区灯具，真实存在的办公区照明如下：\n\n- 未来智城公共办公区：1/2/3回路格栅灯，共3路\n- 农旅公共办公区1：1/2回路泛光灯\n- 农旅公共办公区2：1/2回路泛光灯、3回路窗帘灯带\n\n刚才的定时开灯任务是针对前台01过道灯的，如果不对，请在任务卡片中取消该任务。请告诉我您指的是哪个办公区（或具体哪几路灯），我重新安排5分钟后开灯。",
+              "timestamp": "2026-10-09T01:45:51.982Z"
+            },
+            {
+              "type": "run.completed",
+              "outcome": "message",
+              "timestamp": "2026-10-09T01:45:51.982Z"
+            }
+          ]
+        },
+        {
+          "turnId": "a1b32b16-02cb-47a1-840b-83381f3816d4",
+          "startedAt": "2026-10-09T01:46:12.101Z",
+          "user": "是第一个，50分的时候开启",
+          "events": [
+            {
+              "type": "tool.completed",
+              "tool": "propose_task",
+              "status": "completed",
+              "timestamp": "2026-10-09T01:46:27.641Z"
+            },
+            {
+              "type": "message.completed",
+              "content": "已按您的选择重新生成定时任务：09:50 打开未来智城公共办公区的3路格栅灯，请在任务卡片中确认。",
+              "timestamp": "2026-10-09T01:46:34.774Z"
+            },
+            {
+              "type": "run.awaiting_confirmation",
+              "timestamp": "2026-10-09T01:46:34.776Z"
+            }
+          ]
+        },
+        {
+          "turnId": "7a994053-fe6e-443c-bb3c-dd6dc8af711f",
+          "startedAt": "2026-10-09T01:47:09.112Z",
+          "user": "今天公司整体能耗跟昨天相比如何",
+          "events": [
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "failed",
+              "summary": "本步骤未完成",
+              "timestamp": "2026-10-09T01:47:23.675Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "find_device_candidates",
+              "status": "completed",
+              "summary": "找到 43 个设备候选",
+              "timestamp": "2026-10-09T01:47:30.211Z"
+            },
+            {
+              "type": "tool.completed",
+              "tool": "read_device_states",
+              "status": "completed",
+              "timestamp": "2026-10-09T01:47:54.469Z"
+            },
+            {
+              "type": "message.completed",
+              "content": "做不到这个对比，原因有二：\n\n- 完整历史能耗统计未接入，系统里没有昨天的能耗数据可供比较。\n- 刚查询了26楼和27楼全部43台电表，当前均无可用的最新读数，连当前读数也拿不到。\n\n如果需要，我可以设置一个定时只读巡检任务，定期读取电表读数留存，便于以后比较。",
+              "timestamp": "2026-10-09T01:48:03.087Z"
+            },
+            {
+              "type": "run.completed",
+              "outcome": "message",
+              "timestamp": "2026-10-09T01:48:03.088Z"
+            }
+          ]
+        }
+      ],
+      "modelVisibleProjections": [
+        {
+          "sessionSeq": 4,
+          "handle": "s1",
+          "totalMatches": 81,
+          "deviceDetailCount": 10,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 40,
+          "status": null
+        },
+        {
+          "sessionSeq": 6,
+          "handle": null,
+          "totalMatches": 81,
+          "deviceDetailCount": 0,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": null,
+          "locationGroupCount": 0,
+          "status": "duplicate_result"
+        },
+        {
+          "sessionSeq": 8,
+          "handle": null,
+          "totalMatches": 81,
+          "deviceDetailCount": 0,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": null,
+          "locationGroupCount": 0,
+          "status": "duplicate_result"
+        },
+        {
+          "sessionSeq": 13,
+          "handle": "s4",
+          "totalMatches": 7,
+          "deviceDetailCount": 7,
+          "matchedHints": [
+            {
+              "deviceHandle": "d4_5",
+              "matchedNameHints": [
+                "过道"
+              ]
+            },
+            {
+              "deviceHandle": "d4_7",
+              "matchedNameHints": [
+                "过道"
+              ]
+            }
+          ],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 7,
+          "status": null
+        },
+        {
+          "sessionSeq": 23,
+          "handle": "s5",
+          "totalMatches": 81,
+          "deviceDetailCount": 10,
+          "matchedHints": [
+            {
+              "deviceHandle": "d5_7",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            },
+            {
+              "deviceHandle": "d5_14",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            },
+            {
+              "deviceHandle": "d5_18",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            },
+            {
+              "deviceHandle": "d5_19",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            },
+            {
+              "deviceHandle": "d5_28",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            },
+            {
+              "deviceHandle": "d5_39",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            },
+            {
+              "deviceHandle": "d5_47",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            }
+          ],
+          "missingDetailForMatchedHandles": [
+            "d5_14",
+            "d5_18",
+            "d5_19",
+            "d5_28",
+            "d5_39",
+            "d5_47"
+          ],
+          "groupsComplete": true,
+          "locationGroupCount": 40,
+          "status": null
+        },
+        {
+          "sessionSeq": 25,
+          "handle": "s6",
+          "totalMatches": 3,
+          "deviceDetailCount": 3,
+          "matchedHints": [
+            {
+              "deviceHandle": "d6_1",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            },
+            {
+              "deviceHandle": "d6_2",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            },
+            {
+              "deviceHandle": "d6_3",
+              "matchedNameHints": [
+                "公共办公区"
+              ]
+            }
+          ],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 3,
+          "status": null
+        },
+        {
+          "sessionSeq": 37,
+          "handle": "s7",
+          "totalMatches": 43,
+          "deviceDetailCount": 43,
+          "matchedHints": [],
+          "missingDetailForMatchedHandles": [],
+          "groupsComplete": true,
+          "locationGroupCount": 43,
+          "status": null
+        }
+      ]
+    }
+  ],
+  "specificProjectionCounterexample": {
+    "candidateSet": "s3",
+    "storedDeviceCount": 50,
+    "modelDetailCount": 10,
+    "storedLocationGroupCount": 64,
+    "modelLocationGroupCount": 40,
+    "advertisedGroupsComplete": true,
+    "matchedDeviceHandle": "d3_19",
+    "matchedDeviceName": "照明开关-26楼运营部公共办公区过道-2回路过道格栅灯"
+  }
+}
