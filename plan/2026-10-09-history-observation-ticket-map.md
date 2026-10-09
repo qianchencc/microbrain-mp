@@ -6,6 +6,8 @@
 
 票05已实施原始累计历史与同电表Company问答；真实8条记录、当前窗口保留和新目录权限验证通过，手机待验，见[票05交接](2026-10-09-meter-history-handoff.md)。票03继续推进。
 
+票03已接立即导航、两源观看/重连、SDK释放和后端断连取消；两端真实首帧通过，微信/生产E02待验，见[实时观看交接](2026-10-09-shared-video-live-handoff.md)。票04先验证真实SDK回放。
+
 权威范围：[业务规格](2026-10-09-history-observation-spec.md)。接口实测、旧代码偏差和十个情境：[接入方案](2026-10-09-history-interfaces-business-integration.md)。本地 tracker 为 `.scratch/history-observation-integration/`；规格与票据正文归档 Git，tracker 只记录状态/回传并指向正文，避免因本地目录被忽略而失去实施材料。
 
 ## 九个完整闭环

@@ -11,8 +11,7 @@
       <view class="dot" :class="dotOf(d.online)" />
       <text class="nm">{{ d.name }}</text>
       <text class="loc">{{ d.location }}</text>
-      <button v-if="!readOnly" class="vbtn" :disabled="viewDisabled(d)" hover-class="vbtn--pressed" @tap="view(d)">{{ viewLabel(d) }}</button>
-      <text v-else class="meta meta--wide">仅状态，播放未接入</text>
+      <button class="vbtn" :disabled="viewDisabled(d)" hover-class="vbtn--pressed" @tap="view(d)">{{ viewLabel(d) }}</button>
      </view>
     </template>
     <text v-if="block.type === 'video'" class="meta">状态查询于 {{ observed || '时间未知' }}</text>

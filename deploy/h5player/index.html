@@ -1,10 +1,10 @@
 <!-- 生产版 H5 监控播放页（拟物材质体系）。
-     部署：整文件放置客户域静态路径（如 https://ncim.577119.com/owner/h5player/index.html），
+     部署：index.html 与 player.js 一起放置客户域静态路径（如 https://ncim.577119.com/owner/h5player/），
      并同步 mp/config/index.js 的 videoPlayerUrl 指向该地址。
-     SDK 资产默认 /owner/static/h5player/（客户已托管 h5player.min.js + playctrl*.js），可用 ?sdk= 覆盖。
-     入参（小程序 webView 注入契约）：?url=<wss> 直接开播 ｜ ?deviceId=&api= 页内现取流 ｜
+     SDK 资产固定 /owner/static/h5player/（客户已托管 h5player.min.js + playctrl*.js）。
+     入参（小程序 webView 注入契约）：deviceId/api/source，页内现取流；短时效地址不进导航参数。
      token/tenantCode 由 webView 页自动注入（客户会话凭据），页内取流以 Authorization/Tenantcode 透传 ｜
-     &name=&loc= 展示 ｜ &debug=1 页内日志。
+     name/loc 仅展示；不记录凭据或短期流地址。
      生命周期：pagehide/beforeunload 必须 JS_Stop 释放会话——上游按账号限流，孤儿会话会导致 code:207 全局拒流。 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -141,111 +141,7 @@ body{
 <pre id="devlog"></pre>
 
 <script src="https://res.wx.qq.com/open/js/jweixin-1.3.2.js"></script>
-<script src="/owner/static/h5player/h5player.min.js"></script>
-<script>
-(function(){
-'use strict';
-var Q=new URLSearchParams(location.search);
-var SDK=Q.get('sdk')||'/owner/static/h5player/';
-var DEV=Q.get('debug')==='1';
-var $=function(id){return document.getElementById(id)};
-var log=function(){ if(!DEV)return; var el=$('devlog'); el.classList.add('on');
-  el.textContent+=Array.prototype.map.call(arguments,function(x){
-    try{return typeof x==='object'?JSON.stringify(x):String(x)}catch(e){return'?'} }).join(' ')+'\n';
-  el.scrollTop=el.scrollHeight; };
-['warn','error'].forEach(function(k){var o=console[k].bind(console);console[k]=function(){o.apply(null,arguments);log.apply(null,['['+k+']'].concat([].slice.call(arguments)))}});
+<script src="./player.js"></script>
 
-/* 入参：webView 注入 token/tenantCode（客户会话），mp 侧另带 url/deviceId/api/name/loc */
-var urlParam=Q.get('url'), deviceId=Q.get('deviceId');
-var apiBase=Q.get('api')||'';
-var authToken=Q.get('token')||'', tenantCode=Q.get('tenantCode')||'';
-$('camName').textContent=Q.get('name')||'监控画面';
-var loc=Q.get('loc'); if(loc)$('camSub').textContent=loc+' · 实时预览';
-var authHeader=/^bearer\s/i.test(authToken)?authToken:('bearer '+authToken);
-
-/* 状态机 */
-var state='boot', plugin=null, streamUrl=null, fetchedAt=null, hideTimer=null;
-var STATE_LABEL={fetching:'取流中',connecting:'接入中',playing:'播放中',failed:'不可用'};
-function setState(s,sub){
-  state=s;
-  $('loadingView').classList.toggle('on',s==='fetching'||s==='connecting');
-  $('errorView').classList.toggle('on',s==='failed');
-  $('liveBadge').classList.toggle('on',s==='playing');
-  $('footState').textContent=STATE_LABEL[s]||s;
-  if(sub)$('stateSub').textContent=sub;
-  if(s==='playing'){ $('footTime').textContent=fetchedAt?('流地址 '+fetchedAt.slice(11,19)):''; scheduleHide(); }
-  else showChrome();
-  log('state:',s,sub||'');
-}
-function fail(title,sub){ $('errTitle').textContent=title; $('errSub').textContent=sub||'请稍后重试'; setState('failed'); }
-
-function showChrome(){ $('chromeTop').classList.remove('hidden'); $('chromeBottom').classList.remove('hidden'); }
-function scheduleHide(){ clearTimeout(hideTimer); if(state!=='playing')return;
-  hideTimer=setTimeout(function(){ $('chromeTop').classList.add('hidden'); $('chromeBottom').classList.add('hidden'); },3200); }
-document.querySelector('.stage-wrap').addEventListener('click',function(){
-  var h=$('chromeTop').classList.contains('hidden');
-  if(h){showChrome();scheduleHide()} else if(state==='playing'){scheduleHide()}
-});
-
-/* 取流：url 模式直用（mp 已现取）；deviceId 模式页内现取。
-   上游按账号限流（code:207），重试必须换新短时效地址而非重放旧地址。 */
-function obtainUrl(){
-  if(urlParam)return Promise.resolve(urlParam);
-  if(!deviceId)return Promise.reject({msg:'缺少设备参数'});
-  var api=apiBase||(location.origin+'/micro-api/api/ai');
-  return fetch(api+'/agent/devices/'+encodeURIComponent(deviceId)+'/video-stream',
-      {headers:{Authorization:authHeader,Tenantcode:tenantCode}})
-    .then(function(r){ if(!r.ok)throw{msg:'取流接口 '+r.status,status:r.status}; return r.json() })
-    .then(function(j){ fetchedAt=j.fetchedAt||null; if(!j.url)throw{msg:'取流返回为空'}; urlParam=null; return j.url });
-}
-function teardown(){
-  try{ if(plugin&&plugin.JS_Stop)plugin.JS_Stop(); }catch(e){}
-  plugin=null; $('playWnd').innerHTML='';
-}
-function stageSize(){
-  var w=document.querySelector('.stage-wrap').getBoundingClientRect();
-  var vw=w.width, vh=w.height, ar=16/9;
-  var sh=Math.min(vh, vw/ar), sw=sh*ar;
-  if(sw>vw){sw=vw;sh=sw/ar}
-  return {w:Math.floor(sw),h:Math.floor(sh)};
-}
-function play(){
-  teardown(); clearTimeout(hideTimer);
-  setState('fetching','获取视频流地址');
-  obtainUrl().then(function(u){
-    streamUrl=u; setState('connecting','正在建立播放通道');
-    var s=stageSize(), wnd=$('playWnd');
-    wnd.style.width=s.w+'px'; wnd.style.height=s.h+'px';
-    if(typeof JSPlugin!=='function')throw{msg:'播放器组件未加载'};
-    plugin=new JSPlugin({szId:'playWnd',iWidth:s.w,iHeight:s.h,iMaxSplit:1,iCurrentSplit:1,szBasePath:SDK,
-      oStyle:{borderWidth:0,background:'transparent'},openDebug:DEV});
-    log('JS_Play',u);
-    return Promise.resolve(plugin.JS_Play(u,{playURL:u,mode:0},1));
-  }).then(function(){ if(state==='connecting')setState('playing'); })
-   .catch(function(e){
-     var msg=(e&&(e.msg||e.message))||'';
-     if(state==='failed')return;
-     if(/取流|设备参数|401|403|404|503|fetch/i.test(msg))
-       fail('无法获取视频流',msg.indexOf('过期')>-1?'取流地址已过期，请重试':'请稍后重试');
-     else
-       fail('视频流暂时不可用','连接未建立，请稍后重试'+(urlParam?'（若重试无效，取流地址可能已过期）':''));
-     log('fail',msg,JSON.stringify(e));
-   });
-}
-
-/* 重连优先走 deviceId 现取新地址；url 模式下 urlParam 已被首次成功取流清空。 */
-$('btnRetry').addEventListener('click',function(){ urlParam=null; play(); });
-$('btnRelink').addEventListener('click',function(){ urlParam=null; play(); });
-function goBack(){ try{ if(window.wx&&wx.miniProgram&&wx.miniProgram.navigateBack){wx.miniProgram.navigateBack();return} }catch(e){}
-  if(history.length>1)history.back(); else { showChrome(); $('footState').textContent='请使用微信返回或关闭此页'; } }
-$('btnBack').addEventListener('click',goBack);
-$('btnBack2').addEventListener('click',goBack);
-window.addEventListener('pagehide',teardown);
-window.addEventListener('beforeunload',teardown);
-
-if(!urlParam&&!deviceId){ fail('缺少播放参数','请从设备详情进入播放页'); }
-else play();
-})();
-</script>
 </body>
 </html>

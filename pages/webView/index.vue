@@ -7,6 +7,7 @@
 <script>
 	import { getTokenId, checkToken } from '@/utils/auth'
 	import { useUserStoreHook } from '@/store/modules/user'
+	import { getAgentStorageScope } from '@/utils/agent-session'
 	// import { joinGroup } from '@/apis/group/index.js'
 	import { DOMAIN } from '@/config/settings'
 
@@ -24,12 +25,19 @@
 		data() {
 			return {
 				url: '',
+				assistantVideo: false,
+				videoScope: '',
 				eventChannel: null
 			}
 		},
 		onLoad: async function(option) {
-			if (option.assistantVideo === '1') uni.setNavigationBarTitle({ title: '实时画面' })
+			this.assistantVideo = option.assistantVideo === '1'
+			if (this.assistantVideo) {
+				uni.setNavigationBarTitle({ title: '实时画面' })
+				uni.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
+			}
 			await checkToken()
+			if (this.assistantVideo) this.videoScope = getAgentStorageScope()
 			if (!option.noToken) {
 				option.token = getTokenId()
 				option.tenantCode = useUserStoreHook().getDistrict.id
@@ -37,7 +45,7 @@
 			}
 			// 额外参数, 请encodeURIComponent
 			this.url = option.path + '?' + obj2Query(option)
-			console.log('webView url ------------------->', this.url)
+			if (!this.assistantVideo) console.log('webView url ------------------->', this.url)
 			// #ifdef APP-NVUE
 			this.eventChannel = this.$scope.eventChannel // 兼容APP-NVUE
 			// #endif
@@ -45,9 +53,15 @@
 			this.eventChannel = this.getOpenerEventChannel()
 			// #endif
 		},
+		onShow() {
+			if (this.assistantVideo && this.videoScope && this.videoScope !== getAgentStorageScope()) {
+				this.url = ''
+				uni.showToast({ title: '会话已改变，请重新进入播放页', icon: 'none' })
+			}
+		},
 		methods: {
 			async getMessage(e) {
-				console.log('webView Data ------------------->', e)
+				if (!this.assistantVideo) console.log('webView Data ------------------->', e)
 				const target = e.detail.data[0]
 				if (target.action) {
 					if (target.action === 'scan') {

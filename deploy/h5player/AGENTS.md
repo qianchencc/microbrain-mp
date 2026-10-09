@@ -1,0 +1,8 @@
+# Shared video page
+
+- Ship index.html and player.js together. SDK assets must be same-origin under /owner/static/h5player/ for worker/wasm loading.
+- Navigate before fetching. source/device/session remain explicit on every retry; never share Company and Office catalogs or place WSS in navigation/history/observation cards.
+- Prepare SDK before requesting a short-lived stream. Only firstFrameDisplay means playing. Return waits for JS_Stop; a broken SDK has a bounded return fallback. Hide/unload aborts requests and releases the instance.
+- Do not log credentials, stream URLs or SDK payloads. The existing WebView injects token/tenantCode; immediately remove secrets from H5 browser history. A changed miniapp identity clears the old WebView.
+- Public development proxies must require caller authorization; never fall back to the real development identity for anonymous external traffic.
+- Gate actual controls on SDK evidence. Live and playback differ; a successful WSS response alone is not decoded video. Latest actual acceptance: plan/2026-10-09-shared-video-live-handoff.md.
