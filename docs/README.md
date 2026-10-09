@@ -10,6 +10,8 @@
 
 ## 当前状态
 
+- 2026-10-09 用户已认可优化现有Agent的设备发现与目标表达；规格及三条照明闭环已整理，测试入口与票据粒度待一次合并确认，业务尚未实施。见[优化规格](../plan/2026-10-09-agent-target-improvement-spec.md)、[三票路线](../plan/2026-10-09-agent-target-improvement-tickets.md)与[准备交接](../plan/2026-10-09-agent-target-improvement-preparation-handoff.md)。
+
 - 2026-10-09 Agent自然首轮到报告的隔离真实模型对照完成：现版与候选均完成选择/排除/改时间、夹具确认执行和同一Task追问；候选报告有时区与重操作建议问题，整体优于现版未证明。真实客户/微信未验，未部署，见[回传](../plan/2026-10-09-agent-natural-delegation-return.md)。
 
 - 2026-10-09 历史观察票02已接仪表盘环境趋势和Company同窗口工具/持久化观察卡，修正PM10/PM1.0与模型报告时区。真实查询约1.1秒，实际Company追问峰值11:00/28.2°C；Runtime109/109、MP28/28与构建通过。手机、日期原生触摸、部分遮挡截图的视觉复验待验，见[环境历史交接](../plan/2026-10-09-environment-history-handoff.md)。
