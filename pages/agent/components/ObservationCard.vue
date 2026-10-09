@@ -5,6 +5,7 @@
     <view class="oblock-head"><text>{{ blockLabel(block) }}</text><text class="count">{{ blockCount(block) }}</text></view>
 
     <EnvironmentTrend v-if="block.type === 'environment_history'" :report="block.report" />
+    <MeterHistoryReport v-else-if="block.type === 'energy_history'" :report="block.report" />
     <template v-else-if="block.type === 'video'">
      <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="orow">
       <view class="dot" :class="dotOf(d.online)" />
@@ -72,6 +73,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import EnvironmentTrend from './EnvironmentTrend.vue'
+import MeterHistoryReport from './MeterHistoryReport.vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
@@ -102,9 +104,9 @@ function restOf(block, index) {
  return Math.max(0, total - ROW_LIMIT)
 }
 
-const LABELS = { environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
+const LABELS = { energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
 const blockLabel = block => LABELS[block.type] || '观察'
-const blockCount = block => block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
+const blockCount = block => block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
 const sourceOf = reading => environmentSource(reading)

@@ -21,6 +21,12 @@ export function fmtDateTime(iso) {
  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+export function fmtShanghaiDateTime(iso) {
+ const time = Date.parse(iso || '')
+ if (!Number.isFinite(time)) return ''
+ return new Date(time + 8 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' ')
+}
+
 export function ageHint(iso, nowMs = Date.now()) {
  const time = Date.parse(iso || '')
  if (!Number.isFinite(time)) return ''

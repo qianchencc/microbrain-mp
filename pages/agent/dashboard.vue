@@ -31,8 +31,8 @@
       <text class="sensor-name">{{ energy?.name || (energyLoading ? '正在读取电表读数' : '暂无有效电表读数') }}</text>
       <text class="energy-value">{{ metricValue(energy?.reading?.totalActivePower) }}<text>kW</text></text>
       <text class="fineprint" :class="{ 'demo-note': energyStale(energy?.reading) }">{{ energy?.reading ? '最新已知功率 · ' + (fmtDateTime(energy.reading.readTime) || '上报时间未知') + (energyStale(energy.reading) ? ' · 陈旧/时间未知' : '') : energyLoading ? '其他概览可先查看，电表读数随后补入' : '本次未取得有效读数' }}</text>
-      <button class="meter-link" :disabled="!loadedSections.includes('energy')" @tap="openObservation('energy')">查看 {{ loadedSections.includes('energy') ? counts.energy : '—' }} 个计量点 <uni-icons type="right" size="11" color="#567461" /></button>
      </template>
+     <button class="meter-link" @tap="openObservation('energy')">查看计量点原始历史 <uni-icons type="right" size="11" color="#567461" /></button>
     </view>
     <button class="ledger" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '摘要暂不可用 · 可查看历史' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : alertsLoading ? '正在更新摘要 · 可查看历史' : '按类别和日期查看历史' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>本次记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
     <text class="ledger-note">本次读取的历史台账，不表示当前仍在报警或已经恢复</text>
@@ -53,6 +53,7 @@
    <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" hover-class="event-back--pressed" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
    <SafetyHistoryList v-if="observationType === 'alerts'" class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="observationType === 'alerts' && !selectedEvent" @select="selectedEvent = $event" />
    <EnvironmentHistoryView v-else-if="observationType === 'environment'" class="event-host" :active="observationType === 'environment'" @question="openEnvironmentAgent" />
+   <MeterHistoryView v-else-if="observationType === 'energy'" class="event-host" :active="observationType === 'energy'" @question="openMeterAgent" />
    <scroll-view v-else class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" source="company" read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view>
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="Boolean(observationType)" @reference="referenceEvent" />
   </DeviceSheet>
@@ -74,6 +75,7 @@ import ObservationCard from './components/ObservationCard.vue'
 import SafetyEventDetail from './components/SafetyEventDetail.vue'
 import SafetyHistoryList from './components/SafetyHistoryList.vue'
 import EnvironmentHistoryView from './components/EnvironmentHistoryView.vue'
+import MeterHistoryView from './components/MeterHistoryView.vue'
 
 const selectedEvent = ref(null)
 const tasksOpen = ref(false)
@@ -92,7 +94,7 @@ const clock = computed(() => fmtDateTime(snapshot.value?.observedAt).slice(5))
 const chart = energyChart(repairEnergy.hours)
 const deviceCells = [{ kind: 'environment', label: '环境', icon: 'cloud' }, { kind: 'energy', label: '计量', icon: 'map' }, { kind: 'safety', label: '安全', icon: 'notification' }]
 const environmentCells = [{ key: 'temp', label: '温度', unit: '°C' }, { key: 'humidity', label: '湿度', unit: '%' }, { key: 'pm25', label: 'PM2.5', unit: '' }]
-const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '最新计量读数', alerts: '安全事件台账' })[observationType.value] || '')
+const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '计量点原始历史', alerts: '安全事件台账' })[observationType.value] || '')
 const observation = computed(() => {
  if (!snapshot.value || !observationType.value || (observationType.value === 'alerts' && alertsUnavailable.value)) return null
  const type = observationType.value
@@ -137,7 +139,7 @@ async function load() {
   }
  } finally { if (current === requestId) { loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false } }
 }
-function openObservation(type) { if (type === 'alerts' || type === 'environment' || snapshot.value) observationType.value = type }
+function openObservation(type) { if (['alerts', 'environment', 'energy'].includes(type) || snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
 function resultLabel(status) { return ({ completed: '已完成', partial: '部分完成', failed: '失败', missed: '已错过', cancelled: '已取消', unconfirmed: '结果未确认' })[status] || status }
 function observationBack() { if (selectedEvent.value) selectedEvent.value = null; else observationType.value = '' }
@@ -145,10 +147,11 @@ function referenceEvent(reference) { openAgent('company', reference) }
 function referenceTask(reference) { if (openingAgent.value) return; tasksOpen.value = false; openAgent('company', reference) }
 const openingAgent = ref('')
 function openEnvironmentAgent(window) { openAgent('company', null, window) }
-function openAgent(source, reference, environmentWindow) {
+function openMeterAgent(window) { openAgent('company', null, null, window) }
+function openAgent(source, reference, environmentWindow, energyWindow) {
  if (openingAgent.value) return
  openingAgent.value = source
- uni.navigateTo({ success: () => { if (reference?.type === 'safety_event') selectedEvent.value = null }, url: `/pages/agent/index?source=${source}&from=dashboard${reference ? (reference.type === 'safety_event' ? '&safetyReference=' : '&taskReference=') + encodeURIComponent(JSON.stringify(reference)) : ''}${environmentWindow ? '&environmentWindow=' + encodeURIComponent(JSON.stringify(environmentWindow)) : ''}`, fail: () => { openingAgent.value = ''; if (reference && reference.type !== 'safety_event') tasksOpen.value = true; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
+ uni.navigateTo({ success: () => { if (reference?.type === 'safety_event') selectedEvent.value = null }, url: `/pages/agent/index?source=${source}&from=dashboard${reference ? (reference.type === 'safety_event' ? '&safetyReference=' : '&taskReference=') + encodeURIComponent(JSON.stringify(reference)) : ''}${environmentWindow ? '&environmentWindow=' + encodeURIComponent(JSON.stringify(environmentWindow)) : ''}${energyWindow ? '&energyWindow=' + encodeURIComponent(JSON.stringify(energyWindow)) : ''}`, fail: () => { openingAgent.value = ''; if (reference && reference.type !== 'safety_event') tasksOpen.value = true; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
 }
 function back() { backToParent('/pages/index/index') }
 onShow(() => {

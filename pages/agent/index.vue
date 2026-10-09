@@ -111,7 +111,7 @@ const input = ref('')
 const composerReference = ref(null)
 const editingTurn = ref(null)
 let composerStash = ''
-let incomingReference, incomingEnvironmentPrompt, composerHydrated = false
+let incomingReference, incomingHistoryPrompt, composerHydrated = false
 watch(composerReference, value => { if (draftScope.value) preserveComposerReference(draftScope.value, agentSource.value, value) }, { flush: 'sync' })
 watch(input, value => {
  if (draftScope.value && !editingTurn.value) preserveComposerDraft(draftScope.value, agentSource.value, value)
@@ -242,10 +242,10 @@ async function restore() {
    const savedReference = takeComposerReference(scope, agentSource.value)
    if (savedReference !== undefined) composerReference.value = savedReference
    if (incomingReference) { composerReference.value = incomingReference; incomingReference = null }
-   if (incomingEnvironmentPrompt) {
-    const prompt = incomingEnvironmentPrompt; incomingEnvironmentPrompt = ''
+   if (incomingHistoryPrompt) {
+    const prompt = incomingHistoryPrompt; incomingHistoryPrompt = ''
     if (!input.value.trim() && !editingTurn.value) input.value = prompt
-    else uni.showModal({ title: '已有未发送内容', content: '是否改用所选期间的环境趋势问题？取消会保留原草稿。', confirmText: '使用此问题', cancelText: '保留草稿', success: result => { if (result.confirm && !disposed && scope === getAgentStorageScope()) { cancelEdit(); input.value = prompt } } })
+    else uni.showModal({ title: '已有未发送内容', content: '是否改用所选历史查询问题？取消会保留原草稿。', confirmText: '使用此问题', cancelText: '保留草稿', success: result => { if (result.confirm && !disposed && scope === getAgentStorageScope()) { cancelEdit(); input.value = prompt } } })
    }
    composerHydrated = true
   }
@@ -622,8 +622,15 @@ onLoad(options => {
   try {
    const window = JSON.parse(decodeURIComponent(options.environmentWindow))
    if (typeof window.from !== 'string' || typeof window.to !== 'string' || window.from.length > 40 || window.to.length > 40 || !Number.isFinite(Date.parse(window.from)) || !Number.isFinite(Date.parse(window.to))) throw new Error('invalid')
-   incomingEnvironmentPrompt = `请查询并解释站点环境历史，期间 ${window.from} 至 ${window.to}。哪些指标变化明显？`
+   incomingHistoryPrompt = `请查询并解释站点环境历史，期间 ${window.from} 至 ${window.to}。哪些指标变化明显？`
   } catch { uni.showToast({ title: '环境期间无效', icon: 'none' }) }
+ }
+ if (options?.energyWindow && isCompany.value) {
+  try {
+   const window = JSON.parse(decodeURIComponent(options.energyWindow))
+   if (typeof window.from !== 'string' || typeof window.to !== 'string' || window.from.length > 40 || window.to.length > 40 || !Number.isFinite(Date.parse(window.from)) || !Number.isFinite(Date.parse(window.to)) || typeof window.meter?.name !== 'string' || window.meter.name.length > 60 || typeof window.meter.id !== 'string' || window.meter.id.length > 60) throw new Error('invalid')
+   incomingHistoryPrompt = `查询电表“${window.meter.name.slice(0, 30)}”（${window.meter.id}）：${window.from}至${window.to}，仅原始累计示数。`
+  } catch { uni.showToast({ title: '计量点期间无效', icon: 'none' }) }
  }
  uni.setNavigationBarTitle({ title: isCompany.value ? '公司 Agent' : '办公室 Agent' })
  if (options?.alertPrompt !== undefined) {

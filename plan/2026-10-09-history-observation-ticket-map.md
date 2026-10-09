@@ -4,6 +4,8 @@
 
 票02已实施真实环境历史、PM修正与同窗口 Company 追问；手机/日期触摸/视觉复验待验，见[票02交接](2026-10-09-environment-history-handoff.md)。
 
+票05已实施原始累计历史与同电表Company问答；真实8条记录、当前窗口保留和新目录权限验证通过，手机待验，见[票05交接](2026-10-09-meter-history-handoff.md)。票03继续推进。
+
 权威范围：[业务规格](2026-10-09-history-observation-spec.md)。接口实测、旧代码偏差和十个情境：[接入方案](2026-10-09-history-interfaces-business-integration.md)。本地 tracker 为 `.scratch/history-observation-integration/`；规格与票据正文归档 Git，tracker 只记录状态/回传并指向正文，避免因本地目录被忽略而失去实施材料。
 
 ## 九个完整闭环
