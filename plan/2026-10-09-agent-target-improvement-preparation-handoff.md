@@ -1,10 +1,10 @@
 # Agent 目标优化：规格准备交接
 
-日期：2026-10-09。当前阶段：ask-matt → to-spec / to-tickets准备。用户认可优化现有方案，三票粒度与测试入口待一次合并确认。生产业务尚未修改。
+日期：2026-10-09。该文为准备阶段快照。用户随后认可三票粒度与HTTP入口；01已完成源码闭环，最新状态见[票01回传](2026-10-09-agent-target-01-return.md)。
 
 ## 下一步
 
-阅读[规格](2026-10-09-agent-target-improvement-spec.md)和[三票拆分](2026-10-09-agent-target-improvement-tickets.md)。确认后向mp的本地tracker发布三个独立票据，按阻塞顺序从01开始；不能从旧位置分组spec的ready标签开始重建全部工具。
+阅读[规格](2026-10-09-agent-target-improvement-spec.md)和[三票拆分](2026-10-09-agent-target-improvement-tickets.md)。三票已发布到mp的本地tracker，01已完成、02/03按阻塞顺序继续；不能从旧位置分组spec的ready标签开始重建全部工具。
 
 首票在最新Runtime主线的隔离分支实施，先通过现有公开HTTP复现页外目标的委托失败，再补必要取证能力，贯穿确认、夹具到期执行与同一报告追问。旧候选分支仅供参考，不能覆盖最新录像和安全事件功能。
 

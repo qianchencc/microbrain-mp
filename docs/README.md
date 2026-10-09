@@ -10,7 +10,7 @@
 
 ## 当前状态
 
-- 2026-10-09 用户已认可优化现有Agent的设备发现与目标表达；规格及三条照明闭环已整理，测试入口与票据粒度待一次合并确认，业务尚未实施。见[优化规格](../plan/2026-10-09-agent-target-improvement-spec.md)、[三票路线](../plan/2026-10-09-agent-target-improvement-tickets.md)与[准备交接](../plan/2026-10-09-agent-target-improvement-preparation-handoff.md)。
+- 2026-10-09 用户已认可优化现有Agent的设备发现与目标表达；规格与三票已确认发布；票01页外照明委托源码闭环已合入Runtime主线，123项回归、双来源HTTP通过；最后指代提示修正后类型/构建与Company正反真实模型再验通过。02/03未实施，3200活动构建与微信/真机未验。见[票01回传](../plan/2026-10-09-agent-target-01-return.md)。见[优化规格](../plan/2026-10-09-agent-target-improvement-spec.md)、[三票路线](../plan/2026-10-09-agent-target-improvement-tickets.md)与[准备交接](../plan/2026-10-09-agent-target-improvement-preparation-handoff.md)。
 
 - 2026-10-09 Agent自然首轮到报告的隔离真实模型对照完成：现版与候选均完成选择/排除/改时间、夹具确认执行和同一Task追问；候选报告有时区与重操作建议问题，整体优于现版未证明。真实客户/微信未验，未部署，见[回传](../plan/2026-10-09-agent-natural-delegation-return.md)。
 
