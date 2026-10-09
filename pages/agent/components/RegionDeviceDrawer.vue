@@ -26,8 +26,11 @@
      <view v-else-if="!devices.length" class="empty">这个区域还没有接入设备</view>
      <view v-else-if="!groups.length" class="empty">没有匹配的设备</view>
      <view v-for="group in groups" :key="group.label" class="group">
-      <text class="group-title">{{ group.label }} · {{ group.items.length }}</text>
-      <view class="device-grid">
+      <button class="group-head" :aria-expanded="!isCollapsed(group)" :aria-label="`${group.label} ${group.items.length} 台`" hover-class="group-head--pressed" @tap="toggleGroup(group)">
+       <text class="group-title">{{ group.label }} · {{ group.items.length }}</text>
+       <uni-icons :type="isCollapsed(group) ? 'right' : 'down'" size="11" color="#5f6e66" />
+      </button>
+      <view v-if="!isCollapsed(group)" class="device-grid">
        <view v-for="device in group.items" :key="device.id" class="device-card" role="button" hover-class="device-card--pressed" @tap="openDevice(device.id)">
         <view class="device-art"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><view v-else-if="device.artVariant === 'video'" class="art-cam"><view class="art-cam__lens" /></view><view v-else-if="device.artVariant === 'observe'" class="art-sensor" /><uni-icons v-else type="gear" size="28" color="#8b9a91" /><view class="state-lamp" :class="device.status" /></view>
         <view class="device-copy">
@@ -79,6 +82,14 @@ const sheetTitle = computed(() => activeTask.value ? '任务' : activeDevice.val
 const devicePane = computed(() => activeDevice.value || deviceClosing.value)
 const taskPane = computed(() => activeTask.value || taskClosing.value)
 const groups = computed(() => regionDeviceGroups(devices.value, readings.value, groupBy.value, query.value))
+// 分组按 分组方式:标签 记忆折叠态，切换分组方式互不影响；抽屉关闭时复位。
+const collapsedGroups = ref([])
+const groupKey = group => `${groupBy.value}:${group.label}`
+function toggleGroup(group) {
+ const key = groupKey(group)
+ collapsedGroups.value = collapsedGroups.value.includes(key) ? collapsedGroups.value.filter(value => value !== key) : [...collapsedGroups.value, key]
+}
+const isCollapsed = group => collapsedGroups.value.includes(groupKey(group))
 const activeDevice = computed(() => activeDeviceId.value
  ? regionDeviceGroups(devices.value, readings.value, 'kind', '')
   .flatMap(group => group.items).find(device => device.id === activeDeviceId.value) || null : null)
@@ -162,7 +173,7 @@ watch(() => props.regionId, () => {
 }, { immediate: true })
 watch(() => props.open, value => {
  if (value) { resetStack(); if (!loading.value) loadDirectory() }
- else { stateRefresh.cancel(); ++stateRequest; stateLoading.value = false; closeSearch(); groupBy.value = 'kind'; resetStack() }
+ else { stateRefresh.cancel(); ++stateRequest; stateLoading.value = false; closeSearch(); groupBy.value = 'kind'; collapsedGroups.value = []; resetStack() }
 })
 watch(() => props.refreshSignal, () => { if (props.open) stateRefresh.after(1000) })
 onBeforeUnmount(() => { stateRefresh.cancel(); ++directoryRequest; ++stateRequest; clearTimeout(focusTimer); clearPaneTimer('device'); clearPaneTimer('task') })
@@ -208,7 +219,9 @@ button::after { border:0; }
 .empty text { display:block; }
 .empty button { margin:14px auto 0; color:#176b54; font-size:12px; }
 .group { margin-top:14px; }
-.group-title { display:block; margin:0 2px 8px; font-size:11px; font-weight:600; color:#5f6e66; }
+.group-head { width:100%; margin:0 0 8px; padding:4px 2px; display:flex; align-items:center; gap:6px; text-align:left; border-radius:8px; }
+.group-head--pressed { background:#eef2ef; }
+.group-title { font-size:11px; font-weight:600; color:#5f6e66; }
 .device-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .device-card { min-width:0; background:#f8faf7; border:1px solid #dae3dc; border-radius:8px; overflow:hidden; transition:transform 130ms cubic-bezier(.23,1,.32,1); animation:cardIn 200ms cubic-bezier(.23,1,.32,1) backwards; }
 .device-card--pressed { transform:scale(.97); }

@@ -8,14 +8,18 @@
   <view class="task-phases">
   <view v-for="(phase, index) in task.phases" :key="phase.at" class="task-phase">
     <view class="phase-time"><view class="phase-node" :class="{ ending: !task.interval && index === 1 }" /><text>{{ phaseTitle(index) }} · {{ taskTime(phase.at) }}</text></view>
-    <view v-for="action in phase.actions" :key="action.deviceId" class="task-device">
+    <view v-for="action in actionsOf(phase, index)" :key="action.deviceId" class="task-device">
      <view class="device-cell"><image v-if="artworkOf(action)" class="device-art" :src="artworkOf(action)" mode="aspectFit" /><text class="device-name">{{ action.deviceName }}</text></view><text class="device-target">{{ targetText(action.kind, action.command) }}</text>
     </view>
     <text v-if="source === 'company' && phase.read?.alertDays" class="read-window">安全台账 · 近 {{ phase.read.alertDays }} 天</text>
-    <view v-for="device in source === 'company' ? phase.read?.devices || [] : []" :key="device.id" class="task-device read-device">
+    <view v-for="device in readDevicesOf(phase, index)" :key="device.id" class="task-device read-device">
      <view class="device-cell"><image class="device-art" :src="artworkOf(device)" mode="aspectFit" /><text class="device-name">{{ device.name }}</text></view><text class="device-target">{{ readTargetText(device.kind) }}</text>
      <text v-if="device.location" class="device-location">{{ device.location }}</text>
     </view>
+    <button v-if="phaseRest(phase, index) || isExpanded(index)" class="phase-more" hover-class="phase-more--pressed" :aria-expanded="isExpanded(index)" @tap="togglePhase(index)">
+     <text>{{ isExpanded(index) ? '收起' : `还有 ${phaseRest(phase, index)} 项 · 展开` }}</text>
+     <uni-icons type="down" size="11" color="#176b54" :class="{ 'caret-up': isExpanded(index) }" />
+    </button>
    </view>
   </view>
   <text v-if="isCancellation" class="task-note">已执行的设备动作不会回滚</text>
@@ -31,9 +35,29 @@
  </view>
 </template>
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { readTargetText, repeatText, taskTime, targetText } from '../task-detail-view.mjs'
 import { resolveDeviceArtwork } from '../device-art/catalog.js'
+
+// 单 phase 动作与待读设备共用 4 行预算；公司级任务的长清单默认收成尾巴可展开。
+const ROW_LIMIT = 4
+const expandedPhases = ref([])
+const isExpanded = index => expandedPhases.value.includes(index)
+function togglePhase(index) {
+ expandedPhases.value = isExpanded(index) ? expandedPhases.value.filter(value => value !== index) : [...expandedPhases.value, index]
+}
+function actionsOf(phase, index) {
+ return (phase.actions || []).slice(0, isExpanded(index) ? Infinity : ROW_LIMIT)
+}
+function readDevicesOf(phase, index) {
+ const budget = isExpanded(index) ? Infinity : ROW_LIMIT - Math.min((phase.actions || []).length, ROW_LIMIT)
+ return (props.source === 'company' ? phase.read?.devices || [] : []).slice(0, Math.max(0, budget))
+}
+function phaseRest(phase, index) {
+ if (isExpanded(index)) return 0
+ const total = (phase.actions || []).length + (props.source === 'company' ? phase.read?.devices?.length || 0 : 0)
+ return Math.max(0, total - ROW_LIMIT)
+}
 
 const props = defineProps({ task: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean })
 defineEmits(['confirm', 'discard', 'open'])
@@ -86,6 +110,9 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .device-target { flex-shrink:0; max-width:100%; color:#5c7865; }
 .read-window { display:block; margin:2px 0 3px 16px; color:#917044; font-size:10px; }
 .device-location { width:100%; margin-left:16px; color:#8b9991; font-size:10px; }
+.phase-more { width:100%; min-height:34px; margin-top:5px; display:flex; align-items:center; justify-content:center; gap:5px; color:#176b54; font-size:11px; font-weight:600; border-radius:0; }
+.phase-more--pressed { background:#eef3ef; }
+.caret-up { transform:rotate(180deg); }
 .task-note { display:block; padding:0 3px 10px; color:#8b796c; font-size:11px; }
 .task-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:13px 3px 3px; border-top:.5px solid #dbe3dd; }
 .task-actions button { display:flex; align-items:center; justify-content:center; min-width:0; min-height:44px; margin:0; padding:0 12px; border-radius:10px; font-size:12px; line-height:44px; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 160ms ease,box-shadow 160ms ease,opacity 160ms ease; }

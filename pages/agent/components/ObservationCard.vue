@@ -5,7 +5,7 @@
     <view class="oblock-head"><text>{{ blockLabel(block) }}</text><text class="count">{{ blockCount(block) }}</text></view>
 
     <template v-if="block.type === 'video'">
-     <view v-for="d in block.devices" :key="d.deviceId" class="orow">
+     <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="orow">
       <view class="dot" :class="dotOf(d.online)" />
       <text class="nm">{{ d.name }}</text>
       <text class="loc">{{ d.location }}</text>
@@ -16,7 +16,7 @@
     <text v-if="block.type === 'video'" class="meta">状态查询于 {{ observed || '时间未知' }}</text>
 
     <template v-else-if="block.type === 'environment'">
-     <view v-for="d in block.devices" :key="d.deviceId" class="erow">
+     <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="erow">
       <view class="erow-head">
        <view class="dot" :class="d.reading ? 'on' : 'warn'" />
        <text class="nm">{{ d.name }}</text>
@@ -31,7 +31,7 @@
     </template>
 
     <template v-else-if="block.type === 'energy'">
-     <view v-for="d in block.devices" :key="d.deviceId" class="erow">
+     <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="erow">
       <view class="erow-head">
        <view class="dot" :class="staleOf(d.reading) ? 'warn' : 'on'" />
        <text class="nm">{{ d.name }}</text>
@@ -43,7 +43,7 @@
     </template>
 
     <template v-else-if="block.type === 'safety'">
-     <view v-for="d in block.devices" :key="d.deviceId" class="orow">
+     <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="orow">
       <view class="dot warn" />
       <text class="nm">{{ d.name }}</text>
       <text class="loc">{{ d.location }}</text>
@@ -52,12 +52,16 @@
     </template>
 
     <template v-else-if="block.type === 'alerts'">
-     <button v-for="(a, i) in block.records || []" :key="a.ledger && a.eventId ? a.ledger + ':' + a.eventId : i" class="arow" :disabled="source !== 'company'" hover-class="arow--pressed" @tap="$emit('select-alert', { record: a, observedAt: observation.observedAt })">
+     <button v-for="(a, i) in recordsOf(block, index)" :key="a.ledger && a.eventId ? a.ledger + ':' + a.eventId : i" class="arow" :disabled="source !== 'company'" hover-class="arow--pressed" @tap="$emit('select-alert', { record: a, observedAt: observation.observedAt })">
       <view class="alert-copy"><text class="anm">{{ a.deviceName }}<text v-if="a.location && a.location !== a.deviceName"> · {{ a.location }}</text></text><text class="at">{{ fmtDateTime(a.occurredAt) || '记录时间未知' }}</text></view>
       <text class="tag" :class="{ un: a.report === false, unknown: a.report == null }">{{ a.report === true ? '已上报' : a.report === false ? '未上报' : '标记未知' }}</text><uni-icons v-if="source === 'company'" type="right" size="12" color="#95a296" />
      </button>
      <text class="meta">{{ alertsMeta(block) }}</text>
     </template>
+    <button v-if="restOf(block, index) || isExpanded(index)" class="omore" hover-class="omore--pressed" :aria-expanded="isExpanded(index)" @tap="toggleBlock(index)">
+     <text>{{ isExpanded(index) ? '收起列表' : `还有 ${restOf(block, index)} ${block.type === 'alerts' ? '条' : '台'} · 展开` }}</text>
+     <uni-icons type="down" size="11" color="#5f7a6b" :class="{ 'caret-up': isExpanded(index) }" />
+    </button>
    </view>
   </view>
  </view>
@@ -73,6 +77,27 @@ defineEmits(['select-alert'])
 const fetchingId = ref('')
 const playerReady = videoPlayerReady()
 const observed = computed(() => fmtDateTime(props.observation.observedAt))
+
+// 大目录块默认只露出前 6 行，块尾提供展开/收起；告警台账以“条”计。
+const ROW_LIMIT = 6
+const expandedBlocks = ref([])
+const isExpanded = index => expandedBlocks.value.includes(index)
+function toggleBlock(index) {
+ expandedBlocks.value = isExpanded(index) ? expandedBlocks.value.filter(value => value !== index) : [...expandedBlocks.value, index]
+}
+function devicesOf(block, index) {
+ const items = block.devices || []
+ return isExpanded(index) ? items : items.slice(0, ROW_LIMIT)
+}
+function recordsOf(block, index) {
+ const items = block.records || []
+ return isExpanded(index) ? items : items.slice(0, ROW_LIMIT)
+}
+function restOf(block, index) {
+ if (isExpanded(index)) return 0
+ const total = block.type === 'alerts' ? (block.records || []).length : (block.devices || []).length
+ return Math.max(0, total - ROW_LIMIT)
+}
 
 const LABELS = { video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
 const blockLabel = block => LABELS[block.type] || '观察'
@@ -141,8 +166,12 @@ button::after { border:0; }
 .arow { display:flex; align-items:center; gap:9px; width:100%; min-height:52px; padding:8px 0; box-sizing:border-box; text-align:left; border-bottom:1px solid #e5ece3; border-radius:0; color:inherit; }.arow:last-of-type { border-bottom:0; }.arow--pressed { background:#eaf1e7; }.alert-copy { flex:1; min-width:0; }.alert-copy .anm { display:block; max-width:100%; font-size:12px; }.alert-copy .at { display:block; margin-top:3px; }
 .at { flex-shrink:0; color:#6d7e73; font-size:10px; font-variant-numeric:tabular-nums; }
 .anm { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#2c4435; font-size:11px; font-weight:600; }
+.omore { width:100%; min-height:34px; margin-top:7px; display:flex; align-items:center; justify-content:center; gap:5px; color:#3c6b58; font-size:11px; font-weight:600; border-radius:0; }
+.omore--pressed { background:#eef4ef; }
+.omore uni-icons { transition:transform 160ms ease; }
+.caret-up { transform:rotate(180deg); }
 .tag { flex-shrink:0; padding:2px 7px; border-radius:8px; background:#e4f2ea; color:#1d6b4e; font-size:9px; font-weight:600; }
 .tag.unknown { background:#edf0eb; color:#829087; }
 .tag.un { background:#f1ead7; color:#8a6a24; }
-@media(prefers-reduced-motion:reduce) { .vbtn { transition:none; } }
+@media(prefers-reduced-motion:reduce) { .vbtn,.omore uni-icons { transition:none; } }
 </style>
