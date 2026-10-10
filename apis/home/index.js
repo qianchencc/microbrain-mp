@@ -12,6 +12,9 @@ export const fetchNewsPage = (data) => request.globalRequest('/api/publish/newsU
 // 新闻详情
 export const fetchNewsById = (id) => request.globalRequest(`/api/publish/history/${id}`, 'GET')
 
+// 确认收到（发布确认记录）
+export const confirmPublishRecord = (data) => request.globalRequest('/api/publish/publishConfirmRecord/', 'POST', data)
+
 // 消息提醒
 export const fetchRemindPage = (type, data) => request.globalRequest(`/api/${type}/remind/setting/page`, 'GET', data)
 

@@ -266,7 +266,7 @@
 				width: 50rpx;
 				height: 50rpx;
 				flex-shrink: 0;
-				margin-right: 5rpx;
+				margin-right: 15rpx;
 			}
 			$height: 50rpx;
 			.notice-list {

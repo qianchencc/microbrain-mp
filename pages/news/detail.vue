@@ -35,7 +35,7 @@
 </template>
 
 <script>
-	import { fetchNewsById } from '@/apis/home'
+	import { fetchNewsById, confirmPublishRecord } from '@/apis/home'
 	import { DOMAIN } from '@/config/settings'
 	import {getUrl} from "@/utils/tools";
 	export default {
@@ -47,6 +47,7 @@
 			}
 		},
 		onLoad(e) {
+			this.historyId = e.id
 			this.gainNewsInfoDetail(e.id)
 		},
 		computed: {
@@ -68,11 +69,16 @@
 				const res = await fetchNewsById(id)
 				if (!res) return
 				this.detail = res.content
+				this.confirmed = res.content.status === 1
 			},
 
-			// 确认收到：确认后变淡不可点击
-			confirmReceive() {
-				if (this.confirmed) return
+			// 确认收到：调用确认接口，成功后变淡不可点击
+			async confirmReceive() {
+				if (this.confirmed || this.confirming) return
+				this.confirming = true
+				const res = await confirmPublishRecord({ historyId: this.historyId })
+				this.confirming = false
+				if (!res) return
 				this.confirmed = true
 				uni.showToast({ title: '已确认收到', icon: 'none' })
 			}
@@ -89,6 +95,9 @@
 			width: 100%;
 			// height: 2000upx;
 			padding: 25upx;
+			/* 底部留出固定操作栏的高度（栏高约 104upx + 安全区），防止内容被遮挡 */
+			padding-bottom: calc(140upx + constant(safe-area-inset-bottom));
+			padding-bottom: calc(140upx + env(safe-area-inset-bottom));
 			border-radius: 15upx;
 			background-color: #fff;
 			box-sizing: border-box;
@@ -158,9 +167,20 @@
 			}
 
 			.footer-handle {
+				position: fixed;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				z-index: 10;
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
+				box-sizing: border-box;
+				padding: 0 25upx;
+				padding-bottom: constant(safe-area-inset-bottom);
+				padding-bottom: env(safe-area-inset-bottom);
+				background-color: #fff;
+				box-shadow: 0 -2upx 12upx rgba(0, 0, 0, 0.06);
 
 				.footer-handle-item {
 					all: unset;

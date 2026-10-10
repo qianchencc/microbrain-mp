@@ -60,7 +60,6 @@ export default {
 			chatToAiProject(data.data).then(res => {
 				this.loading = false
 				if (res) {
-					// todo 修改后,返回的就是查询的条件,传入后查询项目
 					let queryData = res.content || {}
 					this.chatList.push({type: 'PROJECT', data: queryData})
 					this.toBottom()

@@ -28,22 +28,6 @@
 import {goPage} from "@/utils/tools";
 import {fetchProjectPage} from "@/apis/common";
 
-// todo 分页接口未就绪，先mock；联调时删除此方法，getList里改用 fetchProjectPage
-const mockFetchProjectPage = ({page = 1, size = 6} = {}) => {
-	const total = 14
-	const all = Array.from({length: total}, (_, i) => ({
-		projectName: `示例项目${i + 1}`,
-		projectNo: `PRJ${String(i + 1).padStart(4, '0')}`
-	}))
-	const start = (page - 1) * size
-	return Promise.resolve({
-		content: {
-			content: all.slice(start, start + size),
-			totalElements: total
-		}
-	})
-}
-
 export default {
 	name: "ProjectCon",
 	props: {
@@ -73,8 +57,7 @@ export default {
 		// 项目分页查询，query为外部传入的固定查询条件
 		async getList() {
 			const params = { ...this.query, page: this.page, size: this.pageSize }
-			// todo 联调时换成 fetchProjectPage(params)
-			const res = await mockFetchProjectPage(params)
+			const res = await fetchProjectPage(params)
 			const content = res?.content
 			this.list = content?.content || []
 			this.total = content?.totalElements || 0
@@ -93,6 +76,7 @@ export default {
 	}
 }
 </script>
+
 
 <style scoped lang="scss">
 .project-con {
