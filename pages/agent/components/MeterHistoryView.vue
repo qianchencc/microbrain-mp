@@ -7,7 +7,7 @@
    <view v-if="error" class="error"><text>{{ error }}</text><button @tap="load(report ? failedPage : 0)">重试</button></view>
    <button v-if="report?.latestReadTime && !report.samples.length" class="more" hover-class="pressed" @tap="showLatestDay">查看最近采样日 {{ fmtDateTime(report.latestReadTime).slice(0, 10) }}</button>
    <button v-if="report?.nextPage != null" class="more" :disabled="loading" @tap="load(report.nextPage)">{{ loading ? '正在读取…' : '查看更多采样' }}</button>
-   <button v-if="report" class="question" hover-class="pressed" @tap="$emit('question', { ...report.window, meter: report.meter })"><uni-icons type="chatbubble" size="16" color="#fff" /> 向公司 Agent 询问此计量点</button>
+   <button v-if="report && showQuestion" class="question" hover-class="pressed" @tap="$emit('question', { ...report.window, meter: report.meter })"><uni-icons type="chatbubble" size="16" color="#fff" /> 向公司 Agent 询问此计量点</button>
   </scroll-view>
  </view>
 </template>
@@ -18,7 +18,7 @@ import { getEnergyHistory } from '@/apis/agent'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { fmtShanghaiDateTime as fmtDateTime } from '../observation-view.mjs'
 import MeterHistoryReport from './MeterHistoryReport.vue'
-const props = defineProps({ active: Boolean, initialQuery: Object })
+const props = defineProps({ active: Boolean, initialQuery: Object, showQuestion: { type: Boolean, default: true } })
 defineEmits(['question'])
 const today = fmtDateTime(new Date().toISOString()).slice(0, 10)
 const meters = ref([]), meterId = ref(props.initialQuery?.equipmentId || ''), fromDate = ref(props.initialQuery?.from?.slice(0, 10) || today), toDate = ref(props.initialQuery?.to?.slice(0, 10) || today), report = ref(null), loading = ref(false), error = ref(''), failedPage = ref(0)

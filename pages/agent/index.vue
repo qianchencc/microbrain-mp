@@ -18,7 +18,7 @@
      <view v-if="turn.reference" class="turn-reference"><text>{{ referenceTitle(turn.reference) }} · {{ turn.reference.label || turn.reference.content || '原记录' }}</text></view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
      <AgentReplySurface :turn="turn" :busy="busy" :source="agentSource" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'"
-      @energy-reference="referenceEnergyReport" @retry-energy-explanation="retryEnergyReport" @select-alert="openSafetyEvent" @browse-alerts="openSafetyHistory" @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
+      @retry-energy-explanation="retryEnergyReport" @select-alert="openSafetyEvent" @browse-alerts="openSafetyHistory" @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
       @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)"
@@ -85,7 +85,6 @@ const selectedEvent = ref(null), eventOpen = ref(false), eventMounted = ref(fals
 function openSafetyEvent(snapshot) { if (!isCompany.value) return; selectedEvent.value = snapshot; eventMounted.value = true; eventOpen.value = true }
 function openSafetyHistory() { if (!isCompany.value) return; selectedEvent.value = null; eventMounted.value = true; eventOpen.value = true }
 function eventBack() { if (!selectedEvent.value) return false; selectedEvent.value = null; return true }
-function referenceEnergyReport(reference) { if (busy.value || editingTurn.value) return; composerReference.value = { ...reference }; composer.value?.focus?.() }
 async function retryEnergyReport(reference) {
  if (busy.value || editingTurn.value) return
  const previous = composerReference.value

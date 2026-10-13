@@ -4,7 +4,7 @@
    <view class="oblock">
     <view class="oblock-head"><text>{{ blockLabel(block) }}</text><text class="count">{{ blockCount(block) }}</text></view>
 
-    <EnergyComparisonReport v-if="block.type === 'energy_comparison'" :report="block.report" :busy="busy" :running="running" @reference="$emit('energy-reference', $event)" @retry-explanation="$emit('retry-energy-explanation', $event)" />
+    <EnergyComparisonReport v-if="block.type === 'energy_comparison'" :report="block.report" :busy="busy" :running="running" @retry-explanation="$emit('retry-energy-explanation', $event)" />
     <EnvironmentTrend v-else-if="block.type === 'environment_history'" :report="block.report" />
     <MeterHistoryReport v-else-if="block.type === 'energy_history'" :report="block.report" />
     <view v-else-if="block.type === 'video_playback'" class="recording">
@@ -91,7 +91,7 @@ import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
 const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, busy: Boolean, running: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
-defineEmits(['select-alert', 'browse-alerts', 'energy-reference', 'retry-energy-explanation'])
+defineEmits(['select-alert', 'browse-alerts', 'retry-energy-explanation'])
 const fetchingId = ref('')
 const playbackDevice = ref(null)
 const playbackMounted = ref(false)

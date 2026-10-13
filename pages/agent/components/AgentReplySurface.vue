@@ -18,7 +18,7 @@
    </view>
 
    <AssistantMarkdown v-if="turn.text" :content="turn.text" />
-   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" :busy="busy" :running="turn.running" @energy-reference="$emit('energy-reference', $event)" @retry-energy-explanation="$emit('retry-energy-explanation', $event)" :source="source" @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" :read-only="readOnly || source === 'company'" />
+   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" :busy="busy" :running="turn.running" @retry-energy-explanation="$emit('retry-energy-explanation', $event)" :source="source" @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" :read-only="readOnly || source === 'company'" />
    <template v-if="!readOnly">
     <ActionPanel :source="source" v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
      @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
@@ -53,7 +53,7 @@ import TaskProposalCard from './TaskProposalCard.vue'
 import TaskChangeCard from './TaskChangeCard.vue'
 
 defineProps({ turn: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean, readOnly: Boolean, agentName: { type: String, default: '物联 Agent' } })
-defineEmits(['energy-reference', 'retry-energy-explanation', 'toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task', 'select-alert', 'browse-alerts'])
+defineEmits(['retry-energy-explanation', 'toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task', 'select-alert', 'browse-alerts'])
 </script>
 
 <style scoped>
