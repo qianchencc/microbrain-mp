@@ -20,11 +20,12 @@
      <text class="fineprint">{{ environment?.reading?.source === 'shadow' ? '平台影子值 · 可能不是该房间的实测值' : environment?.reading ? '设备观测 · 不代表全公司平均值' : '未取得有效读数' }}</text>
     </view>
     <view class="panel energy">
-     <view class="panel-head"><text>最新计量读数</text></view>
-     <text class="sensor-name">{{ energy?.name || (energyLoading ? '正在读取电表读数' : '暂无有效电表读数') }}</text>
-     <text class="energy-value">{{ metricValue(energy?.reading?.totalActivePower) }}<text>kW</text></text>
-     <text v-if="energy?.reading && !Number.isFinite(energy.reading.totalActivePower)" class="fineprint">接口未提供有效功率</text>
-     <text class="fineprint" :class="{ 'demo-note': energyStale(energy?.reading) }">{{ energy?.reading ? '最近上报 · ' + (fmtDateTime(energy.reading.readTime) || '上报时间未知') + (energyStale(energy.reading) ? ' · 陈旧/时间未知' : '') : energyLoading ? '其他概览可先查看，电表读数随后补入' : '本次未取得有效读数' }}</text>
+     <view class="panel-head"><text>电表累计示数</text></view>
+     <text class="sensor-name">{{ energy?.name || (energyLoading ? '正在读取电表' : '暂无计量点') }}</text>
+     <text v-if="Number.isFinite(energy?.reading?.epf)" class="energy-value">{{ metricValue(energy.reading.epf) }}<text>累计示数</text></text>
+     <text v-else class="fineprint">{{ energyLoading ? '正在读取累计示数…' : sectionErrors.energy || '该计量点暂无有效累计示数' }}</text>
+     <text v-if="energy?.reading" class="fineprint" :class="{ 'demo-note': energyStale(energy.reading) }">最近采样 · {{ fmtDateTime(energy.reading.readTime) }}{{ energyStale(energy.reading) ? ' · 数据未更新' : '' }}</text>
+     <text v-if="energy?.reading" class="fineprint">单台电表累计示数 · 不是当天耗电</text>
      <text class="fineprint">上游目前采用临时模拟补数 · 非持续实测</text>
      <button class="meter-link" @tap="openObservation('energy')">查看计量点原始历史 <uni-icons type="right" size="11" color="#567461" /></button>
     </view>
@@ -56,12 +57,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { getCompanyDashboard } from '@/apis/agent'
+import { getCompanyDashboard, getEnergyHistory } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent } from './navigation.mjs'
 import { dashboardCounts, metricValue } from './dashboard-view.mjs'
-import { fmtDateTime, energyStale } from './observation-view.mjs'
+import { fmtDateTime, fmtShanghaiDateTime, energyStale } from './observation-view.mjs'
 import TaskListSheet from './components/TaskListSheet.vue'
 import AgentAvatar from './components/AgentAvatar.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
@@ -81,7 +82,7 @@ watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync
 watch(observationType, type => { selectedEvent.value = null; if (type) observationMounted.value = true }, { flush: 'sync' })
 const counts = computed(() => dashboardCounts(snapshot.value))
 const environment = computed(() => snapshot.value?.environment?.find(row => row.reading) || snapshot.value?.environment?.[0])
-const energy = computed(() => snapshot.value?.energy?.find(row => Number.isFinite(row.reading?.totalActivePower)) || snapshot.value?.energy?.find(row => row.reading))
+const energy = computed(() => snapshot.value?.energy?.[0])
 const alertsUnavailable = computed(() => Boolean(sectionErrors.value.alerts) || snapshot.value?.errors?.some(row => row.area === 'alerts'))
 const latestAlert = computed(() => snapshot.value?.alerts?.records[0])
 const clock = computed(() => fmtDateTime(snapshot.value?.observedAt).slice(5))
@@ -105,7 +106,17 @@ async function load() {
   await Promise.allSettled(['environment', 'energy', 'alerts', 'automation'].map(async section => {
    const active = () => current === requestId && visible && getAgentStorageScope() === nextScope
    try {
-    const result = await getCompanyDashboard(section)
+    let result
+    if (section === 'energy') {
+     const directory = await getEnergyHistory()
+     if (!active()) return
+     const meters = directory.meters || [], meter = meters[0]
+     const day = fmtShanghaiDateTime(new Date().toISOString()).slice(0, 10)
+     const report = meter ? await getEnergyHistory({ equipmentId: meter.id, from: day + 'T00:00:00+08:00', to: day + 'T23:59:59.999+08:00' }) : null
+     result = { source: 'company', observedAt: report?.observedAt || directory.observedAt,
+      devices: meters.map(item => ({ ...item, kind: 'energy' })),
+      energy: meter ? [{ name: meter.name, deviceId: meter.id, reading: report?.latestSample ? { ...report.latestSample.values, readTime: report.latestSample.readTime } : null }] : [], errors: [] }
+    } else result = await getCompanyDashboard(section)
     if (!active()) return
     const previous = snapshot.value || { devices: [], errors: [] }
     const kind = section === 'alerts' ? 'safety' : section
