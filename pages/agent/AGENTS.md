@@ -47,7 +47,7 @@
 - Company 正式入口位于 A 仪表盘底部；从仪表盘进入两端对话后返回总览，两端同级入口统一位于总览，会话菜单只负责会话操作。路由 source 仅在页面创建时固定，API 显式传递，本端恢复拒绝错来源。Company 不消费 Office 区域/任务/播放入口。见 `plan/2026-10-03-company-readonly-handoff.md`（仓库根）。
 - 微信页面卸载会销毁页面包的模块级内存；跨来源导航草稿须放 app globalData，并按 getAgentStorageScope() + source 分区，身份变化清空，不保存长期凭据。Company 返回后重进必须做真实输入/点击验收，纯 helper 断言不能证明此行为。
 
-- 物联助手菜单入口为 `dashboard.vue`。A 首屏的数量只表示 Company 当前接入观察目录；告警是本次读取的历史台账，不代表实时报警。`totalActivePower` 展示 kW 最新功率，不能累加成日用电 kWh；维修演示的小时 kWh 独立标记、图形由样例数据计算，不进入 Agent/执行上下文。详情复用 ObservationCard/DeviceSheet，切换身份或读取失败清理旧概览；正常刷新保留布局。对话 `from=dashboard` 是入口标记；返回以真实页面栈为准，不授予来源或设备权限。
+- 物联助手菜单入口为 `dashboard.vue`。A 首屏的数量只表示 Company 当前接入观察目录；告警是本次读取的历史台账，不代表实时报警。`totalActivePower` 展示 kW 最新功率，不能累加成日用电 kWh；2026-10-13 已移除本地电量演示曲线；电表只读上游接口，目前客户采用临时模拟补数，页面需说明来源，保留实际 readTime 和陈旧标注，不在本地补造缺失记录。核验与上游缺口见 `plan/2026-10-13-upstream-meter-simulation-handoff.md`。详情复用 ObservationCard/DeviceSheet，切换身份或读取失败清理旧概览；正常刷新保留布局。对话 `from=dashboard` 是入口标记；返回以真实页面栈为准，不授予来源或设备权限。
 
 - Company 智慧空调复用现有草案/参数抽屉；页面 source 必须传到 AgentReplySurface → ActionPanel → ActionDraftCard 及 DraftSheetLayer，选择/确认/还原/取消/状态/参数/重核/收尾请求都显式带 Company。不能仅取消 readOnly 遮罩而让 API 缺省落到 Office；来源校验仍由服务端持久化会话决定。Company 观察视频仍未接入；定时/周期空调和只读简报已接入，报告、安排列表与收件箱保持本端来源。
 

@@ -5,6 +5,7 @@
   <text v-if="!report.samples.length" class="empty">所选期间未取得采样</text>
   <view v-for="sample in report.samples" :key="sample.id + ':' + sample.readTime" class="sample"><text class="time">{{ fmtDateTime(sample.readTime) }}</text><view class="values"><view v-for="field in report.fields" :key="field.key"><text class="value">{{ sample.values[field.key] ?? '—' }}</text><text>{{ labels[field.key] || field.key }}</text></view></view></view>
   <text class="note">累计示数 · 非期间耗电 · 单位与倍率尚未确认</text>
+  <text class="note">上游目前采用临时模拟补数 · 非持续实测</text>
   <text class="note">{{ report.samples.length }} 条已显示<text v-if="!report.coverage.complete"> · 本批数据不能代表全部期间</text><text v-else> · 当前查询已读完</text></text>
   <text class="note">{{ report.latestReadTime ? '该计量点最近采样 ' + fmtDateTime(report.latestReadTime) : '未取得最近采样时间' }}</text>
   <text class="note">读取于 {{ fmtDateTime(report.observedAt) }}</text>

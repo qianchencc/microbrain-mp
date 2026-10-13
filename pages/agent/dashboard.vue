@@ -20,18 +20,12 @@
      <text class="fineprint">{{ environment?.reading?.source === 'shadow' ? '平台影子值 · 可能不是该房间的实测值' : environment?.reading ? '设备观测 · 不代表全公司平均值' : '未取得有效读数' }}</text>
     </view>
     <view class="panel energy">
-     <view class="panel-head"><view class="energy-title"><text>{{ demo ? '典型日用电' : '最新计量读数' }}</text><text v-if="demo" class="demo-tag">维修演示</text></view><view class="mode-switch"><button :class="{ selected: demo }" @tap="demo = true">演示</button><button :class="{ selected: !demo }" @tap="demo = false">真实</button></view></view>
-     <template v-if="demo">
-      <view class="energy-top"><text class="energy-value">{{ repairEnergy.total.toLocaleString() }}<text>kWh</text></text><view class="peak"><text>{{ repairEnergy.peak }} kWh</text><text>最高小时用电 · 样例</text></view></view>
-      <image class="chart" :src="chart" mode="scaleToFill" aria-label="维修演示的小时用电曲线" />
-      <view class="chart-axis"><text>00:00</text><text>06:00</text><text>12:00</text><text>18:00</text><text>24:00</text></view>
-      <text class="fineprint demo-note">24 小时演示样例 · 非实际采集；真实接口仍读取</text>
-     </template>
-     <template v-else>
-      <text class="sensor-name">{{ energy?.name || (energyLoading ? '正在读取电表读数' : '暂无有效电表读数') }}</text>
-      <text class="energy-value">{{ metricValue(energy?.reading?.totalActivePower) }}<text>kW</text></text>
-      <text class="fineprint" :class="{ 'demo-note': energyStale(energy?.reading) }">{{ energy?.reading ? '最新已知功率 · ' + (fmtDateTime(energy.reading.readTime) || '上报时间未知') + (energyStale(energy.reading) ? ' · 陈旧/时间未知' : '') : energyLoading ? '其他概览可先查看，电表读数随后补入' : '本次未取得有效读数' }}</text>
-     </template>
+     <view class="panel-head"><text>最新计量读数</text></view>
+     <text class="sensor-name">{{ energy?.name || (energyLoading ? '正在读取电表读数' : '暂无有效电表读数') }}</text>
+     <text class="energy-value">{{ metricValue(energy?.reading?.totalActivePower) }}<text>kW</text></text>
+     <text v-if="energy?.reading && !Number.isFinite(energy.reading.totalActivePower)" class="fineprint">接口未提供有效功率</text>
+     <text class="fineprint" :class="{ 'demo-note': energyStale(energy?.reading) }">{{ energy?.reading ? '最近上报 · ' + (fmtDateTime(energy.reading.readTime) || '上报时间未知') + (energyStale(energy.reading) ? ' · 陈旧/时间未知' : '') : energyLoading ? '其他概览可先查看，电表读数随后补入' : '本次未取得有效读数' }}</text>
+     <text class="fineprint">上游目前采用临时模拟补数 · 非持续实测</text>
      <button class="meter-link" @tap="openObservation('energy')">查看计量点原始历史 <uni-icons type="right" size="11" color="#567461" /></button>
     </view>
     <button class="ledger" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '摘要暂不可用 · 可查看历史' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : alertsLoading ? '正在更新摘要 · 可查看历史' : '按类别和日期查看历史' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>本次记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
@@ -66,7 +60,7 @@ import { getCompanyDashboard } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent } from './navigation.mjs'
-import { dashboardCounts, metricValue, repairEnergy, energyChart } from './dashboard-view.mjs'
+import { dashboardCounts, metricValue } from './dashboard-view.mjs'
 import { fmtDateTime, energyStale } from './observation-view.mjs'
 import TaskListSheet from './components/TaskListSheet.vue'
 import AgentAvatar from './components/AgentAvatar.vue'
@@ -79,7 +73,7 @@ import MeterHistoryView from './components/MeterHistoryView.vue'
 
 const selectedEvent = ref(null)
 const tasksOpen = ref(false)
-const snapshot = ref(null), loading = ref(false), error = ref(''), demo = ref(true), observationType = ref('')
+const snapshot = ref(null), loading = ref(false), error = ref(''), observationType = ref('')
 const energyLoading = ref(false)
 const alertsLoading = ref(false), automationLoading = ref(false), loadedSections = ref([]), sectionErrors = ref({})
 const tasksMounted = ref(false), observationMounted = ref(false)
@@ -87,11 +81,10 @@ watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync
 watch(observationType, type => { selectedEvent.value = null; if (type) observationMounted.value = true }, { flush: 'sync' })
 const counts = computed(() => dashboardCounts(snapshot.value))
 const environment = computed(() => snapshot.value?.environment?.find(row => row.reading) || snapshot.value?.environment?.[0])
-const energy = computed(() => snapshot.value?.energy?.find(row => Number.isFinite(row.reading?.totalActivePower)))
+const energy = computed(() => snapshot.value?.energy?.find(row => Number.isFinite(row.reading?.totalActivePower)) || snapshot.value?.energy?.find(row => row.reading))
 const alertsUnavailable = computed(() => Boolean(sectionErrors.value.alerts) || snapshot.value?.errors?.some(row => row.area === 'alerts'))
 const latestAlert = computed(() => snapshot.value?.alerts?.records[0])
 const clock = computed(() => fmtDateTime(snapshot.value?.observedAt).slice(5))
-const chart = energyChart(repairEnergy.hours)
 const deviceCells = [{ kind: 'environment', label: '环境', icon: 'cloud' }, { kind: 'energy', label: '计量', icon: 'map' }, { kind: 'safety', label: '安全', icon: 'notification' }]
 const environmentCells = [{ key: 'temp', label: '温度', unit: '°C' }, { key: 'humidity', label: '湿度', unit: '%' }, { key: 'pm25', label: 'PM2.5', unit: '' }]
 const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '计量点原始历史', alerts: '安全事件台账' })[observationType.value] || '')
