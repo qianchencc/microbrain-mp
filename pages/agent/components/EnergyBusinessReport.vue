@@ -4,7 +4,7 @@
   <text class="range">{{ report.meters.length === 1 ? report.meters[0].meter.name : '当前接入计量范围' }}</text>
   <text class="meta">{{ fmtTime(report.requested.from) }} — {{ fmtTime(report.requested.to) }} · {{ report.coverage.requestedMeters }} 台</text>
   <template v-if="report.kind === 'statistics'">
-   <view class="hero"><text class="caption">{{ total?.status === 'partial' ? '有效电表小计' : total ? '所选区间用电量' : single ? '本表区间示数增量' : '逐表区间统计' }}</text><text class="big">{{ total ? value(total.value) : single ? value(last(single)?.usage) : report.coverage.completedMeters ? '已取得 ' + report.coverage.completedMeters + ' 台结果' : '暂无可计算结果' }}<text v-if="total || single" class="unit"> {{ total ? 'kWh' : '示数差' }}</text></text></view>
+   <view class="hero"><text class="caption">{{ total?.status === 'partial' ? '有效电表小计' : total ? '所选区间用电量' : single ? '本表累计读数变化' : '电表采样已取得，尚未换算用电量' }}</text><text class="big">{{ total ? value(total.value) : single ? value(last(single)?.usage) : report.coverage.completedMeters ? '已读取 ' + report.coverage.completedMeters + ' 台电表' : '暂无可计算结果' }}<text v-if="total || single" class="unit"> {{ total ? 'kWh' : '示数差' }}</text></text></view>
    <view v-if="report.summary.average != null" class="facts"><view><text class="caption">日均用电</text><text>{{ value(report.summary.average) }} kWh</text></view></view>
   </template>
   <template v-else-if="report.kind === 'comparison'">
@@ -18,7 +18,7 @@
    <button v-if="report.notChecked?.length > 3" class="more" @tap="open('evidence')">全部 {{ report.notChecked.length }} 项未检查说明 ›</button>
    <text class="meta">{{ report.rules.growthThreshold == null ? '本次未设置用电增长阈值，未作增长正常/异常判断。' : '本次指定增幅阈值 ' + report.rules.growthThreshold + '%；发现仅为核查线索。' }}</text>
   </template>
-  <text v-if="!total && report.kind !== 'inspection'" class="notice">{{ single ? '单位与倍率未确认，保留本表实际示数差，不换算为 kWh。' : '已自动读取当前范围。合计需确认单位、倍率与不重叠计量集合；各表仍保留实际区间的示数差。' }}</text>
+  <text v-if="!total && report.kind !== 'inspection'" class="notice">{{ single ? '单位与倍率未确认，保留本表实际示数差，不换算为 kWh。' : '已自动读取当前范围。目前展示累计读数的变化，还不能换算为用了多少度电，也不能相加为公司总用电。' }}</text>
   <text v-else-if="total?.status === 'partial'" class="notice">仅统计 {{ total.meterIds.length }} 台同口径有效电表，未计入项保留在明细中，不代表全部范围总量。</text>
   <text v-if="report.coverage.reason" class="notice">{{ report.coverage.reason }}</text>
   <view class="coverage"><text>{{ report.coverage.completedMeters }} / {{ report.coverage.requestedMeters }} 台读取完成 · {{ report.coverage.validMeters }} 台区间完整</text><button hover-class="pressed" @tap="open('meters')">查看范围 ›</button></view>
@@ -34,8 +34,8 @@
     <text v-if="report.kind === 'statistics' && report.seriesCoverage?.[grain]?.remaining" class="notice">图表仅显示前 400 段，{{ fmtTime(report.seriesCoverage[grain].remaining.from) }} 之后尚未绘制；区间统计仍覆盖原请求。可切换较粗粒度。</text>
     <text class="meta">缺少完整分段边界的时段留空，未补零或估算。</text>
    </template>
-   <view class="list-heading"><text>{{ total ? '电表明细' : '逐表结果 · 示数差' }}</text><button class="more" @tap="open('meters')">全部 {{ report.meters.length }} 台 ›</button></view>
-   <button v-for="row in report.meters.slice(0, 3)" :key="row.meter.id" class="meter-row" hover-class="row-pressed" @tap="openMeter(row)"><view><text class="meter-name">{{ row.meter.name }}</text><text class="meta">{{ row.status === 'failed' ? row.error : last(row)?.notes.join('；') || row.meter.location }}</text></view><view class="row-value"><text>{{ value(last(row)?.usage) }}</text><text class="small">{{ row.unit || '示数差' }}<text v-if="report.kind === 'comparison' && last(row)?.ratio != null"> · {{ last(row).ratio.toFixed(1) }}%</text></text></view><text>›</text></button>
+   <view class="list-heading"><text>{{ total ? '电表用电明细' : '累计读数变化 · 非用电量' }}</text><button class="more" @tap="open('meters')">全部 {{ report.meters.length }} 台 ›</button></view>
+   <button v-for="row in report.meters.slice(0, 3)" :key="row.meter.id" class="meter-row" hover-class="row-pressed" @tap="openMeter(row)"><view><text class="meter-name">{{ row.meter.name }}</text><text class="meta">{{ row.status === 'failed' ? row.error : last(row)?.notes.join('；') || (!row.unit && last(row)?.sampledFrom && last(row)?.sampledTo ? '累计读数 ' + value(last(row).sampledFrom.value) + ' → ' + value(last(row).sampledTo.value) : row.meter.location) }}</text></view><view class="row-value"><text>{{ row.unit ? value(last(row)?.usage) : last(row)?.usage != null ? '+' + value(last(row).usage) : '无法计算' }}</text><text class="small">{{ row.unit || '读数增加' }}<text v-if="report.kind === 'comparison' && last(row)?.ratio != null"> · {{ last(row).ratio.toFixed(1) }}%</text></text></view><text>›</text></button>
   </template>
   <text class="meta source">{{ report.basis.upstream }} · 查询于 {{ fmtTime(report.observedAt) }}</text>
   <view class="actions"><button hover-class="pressed" @tap="open('evidence')">采样依据</button><button hover-class="pressed" @tap="open('history')">原始采样</button></view>
@@ -75,7 +75,7 @@ const ratio = computed(() => props.report.summary.ratio ?? last(single.value)?.r
 const ratioNote = computed(() => single.value ? last(single.value)?.ratioNote : props.report.summary.ratioNote)
 const difference = computed(() => props.report.summary.difference ?? (single.value?.periods.length > 1 && single.value.periods.slice(-2).every(p => p.status === 'comparable') ? last(single.value).usage - single.value.periods.at(-2).usage : null))
 const chart = computed(() => energyBusinessChart(props.report, grain.value))
-const stateLabel = computed(() => props.report.coverage.status === 'denied' ? '授权失效' : !props.report.coverage.requestedMeters ? '无计量点' : total.value?.status === 'partial' ? '部分结果' : props.report.coverage.status === 'reading' ? props.running ? '读取中' : '已中断' : props.report.coverage.status === 'partial' ? '部分结果' : !total.value && props.report.kind !== 'inspection' ? single.value ? '单位待确认' : '合计待确认' : '完整结果')
+const stateLabel = computed(() => props.report.coverage.status === 'denied' ? '授权失效' : !props.report.coverage.requestedMeters ? '无计量点' : total.value?.status === 'partial' ? '部分结果' : props.report.coverage.status === 'reading' ? props.running ? '读取中' : '已中断' : props.report.coverage.status === 'partial' ? '部分结果' : !total.value && props.report.kind !== 'inspection' ? single.value ? '单位待确认' : '用电量待核实' : '完整结果')
 const selected = computed(() => props.report.meters.find(m => m.meter.id === selectedId.value))
 const paneTitle = computed(() => ({ meters: '电表范围与明细', evidence: '采样依据', history: selected.value ? '原始计量采样' : '选择电表查看采样', findings: '待核查项' })[pane.value])
 const historyQuery = computed(() => ({ equipmentId: selectedId.value, from: [...props.report.windows].sort((a,b) => Date.parse(a.from)-Date.parse(b.from))[0]?.from || props.report.requested.from, to: [...props.report.windows].sort((a,b) => Date.parse(b.to)-Date.parse(a.to))[0]?.to || props.report.requested.to }))
