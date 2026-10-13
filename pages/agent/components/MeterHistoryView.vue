@@ -1,7 +1,7 @@
 <template>
  <view class="history">
   <view class="filters"><picker :range="meters" range-key="name" :value="meterIndex" @change="chooseMeter($event.detail.value)"><view class="meter">{{ selectedMeter?.name || (loading ? '正在读取计量点' : '请选择计量点') }} <uni-icons type="down" size="12" color="#6d8b73" /></view></picker><view class="dates"><picker mode="date" :value="fromDate" :end="toDate" @change="chooseDate('from', $event.detail.value)"><view>{{ fromDate }} <uni-icons type="down" size="10" color="#80947d" /></view></picker><text>至</text><picker mode="date" :value="toDate" :start="fromDate" :end="today" @change="chooseDate('to', $event.detail.value)"><view>{{ toDate }} <uni-icons type="down" size="10" color="#80947d" /></view></picker></view></view>
-  <text v-if="exactWindow" class="exact-window">报告采样窗口 {{ fmtDateTime(exactWindow.from) }} — {{ fmtDateTime(exactWindow.to) }}（含环比基期）</text>
+  <text v-if="exactWindow" class="exact-window">报告采样窗口 {{ fmtDateTime(exactWindow.from) }} — {{ fmtDateTime(exactWindow.to) }}</text>
   <scroll-view class="body" scroll-y enhanced :show-scrollbar="false">
    <view class="paper"><MeterHistoryReport v-if="report" :report="report" /><text v-else class="empty">{{ loading ? '正在读取原始示数' : meters.length ? '请选择期间读取' : '当前没有可用计量点' }}</text></view>
    <view v-if="error" class="error"><text>{{ error }}</text><button @tap="load(report ? failedPage : 0)">重试</button></view>

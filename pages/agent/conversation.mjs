@@ -63,7 +63,7 @@ export function applyEvent(turn, event, turns = [turn]) {
 	if (event.type === 'message.completed') { turn.text = event.content || turn.text; turn.streaming = false }
 	if (event.type === 'observation.reported') {
 		const blocks = (event.blocks || []).filter(block => {
-			if (block.type !== 'energy_comparison' || !block.report?.reportId) return true
+			if (!['energy_comparison', 'company_energy', 'energy_report'].includes(block.type) || !block.report?.reportId) return true
 			const existing = turns.flatMap(item => item.observations).flatMap(obs => obs.blocks).find(item => item.type === block.type && item.report?.reportId === block.report.reportId)
 			if (!existing) return true
 			existing.report = block.report
