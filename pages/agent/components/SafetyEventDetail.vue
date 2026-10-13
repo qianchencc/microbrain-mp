@@ -4,15 +4,17 @@
    <view class="event-paper">
     <view class="event-heading"><view class="event-symbol"><uni-icons type="notification" size="22" color="#a47b35" /></view><text class="event-kind">{{ safetySubtypeText(record.subtype) }}台账记录</text></view>
     <text class="event-name">{{ record.deviceName || '设备名称未提供' }}</text>
-    <view class="event-field"><text>安装位置</text><text>{{ record.location || '未提供' }}</text></view>
+    <text v-if="record.currentDevice && !record.currentDevice.name" class="event-note">当前名称未核验，显示告警记录名称</text>
+    <view class="event-field"><text>{{ record.currentDevice ? '当前位置' : '此前位置' }}</text><text>{{ record.currentDevice ? record.currentDevice.location || '未核验' : record.location || '未提供' }}</text></view>
+    <view v-if="record.recordedDeviceName && record.recordedDeviceName !== record.deviceName" class="event-field"><text>记录名称</text><text>{{ record.recordedDeviceName }}</text></view>
     <view class="event-field"><text>记录时间</text><text>{{ fmtDateTime(record.occurredAt) || '未提供' }}</text></view>
     <view class="event-field"><text>台账来源</text><text>{{ record.ledger === 'gas' ? '燃气台账' : record.ledger === 'smoke' ? '烟感台账' : record.ledger === 'flooding' ? '水浸台账（含历史混表）' : '未提供' }}</text></view>
-    <text class="event-note">这是平台历史台账，当前是否仍在报警需另行核实。</text>
+    <text class="event-note">这是平台历史台账，记录时位置与当前报警状态均未核验。</text>
     <text class="event-observed">{{ verified ? '最新读取于' : '此前读取于' }} {{ fmtDateTime(observedAt) || '时间未提供' }}</text>
    </view>
-   <view class="event-state" aria-live="polite"><text>{{ loading ? '正在更新记录' : error }}</text><button v-if="error && reference" class="event-retry" hover-class="event-pressed" @tap="load">重试</button></view>
+   <view class="event-state" aria-live="polite"><text>{{ loading ? '正在更新记录' : error }}</text><button v-if="reference && (error || record.currentDevice && (!record.currentDevice.name || !record.currentDevice.location))" class="event-retry" :disabled="loading" hover-class="event-pressed" @tap="load">{{ error ? '重试' : '重新读取' }}</button></view>
    <view v-if="referenceAllowed" class="event-cameras">
-    <button class="camera-find" :disabled="cameraLoading" hover-class="event-pressed" @tap="findCameras"><uni-icons type="videocam" size="17" color="#397457" /><text>{{ cameraLoading ? '正在查找本端监控' : '查找记录附近的监控' }}</text></button>
+    <button class="camera-find" :disabled="cameraLoading" hover-class="event-pressed" @tap="findCameras"><uni-icons type="videocam" size="17" color="#397457" /><text>{{ cameraLoading ? '正在查找本端监控' : '按当前位置查找监控' }}</text></button>
     <text v-if="cameraError || cameraNote" class="camera-note">{{ cameraError || cameraNote }}</text>
     <button v-for="camera in cameras" :key="camera.deviceId" class="camera-candidate" hover-class="event-pressed" @tap="selectedCamera = camera"><view><text class="camera-name">{{ camera.name }}</text><text class="camera-note">{{ camera.safetyContext.basis }}</text></view><uni-icons type="right" size="12" color="#71907b" /></button>
     <view v-if="selectedCamera" class="camera-window"><button class="camera-back" @tap="selectedCamera = null">返回候选监控</button><VideoPlaybackForm :key="selectedCamera.deviceId" :device="selectedCamera" :ready="playerReady" :busy="openingVideo" @open="openRecording" /></view>
@@ -75,8 +77,15 @@ async function findCameras() {
   if (current !== cameraRequest || !visible || !props.active || scope !== getAgentStorageScope()) return
   const next = safetyEventReference(result.record)
   if (!next || next.eventId !== target.eventId || next.ledger !== target.ledger || next.deviceId !== target.deviceId) throw new Error('返回的记录身份不匹配')
+  ++requestId; loading.value = false
+  record.value = result.record; observedAt.value = result.observedAt; verified.value = true
   cameraScope = scope; cameras.value = result.candidates; cameraNote.value = result.note
- } catch (cause) { if (current === cameraRequest) cameraError.value = cause.message || '候选监控暂不可用，请重试' }
+ } catch (cause) {
+  if (current === cameraRequest) {
+   if (['UNAUTHORIZED', 'SAFETY_EVENT_UNAVAILABLE'].includes(cause.data?.code)) { record.value = {}; referenceAllowed.value = false; verified.value = false }
+   cameraError.value = cause.message || '候选监控暂不可用，请重试'
+  }
+ }
  finally { if (current === cameraRequest) cameraLoading.value = false }
 }
 async function openRecording(window) {

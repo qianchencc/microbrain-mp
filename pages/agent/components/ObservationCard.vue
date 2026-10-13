@@ -58,14 +58,14 @@
      <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="orow">
       <view class="dot warn" />
       <text class="nm">{{ d.name }}</text>
-      <text class="loc">{{ d.location }}</text>
+      <text class="loc">{{ d.location || '当前位置未核验' }}</text>
       <text class="meta meta--wide">{{ safetySubtypeText(d.subtype) }} · 无实时状态 · 仅告警台账</text>
      </view>
     </template>
 
     <template v-else-if="block.type === 'alerts'">
      <button v-for="(a, i) in recordsOf(block, index)" :key="a.ledger && a.eventId ? a.ledger + ':' + a.eventId : i" class="arow" :disabled="source !== 'company'" hover-class="arow--pressed" @tap="$emit('select-alert', { record: a, observedAt: observation.observedAt })">
-      <view class="alert-copy"><text class="anm">{{ a.deviceName }}<text v-if="a.location && a.location !== a.deviceName"> · {{ a.location }}</text></text><text class="at">{{ fmtDateTime(a.occurredAt) || '记录时间未知' }}</text></view>
+      <view class="alert-copy"><text class="anm">{{ a.deviceName }}<text v-if="a.location && a.location !== a.deviceName"> · {{ a.location }}</text></text><text v-if="a.recordedDeviceName && a.recordedDeviceName !== a.deviceName" class="at">记录名称：{{ a.recordedDeviceName }}</text><text v-if="a.currentDevice && (!a.currentDevice.name || !a.currentDevice.location)" class="at">{{ !a.currentDevice.name ? '当前名称未核验 · 显示记录名称' : '当前位置未核验' }}</text><text class="at">{{ fmtDateTime(a.occurredAt) || '记录时间未知' }}</text></view>
       <uni-icons v-if="source === 'company'" type="right" size="12" color="#95a296" />
      </button>
      <text class="meta">{{ alertsMeta(block) }}</text>

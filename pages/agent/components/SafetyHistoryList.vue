@@ -8,7 +8,7 @@
   <scroll-view class="records" scroll-y enhanced :show-scrollbar="false" :scroll-top="scrollTop" @scroll="scrollTop = $event.detail.scrollTop">
    <view class="paper">
     <button v-for="record in records" :key="record.ledger + ':' + record.eventId + ':' + record.deviceId" class="record" hover-class="pressed" @tap="$emit('select', { record, observedAt })">
-     <view class="record-copy"><text class="name">{{ record.deviceName }}</text><text class="time">{{ fmtDateTime(record.occurredAt) }}</text><text v-if="record.location && record.location !== record.deviceName" class="location">{{ record.location }}</text></view>
+     <view class="record-copy"><text class="name">{{ record.deviceName }}</text><text class="time">{{ fmtDateTime(record.occurredAt) }}</text><text v-if="record.currentDevice" class="location">{{ record.currentDevice.location ? `当前位置：${record.currentDevice.location}` : '当前位置未核验' }}<text v-if="!record.currentDevice.name"> · 显示记录名称</text></text><text v-else-if="record.location && record.location !== record.deviceName" class="location">{{ record.location }}</text></view>
      <uni-icons type="right" size="12" color="#8b9e90" />
     </button>
     <text v-if="!records.length" class="empty">{{ loading ? '正在读取历史记录' : error ? '本次未取得记录' : cursor ? '这一批没有可核实的匹配记录' : '所选期间没有可核实的记录' }}</text>
@@ -46,18 +46,26 @@ async function load(first = true) {
  try {
   const identity = getAgentStorageScope()
   if (identity !== scope) { records.value = []; cursor.value = null; window = null; scope = identity }
-  const query = { type: type.value, limit: 20,
+  const refreshCount = first ? Math.max(20, records.value.length) : 20
+  const query = { type: type.value, limit: Math.min(100, refreshCount),
    from: first || !window ? fromDate.value ? `${fromDate.value}T00:00:00+08:00` : undefined : window.from,
    to: first || !window ? `${endDate.value}T23:59:59.999+08:00` : window.to,
    cursor: first ? undefined : cursor.value }
-  const result = await listSafetyHistory(query)
+  let result = await listSafetyHistory(query)
+  const refreshed = [...(result.items || [])]
+  let refreshExcluded = result.excludedCount || 0, refreshUnknown = result.unknownCount || 0
+  while (first && refreshed.length < refreshCount && result.nextCursor) {
+   if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope()) return
+   result = await listSafetyHistory({ type: type.value, limit: Math.min(100, refreshCount - refreshed.length), ...result.window, cursor: result.nextCursor })
+   refreshed.push(...(result.items || [])); refreshExcluded += result.excludedCount || 0; refreshUnknown += result.unknownCount || 0
+  }
   if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope()) return
   const existing = first ? [] : records.value
   const seen = new Set(existing.map(record => record.ledger + ':' + record.eventId + ':' + record.deviceId))
-  records.value = [...existing, ...(result.items || []).filter(record => !seen.has(record.ledger + ':' + record.eventId + ':' + record.deviceId))]
+  records.value = [...existing, ...refreshed.filter(record => !seen.has(record.ledger + ':' + record.eventId + ':' + record.deviceId))]
   cursor.value = result.nextCursor; observedAt.value = result.observedAt; window = result.window
-  excludedCount.value = (first ? 0 : excludedCount.value) + (result.excludedCount || 0)
-  unknownCount.value = (first ? 0 : unknownCount.value) + (result.unknownCount || 0)
+  excludedCount.value = (first ? 0 : excludedCount.value) + refreshExcluded
+  unknownCount.value = (first ? 0 : unknownCount.value) + refreshUnknown
  } catch (cause) {
   if (current !== generation || !props.active || !visible) return
   if (scope !== getAgentStorageScope() || cause.data?.code === 'UNAUTHORIZED') { records.value = []; cursor.value = null; observedAt.value = '' }
@@ -67,7 +75,7 @@ async function load(first = true) {
 }
 function chooseType(next) { if (type.value === next) return; type.value = next; reset(); void load() }
 function chooseDate(field, value) { if (field === 'from') fromDate.value = value; else endDate.value = value; reset(); void load() }
-function resume() { if (props.active && (!observedAt.value || scope !== getAgentStorageScope())) { reset(); void load() } }
+function resume() { if (props.active) { if (scope !== getAgentStorageScope()) reset(); void load() } }
 watch(() => props.active, active => { if (active) resume(); else invalidate() }, { immediate: true })
 onHide(() => { visible = false; invalidate() })
 onShow(() => { visible = true; resume() })
