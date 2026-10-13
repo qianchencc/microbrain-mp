@@ -35,7 +35,7 @@
    <view v-else-if="device.kind === 'safety'" class="obs-block">
     <view class="obs-head">安全监测</view>
     <view class="obs-line"><view class="dot warn" /><text>{{ subtypeText }} · 无实时状态 · 仅告警台账</text></view>
-    <text class="obs-hint">该设备只上报历史告警，可在对话中查询告警台账</text>
+    <text class="obs-hint">该设备仅提供历史告警记录，可在对话中查询告警台账</text>
    </view>
    <view v-else class="obs-block"><view class="obs-line"><view class="dot warn" /><text>{{ device.detail }}</text></view></view>
    <text class="obs-note">观察设备 · 不支持控制</text>

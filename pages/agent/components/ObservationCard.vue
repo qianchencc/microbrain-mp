@@ -66,7 +66,7 @@
     <template v-else-if="block.type === 'alerts'">
      <button v-for="(a, i) in recordsOf(block, index)" :key="a.ledger && a.eventId ? a.ledger + ':' + a.eventId : i" class="arow" :disabled="source !== 'company'" hover-class="arow--pressed" @tap="$emit('select-alert', { record: a, observedAt: observation.observedAt })">
       <view class="alert-copy"><text class="anm">{{ a.deviceName }}<text v-if="a.location && a.location !== a.deviceName"> · {{ a.location }}</text></text><text class="at">{{ fmtDateTime(a.occurredAt) || '记录时间未知' }}</text></view>
-      <text class="tag" :class="{ un: a.report === false, unknown: a.report == null }">{{ a.report === true ? '已上报' : a.report === false ? '未上报' : '标记未知' }}</text><uni-icons v-if="source === 'company'" type="right" size="12" color="#95a296" />
+      <uni-icons v-if="source === 'company'" type="right" size="12" color="#95a296" />
      </button>
      <text class="meta">{{ alertsMeta(block) }}</text>
      <button v-if="source === 'company'" class="omore" hover-class="omore--pressed" @tap="$emit('browse-alerts')">按类别和日期查看历史 <uni-icons type="right" size="11" color="#5f7a6b" /></button>
@@ -155,7 +155,6 @@ function alertsMeta(block) {
  else if (records.length) parts.push(`本次读取 ${block.total ?? records.length} 条`)
  else parts.push(block.windowDays ? `近 ${block.windowDays} 天无记录` : '本次查询无记录')
  if (block.latest?.time) parts.push(`最新一条 ${fmtDateTime(block.latest.time)}（${ageHint(block.latest.time)}）`)
- parts.push('平台上报标记不代表已恢复')
  return parts.join(' · ')
 }
 </script>
@@ -201,9 +200,6 @@ button::after { border:0; }
 .omore--pressed { background:#eef4ef; }
 .omore uni-icons { transition:transform 160ms ease; }
 .caret-up { transform:rotate(180deg); }
-.tag { flex-shrink:0; padding:2px 7px; border-radius:8px; background:#e4f2ea; color:#1d6b4e; font-size:9px; font-weight:600; }
-.tag.unknown { background:#edf0eb; color:#829087; }
-.tag.un { background:#f1ead7; color:#8a6a24; }
 .recording-name,.recording-window { display:block; }.recording-name { font-size:13px;font-weight:600; }.recording-window { font-size:11px;color:#607c64;line-height:1.7;margin:9px 0; }.recording-open { margin-top:12px; }.video-row { display:grid;grid-template-columns:6px minmax(0,1fr);row-gap:5px; }.video-row .loc,.video-actions { grid-column:2; }.video-actions { display:flex;gap:8px;margin-top:3px; }.video-actions .vbtn { margin:0; }
 @media(prefers-reduced-motion:reduce) { .vbtn,.omore uni-icons { transition:none; } }
 </style>
