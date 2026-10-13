@@ -94,3 +94,17 @@ test('能耗陈旧如实标注、查看画面按钮三态分层', () => {
  assert.equal(isObservationKind('video'), true)
  assert.equal(isObservationKind('lighting'), false)
 })
+
+test('同一电量报告的解读更新原位替换，实时与恢复均只保留一张图表', () => {
+ const event = status => ({ type: 'observation.reported', blocks: [{ type: 'energy_comparison', report: { reportId: 'report-1', weeks: [{ usage: 20 }], explanation: { status } } }] })
+ const first = createTurn('t1', '比较最近四周'), second = createTurn('t2', '重新解读')
+ applyEvent(first, event('pending'), [first, second])
+ applyEvent(first, event('failed'), [first, second])
+ applyEvent(second, event('ready'), [first, second])
+ assert.equal(first.observations.length, 1)
+ assert.equal(first.observations[0].blocks[0].report.explanation.status, 'ready')
+ assert.equal(second.observations.length, 0)
+ const restored = restoreTurns([{ id: 't1', content: '比较', events: [event('pending'), event('failed')] }, { id: 't2', content: '解读', events: [event('ready')] }])
+ assert.equal(restored.flatMap(t => t.observations).length, 1)
+ assert.equal(restored[0].observations[0].blocks[0].report.explanation.status, 'ready')
+})

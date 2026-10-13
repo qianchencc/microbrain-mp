@@ -30,7 +30,7 @@ export function restartTurn(turn, content = turn.content) {
 	})
 }
 
-export function applyEvent(turn, event) {
+export function applyEvent(turn, event, turns = [turn]) {
 	if (event.type === 'run.started' && event.reference) turn.reference = event.reference
 	if (event.type === 'run.started' && event.focusRegion) turn.focusRegion = event.focusRegion
 	if (event.type === 'run.started' && event.turnId) turn.serverId = event.turnId
@@ -61,7 +61,17 @@ export function applyEvent(turn, event) {
 	}
 	if (event.type === 'message.delta') { turn.streaming = true; turn.text += event.content || ''; turn.traceOpen = false }
 	if (event.type === 'message.completed') { turn.text = event.content || turn.text; turn.streaming = false }
-	if (event.type === 'observation.reported') { turn.observations.push({ observedAt: event.observedAt, blocks: event.blocks || [] }); turn.traceOpen = false }
+	if (event.type === 'observation.reported') {
+		const blocks = (event.blocks || []).filter(block => {
+			if (block.type !== 'energy_comparison' || !block.report?.reportId) return true
+			const existing = turns.flatMap(item => item.observations).flatMap(obs => obs.blocks).find(item => item.type === block.type && item.report?.reportId === block.report.reportId)
+			if (!existing) return true
+			existing.report = block.report
+			return false
+		})
+		if (blocks.length) turn.observations.push({ observedAt: event.observedAt, blocks })
+		turn.traceOpen = false
+	}
 	if (event.type === 'action.proposed') { turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.roster = event.inventory || null; turn.traceOpen = false }
 	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
 	if (event.type === 'task.proposed' || event.type === 'task.cancellation.proposed' || event.type === 'task.change.proposed') {
@@ -103,9 +113,10 @@ export function friendlyError(message) {
 }
 
 export function restoreTurns(savedTurns = []) {
-	const turns = savedTurns.map(saved => {
+	const turns = []
+	for (const saved of savedTurns) {
 		const turn = createTurn(saved.id, saved.content)
-		for (const event of saved.events || []) applyEvent(turn, event)
+		for (const event of saved.events || []) applyEvent(turn, event, [...turns, turn])
 		turn.draft = saved.draft || null
 		turn.tasks = saved.tasks?.length ? saved.tasks : saved.task ? [saved.task] : turn.tasks
 		turn.task = turn.tasks[0] || null
@@ -114,8 +125,8 @@ export function restoreTurns(savedTurns = []) {
 		const started = Date.parse(saved.startedAt || saved.events?.find(event => event.type === 'run.started')?.createdAt)
 		const finished = Date.parse(saved.events?.find(event => ['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type))?.timestamp)
 		turn.seconds = Number.isFinite(started) && Number.isFinite(finished) && finished >= started ? Math.max(1, Math.round((finished - started) / 1000)) : 0
-		return turn
-	})
+		turns.push(turn)
+	}
 	const seen = new Set()
 	for (const turn of [...turns].reverse()) {
 		if (!turn.draft) continue

@@ -4,7 +4,8 @@
    <view class="oblock">
     <view class="oblock-head"><text>{{ blockLabel(block) }}</text><text class="count">{{ blockCount(block) }}</text></view>
 
-    <EnvironmentTrend v-if="block.type === 'environment_history'" :report="block.report" />
+    <EnergyComparisonReport v-if="block.type === 'energy_comparison'" :report="block.report" :busy="busy" :running="running" @reference="$emit('energy-reference', $event)" @retry-explanation="$emit('retry-energy-explanation', $event)" />
+    <EnvironmentTrend v-else-if="block.type === 'environment_history'" :report="block.report" />
     <MeterHistoryReport v-else-if="block.type === 'energy_history'" :report="block.report" />
     <view v-else-if="block.type === 'video_playback'" class="recording">
      <text class="recording-name">{{ block.report.name }}</text><text class="meta">{{ block.report.location }}</text>
@@ -81,6 +82,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import EnergyComparisonReport from './EnergyComparisonReport.vue'
 import EnvironmentTrend from './EnvironmentTrend.vue'
 import MeterHistoryReport from './MeterHistoryReport.vue'
 import DeviceSheet from './DeviceSheet.vue'
@@ -88,8 +90,8 @@ import VideoPlaybackForm from './VideoPlaybackForm.vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
-const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
-defineEmits(['select-alert', 'browse-alerts'])
+const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, busy: Boolean, running: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
+defineEmits(['select-alert', 'browse-alerts', 'energy-reference', 'retry-energy-explanation'])
 const fetchingId = ref('')
 const playbackDevice = ref(null)
 const playbackMounted = ref(false)
@@ -118,9 +120,9 @@ function restOf(block, index) {
  return Math.max(0, total - ROW_LIMIT)
 }
 
-const LABELS = { video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
+const LABELS = { energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
 const blockLabel = block => LABELS[block.type] || '观察'
-const blockCount = block => block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
+const blockCount = block => block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
 const sourceOf = reading => environmentSource(reading)
