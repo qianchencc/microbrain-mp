@@ -137,14 +137,14 @@ function planStatus(plan) {
  return planIsEnabled(plan) ? '已启用' : '状态待确认'
 }
 function planAccessSummary(plan) {
- if (plan.canManage) return plan.canPause ? '可交由 Agent 管理或暂停' : '可交由 Agent 管理'
- if (plan.canPause) return '可交由 Agent 暂停'
+ if (plan.canManage) return '可取消本次或全部'
  return '当前账号仅可查看'
 }
 function selectTaskRows(values, kind) {
  const rows = Array.isArray(values) ? values : []
  const allowed = kind === 'upcoming' ? ['scheduled', 'executing', 'pending'] : ['completed', 'partial', 'failed', 'unconfirmed', 'cancelled', 'missed', 'interrupted', 'verified', 'satisfied']
- return rows.filter(task => allowed.includes(task.status) || (kind === 'results' && Boolean(task.report)))
+ return rows.filter(task => (kind !== 'upcoming' || (!task.occurrence && !task.repeat && task.source?.type !== 'recurring_plan'))
+   && (allowed.includes(task.status) || (kind === 'results' && Boolean(task.report))))
   .sort((a, b) => {
    const difference = Date.parse(taskTimeValue(a, kind) || '') - Date.parse(taskTimeValue(b, kind) || '')
    return kind === 'results' ? -difference : difference
