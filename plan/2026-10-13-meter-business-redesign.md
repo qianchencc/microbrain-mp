@@ -1,7 +1,7 @@
 # 电表业务重设计：统计、对比、检查
 
 日期：2026-10-13
-状态：业务与组件设计稿；三方向由用户指定，检查范围待体验确认；不是生产接入完成记录。
+状态：生产组件已按 A 方向重写（同日实施），微信真机验收未完成；检查范围是否双覆盖仍待用户确认。
 
 ## 本次纠正
 
@@ -125,3 +125,19 @@ comparison: previous_equal_window | explicit
 
 
 浏览器验证已覆盖三业务 × 四状态、任意日期/三个范围、统计粒度切换总量不变、同一抽屉逐层返回，以及 390px/320px 宽度无整页溢出。原型内联脚本与 diff 检查通过。详见原型分支 `docs/research/meter-business-redesign/README.md` 和截图；这不证明生产工具、真实网关或微信端已完成接入。
+
+## 生产实施状态（2026-10-13 第二版）
+
+按用户“重新设计，重新思考，适当引入图表表达”的要求，生产组件已重写：
+
+- 新增 `pages/agent/energy-chart.mjs`：共享 SVG data-URL 图表生成器。nice 刻度（[1,2,2.5,5]×10^k，约 4 段细分）、Y 轴标签与网格线、零基线、玉绿渐变柱、斜纹部分段、缺测占位、进行中虚线柱、对比双柱、x 轴标签内嵌，返回 `points` 几何供 HTML 元信息行逐列对齐。
+- 重写 `energy-business-view.mjs` / `energy-comparison-view.mjs`：统一走共享图表语法；业务标签、数字格式化、序列推导、单表判定、`legacyCompanyEnergy` 适配保留。
+- 重写 `EnergyBusinessReport.vue`：单一组件承载三种 kind（`statistics|comparison|inspection`），层级为 kind 徽章+状态 → 范围与请求窗口 → hero（统计大数字/对比双期数值+差额/检查待核查计数）→ facts → 暖色限定通知 → 覆盖率行 → 图表（统计分段含日/周/月粒度切换、对比双柱/多期柱）→ 逐表贡献行（条宽相对最大贡献者）或检查发现+未检查项 → 采样依据/原始采样 → 脚注来源。DeviceSheet 三层栈（meters/evidence/findings → 单表 → history）保留。
+- 重写 `EnergyComparisonReport.vue` 为 A 版式周比较：Y 轴网格图 + 值标签 + 斜纹缺边界 + 进行中虚线，下方按列对齐的可点选环比 chip 与日期元信息，选中列直接进入该周采样依据。
+- `MeterHistoryReport.vue` 轻整饰：采样行卡片化，保留“累计示数 · 非期间耗电 · 单位与倍率尚未确认”。
+- 语义不变量落实：未确认单位/倍率一律显示“累计示数差/表码增量”，不产生跨表合计与伪 kWh；缺失边界不补零；比率仅在完整边界且基期非零时计算；请求窗口原样展示，不回写固定周/月。
+- `CompanyEnergyReport.vue` 继续经 `legacyCompanyEnergy` 委托，旧报告可读。
+
+验证：`npm run test:agent` 44/44 通过；HBuilderX `compile` 微信端编译成功（仅存基线警告）；`git diff --check` 干净；产物含 `energy-chart.js` 与两个视图模块；组件内 `enhanced :show-scrollbar="false"` 与宿主中立首行样式保留；无 `<template v-if>` 嵌 `<text>`；浏览器高保真镜像截图逐卡目检通过。
+
+未完成：客户微信端交互验收（统计/对比选期/检查发现/依据与采样抽屉/缺测态/滚动行为）仍待进行；检查范围双覆盖问题未获用户回答；运行时上游仍是临时模拟补数，口径策略未确认前 kWh 总量不会出现。
