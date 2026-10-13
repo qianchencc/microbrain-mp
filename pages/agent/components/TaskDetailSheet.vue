@@ -1,7 +1,7 @@
 <template>
  <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="planId ? (viewingReport ? '最近一次报告' : '周期安排') : '任务'" @close="$emit('close')">
   <template #header-right><text v-if="regionName" class="region-name">{{ regionName }}</text></template>
-  <TaskDetailContent ref="content" class="content-host" :active="open" :task-id="taskId" :plan-id="planId" :source="source" :sample-task="sampleTask" @cancelled="$emit('cancelled')" @reference="$emit('reference', $event)" @report-open="viewingReport = true" @plan-return="viewingReport = false" />
+  <TaskDetailContent ref="content" class="content-host" :active="open" :task-id="taskId" :plan-id="planId" :source="source" :sample-task="sampleTask" @cancelled="$emit('cancelled')" @dismiss="$emit('close')" @reference="$emit('reference', $event)" @report-open="viewingReport = true" @plan-return="viewingReport = false" />
  </DeviceSheet>
 </template>
 <script setup>

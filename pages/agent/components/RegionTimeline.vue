@@ -8,17 +8,17 @@
  <RegionCalendar v-else-if="calendar" :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" @select="selectDate" @month-change="$emit('calendar-month', $event)" />
  <view class="timeline-stage">
  <scroll-view class="timeline-scroll" scroll-y enhanced :show-scrollbar="false" :scroll-with-animation="scrollAnimated" :scroll-top="scrollTop" :scroll-into-view="focusId" :upper-threshold="240" :lower-threshold="240" @scroll="onScroll" @scrolltoupper="$emit('reach-start')" @scrolltolower="$emit('reach-end')">
-  <view class="timeline" :style="{ height: scene.height + 'px' }">
+  <view class="timeline" @tap="onBlankTap" @touchmove="lastBlankTap = null" :style="{ height: scene.height + 'px' }">
    <image class="timeline-art" :src="svgImage" mode="scaleToFill" :style="{ width: width + 'px', height: scene.height + 'px' }" @error="renderError = '时间轴暂未加载，请重新进入'" />
    <text v-for="(label, index) in scene.labels" :key="'label-' + index" class="time-label" :class="label.kind" :style="{ top: label.displayY + 'px' }">{{ label.text }}</text>
    <view v-if="scene.showNowLabel" class="time-label now" :style="{ top: scene.nowY + 'px' }"><text>现在</text><text>{{ scene.nowText }}</text></view>
    <text v-for="day in scene.dates" :key="day.date" class="date-label" :style="{ top: day.y + 'px' }">{{ day.date.slice(5).replace('-', ' / ') }}</text>
-   <view v-for="item in scene.cards" :id="'timeline-card-' + item.id" :key="item.id" class="card-target" :style="{ top: item.top - 6 + 'px' }" @tap="interactive && $emit('select', item)">
+   <view v-for="item in scene.cards" :id="'timeline-card-' + item.id" :key="item.id" class="card-target" :style="{ top: item.top - 6 + 'px' }" @tap.stop="selectItem(item)">
     <view class="timeline-card" :class="{ faded: item.faded, executing: item.status === 'executing' }" :hover-class="interactive ? 'timeline-card--pressed' : 'none'"><slot name="card" :item="item"><text class="card-label">{{ item.label }}</text></slot></view>
    </view>
    <text v-if="renderError" class="render-error">{{ renderError }}</text>
   </view>
-  <view v-if="bottomPad" class="timeline-tail" :style="{ height: bottomPad + 'px' }" />
+  <view v-if="bottomPad" class="timeline-tail" @tap="onBlankTap" @touchmove="lastBlankTap = null" :style="{ height: bottomPad + 'px' }" />
  </scroll-view>
  <!-- 空态提示盖在时间轴上而不占位替换：无记录时仍看到当天脊柱；层不拦截点按，重试等按钮单独放行 -->
  <view v-if="!items.length" class="timeline-empty"><slot name="empty" /></view>
@@ -58,8 +58,22 @@ function closeCalendar() {
 }
 defineExpose({ dismissCalendar: () => { if (!calMounted.value) return false; closeCalendar(); return true } })
 const scrollAnimated = ref(true)
-let lastScrollTop = 0, emittedDay = ''
+let lastScrollTop = 0, emittedDay = '', lastBlankTap = null
+function selectItem(item) {
+ lastBlankTap = null
+ if (props.interactive) emit('select', item)
+}
+function onBlankTap(event) {
+ const tap = { at: Date.now(), x: Number(event.detail?.x || 0), y: Number(event.detail?.y || 0) }
+ const previous = lastBlankTap
+ lastBlankTap = tap
+ if (!previous || tap.at - previous.at > 350 || Math.hypot(tap.x - previous.x, tap.y - previous.y) > 28) return
+ lastBlankTap = null
+ focusId.value = ''
+ selectDate(localDate(props.now), true)
+}
 function onScroll(event) {
+ lastBlankTap = null
  const y = Number(event?.detail?.scrollTop)
  if (Number.isFinite(y)) lastScrollTop = y
  if (props.days < 2 || !windowStart.value) return
@@ -74,8 +88,8 @@ function measure() {
   if (result?.width) width.value = result.width
  }).exec()
 }
-function focusDate() {
- if (props.focusItems && scene.value.cards.length) {
+function focusDate(forceNow = false) {
+ if (!forceNow && props.focusItems && scene.value.cards.length) {
   const cards = [...scene.value.cards].sort((a, b) => a.top - b.top)
   const target = cards.filter(card => card.top <= scene.value.nowY).at(-1) || cards[0]
   const id = 'timeline-card-' + target.id
@@ -91,10 +105,11 @@ function focusDate() {
  if (scrollTop.value === targetTop) { scrollTop.value = targetTop + .5; nextTick(() => { scrollTop.value = targetTop }) }
  else scrollTop.value = targetTop
 }
-function selectDate(value) {
+function selectDate(value, forceNow = false) {
+ lastBlankTap = null
  if (props.compactCalendar) closeCalendar()
  emit('date-change', value)
- nextTick(focusDate)
+ nextTick(() => focusDate(forceNow))
 }
 onMounted(async () => { await nextTick(); measure(); focusDate() })
 // 日期变化若是滚动上报的回声（emittedDay），视口已经停在那天，不再二次定位。

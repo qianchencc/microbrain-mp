@@ -23,6 +23,7 @@ export const listRegionDeviceStates = regionId => request(`/agent/regions/${enco
 export const listRegionTimeline = (regionId, date) => request(`/agent/regions/${encodeURIComponent(regionId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 export const listRegionCalendar = (regionId, from, to) => request(`/agent/regions/${encodeURIComponent(regionId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getTaskPlan = (planId, source = 'office') => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}`, source), 'GET')
+export const cancelTaskPlan = (planId, version, scope, date, source = 'office') => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}/cancel`, source), 'POST', { version, scope, ...(date ? { date } : {}) })
 export const listTaskPlans = ({ source = 'office' } = {}) => request(`/agent/task-plans?source=${encodeURIComponent(source)}`, 'GET')
 export const listAgentTasks = ({ source = 'office', from, to } = {}) => request(`/agent/tasks?source=${encodeURIComponent(source)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getTaskDetail = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}`, source), 'GET')

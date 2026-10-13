@@ -38,7 +38,7 @@
 - 定时 Task 提案在对话中使用 `TaskProposalCard`：流事件 `task.proposed/task.resolved` 和恢复快照 `turn.task` 共用 taskId；只有点击“创建任务”才调用确认接口。`scheduled/executing` 状态持续按 Task 详情轮询，终态停止；“放弃”只退役提案，不能误显示成已创建任务。工作台深链必须在授权时间轴返回目标 Task 后打开详情，见 `plan/2026-09-28-task-workbench-deeplink.md`。跨日任务仍在每天的区域时间轴显示，绘图只裁切当前日视口，不改变原始阶段时间或同日 B6 几何。微信端验收由用户完成。
 - 到点执行后区域时间轴在页面可见时静默刷新，任务抽屉仅对 `scheduled/executing` 轮询详情；刷新不可清空旧卡片造成闪烁。阶段结果显示 `satisfied/verified/partial/failed/unconfirmed/missed/interrupted`，401 失败原因显示“创建者登录已失效”；设备记录以每个阶段实际结果为准，不把平台受理改写成物理完成。
 - Office 定时 Task 可选 `interval` 独立起止与 ≥1 自由检查点（无两点业务上限）；确认后由正常扫描完整执行各点、不自主补终点控制。详情与卡片区分 `executing`+`executionActive:false`（区间进行中）与 `executionActive:true`（设备调用中）；`report` 只在终态后由已持久化事实生成，设备按当前授权裁剪、台数按可见唯一设备统计。任务轮询经 `mergeTaskDetail` 合并：提案阶段可能只有 `at`/`actions`，先按 `at` 对齐再写 `id` 与 status，不得用详情的 devices 形状覆盖 actions；取消提案 `phases` 可为空，区域导航锚点取 `interval.startsAt` 或首阶段时间。沿用宿主 flex/`TaskDetailSheet`/B6 几何，报告渲染不调用模型。
-- 工作台删除任务使用任务详情 `canCancel` 与 `version`，二次确认后调用取消接口；403/409 保留抽屉并刷新详情。已取消记录继续留在时间轴，淡化并显示“已取消”；未下发设备不得显示为故障。小程序交互验收由用户完成。
+- 工作台删除任务使用任务详情 `canCancel` 与 `version`，二次确认后调用取消接口；403/409 保留抽屉并刷新详情。区域时间轴隐藏已取消任务及轨道，记录数量也排除它们；历史和设备实际操作记录保留，未下发设备不得显示为故障。小程序交互验收由用户完成。
 - Agent `list_tasks` 只读查询授权区域的某一天；取消必须先列出准确任务，再生成独立 `task.cancellation.proposed` 卡。卡片 `cancellationId` 与目标 `taskId` 不同；会话恢复按前者去重，保留原创建收据。确认调用取消提案接口，放弃/新消息/过期只退役提案；任务状态由真实 Task 详情驱动。
 - 区域列表的 `attention` 只表示当前身份尚未查看的部分完成/失败/未核验任务，不能拿运行中状态或装饰圆点充当提示。进入/切换真实区域调用 `acknowledgeRegion`，只有服务端确认后清除本地提示；样例模式不得更新真实水位。工作台可见时常态 30 秒、任务执行中 5 秒刷新，隐藏后停止；小程序交互验收由用户完成。
 - Task 详情独立读取当前授权照明现态，显示在执行收据之外；Office `switchStatus` 缺少执行时上报时间，当前显示“开启”不能把历史 `unconfirmed` 改成 `verified/completed`。现态读取失败不应抹掉任务收据。草案卡也只能根据本次回执及执行时回读决定结果标签，不能根据后来刷新到的现态把 `ACCEPTED` 改成“已达到目标”；所有现态查询不得用执行快照覆盖。
@@ -76,3 +76,5 @@
 ### 区域时间轴首屏加载
 
 选中日期任务优先于相邻日期预加载。未取得该日快照前不能显示 0 条记录；已有记录在静默刷新时保留。旧区域/日期请求不得结束新页面的加载提示，需同时核对区域、日期、身份和请求序号。见 `plan/2026-10-13-region-timeline-loading-handoff.md`。
+
+- 2026-10-13 双 Agent 周期详情直接提供“取消本次/取消全部”，不使用“管理整个周期”引用替代取消。虚拟本次走计划 skip，实际本次走 Task cancel；全部走计划直接取消接口并取消剩余实际检查点。取消成功返回上一层并刷新，来源显式传递。见 `plan/2026-10-13-simple-task-cancellation-handoff.md`。

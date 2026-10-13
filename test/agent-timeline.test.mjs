@@ -151,3 +151,12 @@ test('Company 周期详情保留下一次安排的只读检查快照', () => {
  assert.deepEqual(snapshot.phases, plan.phases)
  assert.equal(taskDetailView(snapshot).phases[0].devices[0].targetText, '读取最新能耗')
 })
+
+
+test('区域时间轴不绘制已取消任务，即使取消提案已清空阶段', () => {
+ const devices = [{ id: 'light-1', kind: 'lighting', name: '会议室照明' }]
+ const tasks = regionSampleTasks('2026-10-13', 'office-1', devices)
+ const kept = tasks[0]
+ assert.deepEqual(regionTimelineItems([kept, { ...tasks[1], status: 'cancelled', phases: [] }]).map(item => item.id), [kept.id])
+ assert.deepEqual(regionTimelineItems([{ ...kept, status: 'cancelled' }]), [])
+})

@@ -2,7 +2,7 @@ import { resolveDeviceArtwork } from './device-art/catalog.js'
 import { creatorVariant } from './region-device-view.mjs'
 
 export function regionTimelineItems(tasks) {
- return tasks.map(task => {
+ return tasks.filter(task => task.status !== 'cancelled').map(task => {
   // 来源 draft/conversation id 只对创建者本人返回，等价于“我创建的任务”身份信号。
   const mine = Boolean(task.source?.draftId || task.source?.conversationId)
   return {

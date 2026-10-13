@@ -26,7 +26,7 @@
     <view v-else-if="notifications.length && !nextCursor" class="list-footer">已显示全部消息</view>
    </scroll-view>
    <view v-if="selected && markError" class="mark-error"><text>报告已打开，但未读状态未更新</text><button @tap="retryMarkSeen">重试</button></view>
-   <TaskDetailContent v-if="selected" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @reference="$emit('reference', $event)" />
+   <TaskDetailContent v-if="selected" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @dismiss="backToList" @reference="$emit('reference', $event)" />
   </view>
  </DeviceSheet>
 </template>

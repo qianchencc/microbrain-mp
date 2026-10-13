@@ -47,7 +47,7 @@ const WINDOW_LEAD = 2, WINDOW_TRAIL = 3, DAY_STALE_MS = 30000
 const windowStart = ref(''), windowDays = ref(1)
 const dayTasks = ref({}), dayDone = new Set(), dayReq = {}, dayLoadedAt = {}
 const windowDates = computed(() => windowStart.value ? Array.from({ length: windowDays.value }, (_, i) => shiftDate(windowStart.value, i)) : [date.value])
-const tasks = computed(() => sampleMode.value ? (date.value === sampleDate.value ? sampleTasks.value : []) : (dayTasks.value[date.value] || []))
+const tasks = computed(() => sampleMode.value ? (date.value === sampleDate.value ? sampleTasks.value : []) : (dayTasks.value[date.value] || []).filter(task => task.status !== 'cancelled'))
 const hasDaySnapshot = computed(() => Object.hasOwn(dayTasks.value, date.value))
 const deviceDrawerOpen = ref(false), deviceCount = ref(null)
 const deviceRefreshSignal = ref(0)

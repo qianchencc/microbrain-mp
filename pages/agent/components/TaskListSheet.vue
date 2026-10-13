@@ -57,11 +57,11 @@
       </view>
      </view>
     </scroll-view>
-    <view class="detail-actions"><button class="reference-button" @tap="referencePlan"><uni-icons type="chatbubble" size="15" color="#fff" /><text>{{ selectedPlan.canManage ? '询问/管理这个计划' : '询问这个计划' }}</text></button></view>
+    <view class="detail-actions"><button class="reference-button" @tap="referencePlan"><uni-icons type="chatbubble" size="15" color="#fff" /><text>询问这个计划</text></button><view v-if="selectedPlan.canManage" class="cancel-actions"><button v-if="selectedPlan.nextDate" class="cancel-button" :disabled="planLoading" @tap="cancelWholePlan('occurrence')">取消本次</button><button class="cancel-button" :disabled="planLoading" @tap="cancelWholePlan('all')">取消全部</button></view></view>
    </view>
 
    <view v-if="selectedTask" class="detail-pane">
-    <TaskDetailContent class="task-content-host" :active="open" :task-id="selectedTaskId" :source="source" @reference="emit('reference', $event)" />
+    <TaskDetailContent class="task-content-host" :active="open" :task-id="selectedTaskId" :source="source" @reference="emit('reference', $event)" @cancelled="onTaskCancelled" @dismiss="backToList" />
    </view>
   </view>
  </DeviceSheet>
@@ -71,7 +71,7 @@
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { getTaskPlan, listAgentTasks, listTaskPlans } from '@/apis/agent'
+import { getTaskPlan, cancelTaskPlan, listAgentTasks, listTaskPlans } from '@/apis/agent'
 import { repeatText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 import SlidingSegments from './SlidingSegments.vue'
@@ -225,6 +225,23 @@ function closeSheet() {
  returnPlan.value = null
  emit('close')
 }
+function onTaskCancelled() {
+ returnPlan.value = null; selectedPlan.value = null; selectedTask.value = null
+ void load()
+}
+async function cancelWholePlan(scopeType) {
+ if (!selectedPlan.value?.canManage || planLoading.value) return
+ const plan = selectedPlan.value, source = props.source, scope = getAgentStorageScope()
+ const title = scopeType === 'all' ? '取消全部' : '取消本次'
+ const confirmed = await new Promise(resolve => uni.showModal({ title, content: scopeType === 'all' ? '取消这个周期全部尚未执行的安排；已执行或已下发的动作不会回滚。' : '只取消下一次安排，后续周期照常执行。', confirmText: title, confirmColor: '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ if (!confirmed || !props.open || selectedPlan.value?.planId !== plan.planId || source !== props.source || scope !== getAgentStorageScope()) return
+ planLoading.value = true
+ try {
+  await cancelTaskPlan(plan.planId, plan.version, scopeType, scopeType === 'occurrence' ? plan.nextDate : undefined, source)
+  backToList(); void load()
+ } catch (cause) { error.value = cause.message || '取消失败，请刷新后重试'; uni.showToast({ title: error.value, icon: 'none' }) }
+ finally { planLoading.value = false }
+}
 function referencePlan() {
  if (!selectedPlan.value?.planId) return
  emit('reference', { type: 'task_plan', planId: selectedPlan.value.planId, label: selectedPlan.value.label || '' })
@@ -289,6 +306,7 @@ button::after { border:0; }
 .task-content-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
 .detail-actions { flex-shrink:0; padding:10px 18px 12px; border-top:1px solid #e5ebe6; background:#fbfcfb; }
 .reference-button { width:100%; min-height:42px; display:flex; align-items:center; justify-content:center; gap:8px; border-radius:6px; background:linear-gradient(180deg,#28775e,#17634c); color:#fff; font-size:12px; font-weight:600; box-shadow:0 2px 5px #16372816,inset 0 1px 0 #ffffff30; }
+.cancel-actions { display:flex; gap:8px; margin-top:10px; }.cancel-button { flex:1; min-width:0; margin:0; height:38px; display:flex; align-items:center; justify-content:center; border:1px solid #ead6d1; border-radius:6px; background:#fff; color:#a15343; font-size:12px; }.cancel-button[disabled] { opacity:.55; }
 .reference-button:active { background:#145841; }
 @keyframes arrangements-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .spinning { animation:none; } }

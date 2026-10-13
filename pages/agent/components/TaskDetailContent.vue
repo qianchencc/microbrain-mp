@@ -44,14 +44,15 @@
     <button class="latest-report-link" @tap="openLatestReport">查看最近一次报告</button>
    </view>
    <view class="source"><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId">对话 {{ detail.source.conversationId.slice(0, 8) }}</text></view>
-   <view v-if="!sampleTask" class="reference-actions"><button class="task-reference" @tap="referenceCurrent">{{ plan ? '询问或管理这个计划' : '引用任务并询问' }}</button><button v-if="task?.occurrence" class="task-reference secondary" @tap="referencePlan">管理整个周期</button></view>
-   <button v-if="detail.canCancel && !sampleTask" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="deleteTask">取消任务</button>
+   <view v-if="!sampleTask" class="reference-actions"><button class="task-reference" @tap="referenceCurrent">{{ plan ? '询问这个计划' : '引用任务并询问' }}</button></view>
+   <button v-if="!sampleTask && !loading && (detail.canCancel || (task?.occurrence?.virtual && detailMine && task.status !== 'cancelled'))" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="task?.occurrence?.virtual ? cancelPeriod('occurrence') : deleteTask()">{{ task?.occurrence ? '取消本次' : '取消任务' }}</button>
+   <button v-if="!sampleTask && (plan?.canManage || (task?.occurrence && detailMine))" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="cancelPeriod('all')">取消全部</button>
   </view>
  </scroll-view>
 </template>
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { cancelTask, getTaskDetail, getTaskLightingStates, getTaskPlan } from '@/apis/agent'
+import { cancelTask, cancelTaskPlan, getTaskDetail, getTaskLightingStates, getTaskPlan } from '@/apis/agent'
 import { taskDetailView, taskPlanSnapshot } from '../task-detail-view.mjs'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
@@ -60,7 +61,7 @@ import { creatorVariant } from '../region-device-view.mjs'
 import ObservationCard from './ObservationCard.vue'
 
 const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, source: { type: String, default: 'office' } })
-const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'plan-return', 'reference'])
+const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'plan-return', 'reference', 'dismiss'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
@@ -75,7 +76,26 @@ function referenceCurrent() {
  if (plan.value) emit('reference', { type: 'task_plan', planId: plan.value.planId, label: plan.value.label })
  else if (task.value) emit('reference', { type: 'task', taskId: task.value.id, label: task.value.label })
 }
-function referencePlan() { if (task.value?.occurrence?.planId) emit('reference', { type: 'task_plan', planId: task.value.occurrence.planId, label: task.value.label }) }
+async function cancelPeriod(scope) {
+ if (cancelling.value) return
+ const planId = plan.value?.planId || task.value?.occurrence?.planId, date = task.value?.occurrence?.date
+ const source = props.source, identity = getAgentStorageScope()
+ if (!planId) return
+ cancelling.value = true; actionError.value = ''
+ try {
+  const result = await getTaskPlan(planId, source)
+  if (!result.plan?.canManage) throw new Error('当前无权取消这个周期')
+  const title = scope === 'all' ? '取消全部' : '取消本次'
+  const confirmed = await new Promise(resolve => uni.showModal({ title, content: scope === 'all'
+   ? '取消这个周期全部尚未执行的安排；已执行或已下发的动作不会回滚。'
+   : '只取消这一次，后续周期照常执行。', confirmText: title, confirmColor: '#a15343', success: value => resolve(value.confirm), fail: () => resolve(false) }))
+  if (!confirmed || !props.active || source !== props.source || identity !== getAgentStorageScope()
+    || planId !== (plan.value?.planId || task.value?.occurrence?.planId)) return
+  await cancelTaskPlan(planId, result.plan.version, scope, date, source)
+  emit('cancelled'); emit('dismiss')
+ } catch (cause) { actionError.value = cause.message || '取消失败，请刷新后重试' }
+ finally { cancelling.value = false }
+}
 const latestReport = computed(() => taskDetailView(plan.value?.latestTask)?.report || null)
 // 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于创建者标记显示“我”。
 const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
@@ -189,16 +209,17 @@ async function deleteTask() {
  if (!detail.value?.canCancel || cancelling.value) return
  const taskId = activeTaskId.value, version = task.value.version
  const settledInterval = detail.value?.interval && !detail.value.phases.some(phase => phase.status === 'pending')
- const confirmed = await new Promise(resolve => uni.showModal({ title: '取消任务',
+ const title = task.value.occurrence ? '取消本次' : '取消任务'
+ const confirmed = await new Promise(resolve => uni.showModal({ title,
   content: settledInterval ? '结束剩余区间；已发生动作不会回滚。'
-   : `${detail.value?.interval ? '未执行的检查点' : '未执行的阶段'}将取消；已经执行的设备动作不会回滚。`, confirmText: '取消任务', confirmColor: '#a15343',
+   : `${detail.value?.interval ? '未执行的检查点' : '未执行的阶段'}将取消；已经执行的设备动作不会回滚。${task.value.occurrence ? '后续周期照常执行。' : ''}`, confirmText: title, confirmColor: '#a15343',
   success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || !props.active || activeTaskId.value !== taskId) return
  cancelling.value = true; actionError.value = ''
  try {
   await cancelTask(taskId, version, props.source)
   await load(true)
-  emit('cancelled')
+  emit('cancelled'); emit('dismiss')
  } catch (cause) {
   actionError.value = cause.message || '取消失败，请刷新后重试'
   await load(true)
