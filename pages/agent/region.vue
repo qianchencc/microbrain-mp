@@ -1,7 +1,7 @@
 <template>
  <view class="region-page">
   <AssistantNav :back-label="backLabel" @back="goBack"><template #title><RegionChip workbench nav /></template></AssistantNav>
-  <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text>{{ tasks.length }} 条记录</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
+  <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text class="record-status">{{ !sampleMode && !hasDaySnapshot ? (error ? '加载失败' : '任务加载中…') : tasks.length + ' 条记录' }}</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
   <text v-if="sampleMode" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-body">
    <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample' : 'real')" calendar :bottom-pad="78" :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :start="windowStart || date" :days="windowDays" :now="displayNow" @date-change="date = $event" @visible-date="onVisibleDate" @reach-start="extendTop" @reach-end="extendBottom" @calendar-month="onCalendarMonth" @select="openTask">
@@ -15,7 +15,7 @@
      </view>
     </template>
    </RegionTimeline>
-   <view v-if="loading || error" class="notice-layer"><view class="notice"><text>{{ loading ? '正在读取任务记录' : error }}</text><button v-if="error" @tap="load">重新加载</button></view></view>
+   <view v-if="loading || error" class="notice-layer"><view class="notice"><view v-if="loading" class="loading-status"><view class="loading-spinner" /><text>正在加载任务…</text></view><text v-else>{{ error }}</text><button v-if="error" @tap="load">重新加载</button></view></view>
   </view>
   <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
   <RegionDeviceDrawer v-if="deviceDrawerMounted" @reference="referenceTask" :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : emptySampleTasks" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="reloadWindow(); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
@@ -48,6 +48,7 @@ const windowStart = ref(''), windowDays = ref(1)
 const dayTasks = ref({}), dayDone = new Set(), dayReq = {}, dayLoadedAt = {}
 const windowDates = computed(() => windowStart.value ? Array.from({ length: windowDays.value }, (_, i) => shiftDate(windowStart.value, i)) : [date.value])
 const tasks = computed(() => sampleMode.value ? (date.value === sampleDate.value ? sampleTasks.value : []) : (dayTasks.value[date.value] || []))
+const hasDaySnapshot = computed(() => Object.hasOwn(dayTasks.value, date.value))
 const deviceDrawerOpen = ref(false), deviceCount = ref(null)
 const deviceRefreshSignal = ref(0)
 const emptySampleTasks = Object.freeze([])
@@ -83,7 +84,7 @@ function ensureWindow() {
 async function loadDay(d, { silent = false, force = false } = {}) {
  const region = focusRegionId.value, scope = getAgentStorageScope()
  if (!region || sampleMode.value) return false
- if (!force && dayDone.has(d) && Date.now() - (dayLoadedAt[d] || 0) < DAY_STALE_MS) return true
+ if (!force && dayDone.has(d) && Date.now() - (dayLoadedAt[d] || 0) < DAY_STALE_MS) { if (d === date.value) loading.value = false; return true }
  const token = (dayReq[d] = (dayReq[d] || 0) + 1)
  const selected = d === date.value
  if (selected && !silent) { error.value = ''; loading.value = true }
@@ -101,9 +102,9 @@ async function loadDay(d, { silent = false, force = false } = {}) {
   dayLoadedAt[d] = Date.now()
   return true
  } catch (cause) {
-  if (token === dayReq[d] && scope === getAgentStorageScope() && selected) error.value = cause.message || '任务记录暂不可用'
+  if (token === dayReq[d] && region === focusRegionId.value && scope === getAgentStorageScope() && d === date.value) error.value = cause.message || '任务记录暂不可用'
   return false
- } finally { if (selected && token === dayReq[d]) loading.value = false }
+ } finally { if (d === date.value && region === focusRegionId.value && scope === getAgentStorageScope() && token === dayReq[d]) loading.value = false }
 }
 async function loadSample() {
  const region = focusRegionId.value, scope = getAgentStorageScope(), current = ++requestId
@@ -123,8 +124,10 @@ async function loadVisibleTimeline() {
  let loaded = false
  if (sampleMode.value) loaded = await loadSample()
  else {
-  windowDates.value.filter(d => d !== selectedDate).forEach(d => { void loadDay(d, { silent: true }) })
   loaded = await loadDay(selectedDate)
+  if (visible && region === focusRegionId.value && selectedDate === date.value && scope === getAgentStorageScope()) {
+   windowDates.value.filter(d => d !== selectedDate).forEach(d => { void loadDay(d, { silent: true }) })
+  }
  }
  if (!loaded) return
  await nextTick()
@@ -257,7 +260,10 @@ view,text,input { font-size:inherit; line-height:inherit; }
 @keyframes fadeIn { from { opacity:0; } }
 .notice-layer { position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; }
 .notice-layer button { pointer-events:auto; }
-.notice { padding:70px 24px; text-align:center; font-size:13px; color:#89958e; animation:fadeIn 160ms ease-out backwards; }
+.notice { margin:130px auto 0; width:fit-content; max-width:calc(100% - 48px); box-sizing:border-box; padding:12px 18px; border-radius:18px; background:rgba(250,252,250,.96); box-shadow:0 3px 14px rgba(31,52,42,.07); text-align:center; font-size:13px; color:#89958e; animation:fadeIn 160ms ease-out backwards; }
+.loading-status { display:flex; align-items:center; gap:8px; }
+.loading-spinner { width:12px; height:12px; border:2px solid #dce8e1; border-top-color:#26745b; border-radius:50%; animation:loadingSpin 800ms linear infinite; }
+@keyframes loadingSpin { to { transform:rotate(360deg); } }
 .notice button { margin-top:18px; background:transparent; font-size:13px; color:#176b54; }
 .notice button::after { border:0; }
 .task-row { display:flex; align-items:center; gap:7px; height:32px; min-width:0; }
@@ -284,5 +290,5 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .dock-seg--pressed { transform:scale(.96); }
 .primary-plus { font-size:15px; font-weight:500; line-height:1; }
 .device-count { font-size:11px; color:#7b8d80; font-weight:600; }
-@media (prefers-reduced-motion:reduce) { .notice,.nav-back,.dock-seg { transition:none; animation:none; } }
+@media (prefers-reduced-motion:reduce) { .loading-spinner,.notice,.nav-back,.dock-seg { transition:none; animation:none; } }
 </style>
