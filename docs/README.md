@@ -14,7 +14,7 @@
 
 ## 当前状态
 
-- 2026-10-09 用户已认可优化现有Agent的设备发现与目标表达；规格与三票已确认发布；票01页外委托与票02完整照明范围/排除已合入Runtime主线；双端共用发现/提案prompt，UTC报时误述已修正。128项全量、最终9项定向、真实模型及原生卡片隔离走查通过，唯一3200已受控更新并真实只读复核。03集合式定时/周期目标于10-13已合入源码：Runtime132项、MP40项及原生84项卡片夹具通过；真实模型503阻塞，未部署本批到3200，真机/真实控制待验。见[票03交接](../plan/2026-10-13-agent-target-03-return.md)。见[票02回传](../plan/2026-10-09-agent-target-02-return.md)与[票01回传](../plan/2026-10-09-agent-target-01-return.md)。见[优化规格](../plan/2026-10-09-agent-target-improvement-spec.md)、[三票路线](../plan/2026-10-09-agent-target-improvement-tickets.md)与[准备交接](../plan/2026-10-09-agent-target-improvement-preparation-handoff.md)。
+- 2026-10-09 用户已认可优化现有Agent的设备发现与目标表达；规格与三票已确认发布；票01页外委托与票02完整照明范围/排除已合入Runtime主线；双端共用发现/提案prompt，UTC报时误述已修正。128项全量、最终9项定向、真实模型及原生卡片隔离走查通过，唯一3200已受控更新并真实只读复核。03集合式定时/周期目标于10-13完成：Runtime132项、MP40项及原生84项卡片夹具通过；网关恢复后Company周期/Office一次性真实模型及同报告追问通过，唯一3200已更新并真实只读复核，真机/真实控制待验。见[票03交接](../plan/2026-10-13-agent-target-03-return.md)。见[票02回传](../plan/2026-10-09-agent-target-02-return.md)与[票01回传](../plan/2026-10-09-agent-target-01-return.md)。见[优化规格](../plan/2026-10-09-agent-target-improvement-spec.md)、[三票路线](../plan/2026-10-09-agent-target-improvement-tickets.md)与[准备交接](../plan/2026-10-09-agent-target-improvement-preparation-handoff.md)。
 
 - 2026-10-09 Agent自然首轮到报告的隔离真实模型对照完成：现版与候选均完成选择/排除/改时间、夹具确认执行和同一Task追问；候选报告有时区与重操作建议问题，整体优于现版未证明。真实客户/微信未验，未部署，见[回传](../plan/2026-10-09-agent-natural-delegation-return.md)。
 
