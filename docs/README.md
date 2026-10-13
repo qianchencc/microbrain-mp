@@ -16,6 +16,8 @@
 
 ## 当前状态
 
+- 2026-10-13 prompt职责减负已合入Runtime并更新唯一3200：Office静态字符－76.3%、Company－58.7%；参数/标题/当前提案状态/授权后台数与上海日期交由工具及服务器。25组真实模型试验与失败全保留，137项最终全量、客户双来源GET新旧对照通过；不宣称普遍提速、手机或客户物理控制已验，见[回传](../plan/2026-10-13-prompt-responsibility-return.md)。
+
 - 2026-10-13 用户要求复核prompt职责与真实轨迹证据。照明三票的限定闭环已交付，但prompt减负、独立因果与客户端到端轨迹尚未整体验收；旧/新prompt字符、8次检索→3次调用、标题错误重试及真实电量失败均已逐项留证，见[证据复核](research/2026-10-13-agent-prompt-and-trajectory-proof-review.md)。
 
 - 2026-10-09 用户已认可优化现有Agent的设备发现与目标表达；规格与三票已确认发布；票01页外委托与票02完整照明范围/排除已合入Runtime主线；双端共用发现/提案prompt，UTC报时误述已修正。128项全量、最终9项定向、真实模型及原生卡片隔离走查通过，唯一3200已受控更新并真实只读复核。03集合式定时/周期目标于10-13完成：Runtime132项、MP40项及原生84项卡片夹具通过；网关恢复后Company周期/Office一次性真实模型及同报告追问通过，唯一3200已更新并真实只读复核，真机/真实控制待验。见[票03交接](../plan/2026-10-13-agent-target-03-return.md)。见[票02回传](../plan/2026-10-09-agent-target-02-return.md)与[票01回传](../plan/2026-10-09-agent-target-01-return.md)。见[优化规格](../plan/2026-10-09-agent-target-improvement-spec.md)、[三票路线](../plan/2026-10-09-agent-target-improvement-tickets.md)与[准备交接](../plan/2026-10-09-agent-target-improvement-preparation-handoff.md)。
