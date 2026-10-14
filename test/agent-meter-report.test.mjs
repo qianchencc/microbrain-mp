@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportContribution, meterReportEvidence, meterReportHistoryQuery, meterReportIsComparison, meterReportSpanText } from '../pages/agent/meter-report-view.mjs'
-import { loadShapeChart, contributionChart } from '../pages/agent/energy-chart.mjs'
+import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText } from '../pages/agent/meter-report-view.mjs'
+import { loadShapeChart, contributionChart, meterBarChart } from '../pages/agent/energy-chart.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
 const report = {
@@ -359,4 +359,170 @@ test('对比依据行：两期采样与 Δ；未计入表给出两侧原因', ()
  assert.equal(excluded.valueText, '—')
  // 原始采样查询覆盖基期起点 → 本期终点（与周比较卡的含基期窗口一致）
  assert.deepEqual(meterReportHistoryQuery(compare, 'm-a'), { equipmentId: 'm-a', from: '2026-09-24T00:00:00.000+08:00', to: '2026-10-08T00:00:00+08:00' })
+})
+
+const region = {
+ reportId: 'rr1', type: 'meter-report', kind: 'comparison',
+ params: {
+  axis: 'region',
+  span: { requested: { from: '2026-10-01T00:00:00+08:00', to: '2026-10-08T00:00:00+08:00' }, observed: { from: '2026-10-01T00:00:00.000+08:00', to: '2026-10-08T00:00:00.000+08:00' } },
+  scope: { level: 'floor', label: '26楼', basis: 'areaName', meterCount: 2 },
+  other: { level: 'floor', label: '27楼', basis: 'areaName', meterCount: 1 },
+ },
+ sides: {
+  a: {
+   scope: { level: 'floor', label: '26楼', basis: 'areaName', meterCount: 2 },
+   total: { value: 504, unit: '度', yuan: 579.6 },
+   shape24: { rates: Array(24).fill(1.5), coveredFraction: 1, perMeter: true },
+   buckets: { grain: 'day', items: Array.from({ length: 7 }, (_, i) => ({ from: `2026-10-0${i + 1}T00:00:00.000+08:00`, to: `2026-10-0${i + 2}T00:00:00.000+08:00`, value: 72, partial: false, days: 1 })) },
+   coverage: { meters: 2, dataMeters: 2, noData: [], partial: [] },
+   meters: [
+    { id: 'm-a', name: '运营部电表', areaName: '26楼运营部', floor: '26楼', value: 168, status: 'ok', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 100 }, toSample: { readTime: '2026-10-08T00:00:00.000+08:00', value: 268 } } },
+    { id: 'm-b', name: '26楼办公室电表', areaName: '26楼办公室', floor: '26楼', value: 336, status: 'ok', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 200 }, toSample: { readTime: '2026-10-08T00:00:00.000+08:00', value: 536 } } },
+   ],
+   composition: { kind: 'ranking', rows: [{ label: '26楼办公室', value: 336, meterIds: ['m-b'] }, { label: '26楼运营部', value: 168, meterIds: ['m-a'] }], rest: null, excluded: { noData: 0, partial: 0, through: null } },
+   context: { kind: 'parent', parentLabel: '全部电表', share: 60, perMeterDaily: 36, parentPerMeterDaily: 42 },
+  },
+  b: {
+   scope: { level: 'floor', label: '27楼', basis: 'areaName', meterCount: 1 },
+   total: { value: 336, unit: '度', yuan: 386.4 },
+   shape24: { rates: Array(24).fill(2), coveredFraction: 1, perMeter: true },
+   buckets: { grain: 'day', items: Array.from({ length: 7 }, (_, i) => ({ from: `2026-10-0${i + 1}T00:00:00.000+08:00`, to: `2026-10-0${i + 2}T00:00:00.000+08:00`, value: 48, partial: false, days: 1 })) },
+   coverage: { meters: 1, dataMeters: 1, noData: [], partial: [] },
+   meters: [
+    { id: 'm-c', name: '27楼展厅电表', areaName: '27楼展厅', floor: '27楼', value: 336, status: 'ok', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 300 }, toSample: { readTime: '2026-10-08T00:00:00.000+08:00', value: 636 } } },
+   ],
+   composition: { kind: 'ranking', rows: [{ label: '27楼展厅', value: 336, meterIds: ['m-c'] }], rest: null, excluded: { noData: 0, partial: 0, through: null } },
+   context: { kind: 'parent', parentLabel: '全部电表', share: 40, perMeterDaily: 48, parentPerMeterDaily: 42 },
+  },
+ },
+ diff: { value: 168, pct: 50 },
+ metrics: [
+  { key: 'perMeterDaily', unit: '度/台·日', a: { value: 36 }, b: { value: 48 }, change: -12 },
+  { key: 'dailyAvg', unit: '度/日', a: { value: 72 }, b: { value: 48 }, change: 24 },
+  { key: 'nightBase', unit: '度/时', a: { value: 3 }, b: { value: 2 }, change: 1 },
+  { key: 'peakDay', unit: '度', a: { value: 72, sub: '2026-10-02' }, b: { value: 48, sub: '2026-10-03' }, change: 24 },
+ ],
+ overlapMeterIds: [],
+ coverage: { meters: 3, dataMeters: 3, noData: [], partial: [], truncated: false },
+ meters: [
+  { id: 'm-a', name: '运营部电表', areaName: '26楼运营部', floor: '26楼', value: 168, status: 'ok', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 100 }, toSample: { readTime: '2026-10-08T00:00:00.000+08:00', value: 268 } } },
+  { id: 'm-b', name: '26楼办公室电表', areaName: '26楼办公室', floor: '26楼', value: 336, status: 'ok', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 200 }, toSample: { readTime: '2026-10-08T00:00:00.000+08:00', value: 536 } } },
+  { id: 'm-c', name: '27楼展厅电表', areaName: '27楼展厅', floor: '27楼', value: 336, status: 'ok', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 300 }, toSample: { readTime: '2026-10-08T00:00:00.000+08:00', value: 636 } } },
+ ],
+}
+
+test('区域参数行：跨度 · A台数 vs B台数 · 重叠与逐侧未计入尾注', () => {
+ assert.equal(meterReportParamLine(region), '2026-10-01 → 10-08 · 26楼 2台 vs 27楼 1台')
+ const overlap = { ...region, overlapMeterIds: ['m-a'], sides: { ...region.sides, b: { ...region.sides.b, coverage: { meters: 2, dataMeters: 1, noData: [], partial: [{ id: 'm-x', through: 'x' }] } } } }
+ assert.equal(meterReportParamLine(overlap), '2026-10-01 → 10-08 · 26楼 2台 vs 27楼 1台 · 重叠 1 台 · B 1台未计入')
+})
+
+test('区域主数字：双总量带度、差额与比例；一侧无数据时不伪造', () => {
+ const hero = meterReportHero(region)
+ assert.equal(hero.mode, 'region')
+ assert.equal(hero.label, '用电量 · 26楼 vs 27楼')
+ assert.equal(hero.value, '504 度 vs 336 度')
+ assert.equal(hero.detail, '差 +168 度 · +50%')
+ const half = { ...region, sides: { ...region.sides, b: { ...region.sides.b, total: { value: 0, unit: '度', yuan: 0 }, coverage: { meters: 1, dataMeters: 0, noData: ['m-c'], partial: [] } } }, diff: { value: null, pct: null, pctNote: '数据不足' } }
+ const h2 = meterReportHero(half)
+ assert.equal(h2.value, '504 度 vs —')
+ assert.equal(h2.detail, '')
+ assert.equal(h2.pctNote, '数据不足')
+ assert.equal(meterReportParamLine(half).includes('B 1台未计入'), true)
+})
+
+test('区域指标表头用 A/B 范围标签，首行单台日均', () => {
+ assert.deepEqual(meterReportMetricHeads(region), ['26楼', '27楼', '差'])
+ const rows = meterReportMetricTable(region)
+ assert.equal(rows[0].key, 'perMeterDaily')
+ assert.equal(rows[0].label, '单台日均')
+ assert.equal(rows[0].a.text, '36 度/台·日')
+ assert.equal(rows[0].change.text, '−12')
+ assert.deepEqual(meterReportMetricHeads(compare), ['本期', '上期', '变化'])
+})
+
+test('区域曲线：A 玉绿 B 黄铜实线，单台平均后缀图例', () => {
+ const curve = meterReportLoadCurve(region)
+ assert.ok(curve?.hasData)
+ const svg = decodeURIComponent(curve.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /26楼 · 单台平均/)
+ assert.match(svg, /27楼 · 单台平均/)
+ assert.match(svg, /stroke="#b89443"/)
+ assert.ok(!/stroke="#b89443" stroke-width="2" stroke-dasharray/.test(svg))
+ const sameCount = { ...region, sides: { a: { ...region.sides.a, shape24: { rates: region.sides.a.shape24.rates, coveredFraction: 1 } }, b: { ...region.sides.b, shape24: { rates: region.sides.b.shape24.rates, coveredFraction: 1 } } } }
+ const raw = decodeURIComponent(meterReportLoadCurve(sameCount).src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(raw, /26楼</)
+ assert.ok(!raw.includes('单台平均'))
+})
+
+test('区域排行：两条独立榜单、标题带范围台数、B 黄铜条', () => {
+ const rankings = meterReportRegionRankings(region)
+ assert.equal(rankings.length, 2)
+ assert.equal(rankings[0].title, '26楼 · 2台')
+ assert.equal(rankings[1].title, '27楼 · 1台')
+ assert.deepEqual(rankings[0].rows.map(r => r.label), ['26楼办公室', '26楼运营部'])
+ assert.deepEqual(rankings[1].rows.map(r => r.label), ['27楼展厅'])
+ const svg = decodeURIComponent(rankings[1].src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /fill="#b89443"/)
+ assert.ok(!svg.includes('url(#jade)') || !rankings[1].rows.some(r => r.value !== null && !r.highlight))
+})
+
+test('区域依据按 A/B 分组；历史查询用单跨度', () => {
+ const sections = meterReportEvidenceSections(region)
+ assert.equal(sections.length, 2)
+ assert.equal(sections[0].tag, 'A · 26楼')
+ assert.deepEqual(sections[0].rows.map(r => r.id), ['m-a', 'm-b'])
+ assert.equal(sections[1].tag, 'B · 27楼')
+ assert.deepEqual(sections[1].rows.map(r => r.id), ['m-c'])
+ assert.equal(sections[0].rows[0].statusText, '计入合计')
+ assert.match(sections[0].rows[0].bounds, /起 2026-10-01 00:00 · 示数 100 · 止 2026-10-08 00:00 · 示数 268/)
+ const overlap = { ...region, overlapMeterIds: ['m-c'], sides: { ...region.sides, a: { ...region.sides.a, meters: [...region.sides.a.meters, region.sides.b.meters[0]] } } }
+ const s2 = meterReportEvidenceSections(overlap)
+ assert.equal(s2.length, 1)
+ assert.deepEqual(meterReportHistoryQuery(region, 'm-c'), { equipmentId: 'm-c', from: '2026-10-01T00:00:00+08:00', to: '2026-10-08T00:00:00+08:00' })
+})
+
+test('04 修正：跨日/跨年与日内时刻保留、分段默认回退、空合计隐藏主数字、环比只在紧邻等长基期', () => {
+ const subDay = { ...report, params: { ...report.params, span: { requested: { from: '2026-10-01T08:30:00+08:00', to: '2026-10-02T10:45:00+08:00' } } } }
+ assert.equal(meterReportSpan(subDay), '2026-10-01 08:30 → 10-02 10:45')
+ const crossYear = { ...compare, params: { ...compare.params, baseline: { requested: { from: '2026-12-28T00:00:00+08:00', to: '2027-01-04T00:00:00+08:00' } } } }
+ assert.match(meterReportParamLine(crossYear), /2026-12-28 → 2027-01-04/)
+ const laterBase = { ...compare, params: { ...compare.params, baseline: { requested: { from: '2026-09-20T00:00:00+08:00', to: '2026-10-10T00:00:00+08:00' } } } }
+ assert.deepEqual(meterReportHistoryQuery(laterBase, 'm-a'), { equipmentId: 'm-a', from: '2026-09-20T00:00:00+08:00', to: '2026-10-10T00:00:00+08:00' })
+ assert.equal(meterReportCompareView(compare), 'curve')
+ assert.equal(meterReportCompareView({ ...compare, sides: { ...compare.sides, b: { ...compare.sides.b, shape24: { rates: null, coveredFraction: 0 } } } }), 'bars')
+ assert.equal(meterReportCompareView(region), 'curve')
+ assert.equal(meterReportHero({ ...report, coverage: { ...report.coverage, dataMeters: 0 }, total: { value: 0, unit: '度', yuan: null, tariff: null } }).empty, true)
+ assert.match(meterReportHero(crossYear).pct || '', /较基期/)
+ assert.match(meterReportHero(compare).pct || '', /环比/)
+ const emptyCohort = {
+  ...compare,
+  coverage: { ...compare.coverage, dataMeters: 0 },
+  sides: { a: { ...compare.sides.a, total: { value: 0, unit: '度', yuan: 0 } }, b: { ...compare.sides.b, total: { value: 0, unit: '度', yuan: 0 } } },
+  diff: { value: null, pct: null, pctNote: '数据不足' },
+ }
+ const emptyHero = meterReportHero(emptyCohort)
+ assert.equal(emptyHero.value, null)
+ assert.equal(emptyHero.pctNote, '数据不足')
+ assert.match(emptyHero.sub, /本期 — · 上期 —/)
+ assert.ok(!/0/.test(emptyHero.sub))
+ assert.match(meterReportParamLine({ ...report, coverage: { ...report.coverage, truncated: true } }), /读取不全$/)
+})
+
+test('分段双柱：A 缺测仍画 B；B 缺测不画假零线', () => {
+  const bOnly = [{ value: null, baseline: 5, label: '10/01' }]
+ const svg = decodeURIComponent(meterBarChart(bOnly, { paired: true }).src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /fill="#bfd2b9"/)
+ assert.ok(!svg.includes('缺测'))
+ const aOnly = [{ value: 5, baseline: null, label: '10/01' }]
+ const svgA = decodeURIComponent(meterBarChart(aOnly, { paired: true }).src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svgA, /fill="url\(#jade\)"/)
+ assert.ok(!svgA.includes('bfd2b9'))
+ const neither = meterBarChart([{ value: null, baseline: null, label: '10/01' }], { paired: true })
+ assert.equal(neither.hasData, false)
+ assert.ok(decodeURIComponent(neither.src).includes('缺测'))
+ assert.deepEqual(meterReportBarLegend(compare).map(i => i.label), ['本期', '上期'])
+ assert.deepEqual(meterReportBarLegend(region).map(i => i.label), ['26楼', '27楼'])
+ assert.equal(meterReportBarLegend(report).length, 0)
 })

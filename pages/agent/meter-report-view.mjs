@@ -8,6 +8,7 @@ import { fmtShanghaiDateTime } from './observation-view.mjs'
 
 const finite = value => typeof value === 'number' && Number.isFinite(value)
 export const meterReportIsComparison = report => report?.kind === 'comparison'
+export const meterReportAxis = report => report?.params?.axis === 'region' ? 'region' : 'time'
 // 对比卡「曲线 | 分段」切换：曲线 = 本期/上期 24 小时负荷叠加；分段 = 两期同粒度双柱。
 export const meterCompareViews = [{ key: 'curve', label: '曲线' }, { key: 'bars', label: '分段' }]
 
@@ -25,38 +26,87 @@ export const degreeText = value => finite(value)
  ? (Math.abs(value) >= 1000 ? value.toLocaleString('zh-CN', { maximumFractionDigits: 1 }) : String(Math.round(value * 10) / 10))
  : '—'
 
+const boundaryLabel = (iso, withYear) => {
+ const text = String(iso || '')
+ const ms = Date.parse(text)
+ if (!Number.isFinite(ms) || text.length < 16) return text.slice(0, 10)
+ const day = withYear ? text.slice(0, 10) : text.slice(5, 10)
+ const h = Number(text.slice(11, 13)), m = Number(text.slice(14, 16))
+ return h === 0 && m === 0 ? day : `${day} ${text.slice(11, 16)}`
+}
+const spanLabel = (requested, short) => {
+ const fromMs = Date.parse(requested?.from || ''), toMs = Date.parse(requested?.to || '')
+ const crossYear = Number.isFinite(fromMs) && Number.isFinite(toMs)
+  && String(requested.from || '').slice(0, 4) !== String(requested.to || '').slice(0, 4)
+ return `${boundaryLabel(requested?.from, !short || crossYear)} → ${boundaryLabel(requested?.to, crossYear)}`
+}
+
 export function meterReportSpan(report) {
  const requested = report?.params?.span?.requested || {}
- return `${String(requested.from || '').slice(0, 10)} → ${String(requested.to || '').slice(5, 10)}`
+ return spanLabel(requested, false)
 }
-const spanShort = requested => `${String(requested?.from || '').slice(5, 10)} → ${String(requested?.to || '').slice(5, 10)}`
+const spanShort = requested => spanLabel(requested, true)
 
-// 参数行：时间跨度（对比为本期 vs 基期）· 范围名 台数 · 覆盖尾注（数据不全给截至时刻，无数据只报数）。
+// 参数行：时间跨度（时间对比为本期 vs 基期，区域对比为本期 · A范围 vs B范围）· 覆盖尾注。
 export function meterReportParamLine(report) {
  const scope = report?.params?.scope || {}
  const coverage = report?.coverage || {}
  const base = report?.params?.baseline?.requested
- const when = base ? `${spanShort(report?.params?.span?.requested)} vs ${spanShort(base)}` : meterReportSpan(report)
- let line = `${when} · ${scope.label || '全部电表'} ${scope.meterCount ?? report?.meters?.length ?? 0}台`
+ let line = ''
+ if (meterReportAxis(report) === 'region') {
+  const other = report?.params?.other || {}
+  line = `${meterReportSpan(report)} · ${scope.label || '全部电表'} ${scope.meterCount ?? report?.sides?.a?.coverage?.meters ?? 0}台 vs ${other.label || '全部电表'} ${other.meterCount ?? report?.sides?.b?.coverage?.meters ?? 0}台`
+  if (report?.overlapMeterIds?.length) line += ` · 重叠 ${report.overlapMeterIds.length} 台`
+  const aExcluded = (report?.sides?.a?.coverage?.noData?.length || 0) + (report?.sides?.a?.coverage?.partial?.length || 0)
+  const bExcluded = (report?.sides?.b?.coverage?.noData?.length || 0) + (report?.sides?.b?.coverage?.partial?.length || 0)
+  if (aExcluded) line += ` · A ${aExcluded}台未计入`
+  if (bExcluded) line += ` · B ${bExcluded}台未计入`
+ } else {
+  const when = base ? `${spanShort(report?.params?.span?.requested)} vs ${spanShort(base)}` : meterReportSpan(report)
+  line = `${when} · ${scope.label || '全部电表'} ${scope.meterCount ?? report?.meters?.length ?? 0}台`
+ }
  const through = (coverage.partial || []).map(item => item.through).filter(Boolean).sort().at(-1)
- if ((coverage.partial || []).length) line += ` · ${coverage.partial.length}台数据截至${comparisonDate(through)}`
- if (coverage.noData?.length) line += ` · ${coverage.noData.length}台无数据`
+ if (meterReportAxis(report) !== 'region' && (coverage.partial || []).length) line += ` · ${coverage.partial.length}台数据截至${comparisonDate(through)}`
+ if (meterReportAxis(report) !== 'region' && coverage.noData?.length) line += ` · ${coverage.noData.length}台无数据`
+ if (coverage.truncated) line += ' · 读取不全'
  return line
 }
 
 const sgn = value => value > 0 ? '+' : value < 0 ? '−' : ''
 
+const sideTotal = (side, empty) => (!empty && finite(side?.total?.value)) ? `${degreeText(side.total.value)} 度` : '—'
+
 export function meterReportHero(report) {
  if (meterReportIsComparison(report)) {
   const diff = report?.diff || {}, sides = report?.sides || {}
+  if (meterReportAxis(report) === 'region') {
+   const scopeA = report?.params?.scope?.label || 'A', scopeB = report?.params?.other?.label || 'B'
+   const aValid = (report?.sides?.a?.coverage?.dataMeters ?? 0) > 0, bValid = (report?.sides?.b?.coverage?.dataMeters ?? 0) > 0
+   const totalText = (side, ok) => ok && finite(side?.total?.value) ? `${degreeText(side.total.value)} 度` : '—'
+   return {
+    mode: 'region',
+    label: `用电量 · ${scopeA} vs ${scopeB}`,
+    value: aValid || bValid ? `${totalText(sides.a, aValid)} vs ${totalText(sides.b, bValid)}` : null,
+    detail: finite(diff.value)
+     ? `差 ${sgn(diff.value)}${degreeText(Math.abs(diff.value))} 度${finite(diff.pct) ? ` · ${sgn(diff.pct)}${Math.abs(diff.pct)}%` : ''}`
+     : '',
+    pctNote: !finite(diff.value) ? (diff.pctNote || '') : (finite(diff.pct) ? '' : diff.pctNote || ''),
+   }
+  }
+  const span = report?.params?.span?.requested || {}, base = report?.params?.baseline?.requested || {}
+ const cohortEmpty = (report?.coverage?.dataMeters ?? null) === 0
+  const adjacent = Date.parse(base.to) === Date.parse(span.from)
+   && Date.parse(span.to) - Date.parse(span.from) === Date.parse(base.to) - Date.parse(base.from)
+  const ratioLabel = adjacent ? '环比' : '较基期'
   return {
    value: finite(diff.value) ? `${sgn(diff.value)}${degreeText(Math.abs(diff.value))}` : null,
-   pct: finite(diff.pct) ? `环比 ${sgn(diff.pct)}${Math.abs(diff.pct)}%` : '',
-   pctNote: !finite(diff.pct) ? (diff.pctNote || '基期为零') : '',
-   sub: `本期 ${finite(sides.a?.total?.value) ? degreeText(sides.a.total.value) : '—'} 度 · 上期 ${finite(sides.b?.total?.value) ? degreeText(sides.b.total.value) : '—'} 度`,
+   pct: finite(diff.pct) ? `${ratioLabel} ${sgn(diff.pct)}${Math.abs(diff.pct)}%` : '',
+   pctNote: finite(diff.pct) ? '' : (diff.pctNote || '基期为零'),
+   sub: `本期 ${sideTotal(sides.a, cohortEmpty)} · 上期 ${sideTotal(sides.b, cohortEmpty)}`,
   }
  }
  const total = report?.total || {}
+ if ((report?.coverage?.dataMeters ?? 0) === 0) return { empty: true, value: null, yuan: '' }
  return {
   value: finite(total.value) ? degreeText(total.value) : null,
   yuan: finite(total.yuan) && finite(total.tariff) ? `约 ¥${degreeText(total.yuan)} · 按 ${total.tariff} 元/度` : '',
@@ -84,7 +134,7 @@ export function meterReportContext(report) {
 // 2×2 指标格（统计）/ 本期·上期·变化表（对比）：标签可点开一句话定义。峰值日 sub 是日期，峰值小时 sub 是时刻。
 const METRIC_LABELS = {
  dailyAvg: '日均', weekdayDailyAvg: '工作日日均', nightBase: '夜间基荷', peakDay: '峰值日', top3Share: '前3占比',
- dayTotal: '当日合计', peakHour: '峰值小时', nightShare: '夜间占比',
+ dayTotal: '当日合计', peakHour: '峰值小时', nightShare: '夜间占比', perMeterDaily: '单台日均',
 }
 const METRIC_DEFS = {
  dailyAvg: '统计期内平均每天用电',
@@ -95,6 +145,7 @@ const METRIC_DEFS = {
  dayTotal: '统计日当天的总用电',
  peakHour: '用电最多的一个小时',
  nightShare: '00:00–06:00 用电占比，越高说明越多持续用电',
+ perMeterDaily: '日均 ÷ 有数据的电表台数',
 }
 const metricSub = sub => sub ? (String(sub).includes(':') ? sub : comparisonDate(sub)) : ''
 export function meterReportMetrics(report) {
@@ -106,6 +157,13 @@ export function meterReportMetrics(report) {
   sub: metricSub(metric.sub),
   def: METRIC_DEFS[metric.key] || '',
  }))
+}
+
+export function meterReportMetricHeads(report) {
+ if (meterReportAxis(report) === 'region') {
+  return [report?.params?.scope?.label || 'A', report?.params?.other?.label || 'B', '差']
+ }
+ return ['本期', '上期', '变化']
 }
 
 // 对比指标表：指标 / 本期 / 上期 / 变化 四列；两侧数值带单位小字，峰值日的 sub 是日期、峰值小时是时刻；
@@ -136,10 +194,19 @@ export function meterReportLoadCurve(report) {
  if (meterReportIsComparison(report)) {
   const a = report?.sides?.a?.shape24?.rates, b = report?.sides?.b?.shape24?.rates
   if (!Array.isArray(a) && !Array.isArray(b)) return null
-  const chart = loadShapeChart(Array.isArray(a) ? a : [], { peer: Array.isArray(b) ? b : [], legend: ['本期', '上期'] })
+  const region = meterReportAxis(report) === 'region'
+  const perMeter = Boolean(report?.sides?.a?.shape24?.perMeter || report?.sides?.b?.shape24?.perMeter)
+  const suffix = region && perMeter ? ' · 单台平均' : ''
+  const legend = region
+   ? [`${report?.params?.scope?.label || 'A'}${suffix}`, `${report?.params?.other?.label || 'B'}${suffix}`]
+   : ['本期', '上期']
+  const chart = loadShapeChart(Array.isArray(a) ? a : [], {
+   peer: Array.isArray(b) ? b : [], legend,
+   ...(region ? { peerColor: '#b89443', peerDash: '' } : {}),
+  })
   const hasData = (Array.isArray(a) && a.some(v => finite(v))) || (Array.isArray(b) && b.some(v => finite(v)))
   if (!hasData) return null
-  return { ...chart, hasData: true, title: meterReportIsDay(report) ? '当日小时负荷' : '24小时负荷' }
+  return { ...chart, hasData: true, title: `${meterReportIsDay(report) ? '当日小时负荷' : '24小时负荷'}${suffix}` }
  }
  const rates = report?.shape24?.rates
  if (!Array.isArray(rates)) return null
@@ -167,6 +234,23 @@ function bucketLabel(bucket, grain) {
  const base = grain === 'month' ? `${Number(String(bucket.from).slice(5, 7))}月` : comparisonDate(bucket.from)
  const natural = grain === 'day' ? 1 : grain === 'week' ? 7 : daysInMonth(bucket.from)
  return bucket.partial && bucket.days < natural ? `${base}·${bucket.days}天` : base
+}
+
+export function meterReportCompareView(report) {
+ const a = report?.sides?.a?.shape24?.rates, b = report?.sides?.b?.shape24?.rates
+ const sideOk = rates => Array.isArray(rates) && rates.some(v => finite(v))
+ return sideOk(a) && sideOk(b) ? 'curve' : 'bars'
+}
+
+export function meterReportBarLegend(report) {
+ if (!meterReportIsComparison(report)) return []
+ if (meterReportAxis(report) === 'region') {
+  return [
+   { label: report?.params?.scope?.label || 'A', color: '#3d8a68' },
+   { label: report?.params?.other?.label || 'B', color: '#bfd2b9' },
+  ]
+ }
+ return [{ label: '本期', color: '#3d8a68' }, { label: '上期', color: '#bfd2b9' }]
 }
 
 // 对比分段：两期同粒度双柱（基期灰绿、本期玉绿），按下标配对；不同长度时多余侧照常画、对侧为 null。
@@ -225,10 +309,42 @@ export function meterReportRanking(report) {
  return { ...meterRankingChart(rows), rows, excluded }
 }
 
+export function meterReportRegionRankings(report) {
+ const sideRows = side => {
+  const composition = side?.composition || {}
+  const rows = [...(composition.rows || [])].map(row => ({ label: row.label, value: finite(row.value) ? row.value : null, highlight: Boolean(row.highlight) }))
+  if (composition.rest && composition.rest.count > 0) rows.push({ label: `其余 ${composition.rest.count} 处`, value: composition.rest.value })
+  const excluded = []
+  if (composition.excluded?.partial) excluded.push(`数据不全 ${composition.excluded.partial} 处 —`)
+  if (composition.excluded?.noData) excluded.push(`无数据 ${composition.excluded.noData} 处 —`)
+  return { rows, excluded }
+ }
+ const a = sideRows(report?.sides?.a), b = sideRows(report?.sides?.b)
+ const titleA = `${report?.params?.scope?.label || 'A'} · ${report?.params?.scope?.meterCount ?? report?.sides?.a?.coverage?.meters ?? 0}台`
+ const titleB = `${report?.params?.other?.label || 'B'} · ${report?.params?.other?.meterCount ?? report?.sides?.b?.coverage?.meters ?? 0}台`
+ return [
+  { title: titleA, ...meterRankingChart(a.rows), excluded: a.excluded, rows: a.rows },
+  { title: titleB, ...meterRankingChart(b.rows, { color: '#b89443' }), excluded: b.excluded, rows: b.rows },
+ ]
+}
+
 // 依据行：每台表的实际起止采样时刻与示数；两端缺失或区间内无采样如实标注。
 // 对比报告每台表带两期（a=本期、b=基期）各自的起止采样与区间差；任一侧无效即不进对比。
 export function meterReportEvidence(report) {
  const sampleText = sample => `${fmtShanghaiDateTime(sample.readTime)} · 示数 ${degreeText(sample.value)}`
+ if (meterReportAxis(report) === 'region') {
+  return (report?.meters || []).map(meter => {
+   const from = meter.observed?.fromSample, to = meter.observed?.toSample
+   return {
+    id: meter.id,
+    name: meter.name,
+    label: meter.areaName || meter.name,
+    statusText: ({ ok: '计入合计', noData: '无数据', partial: '数据不全' })[meter.status] || meter.status,
+    bounds: from || to ? `起 ${from ? sampleText(from) : '缺失'} · 止 ${to ? sampleText(to) : '缺失'}` : '区间内无采样记录',
+    valueText: finite(meter.value) ? `${degreeText(meter.value)} 度` : '—',
+   }
+  })
+ }
  if (meterReportIsComparison(report)) {
   return (report?.meters || []).map(meter => {
    const sideText = side => {
@@ -261,13 +377,29 @@ export function meterReportEvidence(report) {
  })
 }
 
-// 依据抽屉抬头的时间文字：对比写「本期 … · 上期 …」，统计写请求跨度。
+// 依据抽屉抬头的时间文字：对比写「本期 … · 上期 …」或区域「A … · B …」，统计写请求跨度。
 export function meterReportSpanText(report) {
+ if (meterReportAxis(report) === 'region') return meterReportSpan(report)
  if (meterReportIsComparison(report)) {
   const a = report?.params?.span?.requested || {}, b = report?.params?.baseline?.requested || {}
-  return `本期 ${String(a.from || '').slice(5, 10)} → ${String(a.to || '').slice(5, 10)} · 上期 ${String(b.from || '').slice(5, 10)} → ${String(b.to || '').slice(5, 10)}`
+  return `本期 ${spanLabel(a, true)} · 上期 ${spanLabel(b, true)}`
  }
  return meterReportSpan(report)
+}
+
+export function meterReportEvidenceSections(report) {
+ if (meterReportAxis(report) === 'region') {
+  const idsA = new Set((report?.sides?.a?.meters || []).map(m => m.id))
+  const idsB = new Set((report?.sides?.b?.meters || []).map(m => m.id))
+  const all = meterReportEvidence(report)
+  const tag = (report?.params?.scope?.label || 'A'), tagB = (report?.params?.other?.label || 'B')
+  const inBoth = new Set(report?.overlapMeterIds || [])
+  return [
+   { tag: `A · ${tag}`, rows: all.filter(row => idsA.has(row.id)) },
+   { tag: `B · ${tagB}`, rows: all.filter(row => idsB.has(row.id) && !inBoth.has(row.id)) },
+  ].filter(section => section.rows.length)
+ }
+ return [{ tag: '', rows: meterReportEvidence(report) }]
 }
 
 // 点电表进原始采样页：沿报告请求窗口（对比覆盖基期+本期，与周比较卡的含基期窗口一致），
@@ -276,8 +408,11 @@ export function meterReportHistoryQuery(report, meterId) {
  const requested = report?.params?.span?.requested || {}
  if (meterReportIsComparison(report)) {
   const base = report?.params?.baseline?.requested || {}
-  const from = String(base.from || '') && String(base.from) < String(requested.from || '') ? base.from : requested.from
-  return { equipmentId: meterId, from, to: requested.to }
+  const starts = [requested.from, base.from].filter(v => Number.isFinite(Date.parse(v)))
+  const ends = [requested.to, base.to].filter(v => Number.isFinite(Date.parse(v)))
+  const from = starts.length ? starts.reduce((x, y) => Date.parse(y) < Date.parse(x) ? y : x) : requested.from
+  const to = ends.length ? ends.reduce((x, y) => Date.parse(y) > Date.parse(x) ? y : x) : requested.to
+  return { equipmentId: meterId, from, to }
  }
  return { equipmentId: meterId, from: requested.from, to: requested.to }
 }

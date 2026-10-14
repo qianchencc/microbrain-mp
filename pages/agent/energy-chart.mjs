@@ -51,17 +51,23 @@ export function meterBarChart(columns, options = {}) {
  const bars = list.map((c, i) => {
   const cx = padLeft + cell * (i + .5)
   const missing = !finite(c.value)
+  const missingBase = paired && !finite(c.baseline)
   let svg = ''
-  if (missing) {
+  if (missing && (!paired || missingBase)) {
    svg += `<text x="${cx}" y="${base - 14}" text-anchor="middle" font-size="9.5" fill="#a9b6a4">缺测</text>`
   } else if (paired) {
    const bw = Math.min(18, cell * .26)
-   const bh = finite(c.baseline) ? c.baseline / ceiling * (base - top) : 0
-   const ch = c.value / ceiling * (base - top)
-   if (bh > 0) svg += `<rect x="${cx - bw - 2}" y="${y(c.baseline)}" width="${bw}" height="${bh}" rx="3" fill="#bfd2b9"/>`
-   else svg += `<line x1="${cx - bw - 1}" x2="${cx - 3}" y1="${base - 1}" y2="${base - 1}" stroke="#bfd2b9" stroke-width="2"/>`
-   if (ch > 0) svg += `<rect x="${cx + 2}" y="${y(c.value)}" width="${bw}" height="${ch}" rx="3" fill="url(#jade)"/>`
-   else svg += `<line x1="${cx + 3}" x2="${cx + bw + 1}" y1="${base - 1}" y2="${base - 1}" stroke="#74a58c" stroke-width="2"/>`
+   const bx = missing ? cx + bw / 2 : cx
+   if (!missingBase) {
+    const bh = c.baseline / ceiling * (base - top)
+    if (bh > 0) svg += `<rect x="${bx - bw - 2}" y="${y(c.baseline)}" width="${bw}" height="${bh}" rx="3" fill="#bfd2b9"/>`
+    else svg += `<line x1="${bx - bw - 1}" x2="${bx - 3}" y1="${base - 1}" y2="${base - 1}" stroke="#bfd2b9" stroke-width="2"/>`
+   }
+   if (!missing) {
+    const ch = c.value / ceiling * (base - top)
+    if (ch > 0) svg += `<rect x="${cx + 2}" y="${y(c.value)}" width="${bw}" height="${ch}" rx="3" fill="url(#jade)"/>`
+    else svg += `<line x1="${cx + 3}" x2="${cx + bw + 1}" y1="${base - 1}" y2="${base - 1}" stroke="#74a58c" stroke-width="2"/>`
+   }
   } else {
    const bw = Math.min(30, cell * .55)
    const h = c.value / ceiling * (base - top)
@@ -81,7 +87,7 @@ export function meterBarChart(columns, options = {}) {
  }).join('')
 
  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="jade" x2="0" y2="1"><stop stop-color="#388e6d"/><stop offset="1" stop-color="#176b54"/></linearGradient><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="7" height="7" fill="#d9e8dc"/><path d="M0 0v7" stroke="#74a58c" stroke-width="3"/></pattern></defs>${grid}${bars}</svg>`
- return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, padLeft, padRight, hasData: list.some(c => finite(c.value)) }
+ return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, padLeft, padRight, hasData: list.some(c => finite(c.value) || (paired && finite(c.baseline))) }
 }
 
 function escapeXml(text) {
@@ -105,7 +111,7 @@ export function meterRankingChart(rows, options = {}) {
   let svg = `<text x="0" y="${mid + 3}" font-size="10.5" fill="#4a5d4e">${clip(row.label)}</text>`
   if (finite(row.value)) {
    const w = Math.max(3, row.value / max * barArea)
-   svg += `<rect x="${labelW}" y="${y + 5}" width="${w.toFixed(2)}" height="${rowHeight - 11}" rx="4" fill="${row.highlight ? '#b89443' : 'url(#jade)'}"/>`
+   svg += `<rect x="${labelW}" y="${y + 5}" width="${w.toFixed(2)}" height="${rowHeight - 11}" rx="4" fill="${row.highlight ? '#b89443' : options.color || 'url(#jade)'}"/>`
    svg += `<text x="${width}" y="${mid + 3}" text-anchor="end" font-size="10.5" font-weight="600" fill="#355a43">${barLabel(row.value)}</text>`
   } else {
    svg += `<line x1="${labelW + 4}" x2="${labelW + 22}" y1="${mid}" y2="${mid}" stroke="#c2cabc" stroke-width="2" stroke-linecap="round"/>`
@@ -310,7 +316,7 @@ export function loadShapeChart(rates, options = {}) {
    : `<path d="${seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.h).toFixed(2)} ${y(p.v).toFixed(2)}`).join('')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`).join('')
  }
  let body = ''
- if (peerList.some(v => v !== null)) body += drawLine(peerList, '#8fa086', '5 4')
+ if (peerList.some(v => v !== null)) body += drawLine(peerList, options.peerColor || '#8fa086', options.peerDash === undefined ? '5 4' : options.peerDash)
  for (const seg of segments) {
   const line = seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.h).toFixed(2)} ${y(p.v).toFixed(2)}`).join('')
   if (seg.length === 1) {
@@ -320,9 +326,11 @@ export function loadShapeChart(rates, options = {}) {
   body += `<path d="${line}L${x(seg.at(-1).h).toFixed(2)} ${base}L${x(seg[0].h).toFixed(2)} ${base}Z" fill="url(#trendFill)"/>`
   body += `<path d="${line}" fill="none" stroke="#2e7d5c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
  }
+ const peerColor = options.peerColor || '#8fa086'
+ const peerDash = options.peerDash === undefined ? '5 4' : options.peerDash
  const legend = options.legend
   ? `<line x1="${padLeft}" x2="${padLeft + 16}" y1="10" y2="10" stroke="#2e7d5c" stroke-width="2"/><text x="${padLeft + 21}" y="13" font-size="9" fill="#5a6f5b">${escapeXml(options.legend[0])}</text>`
-   + `<line x1="${padLeft + 96}" x2="${padLeft + 112}" y1="10" y2="10" stroke="#8fa086" stroke-width="2" stroke-dasharray="5 4"/><text x="${padLeft + 117}" y="13" font-size="9" fill="#8b9882">${escapeXml(options.legend[1])}</text>`
+   + `<line x1="${padLeft + 96}" x2="${padLeft + 112}" y1="10" y2="10" stroke="${peerColor}" stroke-width="2"${peerDash ? ` stroke-dasharray="${peerDash}"` : ''}/><text x="${padLeft + 117}" y="13" font-size="9" fill="${peerColor}">${escapeXml(options.legend[1])}</text>`
   : ''
 
  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${band}${legend}${body}${xTicks}</svg>`
