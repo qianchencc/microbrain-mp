@@ -1,6 +1,6 @@
 <template>
- <view class="observations">
-  <view v-for="(block, index) in observation.blocks || []" :key="index" class="ocard">
+ <view v-if="visibleBlocks.length" class="observations">
+  <view v-for="(block, index) in visibleBlocks" :key="index" class="ocard">
    <view class="oblock">
     <view class="oblock-head"><text>{{ blockLabel(block) }}</text><text class="count">{{ blockCount(block) }}</text></view>
 
@@ -90,9 +90,11 @@ import MeterHistoryReport from './MeterHistoryReport.vue'
 import DeviceSheet from './DeviceSheet.vue'
 import VideoPlaybackForm from './VideoPlaybackForm.vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
+import { meterReportHasData } from '../meter-report-view.mjs'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
 const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, running: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
+const visibleBlocks = computed(() => (props.observation?.blocks || []).filter(block => block?.type !== 'meter_report' || meterReportHasData(block.report)))
 defineEmits(['select-alert', 'browse-alerts'])
 const fetchingId = ref('')
 const playbackDevice = ref(null)

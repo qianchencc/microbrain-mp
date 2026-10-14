@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText, meterReportPowerFactor } from '../pages/agent/meter-report-view.mjs'
+import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText, meterReportPowerFactor, meterReportHasData } from '../pages/agent/meter-report-view.mjs'
 import { loadShapeChart, contributionChart, meterBarChart } from '../pages/agent/energy-chart.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
@@ -288,6 +288,45 @@ test('对比指标表：指标/本期/上期/变化 四列，变化给涨跌色'
  assert.equal(rows[1].def, '周一至周五数据完整日的平均用电')
 })
 
+// 夜间口径 20:00–次日08:00：仅带 nightWindow 标记的 nightBase 改用「夜间负荷」标签与新定义；
+// 无标记的旧报告（统计与对比）保持「夜间基荷」与 00–06 定义不变。
+test('夜间负荷标记：nightBase 标记 20:00-08:00 时标签/定义换新，旧报告保持原口径', () => {
+ const marked = meterReportMetrics({ ...report, metrics: [{ key: 'nightBase', value: 5, unit: '度/时', nightWindow: '20:00-08:00' }] })[0]
+ assert.equal(marked.label, '夜间负荷')
+ assert.equal(marked.valueText, '5')
+ assert.equal(marked.unit, '度/时')
+ assert.equal(marked.def, '20:00–次日08:00 用电量 ÷ 12小时，取范围内有效完整夜间的平均')
+ const legacy = meterReportMetrics({ ...report, metrics: [{ key: 'nightBase', value: 5, unit: '度/时' }] })[0]
+ assert.equal(legacy.label, '夜间基荷')
+ assert.equal(legacy.def, '00:00–06:00 平均每小时用电，代表无人时的持续耗电')
+ const markedRow = meterReportMetricTable({ ...compare, metrics: [{ key: 'nightBase', unit: '度/时', nightWindow: '20:00-08:00', a: { value: 5 }, b: { value: 3 }, change: 2 }] })[0]
+ assert.equal(markedRow.label, '夜间负荷')
+ assert.equal(markedRow.def, '20:00–次日08:00 用电量 ÷ 12小时，取范围内有效完整夜间的平均')
+ const legacyRow = meterReportMetricTable(compare).find(r => r.key === 'nightBase')
+ assert.equal(legacyRow.label, '夜间基荷')
+ assert.equal(legacyRow.def, '00:00–06:00 平均每小时用电，代表无人时的持续耗电')
+})
+
+// 夜间底带随标记扩展为 20:00–08:00 两段（默认宽 360：格宽 13.4167）；无标记保持 0–6 单段。
+test('负荷曲线夜间底带：标记 20:00-08:00 画 0–8 与 20–24 两段，旧报告仍 0–6', () => {
+ const rates = Array.from({ length: 24 }, (_, h) => 0.3 + h * 0.01)
+ const markedSvg = decodeURIComponent(loadShapeChart(rates, { nightWindow: '20:00-08:00' }).src.slice('data:image/svg+xml;utf8,'.length))
+ assert.ok(markedSvg.includes('x="30.00"'))
+ assert.ok(markedSvg.includes('width="107.33"')) // 0–8 段
+ assert.ok(markedSvg.includes('x="298.33"'))
+ assert.ok(markedSvg.includes('width="53.67"')) // 20–24 段
+ assert.equal((markedSvg.match(/夜间/g) || []).length, 2)
+ const legacySvg = decodeURIComponent(loadShapeChart(rates).src.slice('data:image/svg+xml;utf8,'.length))
+ assert.ok(legacySvg.includes('width="80.50"')) // 0–6 单段不变
+ assert.equal((legacySvg.match(/夜间/g) || []).length, 1)
+ // 报告级接缝：statistics nightBase 带标记时负荷曲线使用新底带。
+ const viaReport = meterReportLoadCurve({ ...report, metrics: [{ key: 'nightBase', value: 5, unit: '度/时', nightWindow: '20:00-08:00' }], shape24: { rates, coveredFraction: 1 } })
+ const viaSvg = decodeURIComponent(viaReport.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.ok(viaSvg.includes('x="298.33"'))
+ const viaLegacy = meterReportLoadCurve({ ...report, shape24: { rates, coveredFraction: 1 } })
+ assert.ok(decodeURIComponent(viaLegacy.src.slice('data:image/svg+xml;utf8,'.length)).includes('width="80.50"'))
+})
+
 test('曲线/分段切换：两种投影视图互不改变主数字与指标', () => {
  const curve = meterReportLoadCurve(compare)
  assert.ok(curve?.hasData)
@@ -508,6 +547,57 @@ test('04 修正：跨日/跨年与日内时刻保留、分段默认回退、空�
  assert.match(emptyHero.sub, /本期 — · 上期 —/)
  assert.ok(!/0/.test(emptyHero.sub))
  assert.match(meterReportParamLine({ ...report, coverage: { ...report.coverage, truncated: true } }), /读取不全$/)
+})
+
+test('09 修正：不等长周期按日均对比、单侧有效保留该侧总量、采样停更标注截至时间、无有效数据判空', () => {
+ // 1. 跨度停更：observed.to 比 requested.to 早超过 1 天且无单表 partial 时，参数行标注截至日期
+ const earlyStopStats = {
+  ...report,
+  params: { ...report.params, span: { requested: { from: '2026-10-01T00:00:00+08:00', to: '2026-10-14T20:00:00+08:00' }, observed: { from: '2026-10-01T08:00:00.000+08:00', to: '2026-10-10T08:00:00.000+08:00' } } },
+  coverage: { meters: 43, dataMeters: 43, noData: [], partial: [], truncated: false },
+ }
+ assert.match(meterReportParamLine(earlyStopStats), /截至10\/10/)
+ assert.equal(meterReportHasData(earlyStopStats), true)
+ assert.equal(meterReportHasData({ ...earlyStopStats, coverage: { ...earlyStopStats.coverage, dataMeters: 0 } }), false)
+
+ // 2. 不等长周期对比：diff.basis='dailyAvg'，主数字单位为 度/日，副行展示两期总量与有效天数
+ const unequalCmp = {
+  ...compare,
+  sides: {
+   a: { ...compare.sides.a, total: { value: 135, unit: '度', yuan: 155.25 }, dataMeters: 2, effectiveDays: 3 },
+   b: { ...compare.sides.b, total: { value: 210, unit: '度', yuan: 241.5 }, dataMeters: 2, effectiveDays: 7 },
+  },
+  diff: { value: 15, pct: 50, basis: 'dailyAvg', unit: '度/日' },
+ }
+ const hUnequal = meterReportHero(unequalCmp)
+ assert.equal(hUnequal.label, '日均用电 · 与上期相比')
+ assert.equal(hUnequal.value, '+15')
+ assert.equal(hUnequal.unit, '度/日')
+ assert.equal(hUnequal.pct, '较基期 +50%')
+ assert.equal(hUnequal.sub, '本期 135 度（3天） · 上期 210 度（7天）')
+
+ // 3. 单侧有效对比：本期 0 台有效、上期 2 台有效（210 度）→ 保留上期 210 度，本期显示 —，meterReportHasData 为 true
+ const oneSideCmp = {
+  ...compare,
+  coverage: { ...compare.coverage, dataMeters: 0 },
+  sides: {
+   a: { ...compare.sides.a, total: { value: 0, unit: '度', yuan: 0 }, dataMeters: 0, effectiveDays: 7 },
+   b: { ...compare.sides.b, total: { value: 210, unit: '度', yuan: 241.5 }, dataMeters: 2, effectiveDays: 7 },
+  },
+  diff: { value: null, pct: null, pctNote: '本期无有效采样' },
+ }
+ const hOneSide = meterReportHero(oneSideCmp)
+ assert.equal(hOneSide.value, null)
+ assert.equal(hOneSide.pctNote, '本期无有效采样')
+ assert.equal(hOneSide.sub, '本期 — · 上期 210 度')
+ assert.equal(meterReportHasData(oneSideCmp), true)
+
+ // 4. 两侧均无有效数据：meterReportHasData 为 false
+ const bothEmptyCmp = {
+  ...oneSideCmp,
+  sides: { ...oneSideCmp.sides, b: { ...oneSideCmp.sides.b, dataMeters: 0 } },
+ }
+ assert.equal(meterReportHasData(bothEmptyCmp), false)
 })
 
 test('分段双柱：A 缺测仍画 B；B 缺测不画假零线', () => {

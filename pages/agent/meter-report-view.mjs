@@ -9,6 +9,16 @@ import { fmtShanghaiDateTime } from './observation-view.mjs'
 const finite = value => typeof value === 'number' && Number.isFinite(value)
 export const meterReportIsComparison = report => report?.kind === 'comparison'
 export const meterReportAxis = report => report?.params?.axis === 'region' ? 'region' : 'time'
+export function meterReportHasData(report) {
+ if (!report) return false
+ if (!meterReportIsComparison(report)) return (report?.coverage?.dataMeters ?? 0) > 0
+ if (meterReportAxis(report) === 'region') {
+  return (report?.sides?.a?.coverage?.dataMeters ?? 0) > 0 || (report?.sides?.b?.coverage?.dataMeters ?? 0) > 0
+ }
+ return (report?.coverage?.dataMeters ?? 0) > 0
+  || (report?.sides?.a?.dataMeters ?? 0) > 0
+  || (report?.sides?.b?.dataMeters ?? 0) > 0
+}
 // 对比卡「曲线 | 分段」切换：曲线 = 本期/上期 24 小时负荷叠加；分段 = 两期同粒度双柱。
 export const meterCompareViews = [{ key: 'curve', label: '曲线' }, { key: 'bars', label: '分段' }]
 
@@ -67,6 +77,13 @@ export function meterReportParamLine(report) {
  }
  const through = (coverage.partial || []).map(item => item.through).filter(Boolean).sort().at(-1)
  if (meterReportAxis(report) !== 'region' && (coverage.partial || []).length) line += ` · ${coverage.partial.length}台数据截至${comparisonDate(through)}`
+ else if (meterReportAxis(report) !== 'region') {
+  const reqTo = Date.parse(report?.params?.span?.requested?.to || '')
+  const obsTo = Date.parse(report?.params?.span?.observed?.to || '')
+  if (Number.isFinite(reqTo) && Number.isFinite(obsTo) && reqTo - obsTo > 86_400_000) {
+   line += ` · 截至${comparisonDate(report.params.span.observed.to)}`
+  }
+ }
  if (meterReportAxis(report) !== 'region' && coverage.noData?.length) line += ` · ${coverage.noData.length}台无数据`
  if (coverage.truncated) line += ' · 读取不全'
  return line
@@ -94,15 +111,24 @@ export function meterReportHero(report) {
    }
   }
   const span = report?.params?.span?.requested || {}, base = report?.params?.baseline?.requested || {}
- const cohortEmpty = (report?.coverage?.dataMeters ?? null) === 0
-  const adjacent = Date.parse(base.to) === Date.parse(span.from)
+  const cohortEmpty = (report?.coverage?.dataMeters ?? null) === 0
+  const aEmpty = sides.a?.dataMeters !== undefined ? sides.a.dataMeters === 0 : cohortEmpty
+  const bEmpty = sides.b?.dataMeters !== undefined ? sides.b.dataMeters === 0 : cohortEmpty
+  const isDailyBasis = diff.basis === 'dailyAvg'
+  const adjacent = !isDailyBasis && Date.parse(base.to) === Date.parse(span.from)
    && Date.parse(span.to) - Date.parse(span.from) === Date.parse(base.to) - Date.parse(base.from)
   const ratioLabel = adjacent ? '环比' : '较基期'
+  const sideWithDays = (side, empty) => {
+   const t = sideTotal(side, empty)
+   return !empty && isDailyBasis && finite(side?.effectiveDays) ? `${t}（${degreeText(side.effectiveDays)}天）` : t
+  }
   return {
+   label: isDailyBasis ? '日均用电 · 与上期相比' : '用电量 · 与上期相比',
    value: finite(diff.value) ? `${sgn(diff.value)}${degreeText(Math.abs(diff.value))}` : null,
+   unit: diff.unit || (isDailyBasis ? '度/日' : '度'),
    pct: finite(diff.pct) ? `${ratioLabel} ${sgn(diff.pct)}${Math.abs(diff.pct)}%` : '',
    pctNote: finite(diff.pct) ? '' : (diff.pctNote || '基期为零'),
-   sub: `本期 ${sideTotal(sides.a, cohortEmpty)} · 上期 ${sideTotal(sides.b, cohortEmpty)}`,
+   sub: `本期 ${sideWithDays(sides.a, aEmpty)} · 上期 ${sideWithDays(sides.b, bEmpty)}`,
   }
  }
  const total = report?.total || {}
@@ -148,14 +174,16 @@ const METRIC_DEFS = {
  perMeterDaily: '日均 ÷ 有数据的电表台数',
 }
 const metricSub = sub => sub ? (String(sub).includes(':') ? sub : comparisonDate(sub)) : ''
+const metricLabel = metric => metric.key === 'nightBase' && metric.nightWindow === '20:00-08:00' ? '夜间负荷' : (METRIC_LABELS[metric.key] || metric.key)
+const metricDefinition = metric => metric.key === 'nightBase' && metric.nightWindow === '20:00-08:00' ? '20:00–次日08:00 用电量 ÷ 12小时，取范围内有效完整夜间的平均' : (METRIC_DEFS[metric.key] || '')
 export function meterReportMetrics(report) {
  return (report?.metrics || []).map(metric => ({
   key: metric.key,
-  label: METRIC_LABELS[metric.key] || metric.key,
+  label: metricLabel(metric),
   valueText: finite(metric.value) ? degreeText(metric.value) : '—',
   unit: metric.unit || '',
   sub: metricSub(metric.sub),
-  def: METRIC_DEFS[metric.key] || '',
+  def: metricDefinition(metric),
  }))
 }
 
@@ -177,13 +205,13 @@ export function meterReportMetricTable(report) {
   })
   return {
    key: metric.key,
-   label: METRIC_LABELS[metric.key] || metric.key,
+   label: metricLabel(metric),
    a: cell(metric.a),
    b: cell(metric.b),
    change: finite(metric.change)
     ? { text: `${sgn(metric.change)}${degreeText(Math.abs(metric.change))}`, tone: metric.change > 0 ? 'up' : metric.change < 0 ? 'down' : '' }
     : { text: '—', tone: '' },
-   def: METRIC_DEFS[metric.key] || '',
+   def: metricDefinition(metric),
   }
  })
 }
@@ -191,6 +219,7 @@ export function meterReportMetricTable(report) {
 // 24 小时负荷：覆盖不足时 rates 为 null → 整节隐藏；单日画当天实际曲线；
 // 单台范围画同层对照（本表实线 + 本层单台平均虚线）；对比画本期实线 + 上期虚线（任一侧有数据即显示）。
 export function meterReportLoadCurve(report) {
+ const nightWindow = (report?.metrics || []).find(m => m.key === 'nightBase')?.nightWindow
  if (meterReportIsComparison(report)) {
   const a = report?.sides?.a?.shape24?.rates, b = report?.sides?.b?.shape24?.rates
   if (!Array.isArray(a) && !Array.isArray(b)) return null
@@ -201,7 +230,7 @@ export function meterReportLoadCurve(report) {
    ? [`${report?.params?.scope?.label || 'A'}${suffix}`, `${report?.params?.other?.label || 'B'}${suffix}`]
    : ['本期', '上期']
   const chart = loadShapeChart(Array.isArray(a) ? a : [], {
-   peer: Array.isArray(b) ? b : [], legend,
+   peer: Array.isArray(b) ? b : [], legend, nightWindow,
    ...(region ? { peerColor: '#b89443', peerDash: '' } : {}),
   })
   const hasData = (Array.isArray(a) && a.some(v => finite(v))) || (Array.isArray(b) && b.some(v => finite(v)))
@@ -212,7 +241,7 @@ export function meterReportLoadCurve(report) {
  if (!Array.isArray(rates)) return null
  const peerRates = report?.peer?.floorPerMeterRates
  const parentLabel = report?.context?.kind === 'peer' ? report.context.parentLabel : ''
- const chart = loadShapeChart(rates, peerRates ? { peer: peerRates, legend: ['本表', `${parentLabel}单台平均`] } : {})
+ const chart = loadShapeChart(rates, { nightWindow, ...(peerRates ? { peer: peerRates, legend: ['本表', `${parentLabel}单台平均`] } : {}) })
  if (!chart.hasData) return null
  return { ...chart, title: meterReportIsDay(report) ? '当日小时负荷' : '24小时负荷' }
 }

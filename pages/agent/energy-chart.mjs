@@ -291,8 +291,10 @@ export function loadShapeChart(rates, options = {}) {
   grid += `<text x="${padLeft - 6}" y="${(gy + 3).toFixed(2)}" text-anchor="end" font-size="9" fill="#a9b3a2">${tickLabel(v)}</text>`
  }
  // 夜间时段底带：小时格 0–5，标签置于带内左下不压曲线。
- const band = `<rect x="${padLeft}" y="${top}" width="${(6 * cell).toFixed(2)}" height="${base - top}" fill="#5a6a52" fill-opacity=".07"/>`
-  + `<text x="${padLeft + 4}" y="${base - 4}" font-size="9" fill="#8b9882">夜间</text>`
+ const nightRanges = options.nightWindow === '20:00-08:00' ? [[0, 8], [20, 24]] : [[0, 6]]
+ const band = nightRanges.map(([from, to]) =>
+  `<rect x="${(padLeft + from * cell).toFixed(2)}" y="${top}" width="${((to - from) * cell).toFixed(2)}" height="${base - top}" fill="#5a6a52" fill-opacity=".07"/>`
+  + `<text x="${padLeft + from * cell + 4}" y="${base - 4}" font-size="9" fill="#8b9882">夜间</text>`).join('')
  const xTicks = [0, 6, 12, 18, 23].map(h =>
   `<text x="${x(h).toFixed(2)}" y="${base + 13}" text-anchor="middle" font-size="9" fill="#80917b">${h}</text>`).join('')
 

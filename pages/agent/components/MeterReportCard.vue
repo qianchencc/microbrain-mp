@@ -1,5 +1,5 @@
 <template>
- <view class="mreport">
+ <view class="mreport" @tap="closeDef" @keydown.esc="openDef = ''">
   <button class="param" hover-class="param--pressed" @tap="openEvidence">
    <text class="param-text">{{ paramLine }}</text>
    <uni-icons type="right" size="11" color="#8ba091" />
@@ -14,7 +14,7 @@
       <text v-else>暂无可对比的范围用电</text>
      </template>
      <template v-else>
-      <text v-if="hero.value !== null">{{ hero.value }}<text class="unit"> 度</text><text v-if="hero.pct" class="pct"> {{ hero.pct }}</text></text>
+      <text v-if="hero.value !== null">{{ hero.value }}<text class="unit"> {{ hero.unit || '度' }}</text><text v-if="hero.pct" class="pct"> {{ hero.pct }}</text></text>
       <text v-else>暂无可对比的区间用电</text>
      </template>
     </view>
@@ -32,12 +32,12 @@
     <view class="mtr mtr-head"><text class="mt-k">指标</text><text class="mt-v">{{ metricHeads[0] }}</text><text class="mt-v">{{ metricHeads[1] }}</text><text class="mt-v">{{ metricHeads[2] }}</text></view>
     <template v-for="row in metricRows" :key="row.key">
      <view class="mtr">
-      <button class="mt-k mt-label" :aria-expanded="openDef === row.key" hover-class="pressed" @tap="toggleDef(row.key)"><text>{{ row.label }}</text><text class="metric-info">ⓘ</text></button>
+      <button class="mt-k mt-label" :aria-expanded="openDef === row.key" :aria-describedby="openDef === row.key ? defId : undefined" hover-class="pressed" @tap.stop="toggleDef(row.key)"><text>{{ row.label }}</text><text class="metric-info" aria-hidden="true">ⓘ</text></button>
       <text class="mt-v mtv">{{ row.a.text }}<text v-if="row.a.sub" class="mts"> {{ row.a.sub }}</text></text>
       <text class="mt-v mtv">{{ row.b.text }}<text v-if="row.b.sub" class="mts"> {{ row.b.sub }}</text></text>
       <text class="mt-v mtc" :class="row.change.tone">{{ row.change.text }}</text>
+      <text v-if="openDef === row.key" :id="defId" class="metric-def" role="tooltip">{{ row.def }}</text>
      </view>
-     <text v-if="openDef === row.key" class="metric-def">{{ row.def }}</text>
     </template>
    </view>
 
@@ -65,14 +65,13 @@
      <text v-for="(line, i) in rank.excluded" :key="i" class="excluded">{{ line }}</text>
     </template>
    </template>
-   <template v-else>
-    <view class="shead">
+   <template v-else-if="contribution.hasData">
+    <view class="shead shead-help">
      <text>{{ contribution.title }}<text v-if="contribution.sub" class="shead-sub"> · {{ contribution.sub }}</text></text>
-     <button class="share" :aria-expanded="openDef === 'topShare'" hover-class="pressed" @tap="toggleDef('topShare')"><text>{{ contribution.shareText }}</text><text class="metric-info">ⓘ</text></button>
+     <button class="share" :aria-expanded="openDef === 'topShare'" :aria-describedby="openDef === 'topShare' ? defId : undefined" hover-class="pressed" @tap.stop="toggleDef('topShare')"><text>{{ contribution.shareText }}</text><text class="metric-info" aria-hidden="true">ⓘ</text></button>
+     <text v-if="openDef === 'topShare'" :id="defId" class="metric-def" role="tooltip">{{ contribution.shareDef }}</text>
     </view>
-    <text v-if="openDef === 'topShare'" class="metric-def">{{ contribution.shareDef }}</text>
-    <image v-if="contribution.hasData" class="rank" :src="contribution.src" mode="widthFix" />
-    <text v-else class="empty">没有可比较的位置变化</text>
+    <image class="rank" :src="contribution.src" mode="widthFix" />
    </template>
   </template>
 
@@ -91,11 +90,11 @@
 
    <view v-if="metrics.length" class="metrics">
     <view v-for="m in metrics" :key="m.key" class="metric">
-     <button class="metric-label" :aria-expanded="openDef === m.key" hover-class="pressed" @tap="toggleDef(m.key)">
-      <text>{{ m.label }}</text><text class="metric-info">ⓘ</text>
+     <button class="metric-label" :aria-expanded="openDef === m.key" :aria-describedby="openDef === m.key ? defId : undefined" hover-class="pressed" @tap.stop="toggleDef(m.key)">
+      <text>{{ m.label }}</text><text class="metric-info" aria-hidden="true">ⓘ</text>
      </button>
      <view class="metric-line"><text class="mv">{{ m.valueText }}</text><text v-if="m.unit" class="mu"> {{ m.unit }}</text><text v-if="m.sub" class="ms"> {{ m.sub }}</text></view>
-     <text v-if="openDef === m.key" class="metric-def">{{ m.def }}</text>
+     <text v-if="openDef === m.key" :id="defId" class="metric-def" role="tooltip">{{ m.def }}</text>
     </view>
    </view>
 
@@ -126,7 +125,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, getCurrentInstance } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import MeterReportDetails from './MeterReportDetails.vue'
 import { meterReportIsComparison, meterReportAxis, meterCompareViews, meterReportCompareView, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution } from '../meter-report-view.mjs'
@@ -138,6 +137,7 @@ const isRegion = computed(() => meterReportAxis(props.report) === 'region')
 const grain = ref(props.report.params?.grain || 'day')
 const compareView = ref(meterReportCompareView(props.report))
 const mounted = ref(false), sheetOpen = ref(false), detailsRef = ref(null), detailsNav = ref({ title: '', canBack: false }), openDef = ref('')
+const defId = `mdef-${getCurrentInstance().uid}`
 
 const paramLine = computed(() => meterReportParamLine(props.report))
 const hero = computed(() => meterReportHero(props.report))
@@ -163,10 +163,13 @@ const sheetSubtitle = computed(() => isRegion.value
 watch(() => props.report, () => {
  grain.value = props.report.params?.grain || 'day'
  compareView.value = meterReportCompareView(props.report)
+ openDef.value = ''
 })
 
 function toggleDef(key) { openDef.value = openDef.value === key ? '' : key }
+function closeDef() { openDef.value = '' }
 function openEvidence() {
+ openDef.value = ''
  if (props.embedded) { emit('evidence'); return }
  detailsRef.value?.reset()
  mounted.value = true; sheetOpen.value = true
@@ -194,16 +197,21 @@ button::after { border: 0; }
 .split { display: block; width: 100%; margin-top: 10px; }
 .context-line { display: block; margin-top: 8px; font-size: 11px; color: #80907f; }
 .metrics { display: flex; flex-wrap: wrap; margin: 2px -4px 0; }
-.metric { width: 50%; box-sizing: border-box; padding: 8px 4px 0; }
+.metric { position: relative; width: 50%; box-sizing: border-box; padding: 8px 4px 0; }
 .metric-label { display: flex; align-items: center; gap: 3px; min-height: 22px; font-size: 10px; color: #7d8f75; text-align: left; }
 .metric-info { font-size: 10px; color: #a3b29a; }
 .metric-line { margin-top: 2px; font-variant-numeric: tabular-nums; }
 .metric-line .mv { font-size: 16px; font-weight: 600; color: #2f4a3a; }
 .metric-line .mu { font-size: 10px; color: #80907f; }
 .metric-line .ms { font-size: 10px; color: #a3b09c; }
-.metric-def { display: block; margin-top: 4px; font-size: 9.5px; line-height: 1.5; color: #96a491; }
+.metric-def { display: block; position: absolute; z-index: 3; pointer-events: none; margin: 0; padding: 9px 11px; font-size: 11px; line-height: 1.5; color: #35533f; background: #fafcf6; border-radius: 8px; box-shadow: 0 4px 14px rgba(30,52,40,.16); white-space: normal; overflow-wrap: break-word; }
+.metric .metric-def { bottom: calc(100% - 4px); left: 4px; width: calc(200% - 8px); box-sizing: border-box; }
+.metric:nth-child(2n) .metric-def { left: auto; right: 4px; }
+.shead-help { position: relative; }
+.shead-help .metric-def { left: 0; right: 0; bottom: calc(100% + 6px); width: auto; }
 .mtable { margin-top: 6px; border-top: 1px solid #e3e9dc; }
-.mtr { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; border-bottom: 1px solid #edf1e6; }
+.mtr { position: relative; display: flex; align-items: baseline; gap: 8px; padding: 7px 0; border-bottom: 1px solid #edf1e6; }
+.mtr .metric-def { left: 0; right: 0; bottom: calc(100% - 3px); width: auto; }
 .mtr-head { font-size: 10px; color: #8b9c83; border-bottom-color: #e3e9dc; }
 .mt-k { flex: 1.3; min-width: 0; }
 .mt-v { flex: 1; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
