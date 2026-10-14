@@ -33,7 +33,7 @@ export const meterReportGrainOptions = report => meterReportIsDay(report) ? [{ k
 
 // 度值：千分位、至多 1 位小数；小值不取整以免空刻度。
 export const degreeText = value => finite(value)
- ? (Math.abs(value) >= 1000 ? value.toLocaleString('zh-CN', { maximumFractionDigits: 1 }) : String(Math.round(value * 10) / 10))
+ ? (Math.abs(value) >= 1000 ? value.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : String(Math.round(value * 100) / 100))
  : '—'
 
 const boundaryLabel = (iso, withYear) => {
@@ -55,7 +55,6 @@ export function meterReportSpan(report) {
  const requested = report?.params?.span?.requested || {}
  return spanLabel(requested, false)
 }
-const spanShort = requested => spanLabel(requested, true)
 
 // 参数行：时间跨度（时间对比为本期 vs 基期，区域对比为本期 · A范围 vs B范围）· 覆盖尾注。
 export function meterReportParamLine(report) {
@@ -72,7 +71,9 @@ export function meterReportParamLine(report) {
   if (aExcluded) line += ` · A ${aExcluded}台未计入`
   if (bExcluded) line += ` · B ${bExcluded}台未计入`
  } else {
-  const when = base ? `${spanShort(report?.params?.span?.requested)} vs ${spanShort(base)}` : meterReportSpan(report)
+  const spanReq = report?.params?.span?.requested
+  const diffYear = Boolean(base) && String(spanReq?.from || '').slice(0, 4) !== String(base?.from || '').slice(0, 4)
+  const when = base ? `${spanLabel(spanReq, !diffYear)} vs ${spanLabel(base, !diffYear)}` : meterReportSpan(report)
   line = `${when} · ${scope.label || '全部电表'} ${scope.meterCount ?? report?.meters?.length ?? 0}台`
  }
  const through = (coverage.partial || []).map(item => item.through).filter(Boolean).sort().at(-1)
@@ -89,7 +90,11 @@ export function meterReportParamLine(report) {
  return line
 }
 
-const sgn = value => value > 0 ? '+' : value < 0 ? '−' : ''
+const signed = value => {
+ const visible = Math.round(Math.abs(value) * 100) / 100
+ return { sign: visible === 0 ? '' : value > 0 ? '+' : '−', tone: visible === 0 ? '' : value > 0 ? 'up' : 'down' }
+}
+const signedDegree = value => { const s = signed(value); return { ...s, text: `${s.sign}${degreeText(Math.abs(value))}` } }
 
 const sideTotal = (side, empty) => (!empty && finite(side?.total?.value)) ? `${degreeText(side.total.value)} 度` : '—'
 
@@ -105,7 +110,7 @@ export function meterReportHero(report) {
     label: `用电量 · ${scopeA} vs ${scopeB}`,
     value: aValid || bValid ? `${totalText(sides.a, aValid)} vs ${totalText(sides.b, bValid)}` : null,
     detail: finite(diff.value)
-     ? `差 ${sgn(diff.value)}${degreeText(Math.abs(diff.value))} 度${finite(diff.pct) ? ` · ${sgn(diff.pct)}${Math.abs(diff.pct)}%` : ''}`
+     ? `差 ${signedDegree(diff.value).text} 度${finite(diff.pct) ? ` · ${signedDegree(diff.pct).text}%` : ''}`
      : '',
     pctNote: !finite(diff.value) ? (diff.pctNote || '') : (finite(diff.pct) ? '' : diff.pctNote || ''),
    }
@@ -115,20 +120,34 @@ export function meterReportHero(report) {
   const aEmpty = sides.a?.dataMeters !== undefined ? sides.a.dataMeters === 0 : cohortEmpty
   const bEmpty = sides.b?.dataMeters !== undefined ? sides.b.dataMeters === 0 : cohortEmpty
   const isDailyBasis = diff.basis === 'dailyAvg'
+  const relation = report?.params?.relation
+  const isYear = relation === 'yearOverYear'
+  const baseLabel = isYear ? '去年同期' : '上期'
   const adjacent = !isDailyBasis && Date.parse(base.to) === Date.parse(span.from)
    && Date.parse(span.to) - Date.parse(span.from) === Date.parse(base.to) - Date.parse(base.from)
-  const ratioLabel = adjacent ? '环比' : '较基期'
+  const ratioLabel = relation === 'yearOverYear' ? '同比'
+   : relation === 'previousPeriod' ? '环比'
+   : relation === 'custom' ? '较基期'
+   : adjacent ? '环比' : '较基期'
+  const oneSide = aEmpty !== bEmpty
+  const sideTag = oneSide ? ` · ${aEmpty ? `${baseLabel}用电` : '本期用电'}` : ''
+  const label = relation !== undefined
+   ? `${relation === 'yearOverYear' ? '用电同比' : relation === 'previousPeriod' ? '用电环比' : '用电时间对比'}${isDailyBasis && !oneSide ? ' · 日均' : ''}${sideTag}`
+   : `${isDailyBasis && !oneSide ? '日均用电' : '用电量'} · 与上期相比${sideTag}`
+  const primary = aEmpty ? sides.b : sides.a
   const sideWithDays = (side, empty) => {
    const t = sideTotal(side, empty)
    return !empty && isDailyBasis && finite(side?.effectiveDays) ? `${t}（${degreeText(side.effectiveDays)}天）` : t
   }
   return {
-   label: isDailyBasis ? '日均用电 · 与上期相比' : '用电量 · 与上期相比',
-   value: finite(diff.value) ? `${sgn(diff.value)}${degreeText(Math.abs(diff.value))}` : null,
-   unit: diff.unit || (isDailyBasis ? '度/日' : '度'),
-   pct: finite(diff.pct) ? `${ratioLabel} ${sgn(diff.pct)}${Math.abs(diff.pct)}%` : '',
-   pctNote: finite(diff.pct) ? '' : (diff.pctNote || '基期为零'),
-   sub: `本期 ${sideWithDays(sides.a, aEmpty)} · 上期 ${sideWithDays(sides.b, bEmpty)}`,
+   label,
+   value: oneSide
+    ? (finite(primary?.total?.value) ? degreeText(primary.total.value) : null)
+    : finite(diff.value) ? signedDegree(diff.value).text : null,
+   unit: oneSide ? '度' : diff.unit || (isDailyBasis ? '度/日' : '度'),
+   pct: !oneSide && finite(diff.pct) ? `${ratioLabel} ${signedDegree(diff.pct).text}%` : '',
+   pctNote: oneSide ? `${aEmpty ? '本期' : baseLabel}无有效采样` : (finite(diff.pct) ? '' : (diff.pctNote || '基期为零')),
+   sub: `本期 ${sideWithDays(sides.a, aEmpty)} · ${baseLabel} ${sideWithDays(sides.b, bEmpty)}`,
   }
  }
  const total = report?.total || {}
@@ -191,7 +210,7 @@ export function meterReportMetricHeads(report) {
  if (meterReportAxis(report) === 'region') {
   return [report?.params?.scope?.label || 'A', report?.params?.other?.label || 'B', '差']
  }
- return ['本期', '上期', '变化']
+ return ['本期', report?.params?.relation === 'yearOverYear' ? '去年同期' : '上期', '变化']
 }
 
 // 对比指标表：指标 / 本期 / 上期 / 变化 四列；两侧数值带单位小字，峰值日的 sub 是日期、峰值小时是时刻；
@@ -209,7 +228,7 @@ export function meterReportMetricTable(report) {
    a: cell(metric.a),
    b: cell(metric.b),
    change: finite(metric.change)
-    ? { text: `${sgn(metric.change)}${degreeText(Math.abs(metric.change))}`, tone: metric.change > 0 ? 'up' : metric.change < 0 ? 'down' : '' }
+    ? (() => { const s = signedDegree(metric.change); return { text: s.text, tone: s.tone } })()
     : { text: '—', tone: '' },
    def: metricDefinition(metric),
   }
@@ -228,7 +247,7 @@ export function meterReportLoadCurve(report) {
   const suffix = region && perMeter ? ' · 单台平均' : ''
   const legend = region
    ? [`${report?.params?.scope?.label || 'A'}${suffix}`, `${report?.params?.other?.label || 'B'}${suffix}`]
-   : ['本期', '上期']
+   : ['本期', report?.params?.relation === 'yearOverYear' ? '去年同期' : '上期']
   const chart = loadShapeChart(Array.isArray(a) ? a : [], {
    peer: Array.isArray(b) ? b : [], legend, nightWindow,
    ...(region ? { peerColor: '#b89443', peerDash: '' } : {}),
@@ -271,6 +290,12 @@ export function meterReportCompareView(report) {
  return sideOk(a) && sideOk(b) ? 'curve' : 'bars'
 }
 
+export function meterReportCompareViews(report) {
+ const a = report?.sides?.a?.shape24?.rates, b = report?.sides?.b?.shape24?.rates
+ const sideOk = rates => Array.isArray(rates) && rates.some(v => finite(v))
+ return sideOk(a) || sideOk(b) ? meterCompareViews : meterCompareViews.filter(v => v.key === 'bars')
+}
+
 export function meterReportBarLegend(report) {
  if (!meterReportIsComparison(report)) return []
  if (meterReportAxis(report) === 'region') {
@@ -279,7 +304,8 @@ export function meterReportBarLegend(report) {
    { label: report?.params?.other?.label || 'B', color: '#bfd2b9' },
   ]
  }
- return [{ label: '本期', color: '#3d8a68' }, { label: '上期', color: '#bfd2b9' }]
+ const baseWord = report?.params?.relation === 'yearOverYear' ? '去年同期' : '上期'
+ return [{ label: '本期', color: '#3d8a68' }, { label: baseWord, color: '#bfd2b9' }]
 }
 
 // 对比分段：两期同粒度双柱（基期灰绿、本期玉绿），按下标配对；不同长度时多余侧照常画、对侧为 null。
@@ -304,17 +330,23 @@ export function meterReportCompareBuckets(report) {
 // 单台范围时覆盖整层并高亮本表所在位置（标题给「本表 ±Δ」）。
 export function meterReportContribution(report) {
  const contribution = report?.contribution || {}
- const rows = [...(contribution.rows || [])].map(row => ({ label: row.label, delta: finite(row.delta) ? row.delta : null, highlight: Boolean(row.highlight) }))
- if (contribution.rest && contribution.rest.count > 0) rows.push({ label: `其余 ${contribution.rest.count} 处`, delta: finite(contribution.rest.delta) ? contribution.rest.delta : null })
+ const roundDelta = delta => {
+  if (!finite(delta)) return null
+  const rounded = Math.round(Math.abs(delta) * 100) / 100
+  return rounded === 0 ? 0 : delta < 0 ? -rounded : rounded
+ }
+ const rows = [...(contribution.rows || [])].map(row => ({ label: row.label, delta: roundDelta(row.delta), highlight: Boolean(row.highlight) }))
+ if (contribution.rest && contribution.rest.count > 0) rows.push({ label: `其余 ${contribution.rest.count} 处`, delta: roundDelta(contribution.rest.delta) })
  const own = rows.find(row => row.highlight)
  const isPeer = report?.context?.kind === 'peer'
+ const daily = contribution.unit === '度/日'
  return {
-  title: isPeer ? `${report.context.parentLabel} 变化` : '分位置 变化',
-  sub: isPeer && own && finite(own.delta) ? `本表 ${sgn(own.delta)}${degreeText(Math.abs(own.delta))}` : '',
+  title: daily ? `${isPeer ? `${report.context.parentLabel} ` : '分位置'}日均变化 · 度/日` : isPeer ? `${report.context.parentLabel} 变化` : '分位置 变化',
+  sub: isPeer && own && finite(own.delta) ? `本表 ${signedDegree(own.delta).text}${daily ? ' 度/日' : ''}` : '',
   shareText: finite(contribution.topShare) ? `前3项占变化的 ${contribution.topShare}%` : '前3项占变化的 —',
   shareDef: '前 3 项变化量绝对值之和 ÷ 全部变化量绝对值之和',
   rows,
-  ...contributionChart(rows),
+  ...contributionChart(rows, { formatValue: delta => signedDegree(delta).text }),
  }
 }
 
@@ -389,7 +421,7 @@ export function meterReportEvidence(report) {
     label: meter.areaName || meter.name,
     statusText: bothOk ? '计入对比' : `未计入（本期${sideTag(meter.a)}·上期${sideTag(meter.b)}）`,
     bounds: `本期 ${sideText(meter.a)}　｜　上期 ${sideText(meter.b)}`,
-    valueText: delta !== null ? `${sgn(delta)}${degreeText(Math.abs(delta))} 度` : '—',
+    valueText: delta !== null ? `${signedDegree(delta).text} 度` : '—',
    }
   })
  }

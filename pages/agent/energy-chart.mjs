@@ -156,7 +156,8 @@ export function contributionChart(rows, options = {}) {
    else svg += `<line x1="${zero - 4}" x2="${zero + 4}" y1="${mid}" y2="${mid}" stroke="#a9b6a4" stroke-width="2" stroke-linecap="round"/>`
    const tone = delta > 0 ? JADE : delta < 0 ? BRASS : '#a9b6a4'
    const sign = delta > 0 ? '+' : delta < 0 ? '−' : ''
-   svg += `<text x="${width}" y="${mid + 3}" text-anchor="end" font-size="10.5" font-weight="600" fill="${tone}">${sign}${barLabel(Math.abs(delta))}</text>`
+   const valueText = options.formatValue ? escapeXml(options.formatValue(delta)) : `${sign}${barLabel(Math.abs(delta))}`
+   svg += `<text x="${width}" y="${mid + 3}" text-anchor="end" font-size="10.5" font-weight="600" fill="${tone}">${valueText}</text>`
   }
   return svg
  }).join('')

@@ -41,11 +41,12 @@
     </template>
    </view>
 
+   <template v-if="loadCurve || compareBuckets.hasData">
    <view class="shead">
-    <text>{{ compareView === 'curve' ? `${curveTitle} · 度/时` : '时间分布 · 度' }}</text>
-    <view class="seg"><button v-for="v in compareViews" :key="v.key" :class="{ on: compareView === v.key }" :aria-pressed="compareView === v.key" hover-class="pressed" @tap="compareView = v.key">{{ v.label }}</button></view>
+    <text>{{ effectiveCompareView === 'curve' ? `${curveTitle} · 度/时` : '时间分布 · 度' }}</text>
+    <view v-if="compareViews.length > 1" class="seg"><button v-for="v in compareViews" :key="v.key" :class="{ on: effectiveCompareView === v.key }" :aria-pressed="effectiveCompareView === v.key" hover-class="pressed" @tap="compareView = v.key">{{ v.label }}</button></view>
    </view>
-   <template v-if="compareView === 'curve'">
+   <template v-if="effectiveCompareView === 'curve'">
     <image v-if="loadCurve" class="curve" :src="loadCurve.src" mode="scaleToFill" />
     <text v-else class="empty">覆盖不足，两期都画不出负荷曲线</text>
    </template>
@@ -56,6 +57,7 @@
     </scroll-view>
    </template>
    <text v-else class="empty">区间内没有可分段的有效差值</text>
+   </template>
 
    <template v-if="isRegion">
     <template v-for="(rank, index) in regionRankings" :key="index">
@@ -128,7 +130,7 @@
 import { computed, ref, watch, getCurrentInstance } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import MeterReportDetails from './MeterReportDetails.vue'
-import { meterReportIsComparison, meterReportAxis, meterCompareViews, meterReportCompareView, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution } from '../meter-report-view.mjs'
+import { meterReportIsComparison, meterReportAxis, meterReportCompareView, meterReportCompareViews, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution } from '../meter-report-view.mjs'
 
 const props = defineProps({ report: { type: Object, required: true }, embedded: Boolean })
 const emit = defineEmits(['evidence'])
@@ -147,7 +149,8 @@ const metricRows = computed(() => meterReportMetricTable(props.report))
 const metricHeads = computed(() => meterReportMetricHeads(props.report))
 const loadCurve = computed(() => meterReportLoadCurve(props.report))
 const curveTitle = computed(() => loadCurve.value?.title || '24小时负荷')
-const compareViews = meterCompareViews
+const compareViews = computed(() => meterReportCompareViews(props.report))
+const effectiveCompareView = computed(() => compareViews.value.some(v => v.key === compareView.value) ? compareView.value : meterReportCompareView(props.report))
 const grainOptions = computed(() => meterReportGrainOptions(props.report))
 const buckets = computed(() => meterReportBuckets(props.report, grain.value))
 const compareBuckets = computed(() => meterReportCompareBuckets(props.report))
@@ -185,7 +188,7 @@ button::after { border: 0; }
 .mreport { color: #35533f; font-size: 12px; margin-top: 4px; }
 .param { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; text-align: left; }
 .param--pressed { opacity: .7; }
-.param-text { flex: 1; min-width: 0; font-size: 11px; color: #6d8069; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.param-text { flex: 1; min-width: 0; font-size: 11px; line-height: 1.4; color: #6d8069; }
 .hero { padding: 12px 0 10px; }
 .hero-label { color: #71856d; font-size: 11px; }
 .number { margin-top: 4px; font-size: 33px; letter-spacing: -1.2px; line-height: 1.25; font-weight: 650; font-variant-numeric: tabular-nums; }
