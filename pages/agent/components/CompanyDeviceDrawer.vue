@@ -84,7 +84,7 @@ button::after { border:0; }
 .gmode { height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:12px; display:flex; align-items:center; justify-content:center; }
 .gmode.active { background:#176b54; color:#fff; }
 .gcount { margin-left:auto; font-size:11px; color:#89958e; }
-.dscroll { flex:1; min-height:0; padding:0 16px; box-sizing:border-box; }
+.dscroll { flex:1; min-height:0; height:0; padding:0 16px; box-sizing:border-box; }
 .dgroup { margin-top:14px; }
 .ghead { display:flex; align-items:center; gap:6px; width:100%; padding:4px 2px; margin-bottom:8px; text-align:left; font-size:11px; font-weight:600; color:#5f6e66; }
 .gcar { margin-left:auto; color:#9aa894; font-size:9px; }

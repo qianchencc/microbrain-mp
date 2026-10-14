@@ -167,7 +167,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; line-height:1.3; }
 button::after { border:0; }
 .epanel { flex:1; min-height:0; display:flex; flex-direction:column; color:#35533f; font-size:12px; }
-.ebody { flex:1; min-height:0; padding:6px 20px 24px; box-sizing:border-box; }
+.ebody { flex:1; min-height:0; height:0; padding:6px 20px 24px; box-sizing:border-box; }
 .estate-msg { display:flex; flex-direction:column; align-items:center; gap:10px; padding:30px 0; color:#839189; font-size:12px; }
 .eretry { font-size:11px; color:#176b54; border:1px solid #dce4da; border-radius:999px; padding:7px 16px; background:#fcfdf8; }
 .calrow { display:flex; margin:8px 0 2px; }

@@ -75,10 +75,10 @@
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="Boolean(observationType)" @reference="referenceEvent" />
   </DeviceSheet>
   <DeviceSheet v-if="energyMounted" :open="energyOpen" tall compact-header title="能耗统计" @close="energyOpen = false">
-   <CompanyEnergySheet :active="energyOpen" :focus-date="energyFocusDate" @open-meter-history="openMeterHistory" />
+   <CompanyEnergySheet class="event-host" :active="energyOpen" :focus-date="energyFocusDate" @open-meter-history="openMeterHistory" />
   </DeviceSheet>
   <DeviceSheet v-if="drawerMounted" :open="Boolean(drawerKind)" tall compact-header :title="drawerTitle" :meta="drawerDevices.length + ' 台 · 只读目录'" @close="drawerKind = ''">
-   <CompanyDeviceDrawer :devices="drawerDevices" :kind="drawerKind" />
+   <CompanyDeviceDrawer class="event-host" :devices="drawerDevices" :kind="drawerKind" />
   </DeviceSheet>
  </view>
 </template>
