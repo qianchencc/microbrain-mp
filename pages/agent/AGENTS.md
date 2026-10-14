@@ -1,5 +1,6 @@
 # Agent Page Notes
 
+- 公司 Agent 由仪表盘右下角浮层承载：`CompanyAgentFloat.vue`（常驻 orb + 全宽底片面板，展开约至导航栏下沿，orb 停靠面板右上角沿兼任收起把手，点遮罩同样收起）。会话主体是 `AgentConversation.vue`——office 页面（index.vue）与公司浮层共用；`source` 与引用/预填上下文经 props + `setReference`/`prefill` 注入，页面生命周期由宿主 `active` prop 驱动（false=收起/隐藏：保草稿、停轮询、不中止在途流，浮标上亮运行环与未读角标）。`index.vue` 只保留 office 宿主；`source=company`/告警/引用/窗口参数重定向到仪表盘解析（`context-link.mjs`）。面板内打开的台账/任务 Sheet 以视口 fixed（z99）盖在浮层（z40-46）之上。会话菜单统一走 `agent-menu.mjs`。
 - 客户告警跳转的alertPrompt只进入Company；草稿与引用分开保存，编辑/重试用原turn.reference，当前输入的新引用保持不动。run.started携带原引用供恢复；入口与验收边界见 `plan/2026-10-04-customer-alert-reference-handoff.md`，客户正式回调契约仍待对接。
 - 安全台账结构化引用与上述自由文本桥分开：事件身份是 ledger＋eventId，并核对 deviceId；共用 SafetyEventDetail 即时展示带读取时间的快照，稳定身份可立即引用，后台更新不阻塞按钮；发送消息时 Runtime 再按当前目录核验记录，引用本身不代表核验成功或控制授权。仪表盘保留列表节点，返回详情用显式 display:none/block；首次挂载必须触发读取。网络错误保留标注过的旧快照，401/404 清理记录并禁用引用，迟到响应核对 requestId/身份/active。现行行为见 `plan/2026-10-08-independent-reads-lan-handoff.md`。
 - 消防搬迁资料：`currentDevice`表示本次核验的当前名称/安装位置，空字段显示未核验；`recordedDeviceName`保留告警原名称。列表重新打开静默更新，摄像头查询返回的同事件资料同步详情，入口明确“按当前位置查找监控”，不把当前位置解释为记录时位置。

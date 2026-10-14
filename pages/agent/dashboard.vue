@@ -1,6 +1,11 @@
 <template>
  <view class="dashboard">
-  <AssistantNav title="物联助手" back-label="服务首页" @back="back" />
+  <AssistantNav title="物联助手" back-label="服务首页" @back="back">
+  <template #title>
+   <text class="nav-title-text">物联助手</text>
+   <button class="office-entry" :disabled="Boolean(openingAgent)" hover-class="office-entry--pressed" aria-label="打开办公室 Agent" @tap="openAgent('office')"><text class="office-entry-text">办公室</text><uni-icons type="forward" size="11" color="#536b5c" /></button>
+  </template>
+ </AssistantNav>
   <scroll-view class="dashboard-scroll" scroll-y enhanced :show-scrollbar="false">
    <view class="content">
     <view class="headline">
@@ -37,7 +42,7 @@
        <view class="pc"><text class="pt">{{ card.label }}</text><text class="pv">{{ card.pv }}</text><text class="pd">{{ card.pd }}</text></view>
       </view>
      </view>
-     <view v-if="legendItems.length" class="legend"><text v-for="(item, i) in legendItems" :key="item" class="legend-item"><text class="dot" :style="{ background: PIE_COLORS[i % PIE_COLORS.length] }" />{{ item }}</text><text class="legend-item">左环 = 今日</text></view>
+     <view v-if="legendItems.length" class="legend"><text v-for="(item, i) in legendItems" :key="item" class="legend-item"><text class="dot" :style="{ background: PIE_COLORS[i % PIE_COLORS.length] }" />{{ item }}</text><text class="legend-item">左环 = {{ pieLeftLabel }}</text></view>
     </view>
 
     <view class="blk">
@@ -60,8 +65,6 @@
      <text v-else class="sec-empty">{{ automationLoading ? '正在更新任务安排' : '任务摘要暂不可用' }}</text>
     </view>
 
-    <button class="ask" :disabled="Boolean(openingAgent)" hover-class="pressed" @tap="openAgent('company')"><text>{{ openingAgent === 'company' ? '正在打开…' : '问公司 Agent' }}</text><text class="arr">→</text></button>
-    <button class="office" :disabled="Boolean(openingAgent)" hover-class="pressed" @tap="openAgent('office')"><text>办公室 Agent</text><text class="sub">办公室设备 · 对话与自动化 ›</text></button>
    </view>
   </scroll-view>
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" @close="tasksOpen = false" @reference="referenceTask" />
@@ -79,18 +82,19 @@
   <DeviceSheet v-if="drawerMounted" :open="Boolean(drawerKind)" tall compact-header :title="drawerTitle" :meta="drawerDevices.length + ' 台 · 只读目录'" @close="drawerKind = ''">
    <CompanyDeviceDrawer class="event-host" :devices="drawerDevices" :kind="drawerKind" />
   </DeviceSheet>
+  <CompanyAgentFloat ref="agentFloat" :page-active="pageActive" />
  </view>
 </template>
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
+import { computed, onMounted, ref, watch } from 'vue'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent } from './navigation.mjs'
 import { metricValue } from './dashboard-view.mjs'
-import { shiftDate, shanghaiToday, unitOf, round2, comparePct, mergeStripDays, donutImage, compositionFromUsage, PIE_COLORS, STRIP_PAGE_DAYS } from './energy-daily-view.mjs'
+import { shiftDate, shanghaiToday, unitOf, round2, comparePct, mergeStripDays, donutImage, compositionFromUsage, completeDayComparison, PIE_COLORS, STRIP_PAGE_DAYS } from './energy-daily-view.mjs'
 import TaskListSheet from './components/TaskListSheet.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
 import ObservationCard from './components/ObservationCard.vue'
@@ -101,6 +105,8 @@ import MeterHistoryView from './components/MeterHistoryView.vue'
 import CompanyEnergyStrip from './components/CompanyEnergyStrip.vue'
 import CompanyEnergySheet from './components/CompanyEnergySheet.vue'
 import CompanyDeviceDrawer from './components/CompanyDeviceDrawer.vue'
+import CompanyAgentFloat from './components/CompanyAgentFloat.vue'
+import { parseAgentContext, environmentHistoryPrompt, meterHistoryPrompt } from './context-link.mjs'
 
 const KIND_CELLS = [
  { kind: 'environment', label: '环境传感器' },
@@ -179,23 +185,35 @@ function openEnergy(date) {
 }
 function openMeterHistory() { energyOpen.value = false; openObservation('energy') }
 const meterNameOf = id => energyReport.value?.meters?.find(m => m.id === id)?.name || id
+const mdLabel = date => `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日`
+function pieCard(key, label, usage, meterUsage, baseUsage, baseMeterUsage) {
+ const unit = energyUnit.value
+ const current = compositionFromUsage(meterUsage, meterNameOf)
+ const pct = comparePct(usage, baseUsage)
+ const fmt = v => typeof v === 'number' ? String(round2(v)) : '—'
+ return { key, label,
+  curImage: donutImage(current.map(i => i.value)),
+  baseImage: donutImage(compositionFromUsage(baseMeterUsage, meterNameOf).map(i => i.value)),
+  pv: `${fmt(usage)} vs ${fmt(baseUsage)}${unit ? ' ' + unit : ''}`,
+  pd: pct == null ? '—' : (pct >= 0 ? '+' : '') + pct + '%',
+  floors: current.map(i => i.label) }
+}
 const pieCards = computed(() => {
  const comparison = energyReport.value?.comparison
- if (typeof comparison?.currentDay?.usage !== 'number') return [] // 今日至今窗口无实测（如边界恰为最新采样点）时不摆“— vs —”空卡
- const unit = energyUnit.value
- return [['previousDay', '今日至今 vs 昨日同期'], ['lastWeekSameDay', '今日至今 vs 上周同日同期']].map(([key, label]) => {
-  const base = comparison[key]
-  const current = compositionFromUsage(comparison.currentDay.meterUsage, meterNameOf)
-  const pct = comparePct(comparison.currentDay.usage, base?.usage)
-  const fmt = v => typeof v === 'number' ? String(round2(v)) : '—'
-  return { key, label,
-   curImage: donutImage(current.map(i => i.value)),
-   baseImage: donutImage(compositionFromUsage(base?.meterUsage, meterNameOf).map(i => i.value)),
-   pv: `${fmt(comparison.currentDay.usage)} vs ${fmt(base?.usage)}${unit ? ' ' + unit : ''}`,
-   pd: pct == null ? '—' : (pct >= 0 ? '+' : '') + pct + '%',
-   floors: current.map(i => i.label) }
+ if (typeof comparison?.currentDay?.usage === 'number') {
+  return [['previousDay', '今日至今 vs 昨日同期'], ['lastWeekSameDay', '今日至今 vs 上周同日同期']].map(([key, label]) =>
+   pieCard(key, label, comparison.currentDay.usage, comparison.currentDay.meterUsage, comparison[key]?.usage, comparison[key]?.meterUsage))
+ }
+ // 今日至今窗口无实测（如边界恰为最新采样点）时退到最新完整日，整日对比前一日/上周同 weekday
+ const day = latestCompleteDay.value
+ if (!day) return []
+ return [shiftDate(day, -1), shiftDate(day, -7)].flatMap(baseDate => {
+  const comp = completeDayComparison(energyReport.value, day, baseDate)
+  return comp ? [pieCard(`complete-${baseDate}`, `${mdLabel(comp.date)} vs ${mdLabel(comp.baseDate)}`, comp.usage, comp.meterUsage, comp.baseUsage, comp.baseMeterUsage)] : []
  })
 })
+const pieLeftLabel = computed(() =>
+ typeof energyReport.value?.comparison?.currentDay?.usage === 'number' || !latestCompleteDay.value ? '今日' : mdLabel(latestCompleteDay.value))
 const legendItems = computed(() => pieCards.value[0]?.floors || [])
 
 /* 环境 / 台账 / 自动化 */
@@ -305,24 +323,36 @@ function openObservation(type) { if (['alerts', 'environment', 'energy'].include
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
 function resultLabel(status) { return ({ completed: '已完成', partial: '部分完成', failed: '失败', missed: '已错过', cancelled: '已取消', unconfirmed: '结果未确认' })[status] || status }
 function observationBack() { if (selectedEvent.value) selectedEvent.value = null; else observationType.value = '' }
-function referenceEvent(reference) { openAgent('company', reference) }
-function referenceTask(reference) { if (openingAgent.value) return; tasksOpen.value = false; openAgent('company', reference) }
+/* 公司 Agent 改为右下角浮层（CompanyAgentFloat），办公室 Agent 仍走独立页面。
+   引用/观察窗口直传浮层对象，不再过 URL。 */
+const agentFloat = ref(null)
 const openingAgent = ref('')
-function openEnvironmentAgent(window) { openAgent('company', null, window) }
-function openMeterAgent(window) { openAgent('company', null, null, window) }
-function openAgent(source, reference, environmentWindow, energyWindow) {
+const pageActive = ref(false)
+let pendingAgentOpen = null
+function openCompanyAgent(payload = {}) { agentFloat.value?.open(payload) }
+function referenceEvent(reference) { selectedEvent.value = null; observationType.value = ''; openCompanyAgent({ reference }) }
+function referenceTask(reference) { tasksOpen.value = false; openCompanyAgent({ reference }) }
+function openEnvironmentAgent(window) { observationType.value = ''; openCompanyAgent({ prompt: environmentHistoryPrompt(window) }) }
+function openMeterAgent(window) { observationType.value = ''; openCompanyAgent({ prompt: meterHistoryPrompt(window) }) }
+function openAgent(source) {
  if (openingAgent.value) return
  openingAgent.value = source
- uni.navigateTo({ success: () => { if (reference?.type === 'safety_event') selectedEvent.value = null }, url: `/pages/agent/index?source=${source}&from=dashboard${reference ? (reference.type === 'safety_event' ? '&safetyReference=' : '&taskReference=') + encodeURIComponent(JSON.stringify(reference)) : ''}${environmentWindow ? '&environmentWindow=' + encodeURIComponent(JSON.stringify(environmentWindow)) : ''}${energyWindow ? '&energyWindow=' + encodeURIComponent(JSON.stringify(energyWindow)) : ''}`, fail: () => { openingAgent.value = ''; if (reference && reference.type !== 'safety_event') tasksOpen.value = true; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
+ uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard`, fail: () => { openingAgent.value = ''; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
 }
+onLoad(options => {
+ const o = options || {}
+ // 公司深链（含 index 兼容重定向、客户告警跳转）：浮层带上下文直接展开
+ if (o.source === 'company' || o.taskReference || o.alertPrompt !== undefined || o.safetyReference !== undefined || o.environmentWindow !== undefined || o.energyWindow !== undefined) pendingAgentOpen = parseAgentContext(o)
+})
+onMounted(() => { if (pendingAgentOpen) agentFloat.value?.open(pendingAgentOpen) })
 function back() { backToParent('/pages/index/index') }
 onShow(() => {
- visible = true; openingAgent.value = ''
+ visible = true; pageActive.value = true; openingAgent.value = ''
  try { if (scope && scope !== getAgentStorageScope()) resetForScope() }
  catch { resetForScope() }
  load()
 })
-function hide() { visible = false; ++requestId; allLoaded() }
+function hide() { visible = false; pageActive.value = false; ++requestId; allLoaded() }
 onHide(hide); onUnload(hide)
 </script>
 <style scoped>
@@ -379,10 +409,13 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .lchips button.on { background:#176b54; color:#fff; }
 .list-more { display:block; width:100%; padding:10px 0 2px; text-align:left; font-size:10.5px; color:#176b54; }
 
-.ask { display:flex; align-items:center; gap:8px; width:100%; margin-top:28px; padding:15px 0; border-top:1px solid #293f31; font-size:13.5px; font-weight:600; text-align:left; }
-.ask .arr { margin-left:auto; font-weight:400; }
-.office { display:flex; justify-content:space-between; align-items:center; width:100%; margin-top:8px; padding:10px 0; font-size:11.5px; font-weight:600; color:#41564a; text-align:left; }
-.office .sub { font-weight:400; color:#98a49b; font-size:9.5px; }
+/* 标题旁办公室入口：AssistantNav #title 插槽内容用本文件样式（scoped 只吃宿主侧） */
+.nav-title-text { font-size:15px; font-weight:600; color:#293f31; }
+.office-entry { display:flex; align-items:center; gap:3px; margin-left:10px; padding:4px 10px; border-radius:12px; background:linear-gradient(#fefffe,#eef3ef); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16), 0 1px 2px rgba(28,57,42,.08); }
+.office-entry::after { border:0; }
+.office-entry[disabled] { opacity:.6; }
+.office-entry--pressed { opacity:.65; }
+.office-entry-text { font-size:11px; color:#536b5c; }
 .pressed { opacity:.65; }
 
 .notice { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; color:#9a784a; font-size:10px; }.notice button { min-height:30px; color:#8b693c; text-decoration:underline; flex-shrink:0; }
