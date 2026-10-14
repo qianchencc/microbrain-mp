@@ -113,6 +113,13 @@
 				"enablePullDownRefresh": false
 			},
 			"path": "pages/news/web"
+		},
+		{
+			"style": {
+				"enablePullDownRefresh": false,
+				"navigationBarTitleText": "设备列表"
+			},
+			"path": "pages/user/device"
 		}
 	],
 	"globalStyle": {
