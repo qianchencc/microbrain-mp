@@ -101,7 +101,7 @@
   </view>
 
   <DeviceSheet v-if="mounted" :open="sheetOpen" :title="paneTitle" :subtitle="selected?.meter.name || kindLabel" tall @close="sheetOpen = false">
-   <template #leading><button v-if="stack.length" class="back" aria-label="返回上一层" hover-class="pressed" @tap="back">‹</button></template>
+   <template #header-left><button v-if="stack.length" class="back" aria-label="返回上一层" hover-class="pressed" @tap="back">‹</button></template>
    <view v-if="pane === 'history' && selected" class="history-pane"><MeterHistoryView class="history-host" :active="sheetOpen" :initial-query="historyQuery" :show-question="false" /></view>
    <scroll-view v-else class="details-scroll" scroll-y enhanced :show-scrollbar="false">
     <view class="details">

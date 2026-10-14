@@ -87,6 +87,36 @@ function escapeXml(text) {
  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+// 横向排行条：位置名左列、玉绿条 ∝ value/max、末端数值；null 值行画占位线不画条。
+// rows: [{ label, value|null, highlight? }]（highlight 预留：构成排行中强调当前表）
+export function meterRankingChart(rows, options = {}) {
+ const list = Array.isArray(rows) ? rows : []
+ const width = options.width ?? 320
+ const rowHeight = 26, topPad = 2, labelW = 96, valueW = 56
+ const height = topPad * 2 + list.length * rowHeight
+ const max = Math.max(...list.map(row => finite(row.value) ? row.value : 0), 1e-9)
+ const barArea = width - labelW - valueW - 8
+ const clip = label => { const text = String(label ?? ''); return escapeXml(text.length > 9 ? text.slice(0, 9) + '…' : text) }
+
+ const body = list.map((row, i) => {
+  const y = topPad + i * rowHeight
+  const mid = y + rowHeight / 2
+  let svg = `<text x="0" y="${mid + 3}" font-size="10.5" fill="#4a5d4e">${clip(row.label)}</text>`
+  if (finite(row.value)) {
+   const w = Math.max(3, row.value / max * barArea)
+   svg += `<rect x="${labelW}" y="${y + 5}" width="${w.toFixed(2)}" height="${rowHeight - 11}" rx="4" fill="${row.highlight ? '#b89443' : 'url(#jade)'}"/>`
+   svg += `<text x="${width}" y="${mid + 3}" text-anchor="end" font-size="10.5" font-weight="600" fill="#355a43">${barLabel(row.value)}</text>`
+  } else {
+   svg += `<line x1="${labelW + 4}" x2="${labelW + 22}" y1="${mid}" y2="${mid}" stroke="#c2cabc" stroke-width="2" stroke-linecap="round"/>`
+   svg += `<text x="${width}" y="${mid + 3}" text-anchor="end" font-size="10.5" fill="#a9b6a4">—</text>`
+  }
+  return svg
+ }).join('')
+
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="jade" x2="0" y2="1"><stop stop-color="#388e6d"/><stop offset="1" stop-color="#176b54"/></linearGradient></defs>${body}</svg>`
+ return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.some(row => finite(row.value)) }
+}
+
 const toMs = value => typeof value === 'number' ? value : Date.parse(value)
 
 // 非负传感域的纵轴刻度：按原始跨度选 nice step，再把上下界对齐到 step 的整数倍；

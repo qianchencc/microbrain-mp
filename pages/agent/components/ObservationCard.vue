@@ -4,7 +4,8 @@
    <view class="oblock">
     <view class="oblock-head"><text>{{ blockLabel(block) }}</text><text class="count">{{ blockCount(block) }}</text></view>
 
-    <EnergyBusinessReport v-if="block.type === 'energy_report'" :report="block.report" :running="running" />
+    <MeterReportCard v-if="block.type === 'meter_report'" :report="block.report" />
+    <EnergyBusinessReport v-else-if="block.type === 'energy_report'" :report="block.report" :running="running" />
     <CompanyEnergyReport v-else-if="block.type === 'company_energy'" :report="block.report" :running="running" />
     <EnergyComparisonReport v-else-if="block.type === 'energy_comparison'" :report="block.report" />
     <EnvironmentTrend v-else-if="block.type === 'environment_history'" :report="block.report" />
@@ -80,6 +81,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import MeterReportCard from './MeterReportCard.vue'
 import EnergyBusinessReport from './EnergyBusinessReport.vue'
 import CompanyEnergyReport from './CompanyEnergyReport.vue'
 import EnergyComparisonReport from './EnergyComparisonReport.vue'
@@ -119,9 +121,9 @@ function restOf(block, index) {
  return Math.max(0, total - ROW_LIMIT)
 }
 
-const LABELS = { energy_report: '计量结果', company_energy: '历史计量报告', energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
+const LABELS = { meter_report: '用电统计', energy_report: '计量结果', company_energy: '历史计量报告', energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
 const blockLabel = block => block.type === 'video_playback' && block.report.safetyContext ? '相关监控' : LABELS[block.type] || '观察'
-const blockCount = block => block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
+const blockCount = block => block.type === 'meter_report' ? `${block.report?.coverage?.meters ?? block.report?.meters?.length ?? 0} 台` : block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
 const sourceOf = reading => environmentSource(reading)
