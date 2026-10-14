@@ -1,10 +1,11 @@
 <template>
  <scroll-view class="task-scroll" scroll-y enhanced :show-scrollbar="false">
-  <view v-if="loading" class="message">正在读取任务</view>
+  <view v-if="loading && !detail" class="message">加载中…</view>
   <view v-else-if="error" class="message"><text>{{ error }}</text><button @tap="load()">重新加载</button><button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button></view>
   <view v-else-if="detail" class="task-detail">
    <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button>
    <text class="task-name">{{ detail.label }}</text>
+   <text v-if="loading" class="task-when">正在更新…</text>
    <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
    <text v-if="detail.occurrence" class="task-when">{{ detail.occurrence.virtual ? '未来安排 · 尚未开始' : '本次发生' }} · {{ detail.occurrence.date }}</text>
    <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">下一次 · {{ detail.nextText }}</text>
@@ -36,7 +37,6 @@
    <view v-if="detail.report" class="task-report">
     <text class="report-title">执行报告 · {{ detail.report.generatedText }}</text>
     <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 个检查点 · {{ detail.report.devicesVisible }} 台设备</text>
-    <text class="report-note">{{ source === 'company' ? '根据已保存的任务结果汇总' : '按已保存的执行回执汇总；上方记录如实保留受理与未核验结果' }}</text>
    </view>
    <view v-if="plan && latestReport" class="task-report">
     <text class="report-title">最近一次执行 · {{ latestReport.generatedText }}</text>
@@ -60,11 +60,12 @@ import { createStateRefresh } from '../state-refresh.mjs'
 import { creatorVariant } from '../region-device-view.mjs'
 import ObservationCard from './ObservationCard.vue'
 
-const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, source: { type: String, default: 'office' } })
+const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, initialTask: Object, snapshotScope: String, source: { type: String, default: 'office' } })
 const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'plan-return', 'reference', 'dismiss'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
+const detailFresh = ref(false)
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
 const expandedPhases = ref([])
 const detail = computed(() => {
@@ -135,7 +136,11 @@ async function load(silent = false) {
  if (scope !== detailScope) { task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = [] }
  detailScope = scope
  if (!pageVisible || !props.active || (!taskId && !planId)) return
- if (!silent) { task.value = null; plan.value = null; error.value = ''; loading.value = false }
+ if (!silent) {
+  const snapshot = props.initialTask
+  task.value = snapshot?.id === taskId && snapshot.agentSource === props.source && props.snapshotScope === scope && scope ? snapshot : null
+  plan.value = null; error.value = ''; loading.value = false; detailFresh.value = false
+ }
  if (props.sampleTask) { task.value = props.sampleTask; return }
  if (!silent) loading.value = true
  try {
@@ -153,6 +158,7 @@ async function load(silent = false) {
     const previousPhases = new Map((task.value?.phases || []).map(phase => [phase.id, phase.status]))
     error.value = ''
     task.value = result.task
+    detailFresh.value = true
     loaded = true
     if (props.source === 'office' && result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
      if (!silent) void stateRefresh.auto()

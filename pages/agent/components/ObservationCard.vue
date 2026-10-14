@@ -13,7 +13,6 @@
      <text class="recording-name">{{ block.report.name }}</text><text class="meta">{{ block.report.location }}</text>
      <text class="recording-window">{{ fmtShanghaiDateTime(block.report.beginTime) }} — {{ fmtShanghaiDateTime(block.report.endTime) }}</text>
      <text v-if="block.report.safetyContext" class="meta">{{ block.report.safetyContext.label }} · {{ fmtShanghaiDateTime(block.report.safetyContext.occurredAt) }}<text>；{{ block.report.safetyContext.basis }}</text></text>
-     <text class="meta">录像是否存在以实际播放结果为准</text>
      <button class="omore" @tap="selectPlayback(block.report)">调整录像期间</button>
      <button class="vbtn recording-open" :disabled="!playerReady || fetchingId === block.report.deviceId" hover-class="vbtn--pressed" @tap="viewPlayback(block.report)">{{ playerReady ? '查看这段录像' : '播放页接入中' }}</button>
     </view>
@@ -25,8 +24,6 @@
       <view class="video-actions"><button class="vbtn" :disabled="viewDisabled(d)" hover-class="vbtn--pressed" @tap="view(d)">{{ viewLabel(d) }}</button><button class="vbtn recording-link" :disabled="!playerReady" hover-class="vbtn--pressed" @tap="selectPlayback(d)">录像回放</button></view>
      </view>
     </template>
-    <text v-if="block.type === 'video'" class="meta">状态查询于 {{ observed || '时间未知' }}</text>
-
     <template v-else-if="block.type === 'environment'">
      <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="erow">
       <view class="erow-head">
@@ -39,7 +36,6 @@
       </view>
       <text v-else class="meta">{{ d.reading ? '读数不全' : '读数未知' }}</text>
      </view>
-     <text class="meta">观测于 {{ observed || '时间未知' }}<text v-if="hasShadow(block)"> · 影子为平台侧兜底读数，可能不是该房间的实测值</text></text>
     </template>
 
     <template v-else-if="block.type === 'energy'">
@@ -59,7 +55,7 @@
       <view class="dot warn" />
       <text class="nm">{{ d.name }}</text>
       <text class="loc">{{ d.location || '当前位置未核验' }}</text>
-      <text class="meta meta--wide">{{ safetySubtypeText(d.subtype) }} · 无实时状态 · 仅告警台账</text>
+      <text class="meta meta--wide">{{ safetySubtypeText(d.subtype) }}台账</text>
      </view>
     </template>
 
@@ -101,7 +97,6 @@ const playbackDevice = ref(null)
 const playbackMounted = ref(false)
 function selectPlayback(device) { playbackMounted.value = true; playbackDevice.value = device }
 const playerReady = videoPlayerReady()
-const observed = computed(() => fmtDateTime(props.observation.observedAt))
 
 // 大目录块默认只露出前 6 行，块尾提供展开/收起；告警台账以“条”计。
 const ROW_LIMIT = 6
@@ -130,7 +125,6 @@ const blockCount = block => block.type === 'energy_report' ? `${block.report?.co
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
 const sourceOf = reading => environmentSource(reading)
-const hasShadow = block => (block.devices || []).some(d => d.reading?.source === 'shadow')
 const staleOf = reading => energyStale(reading)
 const onlineOf = value => videoOnline(value)
 const viewDisabled = d => !playerReady || videoOnline(d.online) !== true || fetchingId.value === d.deviceId
@@ -149,13 +143,8 @@ async function viewPlayback(report) {
 }
 
 function alertsMeta(block) {
- const parts = []
- const records = block.records || []
- if (records.length && (block.total ?? 0) > records.length) parts.push(`本次读取 ${block.total} 条，显示最近 ${records.length} 条`)
- else if (records.length) parts.push(`本次读取 ${block.total ?? records.length} 条`)
- else parts.push(block.windowDays ? `近 ${block.windowDays} 天无记录` : '本次查询无记录')
- if (block.latest?.time) parts.push(`最新一条 ${fmtDateTime(block.latest.time)}（${ageHint(block.latest.time)}）`)
- return parts.join(' · ')
+ if (!(block.records || []).length) return block.windowDays ? `近 ${block.windowDays} 天无记录` : '本次查询无记录'
+ return block.latest?.time ? `最新一条 ${fmtDateTime(block.latest.time)}（${ageHint(block.latest.time)}）` : ''
 }
 </script>
 

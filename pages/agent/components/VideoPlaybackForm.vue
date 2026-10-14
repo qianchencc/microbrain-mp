@@ -5,7 +5,7 @@
   <view class="pickers"><picker mode="date" :value="dates.fromDate" @change="dates.fromDate = $event.detail.value"><view>{{ dates.fromDate }} <uni-icons type="down" size="10" color="#69806b" /></view></picker><picker mode="time" :value="dates.fromTime" @change="dates.fromTime = $event.detail.value"><view>{{ dates.fromTime }} <uni-icons type="down" size="10" color="#69806b" /></view></picker></view>
   <text class="caption">录像结束</text>
   <view class="pickers"><picker mode="date" :value="dates.toDate" @change="dates.toDate = $event.detail.value"><view>{{ dates.toDate }} <uni-icons type="down" size="10" color="#69806b" /></view></picker><picker mode="time" :value="dates.toTime" @change="dates.toTime = $event.detail.value"><view>{{ dates.toTime }} <uni-icons type="down" size="10" color="#69806b" /></view></picker></view>
-  <text class="note">单次最多三天，录像是否存在以实际播放结果为准。当前离线不影响查询历史录像。</text>
+  <text class="note">单次最长三天</text>
   <text v-if="error" class="error">{{ error }}</text>
   <button class="open-recording" :disabled="!ready || busy" hover-class="pressed" @tap="open">{{ ready ? '查看这段录像' : '播放页接入中' }} <uni-icons type="right" size="12" color="#fff" /></button>
  </view>

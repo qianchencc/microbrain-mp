@@ -11,7 +11,7 @@
     <view class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
     <scroll-view class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="list-summary"><text>{{ listSummary }}</text><text>{{ visibleRows.length }} 项</text></view>
-     <view v-if="loading && !visibleRows.length" class="state-message">正在读取安排</view>
+     <view v-if="loading && !listLoaded" class="state-message">加载中…</view>
      <view v-else-if="error && !visibleRows.length" class="state-message"><text>{{ error }}</text><button @tap="load">重试</button></view>
      <view v-else-if="!visibleRows.length" class="state-message">{{ emptyText }}</view>
 
@@ -42,7 +42,7 @@
     </scroll-view>
    </view>
 
-   <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在核验当前计划与报告</text>
+   <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text>
     <scroll-view class="detail-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="plan-summary">
       <view class="summary-heading"><view class="status-mark" :class="planIsEnabled(selectedPlan) ? 'status-mark--active' : 'status-mark--paused'" /><text class="plan-label">{{ selectedPlan.label || '未命名周期安排' }}</text></view>
@@ -61,7 +61,7 @@
    </view>
 
    <view v-if="selectedTask" class="detail-pane">
-    <TaskDetailContent class="task-content-host" :active="open" :task-id="selectedTaskId" :source="source" @reference="emit('reference', $event)" @cancelled="onTaskCancelled" @dismiss="backToList" />
+    <TaskDetailContent class="task-content-host" :active="open" :task-id="selectedTaskId" :initial-task="selectedTask" :snapshot-scope="loadedScope" :source="source" @reference="emit('reference', $event)" @cancelled="onTaskCancelled" @dismiss="backToList" />
    </view>
   </view>
  </DeviceSheet>
@@ -80,13 +80,16 @@ import TaskDetailContent from './TaskDetailContent.vue'
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
 const emit = defineEmits(['close', 'reference'])
 const views = [
- { value: 'upcoming', label: '即将安排' },
+ { value: 'upcoming', label: '待执行' },
  { value: 'results', label: '执行结果' },
  { value: 'plans', label: '周期计划' },
 ]
 const view = ref('upcoming')
 const tasks = ref([]), plans = ref([])
 const loading = ref(false), error = ref(''), planLoading = ref(false)
+const listLoaded = ref(false)
+const taskRows = new Map()
+let plansLoaded = false
 const selectedTask = ref(null), selectedPlan = ref(null), returnPlan = ref(null)
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
 const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value ? '周期计划' : '我的安排')
@@ -94,10 +97,9 @@ const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : '周期安排')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : '暂无周期计划')
 let requestId = 0, planRequest = 0, loadedScope = '', pageVisible = true
-function resetIdentity() { tasks.value = []; plans.value = []; loadedTaskView = ''; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null }
+function resetIdentity() { tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded = false; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null }
 onHide(() => { pageVisible = false; ++requestId; ++planRequest; loading.value = false; planLoading.value = false })
 onShow(() => { pageVisible = true; if (props.open) void load() })
-let loadedTaskView = ''
 
 function startOfDay(date) {
  const value = new Date(date)
@@ -151,11 +153,9 @@ function selectTaskRows(values, kind) {
   })
 }
 
-async function load() {
+async function load(force = true) {
  if (!props.open || !pageVisible) return
  const current = ++requestId, kind = view.value
- if (kind !== 'plans' && loadedTaskView !== kind) tasks.value = []
- if (kind !== 'plans') loadedTaskView = kind
  loading.value = true
  error.value = ''
  let scope = ''
@@ -163,13 +163,22 @@ async function load() {
   scope = getAgentStorageScope()
   const source = props.source
   if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
+  tasks.value = taskRows.get(kind) || []
+  listLoaded.value = kind === 'plans' ? plansLoaded : taskRows.has(kind)
+  if (!force && listLoaded.value) return
   if (kind === 'plans') {
    const result = await listTaskPlans({ source: props.source })
-   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) plans.value = Array.isArray(result?.plans) ? result.plans : []
+   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) {
+    plans.value = Array.isArray(result?.plans) ? result.plans : []
+    plansLoaded = true; listLoaded.value = true
+   }
   } else {
    const range = taskRange(kind)
    const result = await listAgentTasks({ source: props.source, ...range })
-   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) tasks.value = selectTaskRows(result?.tasks, kind)
+   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) {
+    tasks.value = selectTaskRows(result?.tasks, kind)
+    taskRows.set(kind, tasks.value); listLoaded.value = true
+   }
   }
  } catch (cause) {
   if (current === requestId && props.open && view.value === kind) {
@@ -248,15 +257,10 @@ function referencePlan() {
 }
 
 watch(() => props.source, () => {
- tasks.value = []
- plans.value = []
- loadedTaskView = ''
- selectedTask.value = null
- selectedPlan.value = null
- returnPlan.value = null
+ resetIdentity()
 })
-watch(() => [props.open, props.source, view.value], ([isOpen]) => {
- if (isOpen) void load()
+watch(() => [props.open, props.source, view.value], ([isOpen, source], previous) => {
+ if (isOpen) void load(!previous || !previous[0] || previous[1] !== source)
  else { ++requestId; loading.value = false }
 }, { immediate: true })
 </script>

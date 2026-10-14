@@ -15,7 +15,6 @@
      <text v-else>{{ statsWords }}</text>
     </view>
     <view v-if="total || statsNumber" class="fact-row">
-     <view class="fact"><text>观测跨度</text><text class="fact-value">{{ spanDays }} 天</text></view>
      <view v-if="report.summary.average != null" class="fact"><text>日均用电</text><text class="fact-value">{{ value(report.summary.average) }} kWh</text></view>
      <view v-else-if="total" class="fact"><text>纳入合计</text><text class="fact-value">{{ total.meterIds.length }} 台</text></view>
      <view v-else-if="single" class="fact"><text>取得采样</text><text class="fact-value">{{ single.samples || '—' }} 条</text></view>
@@ -56,15 +55,14 @@
     <view class="finding-head"><view class="finding-title"><view class="fdot" /><view class="ftext">{{ finding.title }}</view></view><text class="pill">{{ meterName(finding.meterId) }}</text></view>
     <text class="finding-detail">{{ finding.detail }}</text>
    </button>
-   <text v-if="!report.findings.length" class="empty">本次已执行的检查规则未发现问题；不等于未检查的项目正常。</text>
+   <text v-if="!report.findings.length" class="empty">本次检查未发现问题</text>
    <button v-if="report.findings.length > 5" class="more" hover-class="pressed" @tap="open('findings')">查看全部 {{ report.findings.length }} 项 ›</button>
    <text v-for="(item, i) in (report.notChecked || []).slice(0, 2)" :key="i" class="notice">未检查{{ item.meterId ? ' · ' + meterName(item.meterId) : '' }}：{{ item.reason }}</text>
-   <text v-if="report.rules?.growthThreshold != null" class="hint">本次指定增幅阈值 {{ report.rules.growthThreshold }}%；发现仅为核查线索，不构成故障结论。</text>
   </template>
 
   <text v-if="report.coverage.reason" class="notice">{{ report.coverage.reason }}</text>
   <view class="coverage">
-   <text>{{ report.coverage.validMeters }} / {{ report.coverage.requestedMeters }} 台有有效结果<text v-if="report.coverage.failedMeters"> · {{ report.coverage.failedMeters }} 台未计入</text></text>
+   <text>{{ report.coverage.validMeters }}/{{ report.coverage.requestedMeters }} 台有效<text v-if="report.coverage.failedMeters"> · {{ report.coverage.failedMeters }} 台未计入</text></text>
    <button hover-class="pressed" @tap="open('meters')">查看范围 ›</button>
   </view>
 
@@ -79,7 +77,6 @@
      <view :style="{ width: chart.points.length <= 7 ? '100%' : chart.width + 'px' }"><image class="chart" :src="chart.src" mode="scaleToFill" /></view>
     </scroll-view>
     <text v-if="seriesNote" class="notice">{{ seriesNote }}</text>
-    <text class="hint">缺少完整分段边界的时段留空，未补零或估算。</text>
    </template>
 
    <view v-if="listRows.length" class="shead">
@@ -95,10 +92,9 @@
     <view class="mrow-value"><text class="v">{{ rowValue(row) }}</text><text class="u">{{ rowUnit(row) }}</text></view>
     <text class="arrow">›</text>
    </button>
-   <text v-if="!listRows.length && !chart.hasData" class="empty">无法取得有效起止读数。已记录缺失电表和窗口，可在采样依据中核查。</text>
+   <text v-if="!listRows.length && !chart.hasData" class="empty">无法取得有效起止读数</text>
   </template>
 
-  <text class="foot">{{ report.basis.upstream }} · 查询于 {{ fmtTime(report.observedAt) }}</text>
   <view class="actions">
    <button hover-class="pressed" @tap="open('evidence')">采样依据</button>
    <button hover-class="pressed" @tap="open('history')">原始采样</button>
@@ -175,7 +171,6 @@ const finiteUsage = row => typeof last(row)?.usage === 'number' && Number.isFini
 const meterName = id => props.report.meters.find(m => m.meter.id === id)?.meter.name || '计量点'
 
 const scopeName = computed(() => props.report.meters.length === 1 ? props.report.meters[0].meter.name : '当前接入计量范围')
-const spanDays = computed(() => Math.max(1, Math.round((Date.parse(props.report.requested.to) - Date.parse(props.report.requested.from)) / 86400000)))
 const stateLabel = computed(() => props.report.coverage.status === 'denied' ? '授权失效' : !props.report.coverage.requestedMeters ? '无计量点' : total.value?.status === 'partial' ? '部分结果' : props.report.coverage.status === 'reading' ? props.running ? '读取中' : '已中断' : props.report.coverage.status === 'partial' ? '部分结果' : !total.value && props.report.kind !== 'inspection' ? single.value ? '口径待确认' : '用电量待核实' : '完整结果')
 
 const statsLabel = computed(() => total.value ? total.value.status === 'partial' ? '已取得结果的小计' : '所选区间用电量' : single.value ? '本表累计读数变化' : '逐表区间结果')
@@ -186,9 +181,9 @@ const statsNumber = computed(() => {
 })
 const statsWords = computed(() => props.report.coverage.completedMeters ? '已完成 ' + props.report.coverage.completedMeters + ' 台统计' : '暂无可计算结果')
 const statsNotice = computed(() => {
- if (total.value?.status === 'partial') return '这是 ' + total.value.meterIds.length + ' 台同口径有效电表的小计，未计入的电表保留在明细中。暂不作为全部范围的总量。'
- if (!total.value && single.value) return '单位与倍率未确认，保留本表实际示数差，不换算为 kWh。'
- if (!total.value && props.report.coverage.completedMeters) return '各表区间差值已统计。单位、倍率及总分表关系待确认，暂不相加为公司总用电；明细中保留逐表结果。'
+ if (total.value?.status === 'partial') return '仅含 ' + total.value.meterIds.length + ' 台同口径电表的小计'
+ if (!total.value && single.value) return '按原始示数差显示'
+ if (!total.value && props.report.coverage.completedMeters) return '逐表差值已统计 · 不作总量加总'
  return ''
 })
 
@@ -215,8 +210,8 @@ const pairMetrics = computed(() => {
 })
 const comparisonNotice = computed(() => {
  if (props.report.summary.ratioNote && !heroRatio.value) return props.report.summary.ratioNote
- if (total.value?.status === 'partial') return '仅比较两期均有完整结果的 ' + total.value.meterIds.length + ' 台电表。两期使用相同范围，未把缺失电表当作零。'
- if (!total.value && !single.value && props.report.coverage.completedMeters) return '总量对比口径未确认。保留各表在两个等长区间的差值；不跨表排序或相加。'
+ if (total.value?.status === 'partial') return '仅比较两期均完整的 ' + total.value.meterIds.length + ' 台'
+ if (!total.value && !single.value && props.report.coverage.completedMeters) return '逐表等长区间差值 · 不作加总'
  return ''
 })
 
@@ -310,7 +305,6 @@ button::after { border: 0; }
 .sw.light { background: #bad0ba; }
 .chart-wrap { width: 100%; margin-top: 8px; }
 .chart { display: block; width: 100%; height: 172px; }
-.hint { display: block; font-size: 10px; color: #91a08b; margin-top: 6px; line-height: 1.6; }
 .link { color: #176b54; font-size: 11px; min-height: 24px; flex-shrink: 0; }
 .mrow { width: 100%; gap: 10px; padding: 12px 0; border-bottom: 1px solid #e3e9dc; text-align: left; }
 .mrow-main { flex: 1; min-width: 0; }
@@ -334,7 +328,6 @@ button::after { border: 0; }
 .pill { flex-shrink: 0; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 2px 7px; background: #f6eee0; color: #a77c37; border-radius: 7px; font-size: 10px; }
 .empty { display: block; padding: 18px 0; color: #72846d; font-size: 12px; }
 .more { display: block; color: #176b54; font-size: 11px; min-height: 28px; margin-top: 8px; }
-.foot { display: block; font-size: 10px; color: #8b9b83; margin-top: 14px; line-height: 1.7; }
 .actions { display: flex; gap: 8px; margin-top: 12px; }
 .actions button { flex: 1; min-height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid #dce7d4; background: #eaf1e4; border-radius: 12px; color: #4a7751; font-size: 11px; font-weight: 600; transition: transform 130ms cubic-bezier(.23, 1, .32, 1); }
 .pressed { transform: scale(.97); }

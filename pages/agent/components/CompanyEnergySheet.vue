@@ -7,16 +7,14 @@
      <button class="calchip" @tap="calOpen = !calOpen"><uni-icons type="calendar" size="13" color="#37513f" /><text>{{ dayLabel(selected, latestCompleteDay) }}</text><uni-icons :type="calOpen ? 'up' : 'down'" size="11" color="#71877a" /></button>
     </view>
     <RegionCalendar v-if="calOpen" class="ecal" :date="selected" :today="today" :max-date="latestCompleteDay || today" compact @select="onCalendar" />
-    <view class="esec"><text>每日用电 · 点选查看当日</text><text v-if="basisNote">{{ basisNote }}</text></view>
+    <view class="esec"><text>每日用电</text><text v-if="basisNote">{{ basisNote }}</text></view>
     <CompanyEnergyStrip ref="stripRef" :days="strip" :selected="selected" @select="onSelectDay" @reach-left="loadOlder" />
     <view v-if="loading" class="estate-msg"><text>正在读取逐日能耗…</text></view>
     <view class="ehero">
      <text class="elabel">{{ dayLabel(selected, latestCompleteDay) }} 用电</text>
      <text class="enum">{{ selectedDay?.usage == null ? '—' : selectedDay.usage }}<text class="u">{{ unit ? ' ' + unit : '' }}</text></text>
-     <text v-if="selectedDay?.usage == null" class="edelta warn">当日边界采样不齐或示数回退 · 不估算</text>
-     <text v-else class="edelta">较前一日 <text class="b">{{ pctText(dod) }}</text>　较上周同日 <text class="b">{{ pctText(wow) }}</text></text>
+     <text v-if="selectedDay?.usage != null" class="edelta">较前一日 <text class="b">{{ pctText(dod) }}</text>　较上周同日 <text class="b">{{ pctText(wow) }}</text></text>
      <text v-if="selectedDay && (selectedDay.elapsedUsage != null || todayUsage != null)" class="edelta">当日同时段 {{ fmtUsage(selectedDay.elapsedUsage, unit) }} · 今日至今 {{ fmtUsage(todayUsage, unit) }}<text v-if="vsToday != null">　今日较当日同时段 <text class="b">{{ pctText(vsToday) }}</text></text></text>
-     <text v-if="selectedDay" class="edelta muted">覆盖 {{ selectedDay.covered }}/{{ selectedDay.expected }} 台{{ selectedDay.complete ? '' : ' · 部分计量点缺采样' }}</text>
     </view>
     <view class="esec"><text>当日构成</text></view>
     <template v-if="composition.items.length">

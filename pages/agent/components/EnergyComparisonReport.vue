@@ -10,7 +10,7 @@
   <template v-if="columns.length">
    <scroll-view scroll-x class="chart-wrap" enhanced :show-scrollbar="false">
     <view class="chart-inner" :style="{ width: chart.width <= 360 ? '100%' : chart.width + 'px' }">
-     <image class="chart" :src="chart.src" mode="scaleToFill" :aria-label="'每周累计示数增量，单位未确认；缺测不补零'" />
+     <image class="chart" :src="chart.src" mode="scaleToFill" aria-label="每周累计示数增量" />
      <view class="meta" :style="{ marginLeft: metaMargin.left, marginRight: metaMargin.right }">
       <button v-for="(week, index) in columns" :key="week.label + index" class="mcol" :class="{ selected: index === selectedIndex }" hover-class="mcol--pressed" :aria-label="`${week.label}至${week.endLabel}，${comparisonNumber(week.usage)}，环比${comparisonRatio(week)}`" @tap="selectedIndex = index; openSheet('evidence')">
        <text class="chip" :class="chipOf(week)">{{ week.current ? '进行中' : comparisonRatio(week) }}</text>
@@ -21,12 +21,6 @@
     </view>
    </scroll-view>
   </template>
-
-  <text v-if="report.status === 'not_computable'" class="notice">当前采样不足以比较完整周。可查看已有采样和缺失边界。</text>
-  <text v-else-if="report.status === 'partial'" class="notice">{{ report.coverage.complete ? '斜纹柱为缩短采样区间的实际增量，不估算整周。' : '采样读取尚不完整，已有增量仅供查看，暂不计算环比。' }}</text>
-
-  <text class="foot">口径：表码差值（单位/倍率未确认）· {{ report.coverage.upstream }}</text>
-  <text class="foot">{{ report.coverage.samples }} 条采样<text v-if="report.coverage.oldest">（{{ shortDate(report.coverage.oldest) }}–{{ shortDate(report.coverage.latest) }}）</text> · 读取于 {{ fmtDateTime(report.observedAt) }}<text v-if="!report.coverage.complete"> · 读取尚不完整</text></text>
 
   <view class="actions">
    <button hover-class="pressed" @tap="openSheet('evidence')">采样依据</button>
@@ -52,7 +46,6 @@
       </template>
       <text v-else>截至 {{ selected.sampledThrough ? fmtDateTime(selected.sampledThrough) : '尚无有效采样' }} · 不与整周直接比较</text>
      </view>
-     <text class="foot">单位与倍率未确认，以上为原始累计示数。</text>
     </view>
    </scroll-view>
    <view v-else class="history-pane"><MeterHistoryView class="history-host" :active="sheetOpen" :initial-query="historyQuery" :show-question="false" /></view>
@@ -65,7 +58,7 @@ import { computed, ref } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import MeterHistoryView from './MeterHistoryView.vue'
 import { fmtShanghaiDateTime as fmtDateTime } from '../observation-view.mjs'
-import { energyComparisonChart, comparisonColumns, comparisonNumber, comparisonDate, comparisonRatio, comparisonChip } from '../energy-comparison-view.mjs'
+import { energyComparisonChart, comparisonColumns, comparisonNumber, comparisonRatio, comparisonChip } from '../energy-comparison-view.mjs'
 
 const props = defineProps({ report: { type: Object, required: true } })
 const selectedIndex = ref(0), sheetOpen = ref(false), sheetMounted = ref(false), pane = ref('evidence')
@@ -79,7 +72,6 @@ const previous = computed(() => selected.value?.current ? null : selectedIndex.v
 const title = computed(() => props.report.basis.unit ? '用电周环比' : '累计示数差值比较')
 const statusLabel = computed(() => ({ comparable: '可比较', partial: '部分可比较', not_computable: '数据不足', read_failed: '读取失败' })[props.report.status] || props.report.status)
 const chipOf = week => comparisonChip(week)
-const shortDate = iso => comparisonDate(iso)
 function metaNote(week) {
  if (week.current) return week.sampledThrough ? '截至 ' + fmtDateTime(week.sampledThrough).slice(5) : ''
  if (week.ratio == null && week.ratioNote) return '环比不可比'
@@ -111,8 +103,6 @@ button::after { border: 0; }
 .chip.down { background: #e6f0ea; color: #176b54; }
 .ml { font-size: 10px; color: #72876f; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mn { font-size: 9px; color: #a27128; white-space: nowrap; }
-.notice { display: block; padding: 9px 12px; border-radius: 11px; background: #f5eddf; color: #967033; font-size: 11px; line-height: 1.7; margin-top: 10px; }
-.foot { display: block; font-size: 10px; color: #91a08b; line-height: 1.7; margin-top: 8px; }
 .actions { display: flex; gap: 8px; margin-top: 12px; }
 .actions button { flex: 1; min-height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid #dce7d4; background: #eaf1e4; border-radius: 12px; color: #4a7751; font-size: 11px; font-weight: 600; transition: transform 130ms cubic-bezier(.23, 1, .32, 1); }
 .pressed { transform: scale(.97); }

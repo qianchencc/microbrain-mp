@@ -1,6 +1,8 @@
-// 共享柱状图语法：SVG data-URI 承载，供 WeChat image 渲染。
-// 约定：value null/not_computable → “缺测”留白；status partial → 斜纹（短窗实测）；current → 虚线进行中；
+// 共享图表语法：SVG data-URI 承载，供 WeChat image 渲染。
+// 柱状约定：value null/not_computable → “缺测”留白；status partial → 斜纹（短窗实测）；current → 虚线进行中；
 // value 0 → 基线扁条；paired → 灰绿基期 + 玉绿本期双柱。x 轴标签随图内嵌，横向滚动时与柱体同步。
+// 折线约定：点按真实 x 坐标定位，相邻间隔超过中位间隔约 2.5 倍即断段（缺测不伪装成连续曲线）；
+// 稀疏时保留顶点小点，密集时只留线与淡色面积；孤立单点段始终画点。
 
 const finite = value => typeof value === 'number' && Number.isFinite(value)
 const FONT = 'font-family="sans-serif"'
@@ -83,4 +85,82 @@ export function meterBarChart(columns, options = {}) {
 
 function escapeXml(text) {
  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+const toMs = value => typeof value === 'number' ? value : Date.parse(value)
+
+// 非负传感域的纵轴刻度：按原始跨度选 nice step，再把上下界对齐到 step 的整数倍；
+// 数据整体非负时下界不超过 0。返回 { lo, hi, ticks }。
+function niceDomain(min, max) {
+ let span = max - min
+ if (!finite(span) || span <= 0) { min = finite(min) ? min : 0; max = min + 2; span = 2 }
+ const { step } = niceScale(span)
+ const pad = span * .1
+ let lo = Math.floor((min - pad) / step) * step
+ const hi = Math.ceil((max + pad) / step) * step
+ if (min >= 0 && lo < 0) lo = 0
+ const ticks = []
+ for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Number(v.toPrecision(8)))
+ return { lo, hi, ticks }
+}
+
+// points: [{ at: <ms 或可解析时间>, value: number|null, ref?: 原始对象 }]
+// options: { from, to（x 窗界）, selected?: 与 ref 同一对象的选中点 }
+// 返回 { src, width, height, xOf, hasData }：xOf(at) 给出 SVG 横坐标，供点击命中复用同一几何。
+export function trendLineChart(points, options = {}) {
+ const width = options.width ?? 360, height = options.height ?? 154
+ const padLeft = 32, padRight = 10, top = 14, base = height - 14
+ const from = toMs(options.from), span = Math.max(1, toMs(options.to) - from)
+ const xOf = at => padLeft + (toMs(at) - from) / span * (width - padLeft - padRight)
+
+ const list = (Array.isArray(points) ? points : [])
+  .map(p => ({ at: toMs(p.at), value: finite(p.value) ? p.value : null, ref: p.ref ?? p }))
+  .filter(p => Number.isFinite(p.at) && p.value !== null)
+  .sort((a, b) => a.at - b.at)
+
+ const { lo, hi, ticks } = niceDomain(list.length ? Math.min(...list.map(p => p.value)) : 0, list.length ? Math.max(...list.map(p => p.value)) : 0)
+ const y = v => base - (v - lo) / (hi - lo) * (base - top)
+
+ let grid = ''
+ for (const t of ticks) {
+  const gy = y(t)
+  grid += `<line x1="${padLeft}" x2="${width - padRight}" y1="${gy.toFixed(2)}" y2="${gy.toFixed(2)}" stroke="${t === lo ? '#d2dcd0' : '#e1e9df'}" stroke-dasharray="3 5"/>`
+  grid += `<text x="${padLeft - 6}" y="${(gy + 3).toFixed(2)}" text-anchor="end" font-size="9" fill="#a9b3a2">${tickLabel(t)}</text>`
+ }
+
+ const intervals = []
+ for (let i = 1; i < list.length; i++) intervals.push(list[i].at - list[i - 1].at)
+ const sorted = intervals.slice().sort((a, b) => a - b)
+ const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : Infinity
+ const gapLimit = intervals.length >= 3 ? median * 2.5 : span * .2
+
+ const segments = []
+ for (const p of list) {
+  const last = segments.at(-1)
+  if (last && p.at - last.at(-1).at <= gapLimit) last.push(p)
+  else segments.push([p])
+ }
+
+ let body = ''
+ for (const seg of segments) {
+  const line = seg.map((p, i) => `${i ? 'L' : 'M'}${xOf(p.at).toFixed(2)} ${y(p.value).toFixed(2)}`).join('')
+  if (seg.length === 1) {
+   body += `<circle cx="${xOf(seg[0].at).toFixed(2)}" cy="${y(seg[0].value).toFixed(2)}" r="3" fill="#3c8c6b" stroke="#fbfdf8" stroke-width="1.5"/>`
+   continue
+  }
+  const first = xOf(seg[0].at).toFixed(2), last = xOf(seg.at(-1).at).toFixed(2)
+  body += `<path d="${line}L${last} ${base}L${first} ${base}Z" fill="url(#trendFill)"/>`
+  body += `<path d="${line}" fill="none" stroke="#2e7d5c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+ }
+ if (list.length <= 48) {
+  body += list.filter(p => !segments.some(s => s.length === 1 && s[0] === p)).map(p =>
+   `<circle cx="${xOf(p.at).toFixed(2)}" cy="${y(p.value).toFixed(2)}" r="1.9" fill="#3c8c6b"/>`).join('')
+ }
+ const selected = list.find(p => p.ref === options.selected)
+ if (selected) {
+  body += `<circle cx="${xOf(selected.at).toFixed(2)}" cy="${y(selected.value).toFixed(2)}" r="5" fill="#b89443" stroke="#fbfdf8" stroke-width="1.5"/>`
+ }
+
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${body}</svg>`
+ return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, xOf, hasData: list.length > 0 }
 }

@@ -23,7 +23,6 @@
      <view v-for="cell in envCells" :key="cell.key" class="metric"><text class="metric-value">{{ cell.value }}</text><text class="metric-key">{{ cell.label }}</text></view>
     </view>
     <view v-else class="obs-line"><view class="dot warn" /><text>读数未知</text></view>
-    <text v-if="isShadow" class="obs-hint">影子为平台侧兜底读数，可能不是该房间的实测值</text>
    </view>
    <view v-else-if="device.kind === 'energy'" class="obs-block">
     <view class="obs-head">最新已知读数</view>
@@ -34,11 +33,9 @@
    </view>
    <view v-else-if="device.kind === 'safety'" class="obs-block">
     <view class="obs-head">安全监测</view>
-    <view class="obs-line"><view class="dot warn" /><text>{{ subtypeText }} · 无实时状态 · 仅告警台账</text></view>
-    <text class="obs-hint">该设备仅提供历史告警记录，可在对话中查询告警台账</text>
+    <view class="obs-line"><view class="dot warn" /><text>{{ subtypeText }}台账</text></view>
    </view>
    <view v-else class="obs-block"><view class="obs-line"><view class="dot warn" /><text>{{ device.detail }}</text></view></view>
-   <text class="obs-note">观察设备 · 不支持控制</text>
    <view class="obs-tail" />
   </scroll-view>
  </view>
@@ -116,7 +113,6 @@ button::after { border:0; }
  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 4px 12px -5px rgba(20,90,66,.55); transition:transform 130ms cubic-bezier(.23,1,.32,1); }
 .view-btn[disabled] { background:linear-gradient(155deg,#e3e9e4,#d5dcd6); color:#93a19a; font-weight:500; box-shadow:none; }
 .view-btn--pressed:not([disabled]) { transform:scale(.97); }
-.obs-hint { display:block; margin-top:9px; color:#8a6a24; font-size:10px; line-height:1.5; }
 .metric-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
 .metric { padding:9px 10px 8px; border-radius:8px; background:#f4f7f4; box-shadow:inset 0 0 0 .5px #dfe6e0; }
 .metric-value { display:block; color:#234434; font-size:15px; font-weight:700; }
@@ -125,7 +121,6 @@ button::after { border:0; }
 .energy-detail { display:flex; gap:10px; margin-top:6px; color:#5f7468; font-size:10px; }
 .obs-meta { display:block; margin-top:8px; color:#7d8d83; font-size:10px; }
 .obs-meta.stale { color:#a27128; }
-.obs-note { display:block; margin-top:14px; color:#a8b4ab; font-size:10px; }
 .obs-tail { height:24px; }
 .art-cam { width:46px; height:28px; position:relative; border-radius:7px; background:linear-gradient(160deg,#33493e,#17271f); box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 5px 12px -6px rgba(20,40,32,.65); }
 .art-cam::before { content:''; position:absolute; right:-6px; top:9px; width:7px; height:10px; border-radius:1px 3px 3px 1px; background:linear-gradient(90deg,#1c3026,#28473a); }

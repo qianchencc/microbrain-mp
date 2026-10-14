@@ -24,7 +24,6 @@
      <view class="k"><text>环境传感器</text><button class="more" @tap="openObservation('environment')">趋势 <uni-icons type="right" size="10" color="#176b54" /></button></view>
      <text class="sensor-name">{{ environment?.name || (loading ? '正在更新环境读数' : loadedSections.includes('environment') ? '暂无环境读数' : '环境读数暂不可用') }}</text>
      <view class="env"><view v-for="cell in environmentCells" :key="cell.key"><text class="v serif">{{ metricValue(environment?.reading?.[cell.key]) }}<text class="u">{{ cell.unit }}</text></text><text class="ul">{{ cell.label }}</text></view></view>
-     <text class="fineprint">{{ environment?.reading?.source === 'shadow' ? '平台影子值 · 可能不是该房间的实测值' : environment?.reading ? '设备观测 · 不代表全公司平均值' : '未取得有效读数' }}</text>
     </view>
 
     <view class="blk">

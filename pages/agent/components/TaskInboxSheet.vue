@@ -9,7 +9,7 @@
   <view class="inbox-content">
    <scroll-view v-show="!selected" class="inbox-scroll" scroll-y enhanced :show-scrollbar="false" @scrolltolower="load(false)">
     <view class="list-summary"><text>任务结束消息</text><text>{{ unreadCount }} 条未读</text></view>
-    <view v-if="loading && !notifications.length" class="state-message">正在读取收件箱</view>
+    <view v-if="loading && !notifications.length" class="state-message">加载中…</view>
     <view v-else-if="error && !notifications.length" class="state-message"><text>{{ error }}</text><button @tap="load(true)">重试</button></view>
     <view v-else-if="!notifications.length" class="state-message">暂无任务消息</view>
     <button v-for="notification in notifications" :key="notification.id" class="notification-row" @tap="openReport(notification)">
@@ -22,7 +22,7 @@
      <uni-icons type="right" size="13" color="#99a59d" />
     </button>
     <view v-if="notifications.length && error" class="list-footer list-error"><text>{{ error }}</text><button @tap="load(false)">重试</button></view>
-    <view v-else-if="loadingMore" class="list-footer">正在读取更多消息</view>
+    <view v-else-if="loadingMore" class="list-footer">加载更多…</view>
     <view v-else-if="notifications.length && !nextCursor" class="list-footer">已显示全部消息</view>
    </scroll-view>
    <view v-if="selected && markError" class="mark-error"><text>报告已打开，但未读状态未更新</text><button @tap="retryMarkSeen">重试</button></view>

@@ -57,7 +57,7 @@ export function unitOf(report) {
 export function unitNote(report) {
  if (!report) return ''
  if (report.basis?.unit === 'kWh') return report.aggregation?.label ? `统计范围 · ${report.aggregation.label}` : ''
- return '示数增量 · 单位与倍率未经客户确认'
+ return ''
 }
 
 // 逐日条用 days[]（已按日期升序）；bar 高度按可视窗口最大值归一。
