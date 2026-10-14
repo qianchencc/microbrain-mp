@@ -7,25 +7,78 @@ import { videoPageUrl } from '../pages/webView/video-query.mjs'
 
 const flush = async () => { for (let n = 0; n < 8; n++) await new Promise(resolve => setImmediate(resolve)) }
 const script = await readFile(new URL('../deploy/h5player/player.js', import.meta.url), 'utf8')
-function player({ source = 'company', fetch: fetchImpl, play = async () => {}, stop = async () => {}, sdkMissing = false, mode = 'live', beginTime = '2026-10-08T00:00:00+08:00', endTime = '2026-10-08T02:00:00+08:00' } = {}) {
+function player({ source = 'company', fetch: fetchImpl, play = async () => {}, stop = async () => {}, seek = async () => {}, osd, sdkMissing = false, mode = 'live', beginTime = '2026-10-08T00:00:00+08:00', endTime = '2026-10-08T02:00:00+08:00' } = {}) {
  const elements = new Map(), listeners = new Map(), instances = [], requests = [], states = [], history = []
  const element = id => {
   if (!elements.has(id)) elements.set(id, { style: {}, dataset: {}, innerHTML: '', textContent: '', listeners: {}, classList: { add() {}, remove() {}, toggle() {} }, addEventListener(name, fn) { this.listeners[name] = fn }, getBoundingClientRect: () => ({ width: 390, height: 700 }) })
   return elements.get(id)
  }
  const window = { addEventListener: (name, fn) => listeners.set(name, fn), wx: { miniProgram: { navigateBack: () => states.push('back') } },
-  JSPlugin: class { constructor() { this.stops = 0; instances.push(this) } JS_SetWindowControlCallback(callbacks) { this.callbacks = callbacks; return Promise.resolve() } async JS_Play(url, options, ...args) { this.url = url; this.options = options; this.args = args; await play(url, options, this.callbacks); this.callbacks.firstFrameDisplay(0, 640, 368) } JS_Stop() { this.stops++; return stop() } } }
+  JSPlugin: class {
+   constructor() { this.stops = 0; this.position = Date.parse(beginTime); this.rate = 1; this.controls = []; instances.push(this) }
+   JS_SetWindowControlCallback(callbacks) { this.callbacks = callbacks; return Promise.resolve() }
+   async JS_Play(url, options, ...args) { this.url = url; this.options = options; this.args = args; await play(url, options, this.callbacks); this.callbacks.firstFrameDisplay(0, 640, 368) }
+   JS_Stop() { this.stops++; return stop() }
+   async JS_Seek(...args) { this.controls.push(['seek', ...args]); await seek(); this.position = Date.parse(args[1].replace('Z', '+08:00')) }
+   async JS_Pause() { this.controls.push(['pause']) }
+   async JS_Resume() { this.controls.push(['resume']) }
+   async JS_GetOSDTime() { return osd ? osd(this.position) : this.position }
+   async JS_Fast() { this.rate *= 2; this.controls.push(['rate', this.rate]); return this.rate < 1 ? -1 / this.rate : this.rate }
+   async JS_Slow() { this.rate /= 2; this.controls.push(['rate', this.rate]); return this.rate < 1 ? -1 / this.rate : this.rate }
+  } }
  if (sdkMissing) delete window.JSPlugin
  const query = new URLSearchParams({ deviceId: 'camera-1', source, api: 'https://runtime.test/api', token: 'secret', tenantCode: 'XSJ', mode, beginTime, endTime });
  const context = { window, URL, URLSearchParams, AbortController, Promise,
   location: { origin: 'https://customer.test', href: 'https://customer.test/player?' + query, search: '?' + query },
   history: { length: 1, replaceState: (_a, _b, url) => history.push(String(url)) },
   document: { hidden: false, getElementById: element, querySelector: element, addEventListener: (name, fn) => listeners.set(name, fn), createElement: () => ({}), head: { appendChild: script => script.onerror() } },
-  setTimeout: () => 1, clearTimeout() {},
+  setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
   fetch: async (url, init) => { requests.push({ url, init }); return fetchImpl ? fetchImpl(url, init) : { ok: true, json: async () => ({ url: `wss://private.test/${requests.length}`, mode, beginTime, endTime }) } } }
  vm.runInNewContext(script, context)
  return { elements, listeners, instances, requests, states, history, context }
 }
+
+test('recording controls pause, preview without seeking, then seek in the same session and change speed', async () => {
+ const p = player({ mode: 'playback' }); await flush()
+ await p.elements.get('btnPause').listeners.click(); await flush()
+ assert.equal(p.elements.get('btnPause').textContent, '继续')
+ const range = p.elements.get('playbackSeek'); range.value = '3600'
+ range.listeners.input(); await flush()
+ assert.equal(p.instances[0].controls.filter(row => row[0] === 'seek').length, 0)
+ await range.listeners.change(); await flush()
+ assert.deepEqual(p.instances[0].controls.find(row => row[0] === 'seek'), ['seek', 0, '2026-10-08T01:00:00Z', '2026-10-08T02:00:00Z'])
+ assert.equal(p.elements.get('btnPause').textContent, '暂停')
+ assert.equal(p.requests.length, 1)
+ const speed = p.elements.get('playbackSpeed'); speed.value = '4'; await speed.listeners.change(); await flush()
+ assert.equal(p.instances[0].rate, 4)
+ speed.value = '0.5'; await speed.listeners.change(); await flush()
+ assert.equal(p.instances[0].rate, 0.5)
+ await p.elements.get('btnMode').listeners.click(); await flush()
+ assert.equal(new URL(p.requests.at(-1).url).searchParams.get('mode'), 'live')
+ assert.equal(p.instances[0].stops, 1)
+ await p.elements.get('btnMode').listeners.click(); await flush()
+ assert.equal(new URL(p.requests.at(-1).url).searchParams.get('beginTime'), '2026-10-08T00:00:00+08:00')
+})
+
+test('a rejected seek shows a retryable error and does not move the recording position', async () => {
+ const p = player({ mode: 'playback', seek: async () => { throw '0x01730ec1' } }); await flush()
+ const range = p.elements.get('playbackSeek'); range.value = '3600'
+ range.listeners.input(); await range.listeners.change(); await flush()
+ assert.equal(p.instances[0].position, Date.parse('2026-10-08T00:00:00+08:00'))
+ assert.match(p.elements.get('controlMessage').textContent, /定位失败/)
+ assert.equal(p.elements.get('btnPause').disabled, false)
+ assert.equal(p.requests.length, 1)
+})
+
+test('a late recording time read cannot move the cursor back after seeking', async () => {
+ let resolveOld, calls = 0
+ const p = player({ mode: 'playback', osd: time => ++calls === 1 ? new Promise(resolve => { resolveOld = resolve }) : Promise.resolve(time) }); await flush()
+ const range = p.elements.get('playbackSeek'); range.value = '3600'
+ await range.listeners.change(); await flush()
+ assert.equal(p.elements.get('playbackTime').textContent, '01:00:00')
+ resolveOld(Date.parse('2026-10-08T00:01:00+08:00')); await flush()
+ assert.equal(p.elements.get('playbackTime').textContent, '01:00:00')
+})
 
 test('shared player retry keeps source and session, fetches a fresh URL and releases each SDK session', async () => {
  for (const source of ['company', 'office']) {

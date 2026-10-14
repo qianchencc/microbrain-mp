@@ -1,6 +1,6 @@
 <template>
  <view class="event-content">
-  <scroll-view class="event-scroll" scroll-y enhanced :show-scrollbar="false">
+  <scroll-view class="event-scroll" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollTarget" scroll-with-animation>
    <view class="event-paper">
     <view class="event-heading"><view class="event-symbol"><uni-icons type="notification" size="22" color="#a47b35" /></view><text class="event-kind">{{ safetySubtypeText(record.subtype) }}台账记录</text></view>
     <text class="event-name">{{ record.deviceName || '设备名称未提供' }}</text>
@@ -15,15 +15,17 @@
    <view v-if="referenceAllowed" class="event-cameras">
     <button class="camera-find" :disabled="cameraLoading" hover-class="event-pressed" @tap="findCameras"><uni-icons type="videocam" size="17" color="#397457" /><text>{{ cameraLoading ? '正在查找本端监控' : '按当前位置查找监控' }}</text></button>
     <text v-if="cameraError || cameraNote" class="camera-note">{{ cameraError || cameraNote }}</text>
-    <button v-for="camera in cameras" :key="camera.deviceId" class="camera-candidate" hover-class="event-pressed" @tap="selectedCamera = camera"><view><text class="camera-name">{{ camera.name }}</text><text class="camera-note">{{ camera.safetyContext.basis }}</text></view><uni-icons type="right" size="12" color="#71907b" /></button>
-    <view v-if="selectedCamera" class="camera-window"><button class="camera-back" @tap="selectedCamera = null">返回候选监控</button><VideoPlaybackForm :key="selectedCamera.deviceId" :device="selectedCamera" :ready="playerReady" :busy="openingVideo" @open="openRecording" /></view>
+    <view id="event-camera-list">
+     <view v-for="camera in cameras" :key="camera.deviceId" class="camera-candidate"><view><text class="camera-name">{{ camera.name }}</text><text class="camera-note">{{ camera.safetyContext.basis }}</text><view class="camera-actions"><button :disabled="!playerReady || openingVideo" hover-class="event-pressed" @tap="openLive(camera)">看直播</button><button :disabled="openingVideo" hover-class="event-pressed" @tap="selectRecording(camera)">获取回放</button></view></view></view>
+    </view>
+    <view v-if="selectedCamera" id="event-camera-window" class="camera-window"><button class="camera-back" @tap="selectedCamera = null">返回候选监控</button><VideoPlaybackForm :key="selectedCamera.deviceId" :device="selectedCamera" :ready="playerReady" :busy="openingVideo" @open="openRecording" /></view>
    </view>
   </scroll-view>
   <view class="event-actions"><button class="event-reference" :disabled="!referenceAllowed" hover-class="event-pressed" @tap="quote"><uni-icons type="chatbubble" size="16" color="#fff" /><text>引用到对话</text></button></view>
  </view>
 </template>
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import VideoPlaybackForm from './VideoPlaybackForm.vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
@@ -39,6 +41,15 @@ const loading = ref(false), error = ref(''), verified = ref(false)
 const referenceAllowed = ref(false)
 const cameras = ref([]), selectedCamera = ref(null), cameraLoading = ref(false), cameraError = ref(''), cameraNote = ref(''), openingVideo = ref(false)
 const playerReady = videoPlayerReady()
+const scrollTarget = ref('')
+async function reveal(target) { scrollTarget.value = ''; await nextTick(); if (props.active && visible) scrollTarget.value = target }
+function selectRecording(camera) { selectedCamera.value = camera; void reveal('event-camera-window') }
+async function openLive(camera) {
+ if (cameraScope !== getAgentStorageScope() || openingVideo.value) return
+ openingVideo.value = true
+ try { await openVideoPlayer({ ...camera, source: 'company', mode: 'live' }) }
+ finally { openingVideo.value = false }
+}
 let cameraRequest = 0, cameraScope = ''
 const reference = computed(() => safetyEventReference(props.snapshot.record))
 let requestId = 0, visible = true, referenceScope = ''
@@ -79,6 +90,7 @@ async function findCameras() {
   ++requestId; loading.value = false
   record.value = result.record; observedAt.value = result.observedAt; verified.value = true
   cameraScope = scope; cameras.value = result.candidates; cameraNote.value = result.note
+  if (cameras.value.length) void reveal('event-camera-list')
  } catch (cause) {
   if (current === cameraRequest) {
    if (['UNAUTHORIZED', 'SAFETY_EVENT_UNAVAILABLE'].includes(cause.data?.code)) { record.value = {}; referenceAllowed.value = false; verified.value = false }
@@ -98,7 +110,7 @@ function quote() {
  emit('reference', { ...reference.value, label: `${record.value.deviceName} · ${fmtDateTime(record.value.occurredAt)}` })
 }
 watch(() => [props.active, props.snapshot], () => {
- invalidate(); cameras.value = []; selectedCamera.value = null; cameraError.value = ''; cameraNote.value = ''; record.value = props.snapshot.record; observedAt.value = props.snapshot.observedAt
+ invalidate(); scrollTarget.value = ''; cameras.value = []; selectedCamera.value = null; cameraError.value = ''; cameraNote.value = ''; record.value = props.snapshot.record; observedAt.value = props.snapshot.observedAt
  if (props.active) void load()
 }, { immediate: true })
 onHide(() => { visible = false; invalidate() })
@@ -114,4 +126,5 @@ view,text { font-size:inherit; line-height:inherit; } button { margin:0; padding
 .event-note { display:block; margin-top:18px; color:#8f794c; font-size:12px; }.event-observed { display:block; margin-top:12px; color:#8b998e; font-size:11px; }.event-state { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:44px; margin:8px 20px; color:#859287; font-size:12px; }.event-retry { flex-shrink:0; min-height:44px; padding:0 12px; background:transparent; color:#176b54; }
 .event-actions { flex-shrink:0; padding:14px 20px 12px; border-top:1px solid #e7ece5; }.event-reference { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:46px; border-radius:13px; background:linear-gradient(#297c61,#17654e); box-shadow:inset 0 1px 0 #ffffff30,0 3px 8px -5px #164c3b70; color:#fff; font-weight:600; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }.event-reference[disabled] { opacity:.45; }.event-pressed { opacity:.72; transform:scale(.98); } @media(prefers-reduced-motion:reduce) { .event-reference { transition:none; } }
 .event-cameras { margin:0 20px 16px; }.camera-find,.camera-candidate,.camera-back { display:flex;align-items:center;min-height:44px;padding:8px 12px;background:#f1f6ee;border:1px solid #dde7d9;border-radius:11px;color:#397457;gap:8px;text-align:left; }.camera-find { width:100%; }.camera-note { display:block;margin-top:6px;font-size:11px;color:#869580;line-height:1.6; }.camera-candidate { width:100%;justify-content:space-between;margin-top:10px;background:linear-gradient(#fbfcf8,#f3f7f1); }.camera-candidate view { flex:1;min-width:0; }.camera-name { display:block;overflow-wrap:anywhere;font-weight:600; }.camera-window { margin-top:16px; }.camera-back { background:transparent;border:0;padding:0; }.camera-window :deep(.playback-form) { padding:8px 0 0; }
+.camera-actions { display:flex;gap:10px;margin-top:10px; }.camera-actions button { flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;background:#e9f1e5;color:#176b54;border-radius:9px; }.camera-actions button[disabled] { opacity:.45; }
 </style>

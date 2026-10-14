@@ -14,7 +14,7 @@
      <text class="recording-window">{{ fmtShanghaiDateTime(block.report.beginTime) }} — {{ fmtShanghaiDateTime(block.report.endTime) }}</text>
      <text v-if="block.report.safetyContext" class="meta">{{ block.report.safetyContext.label }} · {{ fmtShanghaiDateTime(block.report.safetyContext.occurredAt) }}<text>；{{ block.report.safetyContext.basis }}</text></text>
      <button class="omore" @tap="selectPlayback(block.report)">调整录像期间</button>
-     <button class="vbtn recording-open" :disabled="!playerReady || fetchingId === block.report.deviceId" hover-class="vbtn--pressed" @tap="viewPlayback(block.report)">{{ playerReady ? '查看这段录像' : '播放页接入中' }}</button>
+     <view class="video-actions"><button class="vbtn" :disabled="!playerReady || Boolean(fetchingId)" hover-class="vbtn--pressed" @tap="viewLive(block.report)">看直播</button><button class="vbtn recording-open" :disabled="!playerReady || Boolean(fetchingId)" hover-class="vbtn--pressed" @tap="viewPlayback(block.report)">{{ playerReady ? '查看这段录像' : '播放页接入中' }}</button></view>
     </view>
     <template v-else-if="block.type === 'video'">
      <view v-for="d in devicesOf(block, index)" :key="d.deviceId" class="orow video-row">
@@ -120,7 +120,7 @@ function restOf(block, index) {
 }
 
 const LABELS = { energy_report: '计量结果', company_energy: '历史计量报告', energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
-const blockLabel = block => LABELS[block.type] || '观察'
+const blockLabel = block => block.type === 'video_playback' && block.report.safetyContext ? '相关监控' : LABELS[block.type] || '观察'
 const blockCount = block => block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
@@ -139,6 +139,12 @@ async function viewPlayback(report) {
  if (!playerReady || fetchingId.value) return
  fetchingId.value = report.deviceId
  try { await openVideoPlayer({ ...report, source: props.source, mode: 'playback' }) }
+ finally { fetchingId.value = '' }
+}
+async function viewLive(report) {
+ if (!playerReady || fetchingId.value) return
+ fetchingId.value = report.deviceId
+ try { await openVideoPlayer({ ...report, source: props.source, mode: 'live' }) }
  finally { fetchingId.value = '' }
 }
 

@@ -2,8 +2,9 @@
  'use strict';
  const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
  const deviceId = q.get('deviceId'), source = q.get('source');
- const mode = q.get('mode') || 'live', beginTime = q.get('beginTime'), endTime = q.get('endTime');
- const playback = mode === 'playback';
+ let mode = q.get('mode') || 'live', beginTime = q.get('beginTime'), endTime = q.get('endTime');
+ let playback = mode === 'playback';
+ const eventTime = Date.parse(q.get('eventTime'));
  document.title = playback ? '录像回放' : '实时画面';
  const api = (q.get('api') || location.origin + '/micro-api/api/ai').replace(/\/$/, '');
  const token = q.get('token') || '', tenantCode = q.get('tenantCode') || '';
@@ -17,24 +18,63 @@
  const localTime = value => { const time = Date.parse(value); return Number.isFinite(time) ? new Date(time + 8 * 3600 * 1000).toISOString().slice(0,16).replace('T',' ') : ''; };
  // 客户SDK以北京时间钟面+Z定位录像；此标记仅用于SDK，不是业务/API的UTC时间。
  const sdkPlaybackTime = value => new Date(Date.parse(value) + 8 * 3600 * 1000).toISOString().slice(0,19) + 'Z';
- $('camSub').textContent = playback ? `${localTime(beginTime)} — ${localTime(endTime)}` : (q.get('loc') ? q.get('loc') + ' · ' : '') + '实时预览';
- if (playback) { $('liveBadge').textContent = '录像'; $('liveBadge').classList.add('recorded'); $('btnRetry').textContent = '重新播放'; $('btnRelink').textContent = '重新播放'; }
  let state = 'boot', plugin = null, aborter = null, generation = 0, closed = false;
- let hideTimer, deadline, sdkPromise, stopping = Promise.resolve();
- const labels = { fetching: '取流中', connecting: '接入中', playing: playback ? '录像播放中' : '播放中', ended: '回放结束', failed: '不可用' };
+ let hideTimer, deadline, sdkPromise, clockTimer, stopping = Promise.resolve();
+ let position = Date.parse(beginTime), rate = 1, dragging = false, controlBusy = false;
+ let clockRead = 0, clockPending = 0;
+ const controls = ['btnPause', 'btnEarlier', 'btnLater', 'playbackSeek', 'playbackSpeed', 'btnEvent'];
+ function updateControls() {
+  for (const id of controls) $(id).disabled = !playback || !plugin || controlBusy || !['playing', 'paused'].includes(state);
+  $('btnMode').disabled = controlBusy;
+  $('btnPause').textContent = state === 'paused' ? '继续' : '暂停';
+  $('playbackSpeed').value = String(rate);
+ }
+ function configureMode() {
+  document.title = playback ? '录像回放' : '实时画面';
+  $('camSub').textContent = playback ? `${localTime(beginTime)} — ${localTime(endTime)}` : (q.get('loc') ? q.get('loc') + ' · ' : '') + '实时预览';
+  $('liveBadge').textContent = playback ? '录像' : '直播'; $('liveBadge').classList.toggle('recorded', playback);
+  $('btnRetry').textContent = $('btnRelink').textContent = playback ? '重新播放' : '重新连接';
+  $('btnMode').textContent = playback ? '看直播' : '录像回放';
+  $('playbackTimeline').hidden = !playback;
+  for (const id of controls) $(id).hidden = !playback;
+  const start = Date.parse(beginTime), end = Date.parse(endTime);
+  const eventInside = Number.isFinite(eventTime) && eventTime >= start && eventTime < end;
+  $('eventMark').hidden = $('btnEvent').hidden = !playback || !eventInside;
+  if (eventInside) $('eventMark').style.left = `${(eventTime - start) / (end - start) * 100}%`;
+  $('rangeStart').textContent = localTime(beginTime); $('rangeEnd').textContent = localTime(endTime);
+  $('playbackSeek').max = String(Math.max(0, Math.floor((end - start) / 1000) - 1));
+  position = start; renderPosition(start); updateControls();
+ }
+ function renderPosition(time) {
+  if (!Number.isFinite(time)) return;
+  $('playbackTime').textContent = new Date(time + 8 * 3600_000).toISOString().slice(11,19);
+  $('playbackSeek').value = String(Math.max(0, (time - Date.parse(beginTime)) / 1000));
+  $('playbackSeek').ariaValueText = localTime(new Date(time).toISOString());
+ }
+ async function readPosition(instance, current) {
+  if (!playback || dragging || controlBusy || clockPending || !instance?.JS_GetOSDTime) return;
+  const reading = ++clockRead; clockPending = reading;
+  try {
+   const time = await instance.JS_GetOSDTime(0);
+   if (reading !== clockRead || instance !== plugin || current !== generation || dragging || controlBusy || closed) return;
+   if (Number.isFinite(time) && time >= Date.parse(beginTime) && time <= Date.parse(endTime)) { position = time; renderPosition(time); }
+  } catch { /* 暂时没有时间读数时保留最后一次，不能用墙钟模拟播放进度。 */ }
+  finally { if (clockPending === reading) clockPending = 0; }
+ }
  function showChrome() { $('chromeTop').classList.remove('hidden'); $('chromeBottom').classList.remove('hidden'); }
  function scheduleHide() {
   clearTimeout(hideTimer);
-  if (state === 'playing') hideTimer = setTimeout(() => { $('chromeTop').classList.add('hidden'); $('chromeBottom').classList.add('hidden'); }, 3200);
+  if (state === 'playing' && !dragging && !controlBusy) hideTimer = setTimeout(() => { $('chromeTop').classList.add('hidden'); $('chromeBottom').classList.add('hidden'); }, 3200);
  }
  function setState(value, sub) {
   state = value;
   $('loadingView').classList.toggle('on', value === 'fetching' || value === 'connecting');
   $('errorView').classList.toggle('on', value === 'failed');
   $('liveBadge').classList.toggle('on', value === 'playing');
-  $('footState').textContent = labels[value] || value;
+  $('footState').textContent = ({ fetching: '取流中', connecting: '接入中', playing: playback ? '录像播放中' : '播放中', paused: '已暂停', ended: '回放结束', failed: '不可用' })[value] || value;
   if (sub) $('stateSub').textContent = sub;
-  if (value === 'playing') scheduleHide(); else showChrome();
+  updateControls();
+  if (value === 'playing') scheduleHide(); else { clearTimeout(hideTimer); showChrome(); }
  }
  function release(instance) {
   try { return Promise.resolve(instance?.JS_Stop()); } catch (error) { return Promise.reject(error); }
@@ -42,6 +82,7 @@
  function stop() {
   aborter?.abort(); aborter = null;
   clearTimeout(hideTimer); clearTimeout(deadline);
+  clearInterval(clockTimer); clockTimer = null; ++clockRead; clockPending = 0; dragging = false; controlBusy = false; rate = 1;
   const instance = plugin; plugin = null;
   const previous = stopping;
   stopping = Promise.all([previous.catch(() => {}), release(instance)]).then(() => { if (!plugin) $('playWnd').innerHTML = ''; });
@@ -66,6 +107,8 @@
    STREAM_UNAVAILABLE: ['未取得播放地址', '本次未返回可用播放地址，可以重试；取流失败不代表摄像头离线。'],
    VIDEO_STREAM_UNAVAILABLE: ['视频取流暂不可用', '取流服务未能提供播放地址，请稍后重试或返回。'],
    TIMEOUT: [fetching ? '取流请求超时' : '等待视频画面超时', fetching ? '取流请求未在20秒内完成，可以重试或返回。' : '未在20秒内显示视频首帧，可以重试或返回。'],
+   CONTROL_TIMEOUT: ['播放控制未完成', '本次控制未及时返回，已结束旧会话。请重新播放。'],
+   RATE_CONTROL_FAILED: ['倍速切换未完成', '已结束旧会话，请重新播放恢复1倍速。'],
    STREAM_ENDED: ['实时画面已中断', '播放通道已结束，可以重新连接或返回。'],
   };
   if (known[code]) [title, message] = known[code];
@@ -121,8 +164,8 @@
    if (!['live', 'playback'].includes(mode) || (playback && (!Number.isFinite(Date.parse(beginTime)) || !Number.isFinite(Date.parse(endTime)) || Date.parse(endTime) <= Date.parse(beginTime) || Date.parse(endTime) - Date.parse(beginTime) > 3*86400000))) throw new Error('INVALID_VIDEO_WINDOW');
    phase = 'sdk'; await loadSdk();
    if (closed || current !== generation) return;
-   const rect = document.querySelector('.stage-wrap').getBoundingClientRect();
-   const height = Math.min(rect.height, rect.width * 9 / 16), width = height * 16 / 9;
+   const stage = document.querySelector('.stage-wrap'), rect = stage.getBoundingClientRect();
+   const height = Math.min(stage.clientHeight || rect.height, (stage.clientWidth || rect.width) * 9 / 16), width = height * 16 / 9;
    $('playWnd').style.width = Math.floor(width) + 'px'; $('playWnd').style.height = Math.floor(height) + 'px';
    const instance = new window.JSPlugin({ szId: 'playWnd', iWidth: Math.floor(width), iHeight: Math.floor(height), iMaxSplit: 1, iCurrentSplit: 1,
     szBasePath: sdkPath, oStyle: { borderWidth: 0, background: 'transparent' }, openDebug: false });
@@ -160,10 +203,81 @@
    if (playback) await instance.JS_Play(stream.url, { playURL: stream.url, mode: 1 }, 0, sdkPlaybackTime(beginTime), sdkPlaybackTime(endTime));
    else await instance.JS_Play(stream.url, { playURL: stream.url, mode: 0 }, 0);
    if (closed || current !== generation) { await release(instance).catch(() => {}); return; }
+   if (playback) { void readPosition(instance, current); clockTimer = setInterval(() => { void readPosition(instance, current); }, 500); }
   } catch (error) {
    failAttempt(error);
   }
  }
+ async function control(action, message) {
+  if (!playback || controlBusy || !plugin || !['playing', 'paused'].includes(state)) return;
+  const instance = plugin, current = generation;
+  controlBusy = true; ++clockRead; clockPending = 0; clearTimeout(hideTimer); showChrome(); updateControls(); $('controlMessage').textContent = '正在处理…';
+  let timer;
+  try {
+   await Promise.race([action(instance), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('CONTROL_TIMEOUT')), 8000); })]);
+   if (current === generation && !closed) $('controlMessage').textContent = '';
+  } catch (error) {
+   if (current !== generation || closed) return;
+   if (['CONTROL_TIMEOUT', 'RATE_CONTROL_FAILED'].includes(error?.message)) { ++generation; void stop().catch(() => {}); fail(failure(error, 'playing')); }
+   else $('controlMessage').textContent = message;
+  } finally {
+   clearTimeout(timer);
+   if (current === generation && !closed) { controlBusy = false; dragging = false; updateControls(); void readPosition(instance, current); scheduleHide(); }
+  }
+ }
+ function seek(time) {
+  const start = Date.parse(beginTime), end = Date.parse(endTime);
+  const target = Math.max(start, Math.min(end - 1000, time));
+  dragging = false;
+  return control(async instance => { await instance.JS_Seek(0, sdkPlaybackTime(new Date(target).toISOString()), sdkPlaybackTime(endTime)); if (instance === plugin && !closed) setState('playing'); }, '定位失败，可调整时间后重试');
+ }
+ $('btnPause').addEventListener('click', () => control(async instance => {
+  const paused = state === 'paused'; await (paused ? instance.JS_Resume(0) : instance.JS_Pause(0));
+  if (instance === plugin && !closed) setState(paused ? 'playing' : 'paused');
+ }, '暂停或继续失败，请重试'));
+ $('playbackSeek').addEventListener('input', () => { dragging = true; clearTimeout(hideTimer); showChrome(); renderPosition(Date.parse(beginTime) + Number($('playbackSeek').value) * 1000); });
+ $('playbackSeek').addEventListener('change', () => seek(Date.parse(beginTime) + Number($('playbackSeek').value) * 1000));
+ $('playbackSeek').addEventListener('pointercancel', () => { dragging = false; renderPosition(position); scheduleHide(); });
+ $('btnEarlier').addEventListener('click', () => seek(position - 15000));
+ $('btnLater').addEventListener('click', () => seek(position + 15000));
+ $('btnEvent').addEventListener('click', () => seek(eventTime));
+ $('playbackSpeed').addEventListener('change', () => {
+  const target = Number($('playbackSpeed').value);
+  if (![0.5, 1, 2, 4, 8].includes(target)) return;
+  return control(async instance => {
+   while (rate !== target) {
+    let value;
+    try { value = await (rate < target ? instance.JS_Fast(0) : instance.JS_Slow(0)); }
+    catch { throw new Error('RATE_CONTROL_FAILED'); } // SDK在服务端应答前改变倍速，失败后不能继续猜测档位。
+    if (instance !== plugin || closed) return;
+    if (!Number.isFinite(value) || value === 0) throw new Error('RATE_CONTROL_FAILED');
+    rate = value < 0 ? 1 / Math.abs(value) : value;
+   }
+  }, '倍速切换失败，请重试');
+ });
+ $('btnMode').addEventListener('click', () => {
+  if (controlBusy) return;
+  playback = !playback; mode = playback ? 'playback' : 'live';
+  if (playback && (!beginTime || !endTime)) { endTime = new Date().toISOString(); beginTime = new Date(Date.parse(endTime) - 30 * 60000).toISOString(); }
+  $('controlMessage').textContent = ''; configureMode(); return play();
+ });
+ function resizeVideo() {
+  const stage = document.querySelector('.stage-wrap'), rect = stage.getBoundingClientRect();
+  const height = Math.min(stage.clientHeight || rect.height, (stage.clientWidth || rect.width) * 9 / 16), width = height * 16 / 9;
+  $('playWnd').style.width = Math.floor(width) + 'px'; $('playWnd').style.height = Math.floor(height) + 'px';
+  plugin?.JS_Resize?.(Math.floor(width), Math.floor(height))?.catch(() => {});
+ }
+ let wide = false;
+ $('btnFullscreen').addEventListener('click', async () => {
+  const page = document.querySelector('.page');
+  try {
+   if (document.fullscreenElement) { await document.exitFullscreen(); $('btnFullscreen').textContent = '全屏'; resizeVideo(); }
+   else if (page.requestFullscreen) { await page.requestFullscreen(); $('btnFullscreen').textContent = '退出全屏'; resizeVideo(); }
+   else { wide = !wide; page.classList.toggle('wide', wide); $('btnFullscreen').textContent = wide ? '退出全屏' : '全屏'; resizeVideo(); }
+  } catch { wide = !wide; page.classList.toggle('wide', wide); $('btnFullscreen').textContent = wide ? '退出全屏' : '全屏'; resizeVideo(); }
+ });
+ document.addEventListener('fullscreenchange', () => { $('btnFullscreen').textContent = document.fullscreenElement ? '退出全屏' : '全屏'; resizeVideo(); });
+ window.addEventListener('resize', resizeVideo);
  document.querySelector('.stage-wrap').addEventListener('click', () => { showChrome(); scheduleHide(); });
  $('btnRetry').addEventListener('click', play); $('btnRelink').addEventListener('click', play);
  function close() { closed = true; ++generation; return stop().catch(() => {}); }
@@ -181,5 +295,5 @@
  window.addEventListener('pagehide', close); window.addEventListener('beforeunload', close);
  document.addEventListener('visibilitychange', () => { if (document.hidden) close(); else if (closed) { closed = false; void play(); } });
  window.addEventListener('pageshow', event => { if (event.persisted) { closed = false; void play(); } });
- void play();
+ configureMode(); void play();
 })();

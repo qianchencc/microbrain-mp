@@ -9,7 +9,7 @@ export function videoPageUrl(options) {
  }
  const [path, hash] = decode(options.path).split('#')
  const query = []
- for (const key of ['deviceId', 'source', 'mode', 'name', 'loc', 'api', 'beginTime', 'endTime', 'token', 'tenantCode', 'timestamp']) {
+ for (const key of ['deviceId', 'source', 'mode', 'name', 'loc', 'api', 'beginTime', 'endTime', 'eventTime', 'token', 'tenantCode', 'timestamp']) {
   if (options[key] == null) continue
   const value = ['token', 'tenantCode', 'timestamp', 'deviceId', 'name', 'loc'].includes(key) ? String(options[key]) : decode(options[key])
   query.push(`${key}=${encodeURIComponent(value)}`)

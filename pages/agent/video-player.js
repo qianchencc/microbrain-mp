@@ -21,9 +21,10 @@ export async function openVideoPlayer(device) {
    `videoTarget=${encodeURIComponent(JSON.stringify({ deviceId: device.deviceId, name: device.name || '监控画面', loc: device.location || '' }))}`,
    `api=${encodeURIComponent(globalConfig.videoPlayerApiUrl || globalConfig.agentUrl)}`,
   ]
-  if (device.mode === 'playback') {
+  if (device.beginTime && device.endTime) {
    params.push(`beginTime=${encodeURIComponent(device.beginTime)}`, `endTime=${encodeURIComponent(device.endTime)}`)
   }
+  if (device.safetyContext?.occurredAt) params.push(`eventTime=${encodeURIComponent(device.safetyContext.occurredAt)}`)
   await new Promise((resolve, reject) => uni.navigateTo({ url: `/pages/webView/index?path=${encodeURIComponent(base)}&${params.join('&')}`, success: resolve, fail: reject }))
   return true
  } catch (error) {
