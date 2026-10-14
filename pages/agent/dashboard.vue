@@ -6,7 +6,7 @@
     <view class="headline">
      <view>
       <text class="date">{{ dateLine }}</text>
-      <text class="hello">你好，{{ userName }}</text>
+      <text class="hello">你好{{ userName ? '，' + userName : '' }}</text>
      </view>
      <button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#567461" /></button>
     </view>
@@ -128,9 +128,13 @@ const dateLine = computed(() => {
  const today = shanghaiToday()
  return `${Number(today.slice(5, 7))}月${Number(today.slice(8))}日 · 周${WEEKDAYS[new Date(today + 'T00:00:00Z').getUTCDay()]}`
 })
+// /account/me 无 name 字段：真实姓名在 personalName，code 是 openid 不能展示；
+// 姓名全空时退回脱敏手机号，再空就只显示“你好”。
 const userName = computed(() => {
  const info = useUserStoreHook().getUserInfo || {}
- return info.name || info.nickname || info.code || '同事'
+ const mobile = String(info.mobileNumber || '')
+ const masked = /^1\d{10}$/.test(mobile) ? mobile.slice(0, 3) + '****' + mobile.slice(-4) : ''
+ return info.personalName || info.name || info.nickname || masked || ''
 })
 
 /* 设备目录计数 + 单类设备抽屉 */
@@ -178,7 +182,7 @@ function openMeterHistory() { energyOpen.value = false; openObservation('energy'
 const meterNameOf = id => energyReport.value?.meters?.find(m => m.id === id)?.name || id
 const pieCards = computed(() => {
  const comparison = energyReport.value?.comparison
- if (!comparison?.currentDay) return []
+ if (typeof comparison?.currentDay?.usage !== 'number') return [] // 今日至今窗口无实测（如边界恰为最新采样点）时不摆“— vs —”空卡
  const unit = energyUnit.value
  return [['previousDay', '今日至今 vs 昨日同期'], ['lastWeekSameDay', '今日至今 vs 上周同日同期']].map(([key, label]) => {
   const base = comparison[key]

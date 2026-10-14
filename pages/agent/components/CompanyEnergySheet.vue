@@ -15,6 +15,7 @@
      <text class="enum">{{ selectedDay?.usage == null ? '—' : selectedDay.usage }}<text class="u">{{ unit ? ' ' + unit : '' }}</text></text>
      <text v-if="selectedDay?.usage == null" class="edelta warn">当日边界采样不齐或示数回退 · 不估算</text>
      <text v-else class="edelta">较前一日 <text class="b">{{ pctText(dod) }}</text>　较上周同日 <text class="b">{{ pctText(wow) }}</text></text>
+     <text v-if="selectedDay && (selectedDay.elapsedUsage != null || todayUsage != null)" class="edelta">当日同时段 {{ fmtUsage(selectedDay.elapsedUsage, unit) }} · 今日至今 {{ fmtUsage(todayUsage, unit) }}<text v-if="vsToday != null">　今日较当日同时段 <text class="b">{{ pctText(vsToday) }}</text></text></text>
      <text v-if="selectedDay" class="edelta muted">覆盖 {{ selectedDay.covered }}/{{ selectedDay.expected }} 台{{ selectedDay.complete ? '' : ' · 部分计量点缺采样' }}</text>
     </view>
     <view class="esec"><text>当日构成</text></view>
@@ -43,7 +44,7 @@ import { getCompanyEnergyDaily } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import RegionCalendar from './RegionCalendar.vue'
 import CompanyEnergyStrip from './CompanyEnergyStrip.vue'
-import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, STRIP_PAGE_DAYS, PIE_COLORS } from '../energy-daily-view.mjs'
+import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage } from '../energy-daily-view.mjs'
 import { fmtDateTime } from '../observation-view.mjs'
 
 const props = defineProps({ active: Boolean, focusDate: String })
@@ -72,6 +73,10 @@ const compositionMax = computed(() => composition.value.items.reduce((m, i) => M
 const usageOf = date => strip.value.find(d => d.date === date)?.usage
 const dod = computed(() => comparePct(selectedDay.value?.usage, usageOf(shiftDate(selected.value, -1))))
 const wow = computed(() => comparePct(selectedDay.value?.usage, usageOf(shiftDate(selected.value, -7))))
+// 与今日对比的公平口径：所选日只取与“今日至今”相同的 elapsed 窗口（08:00 → 当前时刻），
+// 不拿完整日去比一个未过完的今天；任一侧无实测样本即显示 —。
+const todayUsage = computed(() => report.value?.comparison?.currentDay?.usage ?? null)
+const vsToday = computed(() => comparePct(todayUsage.value, selectedDay.value?.elapsedUsage))
 const footnote = computed(() => {
  if (!report.value) return ''
  const parts = [`数据截至 ${fmtDateTime(latestSampleTime.value)}`]

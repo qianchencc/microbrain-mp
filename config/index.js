@@ -44,7 +44,7 @@ const getFileBaseUrl = () => {
 const getAgentBaseUrl = () => {
 	// 客户登录、园区和物联接口始终走客户公网；开发阶段 Agent 使用 Mac 当前局域网地址。
 	// 本机 3200 是唯一 Runtime 实例：直连真实客户网关的真实物联后端，不存在模拟数据源。
-	return isDev ? 'http://192.168.123.4:3200/api' : getGatewayBaseUrl() + '/api/ai'
+	return isDev ? 'http://192.168.102.20:3200/api' : getGatewayBaseUrl() + '/api/ai'
 }
 
 // 自建 H5 监控播放页部署位：客户确认 ncim 静态路径后填入（如 ipAddress + '/owner/h5player/index.html'）。

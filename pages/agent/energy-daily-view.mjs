@@ -12,6 +12,8 @@ export function mergeStripDays(current, days) {
  ;(days || []).forEach(day => map.set(day.date, {
   date: day.date,
   usage: typeof day.usage === 'number' ? day.usage : null,
+  elapsedUsage: typeof day.elapsedUsage === 'number' ? day.elapsedUsage : null,
+  elapsedMeters: day.elapsedMeters ?? 0,
   complete: Boolean(day.complete),
   covered: day.coveredMeters ?? 0,
   expected: day.expectedMeters ?? 0

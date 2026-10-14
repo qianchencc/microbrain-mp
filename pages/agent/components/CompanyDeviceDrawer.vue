@@ -9,7 +9,7 @@
     <button class="ghead" @tap="toggle(group.label)"><text>{{ group.label }} · {{ group.items.length }}</text><text class="gcar">{{ collapsed.has(group.label) ? '›' : '⌄' }}</text></button>
     <view v-if="!collapsed.has(group.label)" class="dgrid">
      <view v-for="device in group.items" :key="device.id" class="dcard">
-      <view class="dart"><view :class="artClass(device)" /><view class="lamp" /></view>
+      <view class="dart"><image v-if="artOf(device).src" :src="artOf(device).src" mode="aspectFit" /><view v-else-if="artOf(device).variant === 'video'" class="art-cam"><view class="art-cam__lens" /></view><view v-else-if="artOf(device).variant === 'observe'" class="art-sensor" /><uni-icons v-else type="gear" size="28" color="#8b9a91" /><view class="lamp" :class="{ observe: READ_ONLY_KINDS.has(device.kind) }" /></view>
       <view class="dcopy">
        <text class="dname">{{ device.name }}</text>
        <text class="dloc">{{ locationText(device) }}</text>
@@ -25,6 +25,7 @@
 </template>
 <script setup>
 import { computed, ref } from 'vue'
+import { resolveDeviceArtwork } from '../device-art/catalog.js'
 
 const props = defineProps({ devices: { type: Array, default: () => [] }, kind: String })
 
@@ -51,8 +52,9 @@ function stateLabel(device) {
  if (device.kind === 'safety' && device.subtype) return `只读观察 · ${SUBTYPE_LABEL[device.subtype] || device.subtype}`
  return READ_ONLY_KINDS.has(device.kind) ? '只读观察' : '可控制'
 }
-function artClass(device) {
- return ({ energy: 'art-meter', safety: 'art-safe', video: 'art-cam', ac: 'art-ac', lighting: 'art-light', access: 'art-door' })[device.kind] || 'art-sensor'
+// 统一设备图：device-art/catalog.js 的位图素材（门禁/中央空调/格栅灯/灯带）+ variant CSS 兜底，与区域抽屉同规。
+function artOf(device) {
+ return resolveDeviceArtwork({ kind: device.kind, deviceName: device.name, location: device.location || device.name })
 }
 function locationText(device) {
  const key = locationKey(device)
@@ -89,23 +91,15 @@ button::after { border:0; }
 .dgrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .dcard { border:1px solid #dae3dc; border-radius:8px; overflow:hidden; background:#f8faf7; }
 .dart { height:64px; position:relative; display:flex; align-items:center; justify-content:center; background:linear-gradient(155deg,#dfe4de,#f4f5ef 52%,#d4ddd6); }
-.art-sensor { width:26px; height:26px; border-radius:50%; background:linear-gradient(160deg,#f2f4ef,#cfd8d1); box-shadow:inset 0 1px 0 #fff,inset 0 -3px 6px rgba(48,70,58,.18),0 4px 10px -5px rgba(30,50,40,.5); position:relative; }
-.art-sensor::before { content:''; position:absolute; left:9px; top:9px; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#8fd0ae,#26714f 70%); }
-.art-meter { width:30px; height:34px; border-radius:5px; background:linear-gradient(160deg,#33493e,#17271f); position:relative; box-shadow:inset 0 1px 0 rgba(255,255,255,.16); }
-.art-meter::before { content:''; position:absolute; left:5px; top:5px; right:5px; height:8px; border-radius:2px; background:#cfe0cd; opacity:.85; }
-.art-meter::after { content:''; position:absolute; left:7px; right:7px; bottom:6px; height:3px; border-radius:2px; background:#5d9478; }
-.art-safe { width:24px; height:28px; border-radius:12px 12px 6px 6px; background:linear-gradient(160deg,#f2f4ef,#cfd8d1); position:relative; box-shadow:inset 0 1px 0 #fff; }
-.art-safe::before { content:''; position:absolute; left:8px; top:8px; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#e8c98a,#a47b35 70%); }
-.art-cam { width:40px; height:24px; border-radius:6px; background:linear-gradient(160deg,#33493e,#17271f); position:relative; box-shadow:inset 0 1px 0 rgba(255,255,255,.16); }
-.art-cam::before { content:''; position:absolute; right:-5px; top:7px; width:6px; height:9px; border-radius:1px 3px 3px 1px; background:#28473a; }
-.art-cam::after { content:''; position:absolute; left:8px; top:6px; width:11px; height:11px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#9fd7b9,#1e6647 55%,#0d3b28); }
-.art-ac { width:40px; height:22px; border-radius:5px; background:linear-gradient(160deg,#f2f4ef,#cfd8d1); box-shadow:inset 0 1px 0 #fff; position:relative; }
-.art-ac::before { content:''; position:absolute; left:6px; right:6px; bottom:5px; height:6px; border-radius:3px; background:repeating-linear-gradient(90deg,#8fa89a 0 2px,transparent 2px 5px); }
-.art-light { width:22px; height:22px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#f4e6bd,#d9b96a 75%); box-shadow:0 0 8px #e7c56c66; position:relative; }
-.art-light::after { content:''; position:absolute; left:7px; bottom:-5px; width:8px; height:5px; border-radius:2px; background:#9aa894; }
-.art-door { width:22px; height:34px; border-radius:3px 3px 1px 1px; background:linear-gradient(160deg,#dfe4de,#c3cdc5); box-shadow:inset 0 1px 0 #fff; position:relative; }
-.art-door::before { content:''; position:absolute; right:4px; top:16px; width:3px; height:6px; border-radius:2px; background:#7fa088; }
-.lamp { position:absolute; right:8px; top:8px; width:8px; height:8px; border-radius:50%; background:#5d9478; border:1px solid #fff; box-shadow:0 1px 2px #1f352b33; }
+.dart image { width:92%; height:92%; }
+.art-sensor { width:28px; height:28px; border-radius:50%; background:linear-gradient(160deg,#f2f4ef,#cfd8d1); box-shadow:inset 0 1px 0 #fff,inset 0 -3px 6px rgba(48,70,58,.18),0 4px 10px -5px rgba(30,50,40,.5); position:relative; }
+.art-sensor::before { content:''; position:absolute; left:10px; top:10px; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#8fd0ae,#26714f 70%); }
+.art-sensor::after { content:''; position:absolute; left:5px; top:19px; right:5px; height:1px; background:rgba(38,64,50,.25); }
+.art-cam { width:44px; height:26px; position:relative; border-radius:7px; background:linear-gradient(160deg,#33493e,#17271f); box-shadow:inset 0 1px 0 rgba(255,255,255,.16); }
+.art-cam::before { content:''; position:absolute; right:-6px; top:8px; width:7px; height:10px; border-radius:1px 3px 3px 1px; background:#28473a; }
+.art-cam__lens { position:absolute; left:8px; top:7px; width:12px; height:12px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#9fd7b9,#1e6647 55%,#0d3b28); }
+.lamp { position:absolute; right:8px; top:8px; width:8px; height:8px; border-radius:50%; background:#bbc7be; border:1px solid #fff; box-shadow:0 1px 2px #1f352b33; }
+.lamp.observe { background:#5d9478; }
 .dcopy { padding:7px 9px 9px; min-width:0; }
 .dname { display:block; font-size:12px; font-weight:600; color:#24382d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .dloc { display:block; font-size:10px; color:#65786b; margin-top:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
