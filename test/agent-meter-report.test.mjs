@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportBuckets, meterReportRanking, meterReportEvidence, meterReportHistoryQuery } from '../pages/agent/meter-report-view.mjs'
+import { meterReportParamLine, meterReportHero, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportRanking, meterReportEvidence, meterReportHistoryQuery } from '../pages/agent/meter-report-view.mjs'
+import { loadShapeChart } from '../pages/agent/energy-chart.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
 const report = {
@@ -97,4 +98,48 @@ test('依据行：逐表实际起止采样与状态；无采样表如实标注',
  assert.equal(empty.statusText, '无数据')
  assert.equal(empty.bounds, '区间内无采样记录')
  assert.deepEqual(meterReportHistoryQuery(report, 'm-c'), { equipmentId: 'm-c', from: '2026-10-01T00:00:00+08:00', to: '2026-10-08T00:00:00+08:00' })
+})
+
+// 指标格：四个 key 的标签/单位/一句话定义；无值显示「—」；峰值日 sub 是日期。
+test('指标格：标签与定义齐全，null 值显示 —，峰值日带日期', () => {
+ const withMetrics = {
+  ...report,
+  metrics: [
+   { key: 'dailyAvg', value: 30, unit: '度/日' },
+   { key: 'nightBase', value: null, unit: '度/时' },
+   { key: 'peakDay', value: 60, unit: '度', sub: '2026-10-02' },
+   { key: 'top3Share', value: 100, unit: '%' },
+  ],
+ }
+ const cards = meterReportMetrics(withMetrics)
+ assert.deepEqual(cards.map(c => c.label), ['日均', '夜间基荷', '峰值日', '前3占比'])
+ assert.deepEqual(cards.map(c => c.valueText), ['30', '—', '60', '100'])
+ assert.equal(cards.find(c => c.key === 'nightBase').unit, '度/时')
+ assert.equal(cards.find(c => c.key === 'peakDay').sub, '10/02')
+ assert.equal(cards.find(c => c.key === 'nightBase').def, '00:00–06:00 平均每小时用电，代表无人时的持续耗电')
+ assert.ok(cards.every(c => c.def.length > 0))
+})
+
+// 24 小时负荷：rates 为 null（覆盖不足）时整节隐藏；有 rates 时给出曲线模型。
+test('24小时负荷：rates 为 null 时整节隐藏，有数据时输出曲线', () => {
+ assert.equal(meterReportLoadCurve(report), null)
+ assert.equal(meterReportLoadCurve({ ...report, shape24: { rates: null, coveredFraction: 0 } }), null)
+ const rates = [0.3, 0.29, 0.3, 0.29, 0.29, 0.29, 0.29, 0.33, 0.65, 1.06, 1.05, 1.09, 0.87, 0.79, 0.9, 0.94, 1.04, 1, 0.52, 0.51, 0.37, 0.3, 0.27, 0.28]
+ const curve = meterReportLoadCurve({ ...report, shape24: { rates, coveredFraction: 1 } })
+ assert.ok(curve?.hasData)
+ const svg = decodeURIComponent(curve.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /<svg/)
+ assert.match(svg, /夜间/) // 00–06 底带标注
+ // null 时段断段：hour 3 为 null 时折线分成两段。
+ const gapped = rates.slice(); gapped[3] = null
+ const svg2 = decodeURIComponent(loadShapeChart(gapped).src.slice('data:image/svg+xml;utf8,'.length))
+ assert.ok((svg2.match(/stroke="#2e7d5c"/g) || []).length === 2)
+})
+
+// 小数值定标：max < 1 时纵轴刻度保留小数（0.1/0.2/0.3），不塌成全 0。
+test('负荷曲线小数值刻度保留小数（max < 1）', () => {
+ const svg = decodeURIComponent(loadShapeChart(Array.from({ length: 24 }, (_, h) => h % 8 === 0 ? null : 0.08 + h * 0.01)).src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, />0\.1</)
+ assert.match(svg, />0\.2</)
+ assert.match(svg, />0\.3</)
 })

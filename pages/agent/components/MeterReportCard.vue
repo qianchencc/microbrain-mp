@@ -14,6 +14,16 @@
    <text v-if="hero.yuan" class="yuan">{{ hero.yuan }}</text>
   </view>
 
+  <view v-if="metrics.length" class="metrics">
+   <view v-for="m in metrics" :key="m.key" class="metric">
+    <button class="metric-label" :aria-expanded="openDef === m.key" hover-class="pressed" @tap="toggleDef(m.key)">
+     <text>{{ m.label }}</text><text class="metric-info">ⓘ</text>
+    </button>
+    <view class="metric-line"><text class="mv">{{ m.valueText }}</text><text v-if="m.unit" class="mu"> {{ m.unit }}</text><text v-if="m.sub" class="ms"> {{ m.sub }}</text></view>
+    <text v-if="openDef === m.key" class="metric-def">{{ m.def }}</text>
+   </view>
+  </view>
+
   <view class="shead">
    <text>时间分布 · 度</text>
    <view class="seg"><button v-for="g in meterReportGrains" :key="g.key" :class="{ on: grain === g.key }" :aria-pressed="grain === g.key" hover-class="pressed" @tap="grain = g.key">{{ g.label }}</button></view>
@@ -22,6 +32,11 @@
    <view :style="{ width: buckets.points.length <= 7 ? '100%' : buckets.width + 'px' }"><image class="chart" :src="buckets.src" mode="scaleToFill" /></view>
   </scroll-view>
   <text v-else class="empty">区间内没有可分段的有效差值</text>
+
+  <template v-if="loadCurve">
+   <view class="shead"><text>24小时负荷 · 度/时</text></view>
+   <image class="curve" :src="loadCurve.src" mode="scaleToFill" />
+  </template>
 
   <view class="shead"><text>位置构成 · 度</text></view>
   <image v-if="ranking.hasData" class="rank" :src="ranking.src" mode="widthFix" />
@@ -48,14 +63,16 @@
 import { computed, ref } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import MeterHistoryView from './MeterHistoryView.vue'
-import { meterReportGrains, meterReportParamLine, meterReportHero, meterReportBuckets, meterReportRanking, meterReportEvidence, meterReportHistoryQuery, meterReportSpan } from '../meter-report-view.mjs'
+import { meterReportGrains, meterReportParamLine, meterReportHero, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportRanking, meterReportEvidence, meterReportHistoryQuery, meterReportSpan } from '../meter-report-view.mjs'
 
 const props = defineProps({ report: { type: Object, required: true } })
 const grain = ref(props.report.params?.grain || 'day')
-const mounted = ref(false), sheetOpen = ref(false), pane = ref('meters'), selectedId = ref(''), stack = ref([])
+const mounted = ref(false), sheetOpen = ref(false), pane = ref('meters'), selectedId = ref(''), stack = ref([]), openDef = ref('')
 
 const paramLine = computed(() => meterReportParamLine(props.report))
 const hero = computed(() => meterReportHero(props.report))
+const metrics = computed(() => meterReportMetrics(props.report))
+const loadCurve = computed(() => meterReportLoadCurve(props.report))
 const buckets = computed(() => meterReportBuckets(props.report, grain.value))
 const ranking = computed(() => meterReportRanking(props.report))
 const evidence = computed(() => meterReportEvidence(props.report))
@@ -63,6 +80,7 @@ const selected = computed(() => evidence.value.find(meter => meter.id === select
 const sheetSubtitle = computed(() => `${props.report.params?.scope?.label || '全部电表'} · ${props.report.coverage?.meters ?? evidence.value.length} 台`)
 const historyQuery = computed(() => meterReportHistoryQuery(props.report, selectedId.value))
 
+function toggleDef(key) { openDef.value = openDef.value === key ? '' : key }
 function openSheet() { pane.value = 'meters'; selectedId.value = ''; stack.value = []; mounted.value = true; sheetOpen.value = true }
 function pushHistory(meter) { stack.value.push('meters'); pane.value = 'history'; selectedId.value = meter.id }
 function back() { if (stack.value.pop() === 'meters') { pane.value = 'meters'; selectedId.value = '' } }
@@ -82,12 +100,22 @@ button::after { border: 0; }
 .number.words { font-size: 17px; letter-spacing: 0; }
 .unit { font-size: 12px; font-weight: 400; letter-spacing: 0; margin-left: 6px; color: #788d74; }
 .yuan { display: block; margin-top: 6px; font-size: 11px; color: #80907f; }
+.metrics { display: flex; flex-wrap: wrap; margin: 2px -4px 0; }
+.metric { width: 50%; box-sizing: border-box; padding: 8px 4px 0; }
+.metric-label { display: flex; align-items: center; gap: 3px; min-height: 22px; font-size: 10px; color: #7d8f75; text-align: left; }
+.metric-info { font-size: 10px; color: #a3b29a; }
+.metric-line { margin-top: 2px; font-variant-numeric: tabular-nums; }
+.metric-line .mv { font-size: 16px; font-weight: 600; color: #2f4a3a; }
+.metric-line .mu { font-size: 10px; color: #80907f; }
+.metric-line .ms { font-size: 10px; color: #a3b09c; }
+.metric-def { display: block; margin-top: 4px; font-size: 9.5px; line-height: 1.5; color: #96a491; }
 .shead { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #7d8f75; margin-top: 14px; }
 .seg { display: flex; gap: 2px; background: #eaf0e4; border-radius: 8px; padding: 3px; }
 .seg button { font-size: 10px; min-width: 27px; min-height: 24px; border-radius: 6px; color: #7b8f71; display: flex; align-items: center; justify-content: center; }
 .seg button.on { color: #176b54; background: #fafcf6; font-weight: 600; }
 .chart-wrap { width: 100%; margin-top: 8px; }
 .chart { display: block; width: 100%; height: 172px; }
+.curve { display: block; width: 100%; height: 150px; margin-top: 8px; }
 .rank { display: block; width: 100%; margin-top: 8px; }
 .excluded { display: block; margin-top: 8px; font-size: 10px; color: #96a491; }
 .empty { display: block; padding: 14px 0; color: #72846d; font-size: 11px; }

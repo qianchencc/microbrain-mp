@@ -194,3 +194,48 @@ export function trendLineChart(points, options = {}) {
  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${body}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, xOf, hasData: list.length > 0 }
 }
+
+// 24 小时平均负荷曲线：x 轴为一天 0–23 点（点位在每小时格中心），00–06 画浅底带并在带内左下
+// 标注「夜间」；rates 中 null 的时段断段不连线。纵轴只随数据定标，小范围保留小数刻度（0.1/0.2/…）。
+export function loadShapeChart(rates, options = {}) {
+ const width = options.width ?? 360, height = options.height ?? 160
+ const padLeft = 30, padRight = 8, top = 10, base = height - 22
+ const list = Array.from({ length: 24 }, (_, h) => finite(rates?.[h]) ? rates[h] : null)
+ const { step, top: ceiling } = niceScale(Math.max(...list.map(v => v ?? 0), 1e-9))
+ const spanX = width - padLeft - padRight, cell = spanX / 24
+ const x = h => padLeft + (h + .5) * cell
+ const y = v => base - v / ceiling * (base - top)
+
+ let grid = ''
+ for (let v = 0; v <= ceiling + step / 2; v += step) {
+  const gy = y(v)
+  grid += `<line x1="${padLeft}" x2="${width - padRight}" y1="${gy.toFixed(2)}" y2="${gy.toFixed(2)}" stroke="${v === 0 ? '#c9cfc0' : '#e1e6d8'}"${v === 0 ? ' stroke-width="1.5"' : ' stroke-dasharray="3 5"'}/>`
+  grid += `<text x="${padLeft - 6}" y="${(gy + 3).toFixed(2)}" text-anchor="end" font-size="9" fill="#a9b3a2">${tickLabel(v)}</text>`
+ }
+ // 夜间时段底带：小时格 0–5，标签置于带内左下不压曲线。
+ const band = `<rect x="${padLeft}" y="${top}" width="${(6 * cell).toFixed(2)}" height="${base - top}" fill="#5a6a52" fill-opacity=".07"/>`
+  + `<text x="${padLeft + 4}" y="${base - 4}" font-size="9" fill="#8b9882">夜间</text>`
+ const xTicks = [0, 6, 12, 18, 23].map(h =>
+  `<text x="${x(h).toFixed(2)}" y="${base + 13}" text-anchor="middle" font-size="9" fill="#80917b">${h}</text>`).join('')
+
+ const segments = []
+ for (const [h, v] of list.entries()) {
+  if (v === null) continue
+  const last = segments.at(-1)
+  if (last && last.at(-1).h === h - 1) last.push({ h, v })
+  else segments.push([{ h, v }])
+ }
+ let body = ''
+ for (const seg of segments) {
+  const line = seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.h).toFixed(2)} ${y(p.v).toFixed(2)}`).join('')
+  if (seg.length === 1) {
+   body += `<circle cx="${x(seg[0].h).toFixed(2)}" cy="${y(seg[0].v).toFixed(2)}" r="3" fill="#3c8c6b" stroke="#fbfdf8" stroke-width="1.5"/>`
+   continue
+  }
+  body += `<path d="${line}L${x(seg.at(-1).h).toFixed(2)} ${base}L${x(seg[0].h).toFixed(2)} ${base}Z" fill="url(#trendFill)"/>`
+  body += `<path d="${line}" fill="none" stroke="#2e7d5c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+ }
+
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${band}${body}${xTicks}</svg>`
+ return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.some(v => v !== null) }
+}

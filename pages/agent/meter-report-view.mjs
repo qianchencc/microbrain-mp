@@ -1,7 +1,7 @@
 // meter_report 观察块（区间统计）视图模型：参数行、合计、分段柱、位置构成与依据行全部
 // 由报告事实派生；图表一律经 energy-chart.mjs 生成，组件内不写几何。
 // 口径：总量单位「度」；无数据/数据不全的表不进合计，在参数行与构成尾部如实标注。
-import { meterBarChart, meterRankingChart } from './energy-chart.mjs'
+import { meterBarChart, meterRankingChart, loadShapeChart } from './energy-chart.mjs'
 import { comparisonDate } from './energy-comparison-view.mjs'
 import { fmtShanghaiDateTime } from './observation-view.mjs'
 
@@ -36,6 +36,33 @@ export function meterReportHero(report) {
   value: finite(total.value) ? degreeText(total.value) : null,
   yuan: finite(total.yuan) && finite(total.tariff) ? `约 ¥${degreeText(total.yuan)} · 按 ${total.tariff} 元/度` : '',
  }
+}
+
+// 2×2 指标格：标签在上、数值在下；标签可点开一句话定义。峰值日的 sub 是日期。
+const METRIC_LABELS = { dailyAvg: '日均', nightBase: '夜间基荷', peakDay: '峰值日', top3Share: '前3占比' }
+const METRIC_DEFS = {
+ dailyAvg: '统计期内平均每天用电',
+ nightBase: '00:00–06:00 平均每小时用电，代表无人时的持续耗电',
+ peakDay: '用电最多的一天（只计数据完整的日子）',
+ top3Share: '用电最多的 3 个位置占总量的比例',
+}
+export function meterReportMetrics(report) {
+ return (report?.metrics || []).map(metric => ({
+  key: metric.key,
+  label: METRIC_LABELS[metric.key] || metric.key,
+  valueText: finite(metric.value) ? degreeText(metric.value) : '—',
+  unit: metric.unit || '',
+  sub: metric.sub ? comparisonDate(metric.sub) : '',
+  def: METRIC_DEFS[metric.key] || '',
+ }))
+}
+
+// 24 小时平均负荷：覆盖不足时 rates 为 null → 整节隐藏。
+export function meterReportLoadCurve(report) {
+ const rates = report?.shape24?.rates
+ if (!Array.isArray(rates)) return null
+ const chart = loadShapeChart(rates)
+ return chart.hasData ? chart : null
 }
 
 // 分段柱：bucketsAll 已带全部分粒度，切换粒度只换投影，区间总量不变。
