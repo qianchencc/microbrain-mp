@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportRanking, meterReportEvidence, meterReportHistoryQuery } from '../pages/agent/meter-report-view.mjs'
+import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportRankingTitle, meterReportRanking, meterReportEvidence, meterReportHistoryQuery } from '../pages/agent/meter-report-view.mjs'
 import { loadShapeChart } from '../pages/agent/energy-chart.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
@@ -142,4 +142,40 @@ test('负荷曲线小数值刻度保留小数（max < 1）', () => {
  assert.match(svg, />0\.1</)
  assert.match(svg, />0\.2</)
  assert.match(svg, />0\.3</)
+})
+
+// 定位行三种层级：全部→楼层占比条（含覆盖率标注），楼层/名称匹配→占全部对照，单台→占本层+排名。
+test('定位行：全部给楼层占比条，楼层给占全部对照，单台给占本层与排名', () => {
+ const split = meterReportContext({ ...report, context: { kind: 'floorSplit', floors: [{ floor: '26楼', value: 3022, dataMeters: 22, meters: 22 }, { floor: '27楼', value: 1929, dataMeters: 17, meters: 21 }] } })
+ assert.equal(split.kind, 'split')
+ const splitSvg = decodeURIComponent(split.chart.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(splitSvg, /26楼 3,022度 61%/)
+ assert.match(splitSvg, /27楼 1,929度 39% · 17\/21台/) // 有表被排除时标注有数据/总台数
+ const parent = meterReportContext({ ...report, context: { kind: 'parent', parentLabel: '全部电表', share: 61, perMeterDaily: 4.6, parentPerMeterDaily: 3.8 } })
+ assert.deepEqual(parent, { kind: 'line', text: '占全部电表 61% · 单台日均 4.6 度（全部 3.8）' })
+ const peer = meterReportContext({ ...report, context: { kind: 'peer', parentLabel: '26楼', share: 2.6, rank: 7, of: 22 } })
+ assert.equal(peer.text, '占26楼 2.6% · 本层第 7/22')
+ assert.equal(meterReportContext(report), null) // 无 context 字段的旧报告不画定位行
+})
+
+// 单台范围：曲线换同层对照（本表 + 本层单台平均虚线），构成换本层排行并高亮本表。
+test('单台范围：同层对照曲线带图例与虚线，排行标题为本层并高亮本表行', () => {
+ const location = {
+  ...report,
+  context: { kind: 'peer', parentLabel: '26楼', share: 73.2, rank: 1, of: 2 },
+  peer: { floorPerMeterRates: Array(24).fill(0.2) },
+  shape24: { rates: Array(24).fill(0.4), coveredFraction: 1 },
+  composition: { ...report.composition, rows: [{ label: '26楼运营部', value: 70, highlight: true }, { label: '26楼劳务办公室', value: 27 }] },
+ }
+ const curve = meterReportLoadCurve(location)
+ assert.equal(curve.title, '24小时负荷')
+ const svg = decodeURIComponent(curve.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /本表/)
+ assert.match(svg, /26楼单台平均/)
+ assert.match(svg, /stroke-dasharray="5 4"/)
+ assert.equal(meterReportRankingTitle(location), '26楼 构成 · 度')
+ const ranking = meterReportRanking(location)
+ assert.equal(ranking.rows[0].highlight, true)
+ assert.match(decodeURIComponent(ranking.src.slice('data:image/svg+xml;utf8,'.length)), /#b89443/) // 高亮行黄铜色
+ assert.equal(meterReportRankingTitle(report), '位置构成 · 度')
 })

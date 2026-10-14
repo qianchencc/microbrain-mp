@@ -1,7 +1,7 @@
 // meter_report 观察块（区间统计）视图模型：参数行、合计、分段柱、位置构成与依据行全部
 // 由报告事实派生；图表一律经 energy-chart.mjs 生成，组件内不写几何。
 // 口径：总量单位「度」；无数据/数据不全的表不进合计，在参数行与构成尾部如实标注。
-import { meterBarChart, meterRankingChart, loadShapeChart } from './energy-chart.mjs'
+import { meterBarChart, meterRankingChart, loadShapeChart, floorSplitChart } from './energy-chart.mjs'
 import { comparisonDate } from './energy-comparison-view.mjs'
 import { fmtShanghaiDateTime } from './observation-view.mjs'
 
@@ -38,13 +38,32 @@ export function meterReportHero(report) {
  }
 }
 
-// 2×2 指标格：标签在上、数值在下；标签可点开一句话定义。峰值日的 sub 是日期。
-const METRIC_LABELS = { dailyAvg: '日均', nightBase: '夜间基荷', peakDay: '峰值日', top3Share: '前3占比' }
+// 定位行：全部 → 楼层占比条；楼层/名称匹配 → 占全部与单台日均对照；单台 → 占本层与排名。
+export function meterReportContext(report) {
+ const context = report?.context
+ if (!context) return null
+ if (context.kind === 'floorSplit') return { kind: 'split', chart: floorSplitChart(context.floors) }
+ if (context.kind === 'parent') {
+  const share = finite(context.share) ? `${context.share}%` : '—'
+  const daily = finite(context.perMeterDaily) && finite(context.parentPerMeterDaily)
+   ? `单台日均 ${degreeText(context.perMeterDaily)} 度（${context.parentLabel === '全部电表' ? '全部' : context.parentLabel} ${degreeText(context.parentPerMeterDaily)}）` : ''
+  return { kind: 'line', text: `占${context.parentLabel} ${share}${daily ? ' · ' + daily : ''}` }
+ }
+ if (context.kind === 'peer') {
+  const share = finite(context.share) ? `${context.share}%` : '—'
+  const rank = finite(context.rank) && finite(context.of) ? ` · 本层第 ${context.rank}/${context.of}` : ''
+  return { kind: 'line', text: `占${context.parentLabel} ${share}${rank}` }
+ }
+ return null
+}
+// 2×2 指标格：标签在上、数值在下；标签可点开一句话定义。峰值日 sub 是日期。
+const METRIC_LABELS = { dailyAvg: '日均', nightBase: '夜间基荷', peakDay: '峰值日', top3Share: '前3占比', nightShare: '夜间占比' }
 const METRIC_DEFS = {
  dailyAvg: '统计期内平均每天用电',
  nightBase: '00:00–06:00 平均每小时用电，代表无人时的持续耗电',
  peakDay: '用电最多的一天（只计数据完整的日子）',
  top3Share: '用电最多的 3 个位置占总量的比例',
+ nightShare: '00:00–06:00 用电占比，越高说明越多持续用电',
 }
 export function meterReportMetrics(report) {
  return (report?.metrics || []).map(metric => ({
@@ -57,12 +76,15 @@ export function meterReportMetrics(report) {
  }))
 }
 
-// 24 小时平均负荷：覆盖不足时 rates 为 null → 整节隐藏。
+// 24 小时负荷：覆盖不足时 rates 为 null → 整节隐藏；
+// 单台范围画同层对照（本表实线 + 本层单台平均虚线）。
 export function meterReportLoadCurve(report) {
  const rates = report?.shape24?.rates
  if (!Array.isArray(rates)) return null
- const chart = loadShapeChart(rates)
- return chart.hasData ? chart : null
+ const peerRates = report?.peer?.floorPerMeterRates
+ const parentLabel = report?.context?.kind === 'peer' ? report.context.parentLabel : ''
+ const chart = loadShapeChart(rates, peerRates ? { peer: peerRates, legend: ['本表', `${parentLabel}单台平均`] } : {})
+ return chart.hasData ? { ...chart, title: '24小时负荷' } : null
 }
 
 // 分段柱：bucketsAll 已带全部分粒度，切换粒度只换投影，区间总量不变。
@@ -89,9 +111,13 @@ function daysInMonth(fromIso) {
 }
 
 // 位置构成：前 8 行 + 其余聚合；被排除的表折叠为两行文字，不进柱条。
+// 单台范围时构成是本层排行（标题为「N楼 构成」），本表所在位置行高亮。
+export function meterReportRankingTitle(report) {
+ return report?.context?.kind === 'peer' ? `${report.context.parentLabel} 构成 · 度` : '位置构成 · 度'
+}
 export function meterReportRanking(report) {
  const composition = report?.composition || {}
- const rows = [...(composition.rows || [])].map(row => ({ label: row.label, value: finite(row.value) ? row.value : null }))
+ const rows = [...(composition.rows || [])].map(row => ({ label: row.label, value: finite(row.value) ? row.value : null, highlight: Boolean(row.highlight) }))
  if (composition.rest && composition.rest.count > 0) rows.push({ label: `其余 ${composition.rest.count} 处`, value: composition.rest.value })
  const excluded = []
  if (composition.excluded?.partial) excluded.push(`数据不全 ${composition.excluded.partial} 处 —`)

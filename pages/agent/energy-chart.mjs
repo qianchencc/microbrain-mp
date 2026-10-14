@@ -195,13 +195,43 @@ export function trendLineChart(points, options = {}) {
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, xOf, hasData: list.length > 0 }
 }
 
+// 楼层占比条：一段堆叠横条，颜色区分楼层；段内标签「26楼 3,022度 61%」（有表被排除时追加「· 8/22台」），
+// 太窄的段把标签整条放到条的下一行（带段色），不截断。
+export function floorSplitChart(floors, options = {}) {
+ const list = (Array.isArray(floors) ? floors : []).filter(f => finite(f.value))
+ const width = options.width ?? 340
+ const total = list.reduce((sum, f) => sum + f.value, 0)
+ const palette = ['#2e7d5c', '#b89443', '#7a9a86', '#8b6f4e', '#5a7a6a', '#9a8a6a']
+ const barH = 18, top = 2
+ const labels = list.map((f, i) => {
+  const share = total > 0 ? Math.round(f.value / total * 100) : 0
+  const coverage = f.meters > f.dataMeters ? ` · ${f.dataMeters}/${f.meters}台` : ''
+  return { f, i, share, text: `${f.floor} ${barLabel(f.value)}度 ${share}%${coverage}` }
+ })
+ const narrow = labels.filter(l => (l.f.value / (total || 1)) * width < 118)
+ const height = top + barH + (narrow.length ? narrow.length * 14 + 4 : 0) + 2
+ let cursor = 0, segs = '', below = ''
+ for (const l of labels) {
+  const w = total > 0 ? l.f.value / total * width : 0
+  const color = palette[l.i % palette.length]
+  segs += `<rect x="${cursor.toFixed(2)}" y="${top}" width="${w.toFixed(2)}" height="${barH}"${cursor === 0 ? ' rx="3"' : ''} fill="${color}"/>`
+  if (w >= 118) segs += `<text x="${(cursor + 7).toFixed(2)}" y="${top + 13}" font-size="10" fill="#f6f8f1">${escapeXml(l.text)}</text>`
+  else below += `<text x="${(cursor + Math.min(w / 2, 40)).toFixed(2)}" y="${top + barH + 13 + narrow.indexOf(l) * 14}" text-anchor="middle" font-size="9.5" fill="${color}">${escapeXml(l.text)}</text>`
+  cursor += w
+ }
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}>${segs}${below}</svg>`
+ return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.length > 0 }
+}
+
 // 24 小时平均负荷曲线：x 轴为一天 0–23 点（点位在每小时格中心），00–06 画浅底带并在带内左下
 // 标注「夜间」；rates 中 null 的时段断段不连线。纵轴只随数据定标，小范围保留小数刻度（0.1/0.2/…）。
+// options.peer 叠加第二条灰绿虚线（如同层单台平均），options.legend=[本表名, 对照名] 在顶部给图例。
 export function loadShapeChart(rates, options = {}) {
  const width = options.width ?? 360, height = options.height ?? 160
- const padLeft = 30, padRight = 8, top = 10, base = height - 22
+ const padLeft = 30, padRight = 8, top = options.legend ? 24 : 10, base = height - 22
  const list = Array.from({ length: 24 }, (_, h) => finite(rates?.[h]) ? rates[h] : null)
- const { step, top: ceiling } = niceScale(Math.max(...list.map(v => v ?? 0), 1e-9))
+ const peerList = options.peer ? Array.from({ length: 24 }, (_, h) => finite(options.peer[h]) ? options.peer[h] : null) : []
+ const { step, top: ceiling } = niceScale(Math.max(...list.map(v => v ?? 0), ...peerList.map(v => v ?? 0), 1e-9))
  const spanX = width - padLeft - padRight, cell = spanX / 24
  const x = h => padLeft + (h + .5) * cell
  const y = v => base - v / ceiling * (base - top)
@@ -225,7 +255,20 @@ export function loadShapeChart(rates, options = {}) {
   if (last && last.at(-1).h === h - 1) last.push({ h, v })
   else segments.push([{ h, v }])
  }
+ const drawLine = (points, color, dash) => {
+  const segs = []
+  for (const [h, v] of points.entries()) {
+   if (v === null) continue
+   const last = segs.at(-1)
+   if (last && last.at(-1).h === h - 1) last.push({ h, v })
+   else segs.push([{ h, v }])
+  }
+  return segs.map(seg => seg.length === 1
+   ? `<circle cx="${x(seg[0].h).toFixed(2)}" cy="${y(seg[0].v).toFixed(2)}" r="3" fill="${color}" stroke="#fbfdf8" stroke-width="1.5"/>`
+   : `<path d="${seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.h).toFixed(2)} ${y(p.v).toFixed(2)}`).join('')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`).join('')
+ }
  let body = ''
+ if (peerList.some(v => v !== null)) body += drawLine(peerList, '#8fa086', '5 4')
  for (const seg of segments) {
   const line = seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.h).toFixed(2)} ${y(p.v).toFixed(2)}`).join('')
   if (seg.length === 1) {
@@ -235,7 +278,11 @@ export function loadShapeChart(rates, options = {}) {
   body += `<path d="${line}L${x(seg.at(-1).h).toFixed(2)} ${base}L${x(seg[0].h).toFixed(2)} ${base}Z" fill="url(#trendFill)"/>`
   body += `<path d="${line}" fill="none" stroke="#2e7d5c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
  }
+ const legend = options.legend
+  ? `<line x1="${padLeft}" x2="${padLeft + 16}" y1="10" y2="10" stroke="#2e7d5c" stroke-width="2"/><text x="${padLeft + 21}" y="13" font-size="9" fill="#5a6f5b">${escapeXml(options.legend[0])}</text>`
+   + `<line x1="${padLeft + 96}" x2="${padLeft + 112}" y1="10" y2="10" stroke="#8fa086" stroke-width="2" stroke-dasharray="5 4"/><text x="${padLeft + 117}" y="13" font-size="9" fill="#8b9882">${escapeXml(options.legend[1])}</text>`
+  : ''
 
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${band}${body}${xTicks}</svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${band}${legend}${body}${xTicks}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.some(v => v !== null) }
 }
