@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportEvidence, meterReportHistoryQuery } from '../pages/agent/meter-report-view.mjs'
-import { loadShapeChart } from '../pages/agent/energy-chart.mjs'
+import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportContribution, meterReportEvidence, meterReportHistoryQuery, meterReportIsComparison, meterReportSpanText } from '../pages/agent/meter-report-view.mjs'
+import { loadShapeChart, contributionChart } from '../pages/agent/energy-chart.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
 const report = {
@@ -202,4 +202,161 @@ test('单日跨度：只有时粒度、HH:00 分段标签、当日合计/峰值�
  assert.equal(cards[2].sub, '16:00') // 峰值小时的 sub 是时刻不是日期
  assert.equal(meterReportMetrics({ ...report, metrics: [{ key: 'nightShare', value: 15, unit: '%' }] })[0].label, '夜间占比')
  assert.equal(meterReportGrainOptions(report).length, 3) // 多日跨度仍是 日/周/月
+})
+
+// ---------- kind=comparison（axis=time）----------
+// 对应 runtime 对比报告：同一批表两侧（m-a +35、m-b −70），m-c 本期停报、m-d 无数据未进对比。
+const compare = {
+ reportId: 'rc1', type: 'meter-report', kind: 'comparison',
+ params: {
+  axis: 'time',
+  span: { requested: { from: '2026-10-01T00:00:00+08:00', to: '2026-10-08T00:00:00+08:00' }, observed: { from: '2026-10-01T00:00:00.000+08:00', to: '2026-10-08T00:00:00.000+08:00' } },
+  baseline: { requested: { from: '2026-09-24T00:00:00.000+08:00', to: '2026-10-01T00:00:00.000+08:00' }, observed: { from: '2026-09-24T00:00:00.000+08:00', to: '2026-10-01T00:00:00.000+08:00' } },
+  scope: { level: 'all', label: '全部电表', basis: 'areaName', meterCount: 4 },
+ },
+ sides: {
+  a: {
+   total: { value: 175, unit: '度', yuan: 201.25 },
+   shape24: { rates: Array.from({ length: 24 }, (_, h) => 0.3 + h * 0.02), coveredFraction: 1 },
+   buckets: { grain: 'day', items: Array.from({ length: 7 }, (_, i) => ({ from: `2026-10-0${i + 1}T00:00:00.000+08:00`, to: `2026-10-0${i + 2}T00:00:00.000+08:00`, value: 25, partial: false, days: 1 })) },
+  },
+  b: {
+   total: { value: 210, unit: '度', yuan: 241.5 },
+   shape24: { rates: Array.from({ length: 24 }, (_, h) => 0.4 + h * 0.02), coveredFraction: 1 },
+   buckets: { grain: 'day', items: Array.from({ length: 7 }, (_, i) => ({ from: `2026-09-${24 + i}T00:00:00.000+08:00`, to: `2026-09-${25 + i}T00:00:00.000+08:00`, value: 30, partial: false, days: 1 })) },
+  },
+ },
+ diff: { value: -35, pct: -16.7 },
+ metrics: [
+  { key: 'dailyAvg', unit: '度/日', a: { value: 25 }, b: { value: 30 }, change: -5 },
+  { key: 'weekdayDailyAvg', unit: '度/日', a: { value: 26 }, b: { value: 32 }, change: -6 },
+  { key: 'nightBase', unit: '度/时', a: { value: 0.31 }, b: { value: 0.41 }, change: -0.1 },
+  { key: 'peakDay', unit: '度', a: { value: 30, sub: '2026-10-03' }, b: { value: 34, sub: '2026-09-27' }, change: -4 },
+ ],
+ contribution: {
+  rows: [{ label: '26楼办公室', delta: -70, meterIds: ['m-b'] }, { label: '26楼运营部', delta: 35, meterIds: ['m-a'] }],
+  rest: null, topShare: 100,
+ },
+ context: { kind: 'floorSplit', floors: [{ floor: '26楼', value: 175, dataMeters: 2, meters: 2 }, { floor: '27楼', value: 0, dataMeters: 0, meters: 1 }] },
+ coverage: { meters: 4, dataMeters: 2, noData: ['m-d'], partial: [{ id: 'm-c', through: '2026-10-04T00:00:00.000+08:00' }], truncated: false },
+ meters: [
+  { id: 'm-a', name: '运营部电表', areaName: '26楼运营部', floor: '26楼',
+   a: { value: 105, status: 'ok', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 170 }, toSample: { readTime: '2026-10-08T00:00:00.000+08:00', value: 275 } } },
+   b: { value: 70, status: 'ok', observed: { fromSample: { readTime: '2026-09-24T00:00:00.000+08:00', value: 100 }, toSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 170 } } } },
+  { id: 'm-b', name: '26楼办公室电表', areaName: '26楼办公室', floor: '26楼',
+   a: { value: 70, status: 'ok', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 340 }, toSample: { readTime: '2026-10-08T00:00:00.000+08:00', value: 410 } } },
+   b: { value: 140, status: 'ok', observed: { fromSample: { readTime: '2026-09-24T00:00:00.000+08:00', value: 200 }, toSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 340 } } } },
+  { id: 'm-c', name: '27楼展厅电表', areaName: '27楼展厅', floor: '27楼',
+   a: { value: null, status: 'partial', observed: { fromSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 510 }, toSample: { readTime: '2026-10-04T00:00:00.000+08:00', value: 600 } } },
+   b: { value: 210, status: 'ok', observed: { fromSample: { readTime: '2026-09-24T00:00:00.000+08:00', value: 300 }, toSample: { readTime: '2026-10-01T00:00:00.000+08:00', value: 510 } } } },
+ ],
+}
+
+test('对比参数行：本期 vs 基期 · 范围台数 · 覆盖尾注', () => {
+ assert.equal(meterReportIsComparison(compare), true)
+ assert.equal(meterReportParamLine(compare), '10-01 → 10-08 vs 09-24 → 10-01 · 全部电表 4台 · 1台数据截至10/04 · 1台无数据')
+ assert.equal(meterReportSpanText(compare), '本期 10-01 → 10-08 · 上期 09-24 → 10-01')
+ assert.equal(meterReportIsComparison(report), false) // 统计报告不走对比分支
+})
+
+test('对比主数字：带符号差值 + 环比 + 本期/上期小字；基期为 0 时比例给说明', () => {
+ const hero = meterReportHero(compare)
+ assert.equal(hero.value, '−35')
+ assert.equal(hero.pct, '环比 −16.7%')
+ assert.equal(hero.sub, '本期 175 度 · 上期 210 度')
+ const flat = { ...compare, diff: { value: 70, pct: null, pctNote: '基期为零' } }
+ const hero0 = meterReportHero(flat)
+ assert.equal(hero0.value, '+70')
+ assert.equal(hero0.pct, '')
+ assert.equal(hero0.pctNote, '基期为零')
+})
+
+test('对比指标表：指标/本期/上期/变化 四列，变化给涨跌色', () => {
+ const rows = meterReportMetricTable(compare)
+ assert.deepEqual(rows.map(r => r.label), ['日均', '工作日日均', '夜间基荷', '峰值日'])
+ const daily = rows[0]
+ assert.deepEqual(daily.a, { text: '25 度/日', sub: '' })
+ assert.deepEqual(daily.b, { text: '30 度/日', sub: '' })
+ assert.deepEqual(daily.change, { text: '−5', tone: 'down' })
+ const peak = rows[3]
+ assert.equal(peak.a.sub, '10/03') // 峰值日本期日期
+ assert.equal(peak.b.sub, '09/27')
+ const up = { ...compare, metrics: [{ key: 'nightBase', unit: '度/时', a: { value: 0.5 }, b: { value: 0.4 }, change: 0.1 }] }
+ assert.deepEqual(meterReportMetricTable(up)[0].change, { text: '+0.1', tone: 'up' })
+ const nullChange = { ...compare, metrics: [{ key: 'nightBase', unit: '度/时', a: { value: null }, b: { value: 0.4 }, change: null }] }
+ assert.deepEqual(meterReportMetricTable(nullChange)[0].change, { text: '—', tone: '' })
+ assert.equal(rows[1].def, '周一至周五数据完整日的平均用电')
+})
+
+test('曲线/分段切换：两种投影视图互不改变主数字与指标', () => {
+ const curve = meterReportLoadCurve(compare)
+ assert.ok(curve?.hasData)
+ const svg = decodeURIComponent(curve.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /本期/)
+ assert.match(svg, /上期/)
+ assert.match(svg, /stroke-dasharray="5 4"/) // 上期虚线
+ const bars = meterReportCompareBuckets(compare)
+ assert.equal(bars.points.length, 7)
+ assert.deepEqual(bars.points[0], { value: 25, baseline: 30, label: '10/01', status: undefined })
+ assert.ok(bars.hasData)
+ // 任一侧缺曲线时：只画有数据一侧；两侧都缺 → 隐藏。
+ const aOnly = { ...compare, sides: { ...compare.sides, b: { ...compare.sides.b, shape24: { rates: null, coveredFraction: 0 } } } }
+ assert.ok(meterReportLoadCurve(aOnly)?.hasData)
+ const neither = { ...compare, sides: { a: { ...compare.sides.a, shape24: { rates: null, coveredFraction: 0 } }, b: { ...compare.sides.b, shape24: { rates: null, coveredFraction: 0 } } } }
+ assert.equal(meterReportLoadCurve(neither), null)
+})
+
+test('贡献涨跌条：|Δ| 排序 + 前3占比行 + 零线两侧玉绿/黄铜', () => {
+ const c = meterReportContribution(compare)
+ assert.equal(c.title, '分位置 变化')
+ assert.equal(c.shareText, '前3项占变化的 100%')
+ assert.equal(c.shareDef, '前 3 项变化量绝对值之和 ÷ 全部变化量绝对值之和')
+ assert.deepEqual(c.rows.map(r => [r.label, r.delta]), [['26楼办公室', -70], ['26楼运营部', 35]])
+ const svg = decodeURIComponent(c.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /stroke="#c9cfc0" stroke-width="1\.5"/) // 零线
+ assert.match(svg, /#3d8a68/) // +Δ 玉绿
+ assert.match(svg, /#b89443/) // −Δ 黄铜
+ assert.match(svg, /−70/)
+ assert.match(svg, /\+35/)
+ const withRest = { ...compare, contribution: { ...compare.contribution, rest: { count: 3, delta: -2.5 } } }
+ assert.deepEqual(meterReportContribution(withRest).rows.at(-1), { label: '其余 3 处', delta: -2.5 })
+ // 空贡献：chart.hasData = false
+ const empty = contributionChart([])
+ assert.equal(empty.hasData, false)
+})
+
+test('单台对比：贡献覆盖整层、本表行高亮、标题带本表 Δ', () => {
+ const loc = {
+  ...compare,
+  params: { ...compare.params, scope: { level: 'location', label: '26楼运营部', basis: 'areaName', meterCount: 1 } },
+  context: { kind: 'peer', parentLabel: '26楼', share: 60, rank: 1, of: 2 },
+  contribution: {
+   rows: [{ label: '26楼办公室', delta: -70, meterIds: ['m-b'] }, { label: '26楼运营部', delta: 35, meterIds: ['m-a'], highlight: true }],
+   rest: null, topShare: 100,
+  },
+  meters: [compare.meters[0]],
+ }
+ const c = meterReportContribution(loc)
+ assert.equal(c.title, '26楼 变化')
+ assert.equal(c.sub, '本表 +35')
+ assert.equal(c.rows[1].highlight, true)
+ const svg = decodeURIComponent(c.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /#f5efdf/) // 高亮行淡黄铜底
+ // 高亮行未进前 8 时服务端已强制塞入；视图不再重排
+ const far = { ...loc, contribution: { ...loc.contribution, rows: [...Array.from({ length: 8 }, (_, i) => ({ label: `位置${i}`, delta: -10 - i, meterIds: [] })), { label: '26楼运营部', delta: 1, meterIds: ['m-a'], highlight: true }] } }
+ assert.equal(meterReportContribution(far).rows.at(-1).highlight, true)
+})
+
+test('对比依据行：两期采样与 Δ；未计入表给出两侧原因', () => {
+ const rows = meterReportEvidence(compare)
+ const ok = rows[0]
+ assert.equal(ok.statusText, '计入对比')
+ assert.equal(ok.valueText, '+35 度')
+ assert.match(ok.bounds, /本期 起 2026-10-01 00:00 · 示数 170 · 止 2026-10-08 00:00 · 示数 275/)
+ assert.match(ok.bounds, /上期 起 2026-09-24 00:00 · 示数 100 · 止 2026-10-01 00:00 · 示数 170/)
+ const excluded = rows[2]
+ assert.equal(excluded.statusText, '未计入（本期数据不全·上期计入）')
+ assert.equal(excluded.valueText, '—')
+ // 原始采样查询覆盖基期起点 → 本期终点（与周比较卡的含基期窗口一致）
+ assert.deepEqual(meterReportHistoryQuery(compare, 'm-a'), { equipmentId: 'm-a', from: '2026-09-24T00:00:00.000+08:00', to: '2026-10-08T00:00:00+08:00' })
 })

@@ -1,6 +1,7 @@
 // 共享图表语法：SVG data-URI 承载，供 WeChat image 渲染。
 // 柱状约定：value null/not_computable → “缺测”留白；status partial → 斜纹（短窗实测）；current → 虚线进行中；
 // value 0 → 基线扁条；paired → 灰绿基期 + 玉绿本期双柱。x 轴标签随图内嵌，横向滚动时与柱体同步。
+// 涨跌条（contributionChart）：以零线为中心发散，+Δ 向右玉绿、−Δ 向左黄铜，highlight 行铺淡黄铜底。
 // 折线约定：点按真实 x 坐标定位，相邻间隔超过中位间隔约 2.5 倍即断段（缺测不伪装成连续曲线）；
 // 稀疏时保留顶点小点，密集时只留线与淡色面积；孤立单点段始终画点。
 
@@ -115,6 +116,47 @@ export function meterRankingChart(rows, options = {}) {
 
  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="jade" x2="0" y2="1"><stop stop-color="#388e6d"/><stop offset="1" stop-color="#176b54"/></linearGradient></defs>${body}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.some(row => finite(row.value)) }
+}
+
+// 涨跌贡献条：以零线为中心的横向发散条。delta>0 向右玉绿、<0 向左黄铜、=0 画中心刻痕；
+// highlight 行铺淡黄铜底（单台范围时标出本表所在位置）。数值带 ± 号按涨跌着色。
+// rows: [{ label, delta, highlight? }]
+export function contributionChart(rows, options = {}) {
+ const list = Array.isArray(rows) ? rows : []
+ const width = options.width ?? 320
+ const rowHeight = 26, topPad = 2, labelW = 96, valueW = 58
+ const height = topPad * 2 + list.length * rowHeight + 2
+ const max = Math.max(...list.map(row => finite(row.delta) ? Math.abs(row.delta) : 0), 1e-9)
+ const barArea = width - labelW - valueW - 8
+ const zero = labelW + barArea / 2
+ const clip = label => { const text = String(label ?? ''); return escapeXml(text.length > 9 ? text.slice(0, 9) + '…' : text) }
+ const JADE = '#3d8a68', BRASS = '#b89443'
+
+ let body = `<line x1="${zero}" x2="${zero}" y1="${topPad}" y2="${topPad + list.length * rowHeight}" stroke="#c9cfc0" stroke-width="1.5"/>`
+ body += list.map((row, i) => {
+  const y = topPad + i * rowHeight
+  const mid = y + rowHeight / 2
+  let svg = ''
+  if (row.highlight) svg += `<rect x="0" y="${y + 1}" width="${width}" height="${rowHeight - 2}" rx="5" fill="#f5efdf"/>`
+  svg += `<text x="6" y="${mid + 3}" font-size="10.5" fill="${row.highlight ? '#8a6a2f' : '#4a5d4e'}">${clip(row.label)}</text>`
+  const delta = finite(row.delta) ? row.delta : null
+  if (delta === null) {
+   svg += `<line x1="${zero - 9}" x2="${zero + 9}" y1="${mid}" y2="${mid}" stroke="#c2cabc" stroke-width="2" stroke-linecap="round"/>`
+   svg += `<text x="${width}" y="${mid + 3}" text-anchor="end" font-size="10.5" fill="#a9b6a4">—</text>`
+  } else {
+   const w = Math.max(3, Math.abs(delta) / max * (barArea / 2 - 2))
+   if (delta > 0) svg += `<rect x="${zero + 1}" y="${y + 5}" width="${w.toFixed(2)}" height="${rowHeight - 11}" rx="4" fill="${JADE}"/>`
+   else if (delta < 0) svg += `<rect x="${(zero - 1 - w).toFixed(2)}" y="${y + 5}" width="${w.toFixed(2)}" height="${rowHeight - 11}" rx="4" fill="${BRASS}"/>`
+   else svg += `<line x1="${zero - 4}" x2="${zero + 4}" y1="${mid}" y2="${mid}" stroke="#a9b6a4" stroke-width="2" stroke-linecap="round"/>`
+   const tone = delta > 0 ? JADE : delta < 0 ? BRASS : '#a9b6a4'
+   const sign = delta > 0 ? '+' : delta < 0 ? '−' : ''
+   svg += `<text x="${width}" y="${mid + 3}" text-anchor="end" font-size="10.5" font-weight="600" fill="${tone}">${sign}${barLabel(Math.abs(delta))}</text>`
+  }
+  return svg
+ }).join('')
+
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ${FONT}>${body}</svg>`
+ return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.some(row => finite(row.delta)) }
 }
 
 const toMs = value => typeof value === 'number' ? value : Date.parse(value)
