@@ -675,7 +675,7 @@ defineExpose({ openMenu, openInbox, clearHistory, openRegion, setReference, pref
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
-.conv-root { flex:1; min-height:0; height:100%; display:flex; flex-direction:column; color:#24382d; }
+.conv-root { flex:1; min-width:0; min-height:0; height:100%; display:flex; flex-direction:column; color:#24382d; }
 /* scroll-view 禁止直接用 flex:1/height:0 撑高（微信 webview 已知塌陷：盒子 0 高、
    内容被 enhanced 层画出但命中盒全灭——2026-09-17 预览"看得见点不中"根因）。
    确定性高度链：flex 包裹层 min-height:0 + 内层 scroll-view height:100%。 */
