@@ -6,7 +6,7 @@
   </button>
 
   <view class="hero">
-   <text class="hero-label">用电量（度）</text>
+   <text class="hero-label">用电量</text>
    <view class="number" :class="{ words: hero.value === null }">
     <text v-if="hero.value !== null">{{ hero.value }}<text class="unit"> 度</text></text>
     <text v-else>暂无可合计的区间用电</text>
@@ -32,7 +32,7 @@
    <view v-if="pane === 'history' && selected" class="history-pane"><MeterHistoryView class="history-host" :active="sheetOpen" :initial-query="historyQuery" :show-question="false" /></view>
    <scroll-view v-else class="details-scroll" scroll-y enhanced :show-scrollbar="false">
     <view class="details">
-     <text class="sheet-note">{{ meterReportSpan(report) }} · {{ report.params.scope.label }} · {{ report.coverage.meters }} 台 · 起止采样为区间内实际读到的最近示数；两端缺失、回退或过早停报的表不计入合计。</text>
+     <text class="sheet-note">{{ meterReportSpan(report) }} · {{ report.params.scope.label }} · {{ report.coverage.meters }} 台</text>
      <button v-for="meter in evidence" :key="meter.id" class="mrow" hover-class="row-pressed" @tap="pushHistory(meter)">
       <view class="mrow-main"><text class="mrow-name">{{ meter.label }}</text><text class="mrow-sub">{{ meter.bounds }}</text></view>
       <view class="mrow-value"><text class="v">{{ meter.valueText }}</text><text class="u">{{ meter.statusText }}</text></view>
