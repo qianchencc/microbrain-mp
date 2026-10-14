@@ -526,3 +526,209 @@ test('分段双柱：A 缺测仍画 B；B 缺测不画假零线', () => {
  assert.deepEqual(meterReportBarLegend(region).map(i => i.label), ['26楼', '27楼'])
  assert.equal(meterReportBarLegend(report).length, 0)
 })
+
+import { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../pages/agent/meter-panel-view.mjs'
+
+test('面板查询：预设跨度本地时区、单日/自定义含端点、对比轴、楼层取自 location', () => {
+ const now = Date.parse('2024-09-11T10:30:00+08:00')
+ assert.deepEqual(meterPanelQuery({ preset: '7d' }, now),
+  { kind: 'statistics', from: '2024-09-04T10:30:00.000+08:00', to: '2024-09-11T10:30:00.000+08:00', scopeLevel: 'all' })
+ assert.equal(meterPanelQuery({ preset: '30d' }, now).from, '2024-08-12T10:30:00.000+08:00')
+ assert.equal(meterPanelQuery({ preset: 'month' }, now).from, '2024-09-01T00:00:00.000+08:00')
+ const day = meterPanelQuery({ preset: 'day', date: '2024-09-11' }, now)
+ assert.equal(day.from, '2024-09-11T00:00:00.000+08:00')
+ assert.equal(day.to, '2024-09-11T10:30:00.000+08:00')
+ const past = meterPanelQuery({ preset: 'day', date: '2024-09-09' }, now)
+ assert.equal(past.to, '2024-09-10T00:00:00.000+08:00')
+ const custom = meterPanelQuery({ preset: 'custom', fromDate: '2024-08-30', toDate: '2024-09-02' }, now)
+ assert.equal(custom.from, '2024-08-30T00:00:00.000+08:00')
+ assert.equal(custom.to, '2024-09-03T00:00:00.000+08:00')
+ const cmp = meterPanelQuery({ preset: '7d', kind: 'comparison', scope: { level: 'floor', floor: '26楼' } }, now)
+ assert.equal(cmp.axis, 'time')
+ assert.equal(cmp.floor, '26楼')
+ assert.equal(cmp.scopeLevel, 'floor')
+ const scopes = meterPanelScopes([
+  { kind: 'energy', id: 'm1', name: '27楼表', location: '26楼运营部' },
+  { kind: 'energy', id: 'm2', name: 'x', location: '27楼展厅' },
+  { kind: 'video', id: 'v1', name: '摄像头', location: '99楼' },
+ ])
+ assert.deepEqual(scopes.map(s => s.key), ['all', 'floor:26楼', 'floor:27楼', 'location:m1', 'location:m2'])
+ assert.throws(() => meterPanelQuery({ preset: 'custom', fromDate: '2026-02-29', toDate: '2026-03-01' }, now))
+ assert.throws(() => meterPanelQuery({ preset: 'day', date: '2024-09-12' }, now))
+ assert.throws(() => meterPanelQuery({ preset: 'custom', fromDate: '2024-09-10', toDate: '2024-09-09' }, now))
+})
+
+test('面板加载器：迟到响应不覆盖新请求', async () => {
+ const mk = () => { let resolve, reject; const p = new Promise((r, j) => { resolve = r; reject = j }); return { p, resolve, reject } }
+ const devices = { devices: [{ kind: 'energy', id: 'm1', name: '运营部电表', location: '26楼运营部' }] }
+ const flush = () => new Promise(resolve => setTimeout(resolve, 0))
+ const build = (overrides = {}) => {
+  const calls = { report: [], devices: [] }
+  const states = []
+  let scope = 'u1'
+  const loader = createMeterPanelLoader({
+   fetchReport: () => { const d = mk(); calls.report.push(d); return d.p },
+   fetchDevices: () => { const d = mk(); calls.devices.push(d); return d.p },
+   getScope: () => { if (scope === 'THROW') throw new Error('客户登录已失效，请重新登录'); return scope },
+   waitSession: () => Promise.resolve(),
+   onChange: s => states.push(s),
+   now: () => Date.parse('2024-09-11T10:30:00+08:00'),
+   ...overrides,
+  })
+  return { calls, states, loader, setScope: v => { scope = v } }
+ }
+
+ {
+  const { calls, states, loader } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  loader.load({ preset: '30d' })
+  await flush()
+  calls.report[1].resolve({ reportId: 'B' })
+  calls.devices[1].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report?.reportId, 'B')
+  assert.equal(loader.state.loading, false)
+  calls.report[0].resolve({ reportId: 'A' })
+  calls.devices[0].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report?.reportId, 'B')
+  assert.equal(loader.state.scopes.length, 3)
+  assert.equal(states.at(-1).loading, false)
+ }
+
+ {
+  const { calls, loader } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  loader.load({ preset: '30d' })
+  await flush()
+  calls.report[1].resolve({ reportId: 'B' })
+  calls.devices[1].resolve(devices)
+  await flush()
+  calls.report[0].reject(new Error('上游超时'))
+  calls.devices[0].reject(new Error('上游超时'))
+  await flush()
+  assert.equal(loader.state.report?.reportId, 'B')
+  assert.equal(loader.state.error, '')
+  assert.equal(loader.state.loading, false)
+ }
+
+ {
+  const { calls, loader } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  calls.report[0].resolve({ reportId: 'R1' })
+  calls.devices[0].resolve(devices)
+  await flush()
+  loader.load({ preset: '30d' })
+  await flush()
+  assert.equal(loader.state.loading, true)
+  assert.equal(loader.state.report?.reportId, 'R1')
+  calls.report[1].resolve({ reportId: 'R2' })
+  calls.devices[1].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report?.reportId, 'R2')
+ }
+
+ {
+  const { calls, loader, setScope } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  calls.report[0].resolve({ reportId: 'R1' })
+  calls.devices[0].resolve(devices)
+  await flush()
+  setScope('u2')
+  loader.load({ preset: '7d' })
+  await flush()
+  assert.equal(loader.state.report, null)
+  assert.equal(loader.state.scopes.length, 0)
+  calls.report[1].resolve({ reportId: 'R3' })
+  calls.devices[1].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report?.reportId, 'R3')
+ }
+
+ {
+  const { calls, loader, setScope } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  setScope('u2')
+  calls.report[0].resolve({ reportId: 'R1' })
+  calls.devices[0].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report, null)
+  assert.equal(loader.state.loading, false)
+  assert.ok(loader.state.error)
+ }
+
+ {
+  const { calls, loader } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  calls.report[0].resolve({ reportId: 'R1' })
+  calls.devices[0].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report?.reportId, 'R1')
+  loader.load({ preset: '30d' })
+  await flush()
+  calls.report[1].reject(new Error('网关不可达'))
+  calls.devices[1].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report, null)
+  assert.equal(loader.state.loading, false)
+  assert.match(loader.state.error, /网关不可达/)
+ }
+
+ {
+  const { calls, loader, setScope } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  calls.report[0].resolve({ reportId: 'R1' })
+  calls.devices[0].resolve(devices)
+  await flush()
+  loader.load({ preset: '30d' })
+  await flush()
+  setScope('THROW')
+  calls.report[1].resolve({ reportId: 'R2' })
+  calls.devices[1].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report, null)
+  assert.equal(loader.state.loading, false)
+  assert.ok(loader.state.error)
+ }
+
+ {
+  const { calls, loader } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  loader.load({ preset: 'day', date: '2024-02-30' })
+  await flush()
+  assert.equal(loader.state.report, null)
+  assert.equal(loader.state.loading, false)
+  assert.ok(loader.state.error)
+  calls.report[0].resolve({ reportId: 'LATE' })
+  calls.devices[0].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report, null)
+ }
+
+ {
+  const { calls, loader } = build()
+  loader.load({ preset: '7d' })
+  await flush()
+  loader.deactivate()
+  assert.equal(loader.state.loading, false)
+  calls.report[0].resolve({ reportId: 'X' })
+  calls.devices[0].resolve(devices)
+  await flush()
+  assert.equal(loader.state.report, null)
+ }
+
+ {
+  const { loader } = build({ getScope: () => { throw new Error('客户登录已失效，请重新登录') } })
+  loader.load({ preset: '7d' })
+  assert.equal(loader.state.report, null)
+  assert.match(loader.state.error, /客户登录已失效/)
+ }
+})
