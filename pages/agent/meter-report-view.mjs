@@ -9,6 +9,13 @@ const finite = value => typeof value === 'number' && Number.isFinite(value)
 
 export const meterReportGrains = [{ key: 'day', label: '日' }, { key: 'week', label: '周' }, { key: 'month', label: '月' }]
 
+// 单日跨度默认且只提供「时」粒度；更长跨度给 日/周/月。
+export const meterReportIsDay = report => {
+ const span = report?.params?.span?.requested || {}
+ return Date.parse(span.to) - Date.parse(span.from) <= 86_400_000
+}
+export const meterReportGrainOptions = report => meterReportIsDay(report) ? [{ key: 'hour', label: '时' }] : meterReportGrains
+
 // 度值：千分位、至多 1 位小数；小值不取整以免空刻度。
 export const degreeText = value => finite(value)
  ? (Math.abs(value) >= 1000 ? value.toLocaleString('zh-CN', { maximumFractionDigits: 1 }) : String(Math.round(value * 10) / 10))
@@ -56,13 +63,18 @@ export function meterReportContext(report) {
  }
  return null
 }
-// 2×2 指标格：标签在上、数值在下；标签可点开一句话定义。峰值日 sub 是日期。
-const METRIC_LABELS = { dailyAvg: '日均', nightBase: '夜间基荷', peakDay: '峰值日', top3Share: '前3占比', nightShare: '夜间占比' }
+// 2×2 指标格：标签在上、数值在下；标签可点开一句话定义。峰值日 sub 是日期，峰值小时 sub 是时刻。
+const METRIC_LABELS = {
+ dailyAvg: '日均', nightBase: '夜间基荷', peakDay: '峰值日', top3Share: '前3占比',
+ dayTotal: '当日合计', peakHour: '峰值小时', nightShare: '夜间占比',
+}
 const METRIC_DEFS = {
  dailyAvg: '统计期内平均每天用电',
  nightBase: '00:00–06:00 平均每小时用电，代表无人时的持续耗电',
  peakDay: '用电最多的一天（只计数据完整的日子）',
  top3Share: '用电最多的 3 个位置占总量的比例',
+ dayTotal: '统计日当天的总用电',
+ peakHour: '用电最多的一个小时',
  nightShare: '00:00–06:00 用电占比，越高说明越多持续用电',
 }
 export function meterReportMetrics(report) {
@@ -71,12 +83,12 @@ export function meterReportMetrics(report) {
   label: METRIC_LABELS[metric.key] || metric.key,
   valueText: finite(metric.value) ? degreeText(metric.value) : '—',
   unit: metric.unit || '',
-  sub: metric.sub ? comparisonDate(metric.sub) : '',
+  sub: metric.sub ? (String(metric.sub).includes(':') ? metric.sub : comparisonDate(metric.sub)) : '',
   def: METRIC_DEFS[metric.key] || '',
  }))
 }
 
-// 24 小时负荷：覆盖不足时 rates 为 null → 整节隐藏；
+// 24 小时负荷：覆盖不足时 rates 为 null → 整节隐藏；单日画当天实际曲线；
 // 单台范围画同层对照（本表实线 + 本层单台平均虚线）。
 export function meterReportLoadCurve(report) {
  const rates = report?.shape24?.rates
@@ -84,7 +96,8 @@ export function meterReportLoadCurve(report) {
  const peerRates = report?.peer?.floorPerMeterRates
  const parentLabel = report?.context?.kind === 'peer' ? report.context.parentLabel : ''
  const chart = loadShapeChart(rates, peerRates ? { peer: peerRates, legend: ['本表', `${parentLabel}单台平均`] } : {})
- return chart.hasData ? { ...chart, title: '24小时负荷' } : null
+ if (!chart.hasData) return null
+ return { ...chart, title: meterReportIsDay(report) ? '当日小时负荷' : '24小时负荷' }
 }
 
 // 分段柱：bucketsAll 已带全部分粒度，切换粒度只换投影，区间总量不变。
@@ -100,6 +113,7 @@ export function meterReportBuckets(report, grain) {
 }
 
 function bucketLabel(bucket, grain) {
+ if (grain === 'hour') return String(bucket.from).slice(11, 16) // 'HH:00'
  const base = grain === 'month' ? `${Number(String(bucket.from).slice(5, 7))}月` : comparisonDate(bucket.from)
  const natural = grain === 'day' ? 1 : grain === 'week' ? 7 : daysInMonth(bucket.from)
  return bucket.partial && bucket.days < natural ? `${base}·${bucket.days}天` : base

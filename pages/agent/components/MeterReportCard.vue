@@ -29,7 +29,7 @@
 
   <view class="shead">
    <text>时间分布 · 度</text>
-   <view class="seg"><button v-for="g in meterReportGrains" :key="g.key" :class="{ on: grain === g.key }" :aria-pressed="grain === g.key" hover-class="pressed" @tap="grain = g.key">{{ g.label }}</button></view>
+   <view class="seg"><button v-for="g in grainOptions" :key="g.key" :class="{ on: grain === g.key }" :aria-pressed="grain === g.key" hover-class="pressed" @tap="grain = g.key">{{ g.label }}</button></view>
   </view>
   <scroll-view v-if="buckets.hasData" scroll-x class="chart-wrap" enhanced :show-scrollbar="false">
    <view :style="{ width: buckets.points.length <= 7 ? '100%' : buckets.width + 'px' }"><image class="chart" :src="buckets.src" mode="scaleToFill" /></view>
@@ -66,7 +66,7 @@
 import { computed, ref } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import MeterHistoryView from './MeterHistoryView.vue'
-import { meterReportGrains, meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportRankingTitle, meterReportRanking, meterReportEvidence, meterReportHistoryQuery, meterReportSpan } from '../meter-report-view.mjs'
+import { meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportRankingTitle, meterReportRanking, meterReportEvidence, meterReportHistoryQuery, meterReportSpan } from '../meter-report-view.mjs'
 
 const props = defineProps({ report: { type: Object, required: true } })
 const grain = ref(props.report.params?.grain || 'day')
@@ -77,6 +77,7 @@ const hero = computed(() => meterReportHero(props.report))
 const context = computed(() => meterReportContext(props.report))
 const metrics = computed(() => meterReportMetrics(props.report))
 const loadCurve = computed(() => meterReportLoadCurve(props.report))
+const grainOptions = computed(() => meterReportGrainOptions(props.report))
 const buckets = computed(() => meterReportBuckets(props.report, grain.value))
 const rankingTitle = computed(() => meterReportRankingTitle(props.report))
 const ranking = computed(() => meterReportRanking(props.report))

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportRankingTitle, meterReportRanking, meterReportEvidence, meterReportHistoryQuery } from '../pages/agent/meter-report-view.mjs'
+import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportLoadCurve, meterReportBuckets, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportEvidence, meterReportHistoryQuery } from '../pages/agent/meter-report-view.mjs'
 import { loadShapeChart } from '../pages/agent/energy-chart.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
@@ -178,4 +178,28 @@ test('单台范围：同层对照曲线带图例与虚线，排行标题为本�
  assert.equal(ranking.rows[0].highlight, true)
  assert.match(decodeURIComponent(ranking.src.slice('data:image/svg+xml;utf8,'.length)), /#b89443/) // 高亮行黄铜色
  assert.equal(meterReportRankingTitle(report), '位置构成 · 度')
+})
+
+// 单日跨度：粒度只剩「时」、分段按 HH:00 标注、指标换当日合计/峰值小时、曲线名「当日小时负荷」。
+test('单日跨度：只有时粒度、HH:00 分段标签、当日合计/峰值小时指标与当日曲线名', () => {
+ const day = {
+  ...report,
+  params: { ...report.params, span: { ...report.params.span, requested: { from: '2026-10-02T00:00:00+08:00', to: '2026-10-03T00:00:00+08:00' } }, grain: 'hour' },
+  shape24: { rates: Array(24).fill(0.5), coveredFraction: 1 },
+  metrics: [
+   { key: 'dayTotal', value: 24.6, unit: '度' },
+   { key: 'nightBase', value: 0.43, unit: '度/时' },
+   { key: 'peakHour', value: 2.25, unit: '度', sub: '16:00' },
+   { key: 'top3Share', value: 90, unit: '%' },
+  ],
+  bucketsAll: { hour: [{ from: '2026-10-02T08:00:00.000+08:00', to: '2026-10-02T09:00:00.000+08:00', value: 1.2, partial: false, days: 1 }] },
+ }
+ assert.deepEqual(meterReportGrainOptions(day), [{ key: 'hour', label: '时' }])
+ assert.equal(meterReportBuckets(day, 'hour').points[0].label, '08:00')
+ assert.equal(meterReportLoadCurve(day).title, '当日小时负荷')
+ const cards = meterReportMetrics(day)
+ assert.deepEqual(cards.map(c => c.label), ['当日合计', '夜间基荷', '峰值小时', '前3占比'])
+ assert.equal(cards[2].sub, '16:00') // 峰值小时的 sub 是时刻不是日期
+ assert.equal(meterReportMetrics({ ...report, metrics: [{ key: 'nightShare', value: 15, unit: '%' }] })[0].label, '夜间占比')
+ assert.equal(meterReportGrainOptions(report).length, 3) // 多日跨度仍是 日/周/月
 })
