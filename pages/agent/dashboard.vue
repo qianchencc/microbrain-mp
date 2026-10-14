@@ -76,9 +76,8 @@
    <scroll-view v-else class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" source="company" inline-playback read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view>
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="Boolean(observationType)" @reference="referenceEvent" />
   </DeviceSheet>
-  <DeviceSheet v-if="energyMounted" :open="energyOpen" :back="energyBack" tall compact-header :title="energyNav.title || '能耗统计'" @close="energyOpen = false">
-   <template #header-left><button v-if="energyNav.canBack" class="event-back" :aria-label="energyNav.backLabel || '返回上一层'" hover-class="event-back--pressed" @tap="energyPanelRef?.back()"><uni-icons type="back" size="16" color="#62766a" /></button></template>
-   <CompanyMeterPanel ref="energyPanelRef" class="event-host" :active="energyOpen && pageActive" :focus-date="energyFocusDate" @navigation="onEnergyNav" />
+  <DeviceSheet v-if="energyMounted" :open="energyOpen" tall compact-header title="能耗统计" @close="energyOpen = false">
+   <CompanyEnergySheet class="event-host" :active="energyOpen" :focus-date="energyFocusDate" @open-meter-history="openMeterHistory" />
   </DeviceSheet>
   <DeviceSheet v-if="drawerMounted" :open="Boolean(drawerKind)" tall compact-header :title="drawerTitle" :meta="drawerDevices.length + ' 台 · 只读目录'" @close="drawerKind = ''">
    <CompanyDeviceDrawer class="event-host" :devices="drawerDevices" :kind="drawerKind" />
@@ -104,7 +103,7 @@ import SafetyHistoryList from './components/SafetyHistoryList.vue'
 import EnvironmentHistoryView from './components/EnvironmentHistoryView.vue'
 import MeterHistoryView from './components/MeterHistoryView.vue'
 import CompanyEnergyStrip from './components/CompanyEnergyStrip.vue'
-import CompanyMeterPanel from './components/CompanyMeterPanel.vue'
+import CompanyEnergySheet from './components/CompanyEnergySheet.vue'
 import CompanyDeviceDrawer from './components/CompanyDeviceDrawer.vue'
 import CompanyAgentFloat from './components/CompanyAgentFloat.vue'
 import { parseAgentContext, environmentHistoryPrompt, meterHistoryPrompt } from './context-link.mjs'
@@ -179,11 +178,8 @@ async function loadOlderEnergy(firstDate) {
   if (added) energyStripRef.value?.didPrepend(added)
  } catch { /* 旧窗口读取失败不破坏当前条带 */ }
 }
-const energyPanelRef = ref(null), energyNav = ref({ title: '', canBack: false, backLabel: '' })
-function onEnergyNav(nav) { energyNav.value = nav || { title: '', canBack: false, backLabel: '' } }
-function energyBack() { if (!energyPanelRef.value?.back()) energyOpen.value = false }
 function openEnergy(date) {
- energyFocusDate.value = date || ''
+ energyFocusDate.value = date || latestCompleteDay.value || ''
  if (date) selectedStripDate.value = date
  energyOpen.value = true
 }
