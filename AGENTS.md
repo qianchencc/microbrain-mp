@@ -25,3 +25,12 @@ This repository uses a single-context domain documentation layout. See `docs/age
 - 恢复文件时只使用精确路径和已确认的来源提交（如 `git restore --source=<commit> -- <path>`）；不得用整目录覆盖掩盖来源不明的差异。
 - 提交前必须检查 `git diff --check`、`git status --short` 和提交内容；禁止把构建产物、临时日志、个人工具状态或 `.zcode` 临时计划混入业务提交，除非该文件明确属于项目源代码或文档。
 - 禁止未经明确要求执行 `git push --force`、`git reset --hard`、`git clean -fd`、删除分支或覆盖远端历史；需要远端同步时使用普通 push，并在提交前保留本地可回退点。
+
+## 开发版公网预览（2026-10-14 实测）
+
+- develop 构建的 Agent API 使用 `https://mp-agent.qianc.ltd/api`；trial/release 仍走客户网关 `ncim.577119.com/micro-api/api/ai`。
+- 链路：Cloudflare → frps → 本机第二个 frpc（`~/frp/frpc-agent.toml`，0600，密钥仅在本地配置不落仓库）→ 本机安全代理 `~/frp/agent-public-proxy.mjs`（127.0.0.1:9416）→ 唯一 Runtime 3200。
+- 代理只放行 `/api/agent/*` 并要求真实 Bearer+tenantcode 身份；`local-development`/`local-test`/tenant `LOCAL` 一律 401，`/api/admin/*` 及其他路径 404，`/healthz` 返回代理自身固定标记不透传 Runtime 配置。
+- 公网隧道/真实鉴权/NDJSON 分块传输已实测通过；真实问候 run 以 `run.failed` 结束，Runtime 记录错误『模型未返回可展示的消息』，业务对话尚未验收成功，根因未定位。
+- 真机移动网络、未备案域名调试与视频播放另行验收；`mp-video` 隧道本地 9415 服务当前停止，不在本轮范围。
+- 已验证工具链：Node 22 `/opt/homebrew/opt/node@22/bin/node`；HBuilderX 编译：`/Applications/HBuilderX.app/Contents/MacOS/cli launch mp-weixin --project '/Users/qianchen/works/新发展/mp' --compile true`。
