@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText } from '../pages/agent/meter-report-view.mjs'
+import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText, meterReportPowerFactor } from '../pages/agent/meter-report-view.mjs'
 import { loadShapeChart, contributionChart, meterBarChart } from '../pages/agent/energy-chart.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
@@ -731,4 +731,20 @@ test('面板加载器：迟到响应不覆盖新请求', async () => {
   assert.equal(loader.state.report, null)
   assert.match(loader.state.error, /客户登录已失效/)
  }
+})
+
+test('meterReportPowerFactor formats per-meter PF lines: statistics/region single line, time splits current/baseline, legacy omits', () => {
+ const meter = (id, pf) => ({ id, name: id, powerFactor: pf })
+ const stats = { kind: 'statistics', meters: [meter('m-a', { mean: 0.85, min: 0.8, samples: 2, complete: true })] }
+ assert.deepEqual(meterReportPowerFactor(stats, 'm-a'), ['功率因数 采样均值 0.85 · 最低 0.8 · 2 次有效采样'])
+ assert.deepEqual(meterReportPowerFactor({ kind: 'statistics', meters: [meter('m-a')] }, 'm-a'), [])
+ assert.deepEqual(meterReportPowerFactor(stats, 'm-x'), [])
+ assert.deepEqual(meterReportPowerFactor({ kind: 'statistics', meters: [meter('m-a', { mean: null, min: null, samples: 0, complete: true })] }, 'm-a'), ['功率因数 采样均值 — · 最低 —'])
+ assert.deepEqual(meterReportPowerFactor({ kind: 'statistics', meters: [meter('m-a', { mean: 0, min: 0, samples: 1, complete: false })] }, 'm-a'), ['功率因数 采样均值 0 · 最低 0 · 1 次有效采样 · 读取不全'])
+ const time = { kind: 'comparison', params: { axis: 'time' }, meters: [{ id: 'm-a', a: { powerFactor: { mean: 0.85, min: 0.8, samples: 2, complete: true } }, b: { powerFactor: { mean: 0.5, min: 0.4, samples: 2, complete: true } } }] }
+ assert.deepEqual(meterReportPowerFactor(time, 'm-a'), ['本期功率因数 采样均值 0.85 · 最低 0.8 · 2 次有效采样', '上期功率因数 采样均值 0.5 · 最低 0.4 · 2 次有效采样'])
+ assert.deepEqual(meterReportPowerFactor({ kind: 'comparison', params: { axis: 'time' }, meters: [{ id: 'm-a', a: {}, b: {} }] }, 'm-a'), [])
+ const region = { kind: 'comparison', params: { axis: 'region' }, sides: { a: { meters: [meter('m-a', { mean: 0.9, min: 0.9, samples: 1, complete: true })] }, b: { meters: [meter('m-c', { mean: 0.5, min: 0.5, samples: 1, complete: true })] } }, meters: [meter('m-a'), meter('m-c')] }
+ assert.deepEqual(meterReportPowerFactor(region, 'm-c'), ['功率因数 采样均值 0.5 · 最低 0.5 · 1 次有效采样'])
+ assert.deepEqual(meterReportPowerFactor(region, 'm-d'), [])
 })

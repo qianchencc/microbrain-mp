@@ -416,3 +416,25 @@ export function meterReportHistoryQuery(report, meterId) {
  }
  return { equipmentId: meterId, from: requested.from, to: requested.to }
 }
+
+export function meterReportPowerFactor(report, meterId) {
+ if (!report || !meterId) return []
+ const find = list => (list ?? []).find(meter => meter?.id === meterId)
+ const format = pf => {
+  if (!pf || typeof pf !== 'object') return null
+  const num = value => typeof value === 'number' && Number.isFinite(value) ? String(Math.round(value * 1000) / 1000) : '—'
+  const core = pf.samples ? `采样均值 ${num(pf.mean)} · 最低 ${num(pf.min)} · ${pf.samples} 次有效采样` : '采样均值 — · 最低 —'
+  return pf.complete === false ? `${core} · 读取不全` : core
+ }
+ if (!meterReportIsComparison(report)) {
+  const text = format(find(report.meters)?.powerFactor)
+  return text ? [`功率因数 ${text}`] : []
+ }
+ if (meterReportAxis(report) === 'region') {
+  const text = format(find(report.sides?.a?.meters)?.powerFactor ?? find(report.sides?.b?.meters)?.powerFactor ?? find(report.meters)?.powerFactor)
+  return text ? [`功率因数 ${text}`] : []
+ }
+ const meter = find(report.meters)
+ const a = format(meter?.a?.powerFactor), b = format(meter?.b?.powerFactor)
+ return [...(a ? [`本期功率因数 ${a}`] : []), ...(b ? [`上期功率因数 ${b}`] : [])]
+}

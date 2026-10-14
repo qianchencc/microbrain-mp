@@ -1,6 +1,12 @@
 <template>
  <view class="mdetails">
-  <view v-if="pane === 'history' && selected" class="history-pane"><MeterHistoryView class="history-host" :active="active" :initial-query="historyQuery" :show-question="false" /></view>
+  <view v-if="pane === 'history' && selected" class="history-pane">
+   <view v-if="powerFactorLines.length" class="pf-notes">
+    <text v-for="line in powerFactorLines" :key="line" class="pf-line">{{ line }}</text>
+    <text class="pf-hint">功率因数为采样点均值，非时段平均</text>
+   </view>
+   <MeterHistoryView class="history-host" :active="active" :initial-query="historyQuery" :show-question="false" />
+  </view>
   <scroll-view v-else class="details-scroll" scroll-y enhanced :show-scrollbar="false">
    <view class="details">
     <text class="sheet-note">{{ sheetSpan }} · {{ sheetSubtitle }}</text>
@@ -20,7 +26,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import MeterHistoryView from './MeterHistoryView.vue'
-import { meterReportAxis, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportSpanText } from '../meter-report-view.mjs'
+import { meterReportAxis, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportPowerFactor, meterReportSpanText } from '../meter-report-view.mjs'
 
 const props = defineProps({ report: { type: Object, required: true }, active: Boolean })
 const emit = defineEmits(['navigation'])
@@ -35,6 +41,7 @@ const sheetSubtitle = computed(() => isRegion.value
  : `${props.report.params?.scope?.label || '全部电表'} · ${props.report.coverage?.meters ?? evidence.value.length} 台`)
 const sheetSpan = computed(() => meterReportSpanText(props.report))
 const historyQuery = computed(() => meterReportHistoryQuery(props.report, selectedId.value))
+const powerFactorLines = computed(() => pane.value === 'history' ? meterReportPowerFactor(props.report, selectedId.value) : [])
 const navTitle = computed(() => pane.value === 'history' ? '原始计量采样' : '计量依据')
 
 watch([navTitle, () => stack.value.length], () => emit('navigation', { title: navTitle.value, canBack: stack.value.length > 0 }), { immediate: true })
@@ -55,6 +62,9 @@ button { margin: 0; padding: 0; background: transparent; line-height: 1.4; }
 button::after { border: 0; }
 .mdetails { height: 0; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .history-pane, .history-host { height: 0; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pf-notes { flex-shrink: 0; padding: 8px 20px 6px; border-bottom: 1px solid #e3e9dc; }
+.pf-line { display: block; font-size: 10px; color: #5d6b56; line-height: 1.7; }
+.pf-hint { display: block; font-size: 9px; color: #80907f; line-height: 1.7; }
 .details-scroll { height: 0; flex: 1; min-height: 0; }
 .details { padding: 4px 20px 26px; }
 .sheet-note { display: block; font-size: 10px; color: #80907f; line-height: 1.7; margin-bottom: 4px; }
