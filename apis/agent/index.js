@@ -48,6 +48,8 @@ export const listSafetyHistory = (query = {}) => {
 
 export const getEnvironmentHistory = (query) => request('/agent/environment-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')
 export const getEnergyHistory = (query = {}) => request('/agent/energy-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')
+export const getCompanyDevices = () => request('/agent/company-devices?source=company', 'GET')
+export const getCompanyEnergyDaily = (query = {}) => request('/agent/company-energy-daily?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET', undefined, 90000)
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const restoreConversation = (source = 'office') => request(withConversationSource('/agent/conversations/current', source), 'GET')
 export const clearConversation = (id, source = 'office') => request(withConversationSource(`/agent/conversations/${id}`, source), 'DELETE')

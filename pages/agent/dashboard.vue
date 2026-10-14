@@ -3,46 +3,68 @@
   <AssistantNav title="物联助手" back-label="服务首页" @back="back" />
   <scroll-view class="dashboard-scroll" scroll-y enhanced :show-scrollbar="false">
    <view class="content">
-    <view class="headline"><view><text class="eyebrow">COMPANY OVERVIEW</text><text class="title">公司运行总览</text></view><button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#567461" /></button></view>
-    <view class="estate">
-     <view class="estate-grid" /><image class="campus" src="/static/agent-campus.svg" mode="aspectFit" />
-     <view class="estate-top"><text class="scope-dot" /><text>微脑 · 当前接入范围</text></view>
-     <text class="estate-number">{{ snapshot ? snapshot.devices.length : '—' }}<text class="estate-unit">台</text></text><text class="estate-label">{{ loadedSections.length >= 3 ? '已接入观察设备' : '已取得的观察设备' }}</text>
-     <view class="estate-foot"><text>{{ snapshot ? '查询于 ' + clock : loading ? '正在读取公司数据' : '数据尚未取得' }}</text><text>园区示意</text></view>
+    <view class="headline">
+     <view>
+      <text class="date">{{ dateLine }}</text>
+      <text class="hello">你好，{{ userName }}</text>
+     </view>
+     <button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#567461" /></button>
     </view>
     <view v-if="error" class="notice"><text>{{ error }}</text><button @tap="load">重试</button></view>
     <view v-else-if="snapshot?.errors?.length" class="notice"><text>部分观测暂不可用</text><button @tap="showErrors">查看</button></view>
-    <view class="device-strip"><view v-for="cell in deviceCells" :key="cell.kind" class="device-cell"><view class="device-label"><uni-icons :type="cell.icon" size="13" color="#6e8876" /><text>{{ cell.label }}</text></view><text class="device-value">{{ loadedSections.includes(cell.kind === 'safety' ? 'alerts' : cell.kind) ? counts[cell.kind] : '—' }}<text>台</text></text></view></view>
-    <view class="panel environment">
-     <view class="panel-head"><text>环境观测</text><button class="text-action" @tap="openObservation('environment')">趋势 <uni-icons type="right" size="10" color="#829386" /></button></view>
+    <view class="counts">
+     <button v-for="cell in KIND_CELLS" :key="cell.kind" class="crow" @tap="openKind(cell.kind)">
+      <text class="cc">{{ devicesLoaded ? (kindCounts[cell.kind] ?? 0) : '—' }}</text>
+      <text class="cn">{{ cell.label }}</text>
+     </button>
+    </view>
+    <text v-if="devicesError" class="fineprint dim">{{ devicesError }}</text>
+
+    <view class="blk">
+     <view class="k"><text>环境传感器</text><button class="more" @tap="openObservation('environment')">趋势 <uni-icons type="right" size="10" color="#176b54" /></button></view>
      <text class="sensor-name">{{ environment?.name || (loading ? '正在更新环境读数' : loadedSections.includes('environment') ? '暂无环境读数' : '环境读数暂不可用') }}</text>
-     <view class="environment-grid"><view v-for="cell in environmentCells" :key="cell.key"><text class="env-value">{{ metricValue(environment?.reading?.[cell.key]) }}<text>{{ cell.unit }}</text></text><text class="env-label">{{ cell.label }}</text></view></view>
+     <view class="env"><view v-for="cell in environmentCells" :key="cell.key"><text class="v serif">{{ metricValue(environment?.reading?.[cell.key]) }}<text class="u">{{ cell.unit }}</text></text><text class="ul">{{ cell.label }}</text></view></view>
      <text class="fineprint">{{ environment?.reading?.source === 'shadow' ? '平台影子值 · 可能不是该房间的实测值' : environment?.reading ? '设备观测 · 不代表全公司平均值' : '未取得有效读数' }}</text>
     </view>
-    <view class="panel energy">
-     <view class="panel-head"><text>电表累计示数</text></view>
-     <text class="sensor-name">{{ energy?.name || (energyLoading ? '正在读取电表' : '暂无计量点') }}</text>
-     <text v-if="Number.isFinite(energy?.reading?.epf)" class="energy-value">{{ metricValue(energy.reading.epf) }}<text>累计示数</text></text>
-     <text v-else class="fineprint">{{ energyLoading ? '正在读取累计示数…' : sectionErrors.energy || '该计量点暂无有效累计示数' }}</text>
-     <text v-if="energy?.reading" class="fineprint" :class="{ 'demo-note': energyStale(energy.reading) }">最近采样 · {{ fmtDateTime(energy.reading.readTime) }}{{ energyStale(energy.reading) ? ' · 数据未更新' : '' }}</text>
-     <text v-if="energy?.reading" class="fineprint">单台电表累计示数 · 不是当天耗电</text>
-     <text class="fineprint">上游目前采用临时模拟补数 · 非持续实测</text>
-     <button class="meter-link" @tap="openObservation('energy')">查看计量点原始历史 <uni-icons type="right" size="11" color="#567461" /></button>
+
+    <view class="blk">
+     <view class="k"><text>能耗统计</text><button class="more" @tap="openEnergy()">全部 <uni-icons type="right" size="10" color="#176b54" /></button></view>
+     <CompanyEnergyStrip v-if="energyStrip.length" ref="energyStripRef" :days="energyStrip" :selected="selectedStripDate" pull-enabled @select="openEnergy" @pull-open="openEnergy()" @reach-left="loadOlderEnergy" />
+     <text v-if="energyError" class="fineprint dim">逐日能耗暂不可用 · {{ energyError }}</text>
+     <text v-else-if="!energyStrip.length" class="fineprint">{{ energyLoading ? '正在读取逐日能耗…' : '暂无可统计的计量日' }}</text>
+     <view v-if="pieCards.length" class="pies">
+      <view v-for="card in pieCards" :key="card.key" class="pie">
+       <view class="pair"><image class="donut" :src="card.curImage" mode="aspectFit" /><image class="donut" :src="card.baseImage" mode="aspectFit" /></view>
+       <view class="pc"><text class="pt">{{ card.label }}</text><text class="pv">{{ card.pv }}</text><text class="pd">{{ card.pd }}</text></view>
+      </view>
+     </view>
+     <view v-if="legendItems.length" class="legend"><text v-for="(item, i) in legendItems" :key="item" class="legend-item"><text class="dot" :style="{ background: PIE_COLORS[i % PIE_COLORS.length] }" />{{ item }}</text><text class="legend-item">左环 = 今日</text></view>
     </view>
-    <button class="ledger" @tap="openObservation('alerts')"><view class="ledger-icon"><uni-icons type="notification" size="20" color="#a47b35" /></view><view class="ledger-copy"><text>安全事件台账</text><text>{{ alertsUnavailable ? '摘要暂不可用 · 可查看历史' : latestAlert ? fmtDateTime(latestAlert.occurredAt) + ' · ' + latestAlert.deviceName : alertsLoading ? '正在更新摘要 · 可查看历史' : '按类别和日期查看历史' }}</text></view><view class="ledger-count"><text>{{ snapshot?.alerts && !alertsUnavailable ? snapshot.alerts.total : '—' }}</text><text>本次记录</text></view><uni-icons type="right" size="12" color="#849386" /></button>
-    <text class="ledger-note">本次读取的历史台账，不表示当前仍在报警或已经恢复</text>
-    <view class="panel automation">
-     <view class="panel-head"><text>自动化安排</text><button class="text-action" @tap="tasksOpen = true">查看安排 <uni-icons type="right" size="10" color="#829386" /></button></view>
-     <view class="automation-counts"><text>{{ snapshot?.automation?.enabledPlans ?? '—' }}<text>个启用计划</text></text><text>{{ snapshot?.automation?.active ?? '—' }}<text>项正在执行</text></text></view>
-     <text v-if="!snapshot?.automation" class="fineprint">{{ automationLoading ? '正在更新任务安排' : '任务摘要暂不可用' }}</text>
-     <button v-for="task in snapshot?.automation?.upcoming || []" :key="task.id" class="automation-row" @tap="tasksOpen = true"><text>{{ task.label }}</text><text>{{ fmtDateTime(task.interval?.startsAt || task.phases[0]?.at) }}</text></button>
-     <text v-if="snapshot?.automation && !snapshot.automation.upcoming.length" class="fineprint">未来一周没有待执行安排</text>
-     <view v-if="snapshot?.automation?.latestResults?.length" class="recent-results"><text class="fineprint">最近结果</text><button v-for="task in snapshot.automation.latestResults" :key="task.id" class="automation-row" @tap="tasksOpen = true"><text>{{ task.label }}</text><text>{{ resultLabel(task.status) }}</text></button></view>
+
+    <view class="blk">
+     <view class="k"><text>安全台账</text><view class="lchips"><button v-for="chip in ledgerChips" :key="chip.key" :class="{ on: ledgerFilter === chip.key }" @tap="toggleLedger(chip.key)">{{ chip.label }}</button></view></view>
+     <text v-if="alertsUnavailable" class="sec-empty">{{ alertsLoading ? '正在更新摘要' : '摘要暂不可用 · 可查看历史' }}</text>
+     <template v-else>
+      <button v-for="record in alertRows" :key="(record.ledger || '') + ':' + (record.eventId || record.occurredAt)" class="row" @tap="openObservation('alerts')"><text class="d">{{ fmtMDT(record.occurredAt) }}</text><text class="t">{{ record.deviceName }}</text><text class="s">{{ subtypeLabel(record.subtype || record.ledger) }}</text></button>
+      <text v-if="!alertRows.length" class="sec-empty">{{ alertsLoading ? '正在更新摘要' : '该类型暂无记录' }}</text>
+      <button v-if="snapshot?.alerts" class="list-more" @tap="openObservation('alerts')">全部 {{ snapshot.alerts.total ?? alertRows.length }} 条 ›</button>
+     </template>
     </view>
-    <button class="office-gateway" :disabled="Boolean(openingAgent)" hover-class="gateway-pressed" @tap="openAgent('office')"><view class="office-mark"><uni-icons type="home" size="22" color="#5b795f" /></view><view><text>办公室 Agent</text><text>办公室设备 · 对话与自动化</text></view><uni-icons type="arrow-right" size="19" color="#7a8e7e" /></button>
+
+    <view class="blk">
+     <view class="k"><text>自动化安排</text><button class="more" @tap="tasksOpen = true">查看安排 <uni-icons type="right" size="10" color="#176b54" /></button></view>
+     <template v-if="snapshot?.automation">
+      <button v-for="task in automationRows.upcoming" :key="task.id" class="row" @tap="tasksOpen = true"><text class="d">{{ relDay(atTime(task)) }} {{ (atTime(task) || '').slice(11, 16) }}</text><text class="t">{{ task.label }}</text><text class="s">{{ task.repeat ? '周期' : '待执行' }}</text></button>
+      <button v-for="task in automationRows.done" :key="task.id" class="row" @tap="tasksOpen = true"><text class="d">{{ fmtMD(task.updatedAt) }}</text><text class="t">{{ task.label }}</text><text class="s" :class="{ ok: task.status === 'completed' }">{{ resultLabel(task.status) }}</text></button>
+      <text v-if="!automationRows.upcoming.length && !automationRows.done.length" class="sec-empty">未来一周没有待执行安排</text>
+     </template>
+     <text v-else class="sec-empty">{{ automationLoading ? '正在更新任务安排' : '任务摘要暂不可用' }}</text>
+    </view>
+
+    <button class="ask" :disabled="Boolean(openingAgent)" hover-class="pressed" @tap="openAgent('company')"><text>{{ openingAgent === 'company' ? '正在打开…' : '问公司 Agent' }}</text><text class="arr">→</text></button>
+    <button class="office" :disabled="Boolean(openingAgent)" hover-class="pressed" @tap="openAgent('office')"><text>办公室 Agent</text><text class="sub">办公室设备 · 对话与自动化 ›</text></button>
    </view>
   </scroll-view>
-  <view class="assistant-dock"><button class="assistant" :disabled="Boolean(openingAgent)" hover-class="assistant-pressed" @tap="openAgent('company')"><AgentAvatar /><view><text>{{ openingAgent === 'company' ? '正在打开…' : '公司 Agent' }}</text><text>查询设备、能耗与告警</text></view><uni-icons type="chatboxes" size="21" color="#d4e9d6" /></button></view>
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" @close="tasksOpen = false" @reference="referenceTask" />
   <DeviceSheet v-if="observationMounted" :open="Boolean(observationType)" :back="observationBack" tall compact-header :title="selectedEvent ? '安全台账详情' : observationTitle" @close="observationType = ''">
    <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" hover-class="event-back--pressed" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
@@ -52,71 +74,200 @@
    <scroll-view v-else class="observation-scroll" scroll-y enhanced :show-scrollbar="false"><ObservationCard v-if="observation" :observation="observation" source="company" inline-playback read-only /><text v-else class="sheet-empty">暂无可查看的数据</text></scroll-view>
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="Boolean(observationType)" @reference="referenceEvent" />
   </DeviceSheet>
+  <DeviceSheet v-if="energyMounted" :open="energyOpen" tall compact-header title="能耗统计" @close="energyOpen = false">
+   <CompanyEnergySheet :active="energyOpen" :focus-date="energyFocusDate" @open-meter-history="openMeterHistory" />
+  </DeviceSheet>
+  <DeviceSheet v-if="drawerMounted" :open="Boolean(drawerKind)" tall compact-header :title="drawerTitle" :meta="drawerDevices.length + ' 台 · 只读目录'" @close="drawerKind = ''">
+   <CompanyDeviceDrawer :devices="drawerDevices" :kind="drawerKind" />
+  </DeviceSheet>
  </view>
 </template>
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { getCompanyDashboard, getEnergyHistory } from '@/apis/agent'
+import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
+import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent } from './navigation.mjs'
-import { dashboardCounts, metricValue } from './dashboard-view.mjs'
-import { fmtDateTime, fmtShanghaiDateTime, energyStale } from './observation-view.mjs'
+import { metricValue } from './dashboard-view.mjs'
+import { shiftDate, shanghaiToday, unitOf, round2, comparePct, mergeStripDays, donutImage, compositionFromUsage, PIE_COLORS, STRIP_PAGE_DAYS } from './energy-daily-view.mjs'
 import TaskListSheet from './components/TaskListSheet.vue'
-import AgentAvatar from './components/AgentAvatar.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
 import ObservationCard from './components/ObservationCard.vue'
 import SafetyEventDetail from './components/SafetyEventDetail.vue'
 import SafetyHistoryList from './components/SafetyHistoryList.vue'
 import EnvironmentHistoryView from './components/EnvironmentHistoryView.vue'
 import MeterHistoryView from './components/MeterHistoryView.vue'
+import CompanyEnergyStrip from './components/CompanyEnergyStrip.vue'
+import CompanyEnergySheet from './components/CompanyEnergySheet.vue'
+import CompanyDeviceDrawer from './components/CompanyDeviceDrawer.vue'
+
+const KIND_CELLS = [
+ { kind: 'environment', label: '环境传感器' },
+ { kind: 'energy', label: '电表' },
+ { kind: 'safety', label: '消防安全' },
+ { kind: 'ac', label: '智慧空调' },
+ { kind: 'lighting', label: '照明' },
+ { kind: 'access', label: '门禁' },
+ { kind: 'video', label: '视频监控' }]
+const LEDGER_LABEL = { gas: '燃气', smoke: '烟感', water: '水浸', flooding: '水浸' }
+const ledgerChips = [{ key: 'gas', label: '燃气' }, { key: 'smoke', label: '烟感' }, { key: 'water', label: '水浸' }]
+const WEEKDAYS = '日一二三四五六'
 
 const selectedEvent = ref(null)
 const tasksOpen = ref(false)
 const snapshot = ref(null), loading = ref(false), error = ref(''), observationType = ref('')
-const energyLoading = ref(false)
+const energyLoading = ref(false), devicesLoading = ref(false)
 const alertsLoading = ref(false), automationLoading = ref(false), loadedSections = ref([]), sectionErrors = ref({})
-const tasksMounted = ref(false), observationMounted = ref(false)
+const tasksMounted = ref(false), observationMounted = ref(false), energyMounted = ref(false), drawerMounted = ref(false)
 watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync' })
 watch(observationType, type => { selectedEvent.value = null; if (type) observationMounted.value = true }, { flush: 'sync' })
-const counts = computed(() => dashboardCounts(snapshot.value))
+
+const dateLine = computed(() => {
+ const today = shanghaiToday()
+ return `${Number(today.slice(5, 7))}月${Number(today.slice(8))}日 · 周${WEEKDAYS[new Date(today + 'T00:00:00Z').getUTCDay()]}`
+})
+const userName = computed(() => {
+ const info = useUserStoreHook().getUserInfo || {}
+ return info.name || info.nickname || info.code || '同事'
+})
+
+/* 设备目录计数 + 单类设备抽屉 */
+const catalogDevices = ref([]), devicesLoaded = ref(false), devicesError = ref('')
+const drawerKind = ref('')
+const kindCounts = computed(() => {
+ const map = {}
+ for (const device of catalogDevices.value) map[device.kind] = (map[device.kind] || 0) + 1
+ return map
+})
+const drawerDevices = computed(() => catalogDevices.value.filter(d => d.kind === drawerKind.value))
+const drawerTitle = computed(() => KIND_CELLS.find(c => c.kind === drawerKind.value)?.label || '设备')
+watch(drawerKind, kind => { if (kind) drawerMounted.value = true }, { flush: 'sync' })
+function openKind(kind) { if (devicesLoaded.value) drawerKind.value = kind }
+
+/* 能耗统计：横滑日柱 + 拉环开面板 + 同期对比环 */
+const energyReport = ref(null), energyStrip = ref([]), energyError = ref('')
+const energyStripRef = ref(null), selectedStripDate = ref('')
+const energyOpen = ref(false), energyFocusDate = ref('')
+watch(energyOpen, open => { if (open) energyMounted.value = true }, { flush: 'sync' })
+const energyUnit = computed(() => unitOf(energyReport.value))
+const latestCompleteDay = computed(() => energyReport.value?.latestCompleteDay || '')
+function mergeDailyReport(next) {
+ energyReport.value = next
+ energyStrip.value = mergeStripDays(energyStrip.value, next.days || [])
+}
+async function loadOlderEnergy(firstDate) {
+ if (!firstDate) return
+ const current = requestId
+ try {
+  const next = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS, end: shiftDate(firstDate, -1) })
+  if (current !== requestId) return // 已被刷新/换身份作废，不合并旧报告
+  const before = energyStrip.value.length
+  mergeDailyReport(next)
+  const added = energyStrip.value.length - before
+  if (added) energyStripRef.value?.didPrepend(added)
+ } catch { /* 旧窗口读取失败不破坏当前条带 */ }
+}
+function openEnergy(date) {
+ energyFocusDate.value = date || latestCompleteDay.value || ''
+ if (date) selectedStripDate.value = date
+ energyOpen.value = true
+}
+function openMeterHistory() { energyOpen.value = false; openObservation('energy') }
+const meterNameOf = id => energyReport.value?.meters?.find(m => m.id === id)?.name || id
+const pieCards = computed(() => {
+ const comparison = energyReport.value?.comparison
+ if (!comparison?.currentDay) return []
+ const unit = energyUnit.value
+ return [['previousDay', '今日至今 vs 昨日同期'], ['lastWeekSameDay', '今日至今 vs 上周同日同期']].map(([key, label]) => {
+  const base = comparison[key]
+  const current = compositionFromUsage(comparison.currentDay.meterUsage, meterNameOf)
+  const pct = comparePct(comparison.currentDay.usage, base?.usage)
+  const fmt = v => typeof v === 'number' ? String(round2(v)) : '—'
+  return { key, label,
+   curImage: donutImage(current.map(i => i.value)),
+   baseImage: donutImage(compositionFromUsage(base?.meterUsage, meterNameOf).map(i => i.value)),
+   pv: `${fmt(comparison.currentDay.usage)} vs ${fmt(base?.usage)}${unit ? ' ' + unit : ''}`,
+   pd: pct == null ? '—' : (pct >= 0 ? '+' : '') + pct + '%',
+   floors: current.map(i => i.label) }
+ })
+})
+const legendItems = computed(() => pieCards.value[0]?.floors || [])
+
+/* 环境 / 台账 / 自动化 */
 const environment = computed(() => snapshot.value?.environment?.find(row => row.reading) || snapshot.value?.environment?.[0])
-const energy = computed(() => snapshot.value?.energy?.[0])
-const alertsUnavailable = computed(() => Boolean(sectionErrors.value.alerts) || snapshot.value?.errors?.some(row => row.area === 'alerts'))
-const latestAlert = computed(() => snapshot.value?.alerts?.records[0])
-const clock = computed(() => fmtDateTime(snapshot.value?.observedAt).slice(5))
-const deviceCells = [{ kind: 'environment', label: '环境', icon: 'cloud' }, { kind: 'energy', label: '计量', icon: 'map' }, { kind: 'safety', label: '安全', icon: 'notification' }]
 const environmentCells = [{ key: 'temp', label: '温度', unit: '°C' }, { key: 'humidity', label: '湿度', unit: '%' }, { key: 'pm25', label: 'PM2.5', unit: '' }]
+const alertsUnavailable = computed(() => Boolean(sectionErrors.value.alerts) || snapshot.value?.errors?.some(row => row.area === 'alerts'))
+const ledgerFilter = ref('')
+const alertRows = computed(() => {
+ const records = snapshot.value?.alerts?.records || []
+ const filtered = ledgerFilter.value ? records.filter(r => r.ledger === ledgerFilter.value || (ledgerFilter.value === 'water' && r.ledger === 'flooding')) : records
+ return filtered.slice(0, 3)
+})
+function toggleLedger(key) { ledgerFilter.value = ledgerFilter.value === key ? '' : key }
+function subtypeLabel(value) { return LEDGER_LABEL[value] || '' }
+const automationRows = computed(() => ({
+ upcoming: (snapshot.value?.automation?.upcoming || []).slice(0, 2),
+ done: (snapshot.value?.automation?.latestResults || []).slice(0, 1)
+}))
+const atTime = task => task?.interval?.startsAt ?? task?.phases?.[0]?.at
+const fmtMD = iso => iso ? iso.slice(5, 10) : ''
+const fmtMDT = iso => iso ? iso.slice(5, 16).replace('T', ' ') : ''
+function relDay(iso) {
+ const d = iso?.slice(0, 10)
+ if (!d) return ''
+ const today = shanghaiToday()
+ if (d === today) return '今天'
+ if (d === shiftDate(today, 1)) return '明天'
+ const diff = Date.parse(d + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')
+ if (diff > 0 && diff <= 6 * 864e5) return `周${WEEKDAYS[new Date(d + 'T00:00:00Z').getUTCDay()]}`
+ return fmtMD(iso)
+}
 const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '计量点原始历史', alerts: '安全事件台账' })[observationType.value] || '')
 const observation = computed(() => {
  if (!snapshot.value || !observationType.value || (observationType.value === 'alerts' && alertsUnavailable.value)) return null
  const type = observationType.value
  return { observedAt: snapshot.value[type + 'ObservedAt'], blocks: [type === 'alerts' ? { type, ...snapshot.value.alerts } : { type, devices: snapshot.value[type] || [] }] }
 })
+
+function resetForScope() {
+ snapshot.value = null; loadedSections.value = []; observationType.value = ''
+ catalogDevices.value = []; devicesLoaded.value = false; devicesError.value = ''
+ energyReport.value = null; energyStrip.value = []; selectedStripDate.value = ''
+ energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
+}
+function allLoaded() { loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false; devicesLoading.value = false }
+
 let requestId = 0, scope = '', visible = false
 async function load() {
  const current = ++requestId
- loading.value = true; energyLoading.value = true; alertsLoading.value = true; automationLoading.value = true; error.value = ''; sectionErrors.value = {}
+ loading.value = true; energyLoading.value = true; alertsLoading.value = true; automationLoading.value = true; devicesLoading.value = true; error.value = ''; sectionErrors.value = {}
  try {
   await waitForAgentSession()
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
-  if (nextScope !== scope) { snapshot.value = null; loadedSections.value = []; observationType.value = ''; scope = nextScope }
-  await Promise.allSettled(['environment', 'energy', 'alerts', 'automation'].map(async section => {
+  if (nextScope !== scope) { resetForScope(); scope = nextScope }
+  await Promise.allSettled(['environment', 'alerts', 'automation', 'devices', 'energyDaily'].map(async section => {
    const active = () => current === requestId && visible && getAgentStorageScope() === nextScope
    try {
-    let result
-    if (section === 'energy') {
-     const directory = await getEnergyHistory()
+    if (section === 'devices') {
+     const result = await getCompanyDevices()
      if (!active()) return
-     const meters = directory.meters || [], meter = meters[0]
-     const day = fmtShanghaiDateTime(new Date().toISOString()).slice(0, 10)
-     const report = meter ? await getEnergyHistory({ equipmentId: meter.id, from: day + 'T00:00:00+08:00', to: day + 'T23:59:59.999+08:00' }) : null
-     result = { source: 'company', observedAt: report?.observedAt || directory.observedAt,
-      devices: meters.map(item => ({ ...item, kind: 'energy' })),
-      energy: meter ? [{ name: meter.name, deviceId: meter.id, reading: report?.latestSample ? { ...report.latestSample.values, readTime: report.latestSample.readTime } : null }] : [], errors: [] }
-    } else result = await getCompanyDashboard(section)
+     catalogDevices.value = result.devices || []
+     devicesLoaded.value = true; devicesError.value = ''
+     return
+    }
+    if (section === 'energyDaily') {
+     const result = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS })
+     if (!active()) return
+     energyStrip.value = []
+     mergeDailyReport(result)
+     selectedStripDate.value = result.latestCompleteDay || result.days?.at(-1)?.date || ''
+     energyError.value = ''
+     return
+    }
+    const result = await getCompanyDashboard(section)
     if (!active()) return
     const previous = snapshot.value || { devices: [], errors: [] }
     const kind = section === 'alerts' ? 'safety' : section
@@ -127,21 +278,25 @@ async function load() {
     if (section !== 'automation' && !loadedSections.value.includes(section)) loadedSections.value.push(section)
    } catch (cause) {
     if (!active()) return
-    sectionErrors.value[section] = cause.message || '暂不可用'
-    if (snapshot.value) snapshot.value = { ...snapshot.value, errors: [...snapshot.value.errors.filter(row => row.area !== section), { area: section, message: sectionErrors.value[section] }] }
-    if (cause.data?.code === 'UNAUTHORIZED') { snapshot.value = null; loadedSections.value = []; error.value = cause.message; ++requestId; loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false }
+    if (cause.data?.code === 'UNAUTHORIZED') { resetForScope(); ++requestId; error.value = cause.message; allLoaded(); return }
+    if (section === 'devices') devicesError.value = '设备目录暂不可用'
+    else if (section === 'energyDaily') energyError.value = cause.message || '暂不可用'
+    else {
+     sectionErrors.value[section] = cause.message || '暂不可用'
+     if (snapshot.value) snapshot.value = { ...snapshot.value, errors: [...snapshot.value.errors.filter(row => row.area !== section), { area: section, message: sectionErrors.value[section] }] }
+    }
    } finally {
-    if (current === requestId) ({ environment: loading, energy: energyLoading, alerts: alertsLoading, automation: automationLoading })[section].value = false
+    if (current === requestId) ({ environment: loading, alerts: alertsLoading, automation: automationLoading, devices: devicesLoading, energyDaily: energyLoading })[section].value = false
    }
   }))
   if (current === requestId && !snapshot.value) error.value = '公司数据暂不可用，请重试'
  } catch (cause) {
   if (current === requestId && visible) {
-   ++requestId; loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false
-   snapshot.value = null; loadedSections.value = []; observationType.value = ''
+   ++requestId; allLoaded()
+   resetForScope()
    error.value = cause.message === 'request:fail' ? '公司数据暂不可用，请检查网络后重试' : cause.message || '公司数据暂不可用'
   }
- } finally { if (current === requestId) { loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false } }
+ } finally { if (current === requestId) allLoaded() }
 }
 function openObservation(type) { if (['alerts', 'environment', 'energy'].includes(type) || snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
@@ -160,30 +315,75 @@ function openAgent(source, reference, environmentWindow, energyWindow) {
 function back() { backToParent('/pages/index/index') }
 onShow(() => {
  visible = true; openingAgent.value = ''
- try { if (scope && scope !== getAgentStorageScope()) { snapshot.value = null; loadedSections.value = []; observationType.value = '' } }
- catch { snapshot.value = null; loadedSections.value = []; observationType.value = '' }
+ try { if (scope && scope !== getAgentStorageScope()) resetForScope() }
+ catch { resetForScope() }
  load()
 })
-function hide() { visible = false; ++requestId; loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false }
+function hide() { visible = false; ++requestId; allLoaded() }
 onHide(hide); onUnload(hide)
 </script>
 <style scoped>
 .event-host { flex:1;min-height:0;display:flex;flex-direction:column; }.event-back { display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0; }.event-back--pressed { opacity:.65; }
-.automation-counts { display:flex; gap:28px; margin:8px 0 12px; }.automation-counts > text { font-size:25px; font-weight:600; }.automation-counts > text > text { display:block; font-size:11px; font-weight:400; color:#6e8375; margin-top:2px; }.automation-row { width:100%; min-height:42px; display:flex; align-items:center; justify-content:space-between; gap:14px; text-align:left; }.automation-row > text:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.automation-row > text:last-child { flex-shrink:0; font-size:11px; color:#718677; }.recent-results { margin-top:10px; padding-top:10px; border-top:1px solid #dee6dd; }
 
 view,text,input { font-size:inherit; line-height:inherit; }
 .dashboard { height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden; background:#eef2ee; color:#293f31; font-size:12px; line-height:1.45; }
 button { margin:0; padding:0; background:transparent; font-size:inherit; line-height:inherit; } button::after { border:0; }
+.serif { font-family:Georgia,"Songti SC",serif; }
 
-.dashboard-scroll { flex:1; height:0; min-height:0; }.content { padding:15px 18px calc(115px + env(safe-area-inset-bottom)); }
-.headline { display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; }.eyebrow { display:block; color:#819082; font-size:8px; letter-spacing:1.8px; }.title { display:block; margin-top:5px; font-size:22px; font-weight:650; letter-spacing:-.6px; }.refresh { width:38px; height:38px; display:flex; align-items:center; justify-content:center; border:1px solid #d9e2d7; border-radius:50%; background:linear-gradient(#f9fbf7,#e8eee5); box-shadow:inset 0 1px 0 #fff; }.refresh[disabled] { opacity:.6; }
-.estate { position:relative; height:176px; padding:17px; box-sizing:border-box; overflow:hidden; border-radius:15px; background:radial-gradient(ellipse at 80% 15%,#4d7156,#224c3b 54%,#123729); color:#e4efdc; box-shadow:inset 0 1px 0 #8aa18480,inset 0 -1px 0 #102e25,0 10px 22px -14px #193d2b99; }.estate-grid { position:absolute; inset:0; opacity:.14; background-image:linear-gradient(#b2c6a520 1px,transparent 1px),linear-gradient(90deg,#b2c6a520 1px,transparent 1px); background-size:22px 22px; }.campus { position:absolute; width:210px; height:157px; right:-12px; top:13px; }.estate-top { position:relative; display:flex; align-items:center; gap:6px; color:#b9cfb7; font-size:10px; }.scope-dot { width:4px; height:4px; border-radius:50%; background:#b7ca94; }.estate-number { display:block; position:relative; margin-top:19px; font-size:47px; font-weight:450; line-height:1.1; letter-spacing:-2px; font-variant-numeric:tabular-nums; }.estate-unit { margin-left:5px; font-size:11px; letter-spacing:0; color:#b3c6aa; }.estate-label { display:block; position:relative; margin-top:5px; color:#b3c6aa; font-size:10px; }.estate-foot { position:absolute; left:17px; right:17px; bottom:12px; display:flex; justify-content:space-between; color:#93ad98; font-size:8px; }
-.device-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:15px 0; padding:2px 0; }.device-cell { padding-left:15px; border-left:1px solid #d8e1d7; }.device-cell:first-child { padding-left:3px; border:0; }.device-label { display:flex; align-items:center; gap:5px; color:#7a8b7d; font-size:10px; }.device-value { display:block; margin-top:5px; font-size:23px; line-height:1.2; font-weight:550; font-variant-numeric:tabular-nums; }.device-value text { margin-left:4px; color:#8b988b; font-size:9px; }
-.panel { margin-top:12px; padding:14px 15px; border-radius:12px; background:linear-gradient(145deg,#fcfdf8,#f3f7ef); border:1px solid #dce5d8; box-shadow:inset 0 1px 0 #fff,0 3px 10px -8px #223d2a44; }.panel-head { display:flex; align-items:center; justify-content:space-between; gap:7px; color:#4c6753; font-size:11px; font-weight:650; }.text-action { display:flex; gap:3px; align-items:center; color:#829386; font-size:9px; min-height:24px; }.sensor-name { display:block; margin-top:6px; color:#91a08f; font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.environment-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; margin:11px 0 8px; }.env-value { display:block; color:#31503a; font-size:24px; letter-spacing:-.8px; font-variant-numeric:tabular-nums; }.env-value text { font-size:11px; margin-left:2px; }.env-label { display:block; margin-top:2px; color:#879782; font-size:9px; }.fineprint { display:block; font-size:9px; line-height:1.5; color:#869780; }
-.energy-title { display:flex; align-items:center; gap:7px; }.demo-tag { padding:2px 5px; border:1px solid #e4d9be; border-radius:4px; background:#f4eddc; color:#9a7b40; font-size:8px; font-weight:500; }.mode-switch { display:flex; padding:2px; border-radius:6px; background:#e9efe4; }.mode-switch button { padding:4px 7px; border-radius:4px; color:#8a9987; font-size:9px; }.mode-switch .selected { background:#fcfdf8; color:#477155; box-shadow:0 1px 3px #23422c17; }.energy-top { display:flex; align-items:center; justify-content:space-between; margin-top:9px; }.energy-value { display:block; margin:7px 0; font-size:31px; font-weight:500; letter-spacing:-1px; font-variant-numeric:tabular-nums; }.energy-value text { font-size:11px; color:#809477; margin-left:7px; letter-spacing:0; }.peak { text-align:right; color:#65805c; font-size:10px; }.peak text { display:block; }.peak text:last-child { font-size:8px; color:#8a9a81; margin-top:4px; }.chart { display:block; width:100%; height:77px; }.chart-axis { display:flex; justify-content:space-between; color:#8fa087; font-size:8px; margin:3px 0 7px; }.demo-note { color:#a08a58; }.meter-link { display:flex; align-items:center; justify-content:space-between; width:100%; margin-top:15px; padding-top:11px; border-top:1px solid #e1e8dc; text-align:left; color:#567461; font-size:10px; }
-.ledger { display:flex; align-items:center; gap:10px; width:100%; margin-top:13px; padding:12px; box-sizing:border-box; border:1px solid #e2dfca; border-radius:11px; background:linear-gradient(#f8f7ee,#f2f2e5); text-align:left; }.ledger-icon { width:31px; height:31px; flex-shrink:0; border:1px solid #ddd1ae; border-radius:50%; background:radial-gradient(at 35% 25%,#fffbef,#eee5c8); display:flex; align-items:center; justify-content:center; }.ledger-copy { flex:1; min-width:0; }.ledger-copy text { display:block; font-size:11px; font-weight:600; }.ledger-copy text:last-child { margin-top:4px; color:#94917c; font-size:8px; font-weight:400; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }.ledger-count { text-align:right; flex-shrink:0; font-size:19px; color:#8a713f; font-variant-numeric:tabular-nums; }.ledger-count text { display:block; }.ledger-count text:last-child { font-size:8px; color:#a09b85; }.ledger-note { display:block; margin:5px 4px 14px; font-size:8px; color:#98a08e; }
-.office-gateway { width:100%; display:flex; align-items:center; gap:11px; text-align:left; padding:12px 1px; border-top:1px solid #d8e1d5; transition:transform 140ms cubic-bezier(.23,1,.32,1); }.office-mark { width:36px; height:36px; flex-shrink:0; background:radial-gradient(at 35% 25%,#fcfdf5,#dce5d5); border:1px solid #d3decf; border-radius:10px; display:flex; align-items:center; justify-content:center; }.office-gateway>view:nth-child(2) { flex:1; min-width:0; }.office-gateway text { display:block; font-size:12px; font-weight:600; }.office-gateway text:last-child { margin-top:3px; color:#8b9c86; font-size:9px; font-weight:400; }
-.assistant-dock { position:absolute; bottom:0; left:0; right:0; padding:25px 18px calc(12px + env(safe-area-inset-bottom)); background:linear-gradient(#eef2ee00,#eef2ee 35%); pointer-events:none; }.assistant { pointer-events:auto; display:flex; align-items:center; gap:10px; width:100%; padding:12px 15px; box-sizing:border-box; border-radius:14px; background:linear-gradient(150deg,#2f8163,#17563d); color:#edf3df; border:1px solid #215c43; box-shadow:inset 0 1px 0 #a7c5aa70,inset 0 -1px 0 #113d2d,0 9px 20px -10px #17583e80; transition:transform 140ms cubic-bezier(.23,1,.32,1); }.assistant>view:nth-child(2) { flex:1; text-align:left; }.assistant text { display:block; font-size:13px; font-weight:650; }.assistant text:last-child { font-size:9px; color:#b5cbb0; font-weight:400; margin-top:2px; }.assistant-pressed,.gateway-pressed { transform:scale(.98); }
-.notice { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; color:#9a784a; font-size:10px; }.notice button { min-height:30px; color:#8b693c; text-decoration:underline; flex-shrink:0; }.observation-scroll { flex:1; height:0; min-height:0; padding:5px 18px 25px; box-sizing:border-box; }.sheet-empty { display:block; margin:45px 0; text-align:center; color:#839189; font-size:13px; }.spinning { animation:spin 900ms linear infinite; }@keyframes spin { to { transform:rotate(360deg); } }
-@media(prefers-reduced-motion:reduce) { .spinning { animation:none; }.assistant,.office-gateway { transition:none; } }
+.dashboard-scroll { flex:1; height:0; min-height:0; }.content { padding:15px 18px calc(40px + env(safe-area-inset-bottom)); }
+.headline { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
+.date { display:block; font-size:10.5px; letter-spacing:2.5px; color:#93a08c; }
+.hello { display:block; margin-top:9px; font-size:26px; font-weight:600; letter-spacing:-.5px; line-height:1.3; }
+.refresh { width:38px; height:38px; display:flex; align-items:center; justify-content:center; border:1px solid #d9e2d7; border-radius:50%; background:linear-gradient(#f9fbf7,#e8eee5); box-shadow:inset 0 1px 0 #fff; flex-shrink:0; margin-top:4px; }.refresh[disabled] { opacity:.6; }
+
+.counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.crow { display:block; padding:11px 0 9px; border-bottom:1px solid #ece8d9; text-align:left; }
+.cc { display:block; font-family:Georgia,"Songti SC",serif; font-size:23px; color:#2e4a38; font-variant-numeric:tabular-nums; letter-spacing:-.5px; }
+.cn { display:block; margin-top:2px; font-size:10px; color:#839287; }
+
+.blk { margin-top:26px; }
+.k { display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:10px; letter-spacing:2px; color:#94a08b; padding-bottom:9px; border-bottom:1px solid #dce4da; }
+.more { display:flex; align-items:center; gap:3px; color:#176b54; font-size:10px; letter-spacing:0; min-height:24px; }
+.sensor-name { display:block; margin-top:8px; color:#91a08f; font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fineprint { display:block; font-size:9px; line-height:1.5; color:#869780; margin-top:8px; }
+.fineprint.dim { color:#a08a58; }
+
+.env { display:flex; gap:26px; margin-top:14px; }
+.env .v { font-size:30px; letter-spacing:-.5px; font-variant-numeric:tabular-nums; color:#2e4a38; }
+.env .u { font-size:11px; color:#8a947f; margin-left:2px; }
+.env .ul { display:block; margin-top:3px; font-size:9.5px; color:#97917e; }
+
+.pies { display:flex; gap:10px; margin-top:16px; }
+.pie { flex:1; min-width:0; display:flex; align-items:center; gap:10px; }
+.pair { display:flex; gap:5px; flex-shrink:0; }
+.donut { width:46px; height:46px; flex-shrink:0; }
+.pc { min-width:0; }
+.pt { display:block; font-size:9.5px; color:#97917e; line-height:1.5; }
+.pv { display:block; font-size:15px; font-weight:600; color:#2e4a38; font-variant-numeric:tabular-nums; margin-top:2px; }
+.pd { display:block; font-size:9.5px; color:#a47b35; margin-top:2px; }
+.legend { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:10px; }
+.legend-item { display:flex; align-items:center; font-size:9px; color:#8fa08c; }
+.dot { display:inline-block; width:6px; height:6px; border-radius:2px; margin-right:4px; }
+
+.row { display:flex; align-items:baseline; gap:10px; width:100%; padding:9px 0; border-bottom:1px solid #ece8d9; text-align:left; font-size:12px; color:#3c4a3e; }
+.row .d { font-size:10.5px; color:#97917e; font-variant-numeric:tabular-nums; flex-shrink:0; width:78px; }
+.row .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.row .s { flex-shrink:0; font-size:9.5px; color:#97917e; }
+.row .s.ok { color:#176b54; }
+.sec-empty { display:block; padding:14px 0; font-size:11px; color:#a0ab95; }
+.lchips { display:flex; gap:4px; }
+.lchips button { font-size:9.5px; letter-spacing:0; padding:3px 8px; border-radius:8px; color:#809181; background:#edf3e8; }
+.lchips button.on { background:#176b54; color:#fff; }
+.list-more { display:block; width:100%; padding:10px 0 2px; text-align:left; font-size:10.5px; color:#176b54; }
+
+.ask { display:flex; align-items:center; gap:8px; width:100%; margin-top:28px; padding:15px 0; border-top:1px solid #293f31; font-size:13.5px; font-weight:600; text-align:left; }
+.ask .arr { margin-left:auto; font-weight:400; }
+.office { display:flex; justify-content:space-between; align-items:center; width:100%; margin-top:8px; padding:10px 0; font-size:11.5px; font-weight:600; color:#41564a; text-align:left; }
+.office .sub { font-weight:400; color:#98a49b; font-size:9.5px; }
+.pressed { opacity:.65; }
+
+.notice { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; color:#9a784a; font-size:10px; }.notice button { min-height:30px; color:#8b693c; text-decoration:underline; flex-shrink:0; }
+.observation-scroll { flex:1; height:0; min-height:0; padding:5px 18px 25px; box-sizing:border-box; }.sheet-empty { display:block; margin:45px 0; text-align:center; color:#839189; font-size:13px; }
+.spinning { animation:spin 900ms linear infinite; }@keyframes spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .spinning { animation:none; } }
 </style>
