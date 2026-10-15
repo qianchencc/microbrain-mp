@@ -24,10 +24,10 @@
 
   <view class="actions">
    <button hover-class="pressed" @tap="openSheet('evidence')">采样依据</button>
-   <button hover-class="pressed" @tap="openSheet('history')">原始采样</button>
+   <button hover-class="pressed" @tap="openSheet('history')">电表统计</button>
   </view>
 
-  <DeviceSheet v-if="sheetMounted" :open="sheetOpen" :title="pane === 'evidence' ? '采样依据' : '原始计量采样'" :subtitle="report.meter.name" tall @close="sheetOpen = false">
+  <DeviceSheet v-if="sheetMounted" :open="sheetOpen" :title="pane === 'evidence' ? '采样依据' : '电表统计'" :subtitle="report.meter.name" tall @close="sheetOpen = false">
    <scroll-view v-if="pane === 'evidence'" class="evidence-scroll" scroll-y enhanced :show-scrollbar="false">
     <view class="evidence-content">
      <view class="evidence-tabs"><button v-for="(week, index) in columns" :key="week.label + index" class="evidence-tab" :class="{ active: index === selectedIndex }" hover-class="mcol--pressed" @tap="selectedIndex = index">{{ week.current ? '本周' : week.label }}</button></view>
