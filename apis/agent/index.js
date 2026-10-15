@@ -1,5 +1,5 @@
 import globalConfig from '@/config'
-import { getAgentHeaders } from '@/utils/agent-session'
+import { getAgentHeaders, getAgentStorageScope } from '@/utils/agent-session'
 import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
 import { transportError, createTerminalTracker } from './stream-errors.mjs'
@@ -53,6 +53,39 @@ export const getCompanyEnergyDaily = (query = {}) => request('/agent/company-ene
 // 计量范围×时间统计（meter-report）：scopeLevel all|floor|location|nameMatch + floor/meterId/text，from/to 带时区，grain 可选。
 export const getCompanyMeterReport = (query = {}) => request('/agent/company-meter-report?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET', undefined, 90000)
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
+export const getReportArtifact = (reportId, source = 'company') => request(`/agent/reports/${encodeURIComponent(reportId)}?source=${encodeURIComponent(source)}`, 'GET')
+export function downloadReportArtifact(reportId, source = 'company') {
+ let scope = ''
+ try { scope = getAgentStorageScope() } catch (error) { return Promise.reject(error) }
+ return new Promise((resolve, reject) => {
+  if (typeof uni.openDocument !== 'function') {
+   reject(new Error('当前环境不支持打开 PDF，请在微信小程序中查看'))
+   return
+  }
+  uni.downloadFile({
+   url: globalConfig.agentUrl + `/agent/reports/${encodeURIComponent(reportId)}/download?source=${encodeURIComponent(source)}`,
+   header: getAgentHeaders(),
+   success: response => {
+    const status = response.statusCode
+    if (status !== 200 || !response.tempFilePath) {
+     const error = new Error(status === 401 ? '登录状态已失效，请重新进入'
+      : status === 404 || status === 403 ? '报告不存在或授权已变化' : '下载失败，请重试')
+     error.status = status
+     error.data = { status }
+     reject(error)
+     return
+    }
+    let currentScope = ''
+    try { currentScope = getAgentStorageScope() } catch (error) { reject(error); return }
+    if (currentScope !== scope) { const error = new Error('登录身份已变化，请重新打开报告'); error.data = { code: 'SCOPE_CHANGED' }; reject(error); return }
+    uni.openDocument({ filePath: response.tempFilePath, fileType: 'pdf', showMenu: true,
+     success: () => resolve(response.tempFilePath),
+     fail: cause => reject(new Error(cause?.errMsg || '打开 PDF 失败')) })
+   },
+   fail: cause => reject(new Error(cause?.errMsg || '下载失败，请重试')),
+  })
+ })
+}
 export const restoreConversation = (source = 'office') => request(withConversationSource('/agent/conversations/current', source), 'GET')
 export const clearConversation = (id, source = 'office') => request(withConversationSource(`/agent/conversations/${id}`, source), 'DELETE')
 export const discardTurn = (conversationId, turnId, source = 'office') => request(withConversationSource(`/agent/conversations/${conversationId}/turns/${turnId}`, source), 'DELETE')

@@ -21,6 +21,12 @@
      <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><text class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
      <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" inline-playback read-only />
      <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
+     <button v-if="phase.report" class="phase-report" :aria-label="`打开检查点报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
+      <uni-icons type="compose" size="13" color="#176b54" />
+      <text class="phase-report-title">{{ phase.report.title || '检查点报告' }}</text>
+      <text v-if="phase.report.status === 'partial'" class="phase-report-tag">部分完成</text>
+      <uni-icons type="right" size="12" color="#99a59d" />
+     </button>
      <button v-if="phase.devices.length > 1" class="phase-devices" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
       <view class="phase-avatars"><view v-for="device in phase.devices.slice(0, 5)" :key="device.id" class="phase-avatar"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="12" color="#7c8d82" /></view></view>
       <text class="phase-device-count">{{ phase.devices.length }} 台设备</text><uni-icons :type="expandedPhases.includes(phase.id) ? 'down' : 'right'" size="13" color="#839189" />
@@ -61,7 +67,7 @@ import { creatorVariant } from '../region-device-view.mjs'
 import ObservationCard from './ObservationCard.vue'
 
 const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, initialTask: Object, snapshotScope: String, source: { type: String, default: 'office' } })
-const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'plan-return', 'reference', 'dismiss'])
+const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
@@ -303,6 +309,10 @@ button::after { border:0; }
 .phase-status.tone-active { color:#176b54; }
 .phase-status.tone-off { color:#8a8f86; }
 .phase-reason { display:block; margin-top:5px; color:#a27128; font-size:11px; }
+.phase-report { width:100%; min-height:44px; margin:9px 0 0; padding:6px 10px; border:1px solid #dbe7de; border-radius:8px; display:flex; align-items:center; gap:7px; background:linear-gradient(#fdfefd,#f4f8f4); text-align:left; }
+.phase-report:active { background:#eef4ef; }
+.phase-report-title { flex:1; min-width:0; color:#2f5240; font-size:12px; font-weight:600; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.phase-report-tag { flex-shrink:0; color:#a27128; font-size:10px; }
 .phase-devices { width:100%; min-height:38px; margin:9px 0 0; padding:5px 9px; border:1px solid #e0e9e1; border-radius:8px; display:flex; align-items:center; gap:8px; background:#f9fbf9; text-align:left; }
 .phase-avatars { display:flex; align-items:center; flex-shrink:0; padding-left:5px; }
 .phase-avatar { width:22px; height:22px; margin-left:-5px; border:1px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#edf2ee; }

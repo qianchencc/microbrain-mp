@@ -10,6 +10,7 @@ export function requestJson(url, method, data, header, timeout) {
     if (response.statusCode >= 200 && response.statusCode < 300) resolve(response.data)
     else {
      const error = new Error(response.data?.message || '请求处理失败')
+     error.status = response.statusCode
      error.data = response.data
      reject(error)
     }

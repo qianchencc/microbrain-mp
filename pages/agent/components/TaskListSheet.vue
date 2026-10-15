@@ -1,7 +1,7 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="sheetTitle" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="navigation.title || sheetTitle" @close="closeSheet">
   <template #header-left>
-   <button v-if="selectedTask || selectedPlan" class="back-button" aria-label="返回安排列表" @tap="backToList"><uni-icons type="back" size="15" color="#63776a" /></button>
+   <button v-if="selectedTask || selectedPlan" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
   </template>
   <template #header-right>
    <button v-if="!selectedTask && !selectedPlan" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
@@ -61,7 +61,7 @@
    </view>
 
    <view v-if="selectedTask" class="detail-pane">
-    <TaskDetailContent class="task-content-host" :active="open" :task-id="selectedTaskId" :initial-task="selectedTask" :snapshot-scope="loadedScope" :source="source" @reference="emit('reference', $event)" @cancelled="onTaskCancelled" @dismiss="backToList" />
+    <TaskResultContent ref="content" class="task-content-host" :active="open" :task-id="selectedTaskId" :initial-task="selectedTask" :snapshot-scope="loadedScope" :source="source" @reference="emit('reference', $event)" @cancelled="onTaskCancelled" @dismiss="backToList" @navigation="navigation = $event" />
    </view>
   </view>
  </DeviceSheet>
@@ -75,7 +75,7 @@ import { getTaskPlan, cancelTaskPlan, listAgentTasks, listTaskPlans } from '@/ap
 import { repeatText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 import SlidingSegments from './SlidingSegments.vue'
-import TaskDetailContent from './TaskDetailContent.vue'
+import TaskResultContent from './TaskResultContent.vue'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
 const emit = defineEmits(['close', 'reference'])
@@ -90,14 +90,14 @@ const loading = ref(false), error = ref(''), planLoading = ref(false)
 const listLoaded = ref(false)
 const taskRows = new Map()
 let plansLoaded = false
-const selectedTask = ref(null), selectedPlan = ref(null), returnPlan = ref(null)
+const selectedTask = ref(null), selectedPlan = ref(null), returnPlan = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
 const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value ? '周期计划' : '我的安排')
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : '周期安排')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : '暂无周期计划')
 let requestId = 0, planRequest = 0, loadedScope = '', pageVisible = true
-function resetIdentity() { tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded = false; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null }
+function resetIdentity() { tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded = false; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false } }
 onHide(() => { pageVisible = false; ++requestId; ++planRequest; loading.value = false; planLoading.value = false })
 onShow(() => { pageVisible = true; if (props.open) void load() })
 
@@ -217,6 +217,7 @@ function openLatestReport() {
 }
 function backToList() {
  ++planRequest; planLoading.value = false
+ navigation.value = { title: '', canBack: false }
  if (returnPlan.value) {
   selectedPlan.value = returnPlan.value
   returnPlan.value = null
@@ -226,16 +227,19 @@ function backToList() {
  selectedTask.value = null
  selectedPlan.value = null
 }
-function nativeBack() { if (selectedTask.value || selectedPlan.value) backToList(); else closeSheet() }
+function goBack() { if (content.value?.back()) return; backToList() }
+function nativeBack() { if (content.value?.back()) return; if (selectedTask.value || selectedPlan.value) backToList(); else closeSheet() }
 function closeSheet() {
  ++planRequest; planLoading.value = false
  selectedTask.value = null
  selectedPlan.value = null
  returnPlan.value = null
+ navigation.value = { title: '', canBack: false }
  emit('close')
 }
 function onTaskCancelled() {
  returnPlan.value = null; selectedPlan.value = null; selectedTask.value = null
+ navigation.value = { title: '', canBack: false }
  void load()
 }
 async function cancelWholePlan(scopeType) {
@@ -261,7 +265,7 @@ watch(() => props.source, () => {
 })
 watch(() => [props.open, props.source, view.value], ([isOpen, source], previous) => {
  if (isOpen) void load(!previous || !previous[0] || previous[1] !== source)
- else { ++requestId; loading.value = false }
+ else { ++requestId; loading.value = false; navigation.value = { title: '', canBack: false } }
 }, { immediate: true })
 </script>
 

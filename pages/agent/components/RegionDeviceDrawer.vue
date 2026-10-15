@@ -45,7 +45,7 @@
     </scroll-view>
    </view>
    <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceObservationView v-if="isObservationKind(devicePane.kind)" class="device-timeline-host" :device="devicePane" :reading="readings[devicePane.id]" /><DeviceTimelineView v-else ref="deviceTimeline" class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
-   <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskDetailContent class="task-content-host" :active="open && Boolean(taskPane)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" @dismiss="pop" @reference="$emit('reference', $event)" /></view>
+   <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskResultContent ref="taskContent" class="task-content-host" :active="open && Boolean(activeTask)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" @dismiss="pop" @reference="$emit('reference', $event)" @navigation="taskNavigation = $event" /></view>
   </view>
  </DeviceSheet>
 </template>
@@ -58,7 +58,7 @@ import { getAgentStorageScope } from '@/utils/agent-session'
 import DeviceSheet from './DeviceSheet.vue'
 import DeviceTimelineView from './DeviceTimelineView.vue'
 import DeviceObservationView from './DeviceObservationView.vue'
-import TaskDetailContent from './TaskDetailContent.vue'
+import TaskResultContent from './TaskResultContent.vue'
 import { isObservationKind, regionDeviceGroups } from '../region-device-view.mjs'
 import { createStateRefresh } from '../state-refresh.mjs'
 
@@ -75,10 +75,11 @@ const devices = ref([]), readings = ref({}), loading = ref(false), stateLoading 
 const error = ref(''), stateError = ref(''), groupBy = ref('kind'), query = ref(''), searching = ref(false), searchFocused = ref(false)
 const activeDeviceId = ref(''), activeTask = ref(null)
 const deviceTimeline = ref(null)
+const taskContent = ref(null), taskNavigation = ref({ title: '', canBack: false })
 const deviceClosing = ref(null), taskClosing = ref(null)
 const paneTimers = {}
 const depth = computed(() => activeTask.value ? 2 : activeDeviceId.value ? 1 : 0)
-const sheetTitle = computed(() => activeTask.value ? '任务' : activeDevice.value?.name || '设备')
+const sheetTitle = computed(() => activeTask.value ? taskNavigation.value.title || '任务' : activeDevice.value?.name || '设备')
 const devicePane = computed(() => activeDevice.value || deviceClosing.value)
 const taskPane = computed(() => activeTask.value || taskClosing.value)
 const groups = computed(() => regionDeviceGroups(devices.value, readings.value, groupBy.value, query.value))
@@ -112,6 +113,7 @@ function pop() {
  else if (activeDeviceId.value) { deviceClosing.value = activeDevice.value; activeDeviceId.value = ''; releasePane('device', deviceClosing) }
 }
 function backWithinDrawer() {
+ if (depth.value === 2 && taskContent.value?.back()) return
  if (depth.value === 1 && deviceTimeline.value?.dismissCalendar()) return
  if (depth.value) pop()
  else if (searching.value) closeSearch()

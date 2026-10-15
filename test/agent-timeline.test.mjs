@@ -158,6 +158,34 @@ test('Company 检查点 Agent 阶段沿用只读观察块与状态文案', () =>
  assert.deepEqual(midInterval.phases[0].observations, [observation], '区间未收口时阶段观察块仍能渲染')
 })
 
+test('Company 检查点报告元数据投影为独立报告行且不混入观察块', () => {
+ const link = { id: 'artifact-1', title: '昨日用电简报', status: 'partial', generatedAt: '2026-10-12T01:00:30.000Z' }
+ const artifact = { type: 'report_artifact', report: link }
+ const meterBlock = { type: 'meter_report', report: { kind: 'statistics', total: { value: 10, unit: '度' } } }
+ const meter = { id: 'meter-1', kind: 'energy', name: '26楼运营部电表', target: { observe: true }, outcome: 'observed', details: {} }
+ const phases = [
+  { id: 'p1', at: '2026-10-12T01:00:00.000Z', status: 'partial', endedAt: '2026-10-12T01:00:30.000Z', devices: [meter] },
+  { id: 'p2', at: '2026-10-13T01:00:00.000Z', status: 'failed', failureReason: '执行准备失败', devices: [meter] },
+ ]
+ const detail = taskDetailView({ id: 'task-report', agentSource: 'company', label: '每日简报', status: 'partial',
+  createdAt: '2026-10-12T00:00:00.000Z', phases,
+  report: { generatedAt: '2026-10-13T01:00:31.000Z', outcome: 'partial',
+   phases: [
+    { id: 'p1', at: phases[0].at, status: 'partial', observations: [artifact, meterBlock], devices: [meter] },
+    { id: 'p2', at: phases[1].at, status: 'failed', observations: [], devices: [meter] },
+   ] } })
+ assert.deepEqual(detail.phases[0].report, { reportId: 'artifact-1', title: '昨日用电简报', status: 'partial', phaseId: 'p1', phaseAt: phases[0].at })
+ assert.deepEqual(detail.phases[0].observations, [meterBlock], '报告元数据不进入观察块渲染')
+ assert.equal(detail.phases[1].report, null, '失败阶段没有报告行')
+ const midInterval = taskDetailView({ ...detail, report: null, phases: [{ ...phases[0], observations: [artifact] }, phases[1]] })
+ assert.equal(midInterval.phases[0].report.reportId, 'artifact-1', '区间未收口时阶段报告行仍可见')
+ assert.deepEqual(midInterval.phases[0].observations, [])
+ const plain = taskDetailView({ ...detail, report: null, phases: [{ ...phases[0], observations: [meterBlock] }, phases[1]] })
+ assert.equal(plain.phases[0].report, null, 'result 输出不产生报告行')
+ assert.deepEqual(plain.phases[0].observations, [meterBlock])
+ assert.equal(detail.phases[0].devices[0].resultText, '已读取')
+})
+
 test('Company 周期详情保留下一次安排的只读检查快照', () => {
  const plan = { planId: 'plan-company-1', label: '每日巡检', repeat: { frequency: 'daily' },
   nextAt: '2026-10-10T10:00:00.000Z', phases: [{ id: 'occurrence:plan-company-1:0', at: '2026-10-10T10:00:00.000Z', status: 'pending',

@@ -1,7 +1,7 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="selected ? '任务报告' : '任务收件箱'" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="navigation.title || (selected ? '任务报告' : '任务收件箱')" @close="closeSheet">
   <template #header-left>
-   <button v-if="selected" class="back-button" aria-label="返回收件箱" @tap="backToList"><uni-icons type="back" size="15" color="#63776a" /></button>
+   <button v-if="selected" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
   </template>
   <template #header-right>
    <button v-if="!selected" class="refresh-button" aria-label="刷新收件箱" :disabled="loading" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
@@ -26,7 +26,7 @@
     <view v-else-if="notifications.length && !nextCursor" class="list-footer">已显示全部消息</view>
    </scroll-view>
    <view v-if="selected && markError" class="mark-error"><text>报告已打开，但未读状态未更新</text><button @tap="retryMarkSeen">重试</button></view>
-   <TaskDetailContent v-if="selected" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @dismiss="backToList" @reference="$emit('reference', $event)" />
+   <TaskResultContent v-if="selected" ref="content" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @dismiss="backToList" @reference="$emit('reference', $event)" @navigation="navigation = $event" />
   </view>
  </DeviceSheet>
 </template>
@@ -37,15 +37,15 @@ import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { listNotifications, markNotificationSeen } from '@/apis/agent'
 import DeviceSheet from './DeviceSheet.vue'
-import TaskDetailContent from './TaskDetailContent.vue'
+import TaskResultContent from './TaskResultContent.vue'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
 const emit = defineEmits(['close', 'unread-count', 'reference'])
-const notifications = ref([]), selected = ref(null)
+const notifications = ref([]), selected = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const unreadCount = ref(0), nextCursor = ref('')
 const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref('')
 let requestId = 0, loadedScope = '', pageVisible = true
-function resetIdentity() { notifications.value = []; selected.value = null; nextCursor.value = ''; unreadCount.value = 0; markError.value = ''; publishUnreadCount() }
+function resetIdentity() { notifications.value = []; selected.value = null; nextCursor.value = ''; unreadCount.value = 0; markError.value = ''; navigation.value = { title: '', canBack: false }; publishUnreadCount() }
 onHide(() => { pageVisible = false; ++requestId; loading.value = false; loadingMore.value = false })
 onShow(() => { pageVisible = true; if (props.open) void load(true) })
 const marking = new Set(), seenFailed = new Set()
@@ -106,8 +106,9 @@ function openReport(notification) {
  markError.value = ''
  seenFailed.delete(notification.id)
 }
-function backToList() { selected.value = null; markError.value = '' }
-function nativeBack() { if (selected.value) backToList(); else closeSheet() }
+function backToList() { selected.value = null; markError.value = ''; navigation.value = { title: '', canBack: false } }
+function goBack() { if (content.value?.back()) return; backToList() }
+function nativeBack() { if (content.value?.back()) return; if (selected.value) backToList(); else closeSheet() }
 function closeSheet() { backToList(); emit('close') }
 
 async function onReportLoaded(taskId) {
@@ -142,7 +143,7 @@ function retryMarkSeen() {
 watch(() => [props.open, props.source], ([value, source], previous) => {
  if (previous && source !== previous[1]) resetIdentity()
  if (value) void load(true)
- else { ++requestId; loading.value = false; loadingMore.value = false }
+ else { ++requestId; loading.value = false; loadingMore.value = false; navigation.value = { title: '', canBack: false } }
 }, { immediate: true })
 </script>
 

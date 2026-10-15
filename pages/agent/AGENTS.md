@@ -1,5 +1,7 @@
 # Agent Page Notes
 
+- 检查点产物仅在所属阶段增加 `phase.report` 行，现有任务收件箱仍先打开任务。任务详情宿主统一用 `TaskResultContent`，在同一 Sheet 内按依据→报告→原任务返回；任务节点保持挂载并暂停轮询。预览、引用、PDF 只读保存事实，引用保留草稿且不自动发送；Office 设备时间轴保持原来源，不因共用宿主新增 Company 导航。维护与验收见 `plan/2026-10-15-company-checkpoint-production-handoff.md`。
+
 - 告警监控候选提供直播/回放；回放展开后清空`scroll-into-view`、await nextTick再定位表单，保证同一目标重复点击仍滚动。安全录像卡保留用户两种选择，`safetyContext.occurredAt`经WebView传`eventTime`供标记，直播仍保留原录像窗口；见`plan/2026-10-14-safety-video-controls-handoff.md`。
 
 - 公司 Agent 由仪表盘右下角浮层承载：`CompanyAgentFloat.vue`（常驻 orb + 全宽底片面板，展开约至导航栏下沿，orb 停靠面板右上角沿兼任收起把手，点遮罩同样收起）。会话主体是 `AgentConversation.vue`——office 页面（index.vue）与公司浮层共用；`source` 与引用/预填上下文经 props + `setReference`/`prefill` 注入，页面生命周期由宿主 `active` prop 驱动（false=收起/隐藏：保草稿、停轮询、不中止在途流，浮标上亮运行环与未读角标）。`index.vue` 只保留 office 宿主；`source=company`/告警/引用/窗口参数重定向到仪表盘解析（`context-link.mjs`）。面板内打开的台账/任务 Sheet 以视口 fixed（z99）盖在浮层（z40-46）之上。会话菜单统一走 `agent-menu.mjs`。

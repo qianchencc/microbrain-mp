@@ -99,8 +99,11 @@ export function taskDetailView(task) {
  const reportPhases = task.report?.phases || []
  const phases = task.phases.map((phase, index) => {
   const reportPhase = reportPhases.find(item => (phase.id && item.id === phase.id) || item.at === phase.at)
+  const merged = reportPhase?.observations || phase.observations || []
+  const link = merged.find(block => block?.type === 'report_artifact')?.report
   return {
-   ...phase, observations: reportPhase?.observations || phase.observations || [],
+   ...phase, observations: merged.filter(block => block?.type !== 'report_artifact'),
+   report: link ? { reportId: link.id, title: link.title, status: link.status, phaseId: phase.id, phaseAt: phase.at } : null,
    title: interval ? `检查点${index + 1}` : task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束',
    time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusLabel(phase.status, task.agentSource),
    tone: phaseTone(phase.status), link: linkProgress(phase, task.phases[index + 1]),
