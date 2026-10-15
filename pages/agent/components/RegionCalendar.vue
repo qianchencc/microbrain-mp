@@ -16,14 +16,14 @@
     </button>
    </view>
   </view>
-  <button v-if="error" class="calendar-error" @tap="$emit('month-change', month)">{{ typeof error === 'string' ? error : '日期标记读取失败：未取得具体原因' }} · 重试</button>
+  <button v-if="error" class="calendar-error" @tap="$emit('month-change', month)">{{ error }} · 重试</button>
  </view>
 </template>
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { calendarDates, shiftDate } from '../region-calendar.mjs'
 
-const props = defineProps({ date: String, today: String, minDate: String, maxDate: String, error: [Boolean, String], compact: Boolean, marks: { type: Array, default: () => [] } })
+const props = defineProps({ date: String, today: String, minDate: String, maxDate: String, error: { type: String, default: '' }, compact: Boolean, marks: { type: Array, default: () => [] } })
 const emit = defineEmits(['select', 'month-change'])
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 const month = ref(props.date.slice(0, 7)), expanded = ref(false), gridExpanded = ref(false)

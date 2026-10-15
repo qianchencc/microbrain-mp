@@ -39,3 +39,17 @@ Runtime提交 `602ed9d`。从干净worktree构建后受控更新唯一3200；保
 - 真实重放另外发现模型把06:15Z误写成06:15+08:00的统计终点；本次只证明当天缺数原因可正确收口，不能算时区验收。已登记 `.scratch/business-failure-reasons/issues/01-checkpoint-shanghai-end-time.md`，保持本轮不改统计窗口/提示词。
 
 后续建议技能：`diagnosing-bugs`；涉及新交互形态时再进入`prototype`。维护规则见Runtime `apps/runtime/src/AGENTS.md`与本仓 `pages/agent/AGENTS.md`。
+
+## 日历误报补修（15:49）
+
+用户反馈“日期标记读取失败：未取得具体原因”，点击重试也不消失。根因是上一轮将 `RegionTimeline.calendarError` 和 `RegionCalendar.error` 定义成 `[Boolean, String]`；Vue 将成功状态的空字符串转成 `true`，正常响应也会显示失败。这条提示本身不能证明接口失败。另发现设备日历 catch 丢弃原始错误，只保存 `true`。
+
+修复限于上述两个组件和 `DeviceTimelineView`：错误沿途只用字符串、默认空串；设备日期标记和记录读取保留原始原因。未增加自动重试、未改变日历请求范围或后端。
+
+验证：
+
+- 真实组件链 `DeviceTimelineView → RegionTimeline → RegionCalendar` 的临时 Vue 渲染夹具先复现原因被吞；`RegionTimeline → RegionCalendar` 先复现空串误报。修复后两条均通过，503原因/编号完整保留，同月点击重试确实发出新请求，成功后错误消失并恢复日期标记。
+- 夹具命令：Node22加 `--experimental-vm-modules /private/tmp/calendar-component-loop.mjs`（设备失败/重试）；附加 `--region`（区域成功空串）。使用本机HBuilderX现有Vue编译器与运行时，无新增依赖或测试框架；属于临时组件反馈回路，不计入现有102项测试。
+- 真实网关只读复核：两个办公室区域和各首台空调的10月日历接口全部200，返回日期标记。
+- mp现有测试102/102，HBuilderX微信编译15:48:10成功。原客户微信开发者工具实际进入区域工作台，显示“1条记录”、13/15日标记，递归检查实际日历无错误节点，截图 `/private/tmp/calendar-region-native.png`。这证明原生模拟器正常路径；故障注入/重试沿真实Vue组件链验证，未宣称手机异常分支验收。
+- 日志 `/private/tmp/calendar-fix-agent-tests.log`、`/private/tmp/calendar-fix-weixin-build.log`；只读脚本 `/private/tmp/calendar-readonly-probe.mjs`。未执行任何设备控制、未重启Runtime。

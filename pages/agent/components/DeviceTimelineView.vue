@@ -35,7 +35,7 @@ defineExpose({ dismissCalendar: () => timeline.value?.dismissCalendar() || false
 const selectedDate = ref(props.date), month = ref(props.date.slice(0, 7))
 const maxDate = computed(() => shiftDate(localDate(props.now), 7))
 const displayNow = computed(() => props.sampleMode ? `${selectedDate.value}T14:52:00+08:00` : props.now)
-const events = ref([]), marks = ref([]), loading = ref(false), error = ref(''), calendarError = ref(false)
+const events = ref([]), marks = ref([]), loading = ref(false), error = ref(''), calendarError = ref('')
 const items = computed(() => deviceTimelineItems(events.value))
 // “下一次/进行中”取当前选中日内第一条执行中或未到的待执行阶段；事件按 at 升序。
 const nextAction = computed(() => {
@@ -59,12 +59,12 @@ async function loadTimeline() {
  try {
   const result = await listDeviceTimeline(deviceId, date)
   if (current === timelineRequest) events.value = result.events || []
- } catch (cause) { if (current === timelineRequest) error.value = String(cause.message || '').startsWith('request:fail') ? '设备记录暂不可用，请检查网络后重试' : cause.message || '设备记录暂不可用' }
+ } catch (cause) { if (current === timelineRequest) error.value = cause.message || '设备记录读取失败：网络层未提供具体原因' }
  finally { if (current === timelineRequest) loading.value = false }
 }
 async function loadCalendar() {
  const current = ++calendarRequest, deviceId = props.device.id
- marks.value = []; calendarError.value = false
+ marks.value = []; calendarError.value = ''
  const { from, to } = calendarWindow(month.value)
  if (props.sampleMode) {
   const sampleEvents = deviceSampleEvents(props.sampleTasks, deviceId)
@@ -75,7 +75,7 @@ async function loadCalendar() {
  try {
   const result = await listDeviceCalendar(deviceId, from, to)
   if (current === calendarRequest) marks.value = result.days || []
- } catch { if (current === calendarRequest) calendarError.value = true }
+ } catch (cause) { if (current === calendarRequest) calendarError.value = cause.message || '设备日期标记读取失败：网络层未提供具体原因' }
 }
 watch(() => [props.device.id, selectedDate.value, props.sampleMode, props.sampleTasks], loadTimeline, { immediate: true })
 watch(() => [props.device.id, month.value, props.sampleMode, props.sampleTasks], loadCalendar, { immediate: true })

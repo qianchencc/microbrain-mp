@@ -32,7 +32,7 @@ import { createTimeline, localDate, HOUR_PX, TOP_PAD } from '../timeline-geometr
 import { timelineSvg } from '../timeline-svg.mjs'
 import RegionCalendar from './RegionCalendar.vue'
 
-const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, bottomPad: { type: Number, default: 0 }, calendarMarks: { type: Array, default: () => [] }, calendarError: [Boolean, String], maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, start: String, days: { type: Number, default: 1 } })
+const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, bottomPad: { type: Number, default: 0 }, calendarMarks: { type: Array, default: () => [] }, calendarError: { type: String, default: '' }, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, start: String, days: { type: Number, default: 1 } })
 const emit = defineEmits(['select', 'date-change', 'calendar-month', 'visible-date', 'reach-start', 'reach-end'])
 const DAY_MS = 86400000, DAY_PX = 24 * HOUR_PX
 const dayStart = value => Date.parse(`${value}T00:00:00+08:00`)
