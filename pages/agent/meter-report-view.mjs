@@ -198,6 +198,8 @@ const metricDefinition = metric => metric.dayWindow === 'previous08:00-08:00' &&
  ? '前日08:00–当日08:00用电最多的完整计量日，日期按结束日'
  : metric.dayWindow === 'previous08:00-08:00' && metric.key === 'weekdayDailyAvg'
  ? '按结束日期取周一至周五的完整计量日平均用电（前日08:00–当日08:00）'
+ : metric.key === 'nightShare' && metric.nightWindow === '20:00-08:00'
+ ? '完整计量日内20:00–次日08:00用电量 ÷ 同一批08:00–次日08:00计量日总用电量'
  : metric.key === 'nightBase' && metric.nightWindow === '20:00-08:00' ? '20:00–次日08:00 用电量 ÷ 12小时，取范围内有效完整夜间的平均' : (METRIC_DEFS[metric.key] || '')
 export function meterReportMetrics(report) {
  return (report?.metrics || []).map(metric => ({

@@ -978,3 +978,14 @@ test('08:00计量日说明与历史日历日指标保持各自口径', () => {
  assert.match(rows[0].def, /结束日期取周一至周五/)
  assert.equal(meterReportMetrics({ metrics: [{ ...peak, dayWindow: undefined }] })[0].def, '用电最多的一天（只计数据完整的日子）')
 })
+
+
+test('新夜间占比说明使用20:00–08:00与同批完整计量日，历史占比保持原口径', () => {
+ const marked = meterReportMetrics({ metrics: [{ key: 'nightShare', value: 30.77, unit: '%', nightWindow: '20:00-08:00', dayWindow: 'previous08:00-08:00' }] })[0]
+ assert.equal(marked.label, '夜间占比')
+ assert.equal(marked.valueText, '30.77')
+ assert.match(marked.def, /20:00–次日08:00/)
+ assert.match(marked.def, /同一批/)
+ const legacy = meterReportMetrics({ metrics: [{ key: 'nightShare', value: 15.02, unit: '%' }] })[0]
+ assert.match(legacy.def, /00:00–06:00/)
+})
