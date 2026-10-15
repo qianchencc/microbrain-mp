@@ -967,3 +967,14 @@ test('meterReportPowerFactor formats per-meter PF lines: statistics/region singl
  assert.deepEqual(meterReportPowerFactor(region, 'm-c'), ['功率因数 采样均值 0.5 · 最低 0.5 · 1 次有效采样'])
  assert.deepEqual(meterReportPowerFactor(region, 'm-d'), [])
 })
+
+test('08:00计量日说明与历史日历日指标保持各自口径', () => {
+ const peak = { key: 'peakDay', value: 300, unit: '度', sub: '2026-10-03', dayWindow: 'previous08:00-08:00' }
+ const card = meterReportMetrics({ metrics: [peak] })[0]
+ assert.equal(card.sub, '10/03')
+ assert.match(card.def, /前日08:00–当日08:00/)
+ assert.match(card.def, /结束日/)
+ const rows = meterReportMetricTable({ metrics: [{ key: 'weekdayDailyAvg', dayWindow: peak.dayWindow, unit: '度/日', a: { value: 90 }, b: { value: 60 }, change: 30 }] })
+ assert.match(rows[0].def, /结束日期取周一至周五/)
+ assert.equal(meterReportMetrics({ metrics: [{ ...peak, dayWindow: undefined }] })[0].def, '用电最多的一天（只计数据完整的日子）')
+})
