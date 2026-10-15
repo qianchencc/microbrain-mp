@@ -79,7 +79,7 @@
 
   <template v-else>
    <view class="hero">
-    <text class="hero-label">用电量</text>
+    <text class="hero-label">{{ hero.label || '用电量' }}</text>
     <view class="number" :class="{ words: hero.value === null }">
      <text v-if="hero.value !== null">{{ hero.value }}<text class="unit"> 度</text></text>
      <text v-else>暂无可合计的区间用电</text>

@@ -29,7 +29,7 @@ export const meterReportIsDay = report => {
  const span = report?.params?.span?.requested || {}
  return Date.parse(span.to) - Date.parse(span.from) <= 86_400_000
 }
-export const meterReportGrainOptions = report => meterReportIsDay(report) ? [{ key: 'hour', label: '时' }] : meterReportGrains
+export const meterReportGrainOptions = report => !report?.params?.dailyWindow && meterReportIsDay(report) ? [{ key: 'hour', label: '时' }] : meterReportGrains
 
 // 度值：千分位、至多 1 位小数；小值不取整以免空刻度。
 export const degreeText = value => finite(value)
@@ -77,7 +77,8 @@ export function meterReportParamLine(report) {
   line = `${when} · ${scope.label || '全部电表'} ${scope.meterCount ?? report?.meters?.length ?? 0}台`
  }
  const through = (coverage.partial || []).map(item => item.through).filter(Boolean).sort().at(-1)
- if (meterReportAxis(report) !== 'region' && (coverage.partial || []).length) line += ` · ${coverage.partial.length}台数据截至${comparisonDate(through)}`
+ if (report?.params?.dailyWindow) line += ` · 每日20:00–次日08:00${coverage.partial?.length ? ' · 部分夜间缺测' : ''}`
+ if (!report?.params?.dailyWindow && meterReportAxis(report) !== 'region' && (coverage.partial || []).length) line += ` · ${coverage.partial.length}台数据截至${comparisonDate(through)}`
  else if (meterReportAxis(report) !== 'region') {
   const reqTo = Date.parse(report?.params?.span?.requested?.to || '')
   const obsTo = Date.parse(report?.params?.span?.observed?.to || '')
@@ -153,6 +154,7 @@ export function meterReportHero(report) {
  const total = report?.total || {}
  if ((report?.coverage?.dataMeters ?? 0) === 0) return { empty: true, value: null, yuan: '' }
  return {
+  ...(report?.params?.dailyWindow ? { label: report.coverage?.partial?.length || report.coverage?.noData?.length ? '已取得夜间用电' : '夜间用电' } : {}),
   value: finite(total.value) ? degreeText(total.value) : null,
   yuan: finite(total.yuan) && finite(total.tariff) ? `约 ¥${degreeText(total.yuan)} · 按 ${total.tariff} 元/度` : '',
  }
@@ -160,6 +162,7 @@ export function meterReportHero(report) {
 
 // 定位行：全部 → 楼层占比条；楼层/名称匹配 → 占全部与单台日均对照；单台 → 占本层与排名。
 export function meterReportContext(report) {
+ if (report?.params?.dailyWindow) return null
  const context = report?.context
  if (!context) return null
  if (context.kind === 'floorSplit') return { kind: 'split', chart: floorSplitChart(context.floors) }
@@ -204,11 +207,11 @@ const metricDefinition = metric => metric.dayWindow === 'previous08:00-08:00' &&
 export function meterReportMetrics(report) {
  return (report?.metrics || []).map(metric => ({
   key: metric.key,
-  label: metricLabel(metric),
+  label: report?.params?.dailyWindow && metric.key === 'dailyAvg' ? '夜均' : report?.params?.dailyWindow && metric.key === 'peakDay' ? '峰值夜间' : metricLabel(metric),
   valueText: finite(metric.value) ? degreeText(metric.value) : '—',
   unit: metric.unit || '',
   sub: metricSub(metric.sub),
-  def: metricDefinition(metric),
+  def: report?.params?.dailyWindow && metric.key === 'dailyAvg' ? '全部所选表均完整时的每夜平均用电；缺测不补零' : report?.params?.dailyWindow && metric.key === 'peakDay' ? '全部所选表均完整的夜间中用电最多的一夜，日期按08:00结束日' : metricDefinition(metric),
  }))
 }
 
@@ -277,7 +280,7 @@ export function meterReportBuckets(report, grain) {
  const items = report?.bucketsAll?.[grain] || (report?.buckets?.grain === grain ? report.buckets.items : []) || []
  const columns = items.map(bucket => ({
   value: finite(bucket.value) ? bucket.value : null,
-  label: bucketLabel(bucket, grain),
+  label: report?.params?.dailyWindow && grain === 'day' ? comparisonDate(bucket.to) : bucketLabel(bucket, grain),
   status: bucket.partial ? 'partial' : undefined,
  }))
  return { ...meterBarChart(columns), points: columns }
@@ -364,6 +367,7 @@ function daysInMonth(fromIso) {
 // 位置构成：前 8 行 + 其余聚合；被排除的表折叠为两行文字，不进柱条。
 // 单台范围时构成是本层排行（标题为「N楼 构成」），本表所在位置行高亮。
 export function meterReportRankingTitle(report) {
+ if (report?.params?.dailyWindow) return '夜间用电排名 · 度'
  return report?.context?.kind === 'peer' ? `${report.context.parentLabel} 构成 · 度` : '位置构成 · 度'
 }
 export function meterReportRanking(report) {
@@ -371,7 +375,7 @@ export function meterReportRanking(report) {
  const rows = [...(composition.rows || [])].map(row => ({ label: row.label, value: finite(row.value) ? row.value : null, highlight: Boolean(row.highlight) }))
  if (composition.rest && composition.rest.count > 0) rows.push({ label: `其余 ${composition.rest.count} 处`, value: composition.rest.value })
  const excluded = []
- if (composition.excluded?.partial) excluded.push(`数据不全 ${composition.excluded.partial} 处 —`)
+ if (composition.excluded?.partial) excluded.push(report?.params?.dailyWindow ? `${composition.excluded.partial}台存在缺测，仅合计已取得的完整夜间` : `数据不全 ${composition.excluded.partial} 处 —`)
  if (composition.excluded?.noData) excluded.push(`无数据 ${composition.excluded.noData} 处 —`)
  return { ...meterRankingChart(rows), rows, excluded }
 }
@@ -431,6 +435,12 @@ export function meterReportEvidence(report) {
    }
   })
  }
+ if (report?.params?.dailyWindow) return (report.meters || []).map(meter => ({
+  id: meter.id, name: meter.name, label: meter.areaName || meter.name,
+  statusText: !finite(meter.value) ? '无完整夜间' : meter.night?.validDays < meter.night?.expectedDays ? '部分夜间计入' : '计入合计',
+  bounds: `20:00–次日08:00 · ${meter.night?.validDays ?? 0}/${meter.night?.expectedDays ?? 0}夜有效 · 同日夜间占比 ${finite(meter.night?.share) ? degreeText(meter.night.share) + '%' : '—'}（${meter.night?.shareDays ?? 0}日）`,
+  valueText: finite(meter.value) ? `${degreeText(meter.value)} 度` : '—',
+ }))
  return (report?.meters || []).map(meter => {
   const from = meter.observed?.fromSample, to = meter.observed?.toSample
   return {

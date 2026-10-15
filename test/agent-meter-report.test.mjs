@@ -989,3 +989,18 @@ test('新夜间占比说明使用20:00–08:00与同批完整计量日，历史�
  const legacy = meterReportMetrics({ metrics: [{ key: 'nightShare', value: 15.02, unit: '%' }] })[0]
  assert.match(legacy.def, /00:00–06:00/)
 })
+
+
+test('night-window report keeps its time, ranking metric and partial-day evidence distinct from whole-period usage', () => {
+ const night = { ...report, params: { ...report.params, dailyWindow: { from: '20:00', to: '08:00', timezone: 'Asia/Shanghai' } },
+  meters: [{ id: 'n', name: '运营部电表', areaName: '26楼运营部', status: 'ok', value: 20, night: { validDays: 1, expectedDays: 2, share: 40, shareDays: 1 } }],
+  coverage: { ...report.coverage, partial: [{ id: 'n', through: '2026-10-03T08:00:00+08:00' }] } }
+ assert.match(meterReportParamLine(night), /每日20:00–次日08:00/)
+ assert.match(meterReportHero(night).label, /夜间/)
+ assert.match(meterReportRankingTitle(night), /夜间用电排名/)
+ assert.equal(meterReportContext(night), null)
+ assert.match(meterReportEvidence(night)[0].bounds, /1\/2/)
+ assert.match(meterReportEvidence(night)[0].bounds, /40%/)
+ assert.match(meterReportEvidence(night)[0].statusText, /部分/)
+ assert.deepEqual(meterReportGrainOptions({ ...night, params: { ...night.params, span: { requested: { from: '2026-10-01T20:00:00+08:00', to: '2026-10-02T08:00:00+08:00' } } } }).map(g => g.key), ['day', 'week', 'month'])
+})
