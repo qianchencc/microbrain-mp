@@ -11,3 +11,6 @@ export const fetchDevicePage = (data) => request.globalRequest('/api/perception/
 
 // 获取设备订阅 snTicket（参数为记录id）
 export const fetchDeviceSnTicket = (id) => request.globalRequest('/api/perception/fire/alarmSubConfig/getSnTicket', 'GET', { id })
+
+// 订阅成功后记录用户订阅（参数为订阅配置记录id）
+export const saveAlarmUserSub = (alarmSubConfigId) => request.globalRequest('/api/perception/alarmUserSub/', 'POST', { alarmSubConfigId })
