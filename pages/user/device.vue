@@ -2,7 +2,7 @@
 	<view class="content">
 		<z-paging ref="paging" v-model="dataList" default-page-no="0" @query="queryList">
 			<view class="tip-sticky">
-				<view class="tip">若想开启<text class="strong">强提醒状态响铃+振动</text>，订阅时请勾选添加提醒</view>
+				<view class="tip">若想开启<text class="strong">强提醒状态响铃+振动</text>，订阅时请选择添加提醒</view>
 			</view>
 			<view class="list">
 				<view class="device-item" v-for="item in dataList" :key="item.id">
