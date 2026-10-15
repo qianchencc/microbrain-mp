@@ -140,6 +140,24 @@ test('Company 只读检查显示读取目标、已读取结果和持久化观察
  assert.deepEqual(byTime.phases[0].observations, blocks)
 })
 
+test('Company 检查点 Agent 阶段沿用只读观察块与状态文案', () => {
+ const facts = [{ type: 'meter-report', kind: 'statistics', total: { value: 10, unit: '度' },
+  meters: [{ id: 'meter-1', name: '26楼运营部电表', status: 'ok' }] }]
+ const observation = { type: 'meter_report', report: facts[0] }
+ const phase = { id: 'ckpt-1', at: '2026-10-12T01:00:00.000Z', status: 'partial', endedAt: '2026-10-12T01:00:30.000Z',
+  agentResult: { summary: '统计事实已保存，智能解读未完成', status: 'partial', facts },
+  devices: [{ id: 'meter-1', kind: 'energy', name: '26楼运营部电表', target: { observe: true }, outcome: 'observed', details: {} }] }
+ const detail = taskDetailView({ id: 'task-ckpt', agentSource: 'company', label: '每日电量检查点', status: 'partial',
+  createdAt: '2026-10-12T00:00:00.000Z', phases: [phase],
+  report: { generatedAt: phase.endedAt, outcome: 'partial', phases: [{ id: phase.id, at: phase.at, status: phase.status, observations: [observation], devices: phase.devices }] } })
+ assert.equal(detail.phases[0].statusText, '部分完成')
+ assert.equal(detail.phases[0].devices[0].resultText, '已读取')
+ assert.deepEqual(detail.phases[0].observations, [observation])
+ assert.equal(detail.report.outcomeText, '部分完成')
+ const midInterval = taskDetailView({ ...detail, phases: [{ ...phase, observations: [observation] }], report: null })
+ assert.deepEqual(midInterval.phases[0].observations, [observation], '区间未收口时阶段观察块仍能渲染')
+})
+
 test('Company 周期详情保留下一次安排的只读检查快照', () => {
  const plan = { planId: 'plan-company-1', label: '每日巡检', repeat: { frequency: 'daily' },
   nextAt: '2026-10-10T10:00:00.000Z', phases: [{ id: 'occurrence:plan-company-1:0', at: '2026-10-10T10:00:00.000Z', status: 'pending',

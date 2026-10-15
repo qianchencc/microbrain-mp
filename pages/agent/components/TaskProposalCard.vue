@@ -11,7 +11,8 @@
     <view v-for="action in actionsOf(phase, index)" :key="action.deviceId" class="task-device">
      <view class="device-cell"><image v-if="artworkOf(action)" class="device-art" :src="artworkOf(action)" mode="aspectFit" /><text class="device-name">{{ action.deviceName }}</text></view><text class="device-target">{{ targetText(action.kind, action.command) }}</text>
     </view>
-    <text v-if="source === 'company' && phase.read?.alertDays" class="read-window">安全台账 · 近 {{ phase.read.alertDays }} 天</text>
+    <text v-if="source === 'company' && phase.read?.agent" class="read-window">检查点指令 · {{ phase.read.agent.objective }}</text>
+    <text v-else-if="source === 'company' && phase.read?.alertDays" class="read-window">安全台账 · 近 {{ phase.read.alertDays }} 天</text>
     <view v-for="device in readDevicesOf(phase, index)" :key="device.id" class="task-device read-device">
      <view class="device-cell"><image class="device-art" :src="artworkOf(device)" mode="aspectFit" /><text class="device-name">{{ device.name }}</text></view><text class="device-target">{{ readTargetText(device.kind) }}</text>
      <text v-if="device.location" class="device-location">{{ device.location }}</text>
