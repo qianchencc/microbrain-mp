@@ -65,3 +65,5 @@
 ## Suggested skills
 
 后续从ask-matt进入剩余验收；具体实施遵循implement/TDD与窄公共行为回归，必要时code-review；交互用ego-browser或微信实际自动化，完成后handoff记录。领域与导航已冻结，无需重新访谈。
+
+后续更新：运营部今日分析缺数时的具体原因修复与当前Runtime版本见[2026-10-15缺数诊断](2026-10-15-checkpoint-no-data-handoff.md)；此处保留首轮验收证据。
