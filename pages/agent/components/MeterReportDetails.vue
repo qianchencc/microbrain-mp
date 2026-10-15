@@ -42,7 +42,7 @@ const sheetSubtitle = computed(() => isRegion.value
 const sheetSpan = computed(() => meterReportSpanText(props.report))
 const historyQuery = computed(() => meterReportHistoryQuery(props.report, selectedId.value))
 const powerFactorLines = computed(() => pane.value === 'history' ? meterReportPowerFactor(props.report, selectedId.value) : [])
-const navTitle = computed(() => pane.value === 'history' ? '原始计量采样' : '计量依据')
+const navTitle = computed(() => pane.value === 'history' ? '电表统计' : '计量依据')
 
 watch([navTitle, () => stack.value.length], () => emit('navigation', { title: navTitle.value, canBack: stack.value.length > 0 }), { immediate: true })
 watch(() => props.report, reset)

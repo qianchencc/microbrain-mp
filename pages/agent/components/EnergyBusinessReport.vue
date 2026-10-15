@@ -97,7 +97,7 @@
 
   <view class="actions">
    <button hover-class="pressed" @tap="open('evidence')">采样依据</button>
-   <button hover-class="pressed" @tap="open('history')">原始采样</button>
+   <button hover-class="pressed" @tap="open('history')">电表统计</button>
   </view>
 
   <DeviceSheet v-if="mounted" :open="sheetOpen" :title="paneTitle" :subtitle="selected?.meter.name || kindLabel" tall @close="sheetOpen = false">
@@ -142,7 +142,7 @@
         <text v-for="note in period.notes" :key="note" class="notice">{{ note }}</text>
        </view>
        <text v-if="!selected.periods.length" class="notice">{{ selected.error || '尚未取得有效采样' }}</text>
-       <view class="actions"><button hover-class="pressed" @tap="push('history')">查看这台电表的原始采样</button></view>
+       <view class="actions"><button hover-class="pressed" @tap="push('history')">查看这台电表的统计</button></view>
       </template>
       <view v-else class="actions"><button hover-class="pressed" @tap="push('meters')">查看逐表依据</button></view>
      </template>
@@ -255,7 +255,7 @@ function rowUnit(row) {
 const checkText = rule => ({ pending: '待执行', complete: '已检查 ' + (rule.checkedMeterIds?.length || 0) + ' 台', partial: '部分已检查 ' + (rule.checkedMeterIds?.length || 0) + ' 台', not_checked: '未检查' })[rule.status] || '检查范围'
 
 const selected = computed(() => props.report.meters.find(m => m.meter.id === selectedId.value))
-const paneTitle = computed(() => ({ meters: '电表范围与明细', evidence: '采样依据', history: selected.value ? '原始计量采样' : '选择电表查看采样', findings: '待核查项' })[pane.value])
+const paneTitle = computed(() => ({ meters: '电表范围与明细', evidence: '采样依据', history: selected.value ? '电表统计' : '选择电表查看统计', findings: '待核查项' })[pane.value])
 const historyQuery = computed(() => ({ equipmentId: selectedId.value, from: [...props.report.windows].sort((a, b) => Date.parse(a.from) - Date.parse(b.from))[0]?.from || props.report.requested.from, to: [...props.report.windows].sort((a, b) => Date.parse(b.to) - Date.parse(a.to))[0]?.to || props.report.requested.to }))
 
 function open(view) { pane.value = view; selectedId.value = null; finding.value = null; stack.value = []; mounted.value = true; sheetOpen.value = true }

@@ -16,9 +16,27 @@ export function mergeStripDays(current, days) {
   elapsedMeters: day.elapsedMeters ?? 0,
   complete: Boolean(day.complete),
   covered: day.coveredMeters ?? 0,
-  expected: day.expectedMeters ?? 0
+  expected: day.expectedMeters ?? 0,
+  pending: false,
+  failed: false
  }))
  return [...map.values()].sort((a, b) => a.date < b.date ? -1 : 1)
+}
+
+// 占位日：面板把整段日期预铺为 pending 柱，数据块按区间补进原位——
+// 条带永不缺列，日历跳任何日期都有目标柱，横滑跨月无拼接。
+export function padStripDays(current, from, to) {
+ const map = new Map((current || []).map(d => [d.date, d]))
+ for (let d = from; d <= to; d = shiftDate(d, 1)) {
+  if (map.has(d)) continue
+  map.set(d, { date: d, pending: true, failed: false, usage: null, elapsedUsage: null, elapsedMeters: 0, complete: false, covered: 0, expected: 0 })
+ }
+ return [...map.values()].sort((a, b) => a.date < b.date ? -1 : 1)
+}
+
+// 补块失败的区间标记：只动仍是 pending 的日，已落位的真实数据不改。
+export function markStripFailed(current, from, to) {
+ return (current || []).map(d => d.pending && d.date >= from && d.date <= to ? { ...d, pending: false, failed: true } : d)
 }
 
 // 楼层构成环：SVG data-uri 经 <image> 渲染（与 timeline-svg/energy-chart 同法，wxss 无 conic-gradient）。
@@ -136,4 +154,61 @@ export function comparePct(current, base) {
 
 export function statusText(status) {
  return ({ comparable: '', partial: '边界不齐', not_computable: '不可算' })[status] || ''
+}
+
+const localEnergyDate = ms => new Date(ms + 8 * 3600_000).toISOString().slice(0, 10)
+const localEnergyTime = ms => new Date(ms + 8 * 3600_000).toISOString().replace('Z', '+08:00')
+const preciseEnergyTime = value => typeof value === 'string'
+ && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)
+ && Number.isFinite(Date.parse(value))
+ && new Date(value.slice(0, 10) + 'T00:00:00Z').toISOString().slice(0, 10) === value.slice(0, 10) ? Date.parse(value) : NaN
+
+export function fixedEnergyContext(query) {
+ if (query == null) return null
+ const from = preciseEnergyTime(query.from), to = preciseEnergyTime(query.to)
+ if (typeof query.equipmentId !== 'string' || !query.equipmentId.trim()
+  || !Number.isFinite(from) || !Number.isFinite(to) || from >= to) throw new Error('固定统计范围须包含电表及有效起止时刻')
+ return { equipmentId: query.equipmentId.trim(), from: query.from, to: query.to,
+  minDate: localEnergyDate(from), maxDate: localEnergyDate(to - 1) }
+}
+
+export function fixedEnergyWindow(context, days = 90, end = context.maxDate) {
+ if (!Number.isInteger(days) || days < 1 || days > 90) throw new Error('读取窗口须为1至90天')
+ if (!/^\d{4}-\d{2}-\d{2}$/.test(end) || end < context.minDate || end > context.maxDate
+  || !Number.isFinite(Date.parse(end + 'T00:00:00Z')) || shiftDate(end, 0) !== end) return null
+ const start = [context.minDate, shiftDate(end, -(days - 1))].sort().at(-1)
+ const from = Math.max(Date.parse(context.from), Date.parse(start + 'T00:00:00+08:00'))
+ const to = Math.min(Date.parse(context.to), Date.parse(shiftDate(end, 1) + 'T00:00:00+08:00'))
+ return { kind: 'statistics', scopeLevel: 'location', meterId: context.equipmentId,
+  from: from === Date.parse(context.from) ? context.from : localEnergyTime(from),
+  to: to === Date.parse(context.to) ? context.to : localEnergyTime(to), grain: 'day' }
+}
+
+export function meterStatisticsDailyView(source, context) {
+ const meter = source?.meters?.[0], requested = source?.params?.span?.requested
+ const from = Date.parse(requested?.from), to = Date.parse(requested?.to)
+ if (source?.kind !== 'statistics' || source?.meters?.length !== 1 || meter.id !== context.equipmentId
+  || !Number.isFinite(from) || !Number.isFinite(to) || from >= to
+  || from < Date.parse(context.from) || to > Date.parse(context.to)) throw new Error('返回的电表或时间范围与固定统计范围不符')
+ const items = source.bucketsAll?.day || (source.buckets?.grain === 'day' ? source.buckets.items : []) || []
+ const daily = {}
+ const days = items.map(item => {
+  const start = Date.parse(item.from), end = Date.parse(item.to)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < from || end > to || start >= end
+   || item.value !== null && (typeof item.value !== 'number' || !Number.isFinite(item.value) || item.value < 0)) throw new Error('日分段超出固定统计范围或数值无效')
+  const date = localEnergyDate(start), usage = item.value
+  const complete = usage !== null && !item.partial && source.coverage?.dataMeters === 1
+  daily[date] = { usage, status: usage === null ? 'not_computable' : complete ? 'comparable' : 'partial' }
+  return { date, usage, complete, coveredMeters: usage === null ? 0 : 1, expectedMeters: 1, elapsedUsage: null, elapsedMeters: 0 }
+ })
+ return {
+  source: 'company', observedAt: source.observedAt, timezone: 'Asia/Shanghai',
+  basis: { field: 'epf', boundaryHour: 0, cycle: '请求区间按日分段 · 按实际采样边界计量', unit: 'kWh', nonOverlapping: true },
+  window: { ...requested }, latestSampleTime: source.params.span.observed?.to || meter.observed?.toSample?.readTime || null,
+  latestCompleteDay: days.filter(day => day.complete).at(-1)?.date || null, truncated: Boolean(source.coverage?.truncated),
+  aggregation: { status: 'verified', label: source.params.scope.label, note: '固定电表与统计期间', policyVersion: null },
+  comparison: { currentDay: null, previousDay: null, lastWeekSameDay: null }, days,
+  meters: [{ id: meter.id, name: meter.name, location: meter.areaName || '', latest: meter.observed?.toSample?.readTime || null,
+   complete: !source.coverage?.truncated, daily }],
+ }
 }

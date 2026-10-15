@@ -4,48 +4,66 @@
    <view v-if="error" class="estate-msg"><text>{{ error }}</text><button class="eretry" @tap="init">重试</button></view>
    <template v-else>
     <view class="calrow">
-     <button class="calchip" @tap="calOpen = !calOpen"><uni-icons type="calendar" size="13" color="#37513f" /><text>{{ dayLabel(selected, latestCompleteDay) }}</text><uni-icons :type="calOpen ? 'up' : 'down'" size="11" color="#71877a" /></button>
+     <button v-if="!bounded || selected" class="calchip" @tap="calOpen = !calOpen"><uni-icons type="calendar" size="13" color="#37513f" /><text>{{ labelOf(selected) }}</text><uni-icons :type="calOpen ? 'up' : 'down'" size="11" color="#71877a" /></button>
     </view>
-    <RegionCalendar v-if="calOpen" class="ecal" :date="selected" :today="today" :max-date="latestCompleteDay || today" compact @select="onCalendar" />
+    <RegionCalendar v-if="calOpen && selected && (!bounded || bounds)" class="ecal" :date="selected" :today="today" :min-date="bounded ? bounds?.min : undefined" :max-date="bounded ? (bounds?.max || today) : (latestCompleteDay || today)" compact @select="onCalendar" />
     <view class="esec"><text>每日用电</text><text v-if="basisNote">{{ basisNote }}</text></view>
     <CompanyEnergyStrip ref="stripRef" :days="strip" :selected="selected" @select="onSelectDay" @reach-left="loadOlder" />
     <view v-if="loading" class="estate-msg"><text>正在读取逐日能耗…</text></view>
     <view class="ehero">
-     <text class="elabel">{{ dayLabel(selected, latestCompleteDay) }} 用电</text>
-     <text class="enum">{{ selectedDay?.usage == null ? '—' : selectedDay.usage }}<text class="u">{{ unit ? ' ' + unit : '' }}</text></text>
-     <text v-if="selectedDay?.usage != null" class="edelta">较前一日 <text class="b">{{ pctText(dod) }}</text>　较上周同日 <text class="b">{{ pctText(wow) }}</text></text>
-     <text v-if="selectedDay && (selectedDay.elapsedUsage != null || todayUsage != null)" class="edelta">当日同时段 {{ fmtUsage(selectedDay.elapsedUsage, unit) }} · 今日至今 {{ fmtUsage(todayUsage, unit) }}<text v-if="vsToday != null">　今日较当日同时段 <text class="b">{{ pctText(vsToday) }}</text></text></text>
+     <text class="elabel">{{ labelOf(selected) }} 用电</text>
+     <template v-if="dayPending">
+      <view class="sk-num" /><view class="sk-delta" />
+     </template>
+     <view v-else-if="selectedDay?.failed" class="efail"><text class="enum">—</text><view class="efail-row"><text>该日读取失败</text><button class="eretry" @tap="retrySelected">重试</button></view></view>
+     <template v-else>
+      <text class="enum">{{ selectedDay?.usage == null ? '—' : selectedDay.usage }}<text class="u">{{ unit ? ' ' + unit : '' }}</text></text>
+      <text v-if="boundedEmpty" class="edelta">所选统计期间无可计算用电</text>
+      <text v-if="selectedDay?.usage != null" class="edelta">较前一日 <text class="b">{{ pctText(dod) }}</text>　较上周同日 <text class="b">{{ pctText(wow) }}</text></text>
+      <text v-if="selectedDay && todayInBounds && (selectedDay.elapsedUsage != null || todayUsage != null)" class="edelta">当日同时段 {{ fmtUsage(selectedDay.elapsedUsage, unit) }} · 今日至今 {{ fmtUsage(todayUsage, unit) }}<text v-if="vsToday != null">　今日较当日同时段 <text class="b">{{ pctText(vsToday) }}</text></text></text>
+     </template>
     </view>
     <view class="esec"><text>当日构成</text></view>
-    <template v-if="composition.items.length">
+    <template v-if="dayPending">
+     <view v-for="i in 3" :key="'zc' + i" class="zone-row"><view class="sk-zn" /><view class="ztrack"><view class="zfill sk-fill" :style="{ width: (62 - i * 13) + '%' }" /></view></view>
+    </template>
+    <template v-else-if="composition.items.length">
      <view v-for="(item, i) in composition.items" :key="item.label" class="zone-row">
       <text class="zn">{{ item.label }}</text>
       <view class="ztrack"><view class="zfill" :style="{ width: (item.value / compositionMax * 100) + '%', background: PIE_COLORS[i % PIE_COLORS.length] }" /></view>
       <text class="zv">{{ item.value }}{{ unit ? ' ' + unit : '' }} · {{ Math.round(item.share * 100) }}%</text>
      </view>
     </template>
+    <text v-else-if="selectedDay?.failed" class="sec-empty">该日读取失败，可在上方重试</text>
     <text v-else class="sec-empty">当日无可计算的构成</text>
-    <view class="esec"><text>电表明细 · {{ dayLabel(selected, latestCompleteDay) }}</text><text>{{ meterList.length }} 台</text></view>
+    <view class="esec"><text>电表明细 · {{ labelOf(selected) }}</text><text>{{ meterList.length }} 台</text></view>
+    <template v-if="dayPending">
+     <view v-for="i in 6" :key="'mk' + i" class="mrow"><view class="mrow-copy"><view class="sk-name" /><view class="sk-loc" /></view><view class="sk-v" /></view>
+    </template>
+    <text v-else-if="selectedDay?.failed" class="sec-empty">该日明细读取失败，可在上方重试</text>
+    <template v-else>
     <view v-for="meter in meterList" :key="meter.id" class="mrow">
      <view class="mrow-copy"><text class="mrow-name">{{ meter.name }}</text><text v-if="meter.location" class="mrow-loc">{{ meter.location }}</text></view>
      <text class="mrow-v">{{ meter.usage == null ? '—' : '用电 ' + meter.usage + (unit ? ' ' + unit : '') }}<text v-if="meter.usage != null && selectedDay?.usage" class="mrow-share">占 {{ Math.round(meter.usage / selectedDay.usage * 100) }}%</text><text v-else-if="meter.status !== 'comparable'" class="mrow-share">{{ statusText(meter.status) }}</text></text>
     </view>
+    </template>
     <text class="efoot">{{ footnote }}</text>
-    <view class="eactions"><button class="eaction" @tap="$emit('open-meter-history')">查看原始采样</button></view>
+    <view v-if="showHistoryAction" class="eactions"><button class="eaction" @tap="$emit('open-meter-history')">查看电表统计</button></view>
    </template>
   </scroll-view>
  </view>
 </template>
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { getCompanyEnergyDaily } from '@/apis/agent'
+import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
+import { onHide, onShow } from '@dcloudio/uni-app'
+import { getCompanyEnergyDaily, getCompanyMeterReport } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import RegionCalendar from './RegionCalendar.vue'
 import CompanyEnergyStrip from './CompanyEnergyStrip.vue'
-import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage } from '../energy-daily-view.mjs'
+import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView } from '../energy-daily-view.mjs'
 import { fmtDateTime } from '../observation-view.mjs'
 
-const props = defineProps({ active: Boolean, focusDate: String })
+const props = defineProps({ active: Boolean, focusDate: String, bounded: Boolean, initialQuery: Object, showHistoryAction: { type: Boolean, default: true } })
 defineEmits(['refresh', 'open-meter-history'])
 const today = shanghaiToday()
 const report = ref(null)
@@ -58,9 +76,13 @@ const error = ref('')
 const loading = ref(false)
 const calOpen = ref(false)
 const stripRef = ref(null)
+const bounds = ref(null)
+let boundedJob = null
+let sheetVisible = true
 const unit = computed(() => unitOf(report.value))
 const basisNote = computed(() => unitNote(report.value))
 const selectedDay = computed(() => strip.value.find(d => d.date === selected.value) || null)
+const dayPending = computed(() => selectedDay.value?.pending || (props.bounded && loading.value && !selectedDay.value))
 const meterList = computed(() => {
  const rows = meterRows({ meters: meterEntries.value }, selected.value)
  return [...rows].sort((a, b) => (b.usage ?? -1) - (a.usage ?? -1))
@@ -68,15 +90,38 @@ const meterList = computed(() => {
 const meterEntries = computed(() => Object.values(meterDaily.value))
 const composition = computed(() => floorComposition(meterList.value))
 const compositionMax = computed(() => composition.value.items.reduce((m, i) => Math.max(m, i.value), 0) || 1)
-const usageOf = date => strip.value.find(d => d.date === date)?.usage
-const dod = computed(() => comparePct(selectedDay.value?.usage, usageOf(shiftDate(selected.value, -1))))
-const wow = computed(() => comparePct(selectedDay.value?.usage, usageOf(shiftDate(selected.value, -7))))
+const usageOf = date => {
+ if (props.bounded) {
+  if (!bounds.value || date < bounds.value.min || date > bounds.value.max) return null
+  const day = strip.value.find(d => d.date === date)
+  return day?.complete ? day.usage : null
+ }
+ return strip.value.find(d => d.date === date)?.usage
+}
+const selectedUsage = computed(() => props.bounded ? (selectedDay.value?.complete ? selectedDay.value.usage : null) : selectedDay.value?.usage)
+const dod = computed(() => comparePct(selectedUsage.value, usageOf(shiftDate(selected.value, -1))))
+const wow = computed(() => comparePct(selectedUsage.value, usageOf(shiftDate(selected.value, -7))))
+const labelOf = date => props.bounded ? (date ? `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日` : '') : dayLabel(date, latestCompleteDay.value)
+const todayInBounds = computed(() => !props.bounded || Boolean(bounds.value && today >= bounds.value.min && today <= bounds.value.max))
+const boundedEmpty = computed(() => Boolean(props.bounded && report.value && bounds.value && !loading.value && !strip.value.some(d => d.pending || d.usage != null)))
 // 与今日对比的公平口径：所选日只取与“今日至今”相同的 elapsed 窗口（08:00 → 当前时刻），
 // 不拿完整日去比一个未过完的今天；任一侧无实测样本即显示 —。
 const todayUsage = computed(() => report.value?.comparison?.currentDay?.usage ?? null)
 const vsToday = computed(() => comparePct(todayUsage.value, selectedDay.value?.elapsedUsage))
 const footnote = computed(() => {
  if (!report.value) return ''
+ if (props.bounded) {
+  const meter = meterEntries.value[0]
+  const parts = []
+  if (props.initialQuery && meter) parts.push([meter.name, meter.location].filter(Boolean).join(' · '))
+  else parts.push(report.value.aggregation?.label || '')
+  if (props.initialQuery) parts.push(`${fmtDateTime(props.initialQuery.from)} — ${fmtDateTime(props.initialQuery.to)}`)
+  else if (bounds.value) parts.push(`${bounds.value.min} — ${bounds.value.max}`)
+  if (latestSampleTime.value) parts.push(`数据截至 ${fmtDateTime(latestSampleTime.value)}`)
+  if (report.value.truncated) parts.push('读取窗口被截断')
+  parts.push(report.value.basis?.cycle || '')
+  return parts.filter(Boolean).join(' · ')
+ }
  const parts = [`数据截至 ${fmtDateTime(latestSampleTime.value)}`]
  if (report.value.truncated) parts.push('读取窗口被截断')
  parts.push(report.value.basis?.cycle || '')
@@ -86,10 +131,18 @@ const footnote = computed(() => {
 function pctText(v) { return v == null ? '—' : (v >= 0 ? '+' : '') + v + '%' }
 
 let requestId = 0
-function mergeReport(next) {
- report.value = next
- latestCompleteDay.value = next.latestCompleteDay || ''
- latestSampleTime.value = next.latestSampleTime || ''
+function mergeReport(next, replace = true) {
+ if (replace || !report.value) {
+  report.value = next
+  latestCompleteDay.value = next.latestCompleteDay || ''
+  latestSampleTime.value = next.latestSampleTime || ''
+ } else {
+  const meters = (report.value.meters || []).map(m => {
+   const extra = (next.meters || []).find(x => x.id === m.id)
+   return extra ? { ...m, daily: { ...(extra.daily || {}), ...(m.daily || {}) } } : m
+  })
+  report.value = { ...report.value, meters }
+ }
  strip.value = mergeStripDays(strip.value, next.days || [])
  const md = { ...meterDaily.value }
  ;(next.meters || []).forEach(meter => {
@@ -106,6 +159,7 @@ async function init() {
  const scope = getAgentStorageScope()
  loading.value = true; error.value = ''
  try {
+  if (props.bounded) { await initBounded(current); return }
   const next = await fetchWindow()
   if (current !== requestId || !props.active || scope !== getAgentStorageScope()) return
   strip.value = []; meterDaily.value = {}
@@ -116,8 +170,112 @@ async function init() {
   if (current === requestId) error.value = cause?.data?.message || cause.message || '逐日能耗暂不可用'
  } finally { if (current === requestId) loading.value = false }
 }
+function clearBoundedData() {
+ report.value = null; strip.value = []; meterDaily.value = {}; selected.value = ''; bounds.value = null
+}
+async function initBounded(current) {
+ clearBoundedData()
+ const job = { ctx: null, scope: '', queue: [], requested: new Set(), pumping: false }
+ boundedJob = job
+ await waitForAgentSession()
+ if (current !== requestId || job !== boundedJob || !sheetVisible) return
+ job.scope = getAgentStorageScope()
+ scope.value = job.scope
+ if (props.initialQuery) {
+  job.ctx = fixedEnergyContext(props.initialQuery)
+  if (!job.ctx) { error.value = '该计量对象的统计范围无效'; return }
+  bounds.value = { min: job.ctx.minDate, max: job.ctx.maxDate }
+  strip.value = padStripDays([], job.ctx.minDate, job.ctx.maxDate)
+  const span = Math.round((Date.parse(job.ctx.maxDate) - Date.parse(job.ctx.minDate)) / 864e5) + 1
+  const request = fixedEnergyWindow(job.ctx, span <= 90 ? span : STRIP_PAGE_DAYS)
+  const next = meterStatisticsDailyView(await getCompanyMeterReport(request), job.ctx)
+  if (current !== requestId || job !== boundedJob || !props.active || !sheetVisible || job.scope !== getAgentStorageScope()) return
+  mergeReport(next)
+  if (span <= 90) resolveBoundedPending(job.ctx.minDate, job.ctx.maxDate)
+ } else {
+  const next = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS })
+  if (current !== requestId || job !== boundedJob || !props.active || !sheetVisible || job.scope !== getAgentStorageScope()) return
+  bounds.value = { min: next.days?.[0]?.date || '', max: next.days?.at(-1)?.date || '' }
+  mergeReport(next)
+  if (bounds.value.min) { strip.value = padStripDays(strip.value, bounds.value.min, bounds.value.max); resolveBoundedPending(bounds.value.min, bounds.value.max) }
+ }
+ const loaded = [...strip.value].reverse().find(d => !d.pending && !d.failed && d.usage != null)
+ selected.value = loaded?.date || bounds.value?.max || ''
+ nextTick(() => stripRef.value?.centerOn(selected.value))
+}
+function boundedChunkEnd(date) {
+ const diff = Math.round((Date.parse(bounds.value.max) - Date.parse(date)) / 864e5)
+ return shiftDate(bounds.value.max, -90 * Math.floor(diff / 90))
+}
+function boundedChunkFrom(end) {
+ const start = shiftDate(end, -89)
+ return start < bounds.value.min ? bounds.value.min : start
+}
+function resolveBoundedPending(from, to) {
+ strip.value = strip.value.map(d => d.pending && d.date >= from && d.date <= to ? { ...d, pending: false } : d)
+}
+function ensureBoundedDay(date) {
+ const job = boundedJob
+ if (!job?.ctx || !bounds.value || job.requested.has(date)) return
+ if (!strip.value.find(d => d.date === date)?.pending) return
+ const end = boundedChunkEnd(date)
+ for (let x = boundedChunkFrom(end); x <= end; x = shiftDate(x, 1)) job.requested.add(x)
+ job.queue.push(end)
+ void pumpBounded(job)
+}
+async function pumpBounded(job) {
+ if (job.pumping) return
+ job.pumping = true
+ const current = requestId
+ while (job.queue.length && sheetVisible) {
+  const end = job.queue.shift()
+  const request = fixedEnergyWindow(job.ctx, 90, end)
+  if (!request) continue
+  try {
+   const next = meterStatisticsDailyView(await getCompanyMeterReport(request), job.ctx)
+   if (current !== requestId || job !== boundedJob || !sheetVisible || job.scope !== getAgentStorageScope()) break
+   mergeReport(next, false)
+   resolveBoundedPending(boundedChunkFrom(end), end)
+  } catch (cause) {
+   if (current !== requestId || job !== boundedJob || !sheetVisible || job.scope !== getAgentStorageScope()) break
+   if (cause?.data) {
+    boundedJob = null
+    clearBoundedData()
+    error.value = cause.data?.message || cause.message || '电表统计暂不可用'
+    break
+   }
+   const from = boundedChunkFrom(end)
+   for (let x = from; x <= end; x = shiftDate(x, 1)) job.requested.delete(x)
+   strip.value = markStripFailed(strip.value, from, end)
+  }
+ }
+ job.pumping = false
+}
+function selectBounded(date) {
+ if (!bounds.value || date < bounds.value.min || date > bounds.value.max) return
+ selected.value = date
+ ensureBoundedDay(date)
+ nextTick(() => stripRef.value?.centerOn(date))
+}
+function resumeBounded() {
+ if (!props.active || !sheetVisible || boundedJob) return
+ const scopeNow = getAgentStorageScope()
+ if (report.value && bounds.value && scope.value === scopeNow) {
+  boundedJob = { ctx: props.initialQuery ? fixedEnergyContext(props.initialQuery) : null, scope: scopeNow, queue: [], requested: new Set(), pumping: false }
+  if (selected.value) ensureBoundedDay(selected.value)
+  return
+ }
+ void init()
+}
+function retrySelected() {
+ if (!props.bounded || !bounds.value || !selected.value || !boundedJob) return
+ const end = boundedChunkEnd(selected.value), from = boundedChunkFrom(end)
+ strip.value = strip.value.map(d => d.failed && d.date >= from && d.date <= end ? { ...d, failed: false, pending: true } : d)
+ for (let x = from; x <= end; x = shiftDate(x, 1)) boundedJob.requested.delete(x)
+ ensureBoundedDay(selected.value)
+}
 async function loadOlder(firstDate) {
- if (!firstDate || loading.value) return
+ if (props.bounded || !firstDate || loading.value) return
  const current = ++requestId
  loading.value = true
  try {
@@ -131,7 +289,7 @@ async function loadOlder(firstDate) {
 }
 const scope = ref('')
 async function ensureDateLoaded(date) {
- if (strip.value.some(d => d.date === date)) return
+ if (props.bounded || strip.value.some(d => d.date === date)) return
  const edge = latestCompleteDay.value || today
  const end = shiftDate(date, 15) > edge ? edge : shiftDate(date, 15)
  const current = ++requestId
@@ -147,17 +305,29 @@ async function ensureDateLoaded(date) {
   }
  } catch { /* 日期窗口读取失败，条上保持缺省 */ }
 }
-function onSelectDay(date) { selected.value = date; stripRef.value?.centerOn(date) }
+function onSelectDay(date) {
+ if (props.bounded) { selectBounded(date); return }
+ selected.value = date; stripRef.value?.centerOn(date)
+}
 function onCalendar(date) {
  calOpen.value = false
+ if (props.bounded) { selectBounded(date); return }
  selected.value = date
  ensureDateLoaded(date).then(() => stripRef.value?.centerOn(date))
 }
-watch(() => props.active, value => {
- if (value) { scope.value = getAgentStorageScope(); init() }
+watch([() => props.active, () => props.initialQuery], ([active]) => {
+ if (!props.bounded) { if (active) { scope.value = getAgentStorageScope(); init() } return }
+ if (active && sheetVisible) { void init(); return }
+ requestId++; boundedJob = null; loading.value = false
+ if (active) clearBoundedData()
 }, { immediate: true })
+onHide(() => { if (props.bounded) { sheetVisible = false; requestId++; boundedJob = null; loading.value = false } })
+onShow(() => { if (!props.bounded) return; sheetVisible = true; resumeBounded() })
+onBeforeUnmount(() => { if (props.bounded) { requestId++; boundedJob = null } })
 watch(() => props.focusDate, date => {
- if (date && props.active) { selected.value = date; ensureDateLoaded(date).then(() => stripRef.value?.centerOn(date)) }
+ if (!date || !props.active) return
+ if (props.bounded) { selectBounded(date); return }
+ selected.value = date; ensureDateLoaded(date).then(() => stripRef.value?.centerOn(date))
 })
 </script>
 <style scoped>
@@ -198,5 +368,15 @@ button::after { border:0; }
 .efoot { display:block; font-size:9.5px; color:#a0ab95; line-height:1.8; margin-top:16px; }
 .eactions { display:flex; gap:8px; margin-top:14px; }
 .eaction { flex:1; min-height:38px; display:flex; align-items:center; justify-content:center; border:1px solid #dce7d4; background:#eaf1e4; border-radius:12px; color:#4a7751; font-size:11px; font-weight:600; }
-@media(prefers-reduced-motion:reduce){.calchip:active{transform:none}}
+.efail-row { display:flex; align-items:center; gap:10px; margin-top:8px; font-size:10.5px; color:#a27128; }
+.sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v { background:#e2eadf; border-radius:4px; animation:sk-pulse 1.4s ease-in-out infinite; }
+.sk-num { display:block; width:150px; height:38px; margin-top:4px; border-radius:8px; }
+.sk-delta { display:block; width:220px; max-width:80%; height:10px; margin-top:10px; }
+.sk-zn { width:56px; height:12px; flex-shrink:0; }
+.sk-fill { background:#e2eadf; }
+.sk-name { display:block; width:62%; height:12px; }
+.sk-loc { display:block; width:38%; height:9px; margin-top:6px; }
+.sk-v { width:64px; height:12px; flex-shrink:0; }
+@keyframes sk-pulse { 0%,100% { opacity:.45 } 50% { opacity:.9 } }
+@media(prefers-reduced-motion:reduce){.calchip:active{transform:none} .sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v{animation:none;opacity:.6}}
 </style>

@@ -245,7 +245,7 @@ function relDay(iso) {
  if (diff > 0 && diff <= 6 * 864e5) return `周${WEEKDAYS[new Date(d + 'T00:00:00Z').getUTCDay()]}`
  return fmtMD(iso)
 }
-const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '计量点原始历史', alerts: '安全事件台账' })[observationType.value] || '')
+const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '电表统计', alerts: '安全事件台账' })[observationType.value] || '')
 const observation = computed(() => {
  if (!snapshot.value || !observationType.value || (observationType.value === 'alerts' && alertsUnavailable.value)) return null
  const type = observationType.value

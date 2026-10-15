@@ -1,16 +1,16 @@
 <template>
  <view class="calendar" :class="{ compact, expanded }">
   <view class="calendar-head">
-   <view class="head-zone"><button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" aria-label="上个月" title="上个月" @tap="moveMonth(-1)"><uni-icons type="left" size="14" color="#586d60" /></button></view>
+   <view class="head-zone"><button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" :disabled="Boolean(minDate) && month <= minDate.slice(0, 7)" aria-label="上个月" title="上个月" @tap="moveMonth(-1)"><uni-icons type="left" size="14" color="#586d60" /></button></view>
    <button class="month-title" :aria-expanded="expanded" @tap="setExpanded(!expanded)"><text>{{ month.slice(0, 4) }} 年 {{ Number(month.slice(5)) }} 月</text><uni-icons :type="expanded ? 'up' : 'down'" size="12" color="#71877a" /></button>
    <view class="head-zone head-right">
-    <button class="today-btn" :class="{ 'today-dim': !showToday }" hover-class="today-btn--pressed" aria-label="回到现在" title="回到现在" @tap="backToToday"><view class="today-face"><uni-icons type="location" size="12" color="#2f5a47" /><text>现在</text></view></button>
+    <button class="today-btn" :class="{ 'today-dim': !showToday || !todayInRange }" :disabled="!todayInRange" hover-class="today-btn--pressed" aria-label="回到现在" title="回到现在" @tap="backToToday"><view class="today-face"><uni-icons type="location" size="12" color="#2f5a47" /><text>现在</text></view></button>
     <button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" :disabled="month >= maxDate.slice(0, 7)" aria-label="下个月" title="下个月" @tap="moveMonth(1)"><uni-icons type="right" size="14" color="#586d60" /></button>
    </view>
   </view>
   <view class="days-wrap" :style="{ maxHeight: (expanded ? Math.ceil(days.length / 7) : 1) * (compact ? 40 : 46) + 'px' }">
    <view class="days">
-    <button v-for="(day, index) in days" :key="day" class="day" :class="{ selected: day === date, today: day === today, outside: day.slice(0, 7) !== month, disabled: day > maxDate }" :disabled="day > maxDate" @tap="select(day)">
+    <button v-for="(day, index) in days" :key="day" class="day" :class="{ selected: day === date, today: day === today, outside: day.slice(0, 7) !== month, disabled: outOfRange(day) }" :disabled="outOfRange(day)" @tap="select(day)">
      <text class="weekday">{{ weekdays[index % 7] }}</text><text class="day-number">{{ Number(day.slice(8)) }}</text>
      <view v-if="marksByDay[day]" class="day-mark" :class="{ abnormal: marksByDay[day].abnormal }" />
     </button>
@@ -23,7 +23,7 @@
 import { computed, ref, watch } from 'vue'
 import { calendarDates, shiftDate } from '../region-calendar.mjs'
 
-const props = defineProps({ date: String, today: String, maxDate: String, error: Boolean, compact: Boolean, marks: { type: Array, default: () => [] } })
+const props = defineProps({ date: String, today: String, minDate: String, maxDate: String, error: Boolean, compact: Boolean, marks: { type: Array, default: () => [] } })
 const emit = defineEmits(['select', 'month-change'])
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 const month = ref(props.date.slice(0, 7)), expanded = ref(false), gridExpanded = ref(false)
@@ -41,11 +41,13 @@ function setExpanded(value) {
 }
 function moveMonth(delta) {
  const next = shiftDate(`${month.value}-01`, delta < 0 ? -1 : 32).slice(0, 7)
- if (next <= props.maxDate.slice(0, 7)) { month.value = next; setExpanded(true) }
+ if (next <= props.maxDate.slice(0, 7) && (!props.minDate || next >= props.minDate.slice(0, 7))) { month.value = next; setExpanded(true) }
 }
 const showToday = computed(() => props.date !== props.today || month.value !== props.today.slice(0, 7))
-function select(day) { if (day > props.maxDate) return; month.value = day.slice(0, 7); emit('select', day) }
-function backToToday() { setExpanded(false); select(props.today) }
+const todayInRange = computed(() => props.today <= props.maxDate && (!props.minDate || props.today >= props.minDate))
+const outOfRange = day => day > props.maxDate || Boolean(props.minDate) && day < props.minDate
+function select(day) { if (outOfRange(day)) return; month.value = day.slice(0, 7); emit('select', day) }
+function backToToday() { if (!todayInRange.value) return; setExpanded(false); select(props.today) }
 </script>
 <style scoped>
 view,text,input { font-size:inherit; line-height:inherit; }
