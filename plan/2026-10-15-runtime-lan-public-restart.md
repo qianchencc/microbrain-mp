@@ -1,0 +1,21 @@
+# 当前局域网与公网后端重启
+
+2026-10-15 17:46，用户明确要求重启后端到当前IP并确认 qianc.ltd 公网服务正常。
+
+- 当前 en0 地址：`192.168.123.4`。唯一Runtime由PID10228优雅停止后以Node22重启为PID17970，监听 `0.0.0.0:3200`，同时支持局域网和公网代理的回环连接。
+- 小程序开发API继续为 `https://mp-agent.qianc.ltd/api`，未改为局域网IP。公网仍经Cloudflare/frps/frpc → `127.0.0.1:9416` 安全代理 → 3200。
+- 本机驻留启动器 `~/frp/runtime-loopback-launcher.mjs` 的HOST现为 `0.0.0.0`（文件名沿用历史名称）。原启动器备份在本机 `/private/tmp/runtime-ip-restart-1792057580818/launcher-before.mjs`，仅限下次安全停机后恢复并启动，不能重复启动第二个3200。
+- 重启前执行中对话、任务阶段、确认中草案和未来90秒到期阶段/周期计划均为0。保留原应用构建、真实客户网关、`var/real-runtime.sqlite`、配置版本2与全部身份/任务/配置密钥；没有部署工作区并行修改。
+
+## 验证
+
+- 本机回环、`192.168.123.4:3200`、`mp-agent.qianc.ltd` 的健康检查和真实身份Office区域API均200（2个区域）。Runtime为production、GLM-5.3-Flash、原真实网关。
+- 公网Company真实设备目录200（334台），匿名请求401，公网管理路径404。
+- 经公网创建临时Company测试会话，只发送连接问候；NDJSON分3块到达，16.642秒后 `message.completed` 与 `run.completed` 完整返回。没有操作提案或设备控制；测试会话随后通过公开DELETE接口清理成功。
+- 重启启动器退出后再次核验唯一监听、实际Node22可执行文件与局域网健康正常。frpc和9416代理继续运行，无需重启。
+
+本机证据：`/private/tmp/runtime-ip-restart-1792057580818/result.json`、`/private/tmp/runtime-public-check-20261015.json`。身份仅从既有0600文件在内存读取，证据不包含凭据。
+
+本轮是运行配置与重启验证，未修改应用源码，因此未重建或重跑全量测试。手机移动网络体验尚未人工验收；本次验证的是公网真实HTTPS、鉴权、业务读取和模型流式终态。视频域名不在本次后端API重启范围。
+
+后续技能：异常诊断用 `diagnosing-bugs`；服务发布遵循 `future-tech-standards`。当前模式同时开放局域网监听；恢复仅公网模式时，在安全停机窗口把启动器HOST改回127.0.0.1并重启，前端公网地址无需变更。
