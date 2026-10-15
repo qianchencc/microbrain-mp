@@ -84,7 +84,7 @@ export function applyEvent(turn, event, turns = [turn]) {
 	if (event.type === 'task.cancellation.resolved') for (const task of turn.tasks) if (task.cancellationId === event.cancellationId) task.status = event.status
 	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) { turn.running = false; turn.streaming = false; turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000)) }
 	if (event.type === 'run.failed') {
-		turn.error = event.message || '本次回答未完成'
+		turn.error = event.message || '本次回答未完成：服务端未返回具体原因'
 		for (const item of turn.activities) if (item.status === 'running') item.status = 'failed'
 	}
 	if (event.type === 'run.aborted') {
@@ -106,10 +106,7 @@ export function mergeTaskDetail(task, detail) {
 
 export function friendlyError(message) {
 	const text = String(message || '')
-	if (/request:fail|network|timeout|超时/i.test(text)) return '网络连接中断，本次回答未完成'
-	if (/请求处理失败|502|503|504|Service/i.test(text)) return '服务暂时不可用，本次回答未完成'
-	if (/会话已过期|客户登录已失效/i.test(text)) return '会话已过期，请重新登录'
-	return text || '本次回答未完成'
+	return text || '本次回答未完成：未取得具体失败原因'
 }
 
 export function restoreTurns(savedTurns = []) {

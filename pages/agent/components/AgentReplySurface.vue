@@ -35,7 +35,7 @@
    <view v-if="!readOnly && turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
     <text v-if="turn.result.summary.status === 'completed'" class="execution-answer">{{ turn.result.summary.text }}</text>
     <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>
-    <button v-else-if="turn.result.summary.status === 'failed'" class="execution-retry" :disabled="busy" hover-class="execution-retry--pressed" @tap="$emit('retry-answer')"><uni-icons type="refreshempty" size="14" color="#738177" /><text>重试回答</text></button>
+    <view v-else-if="turn.result.summary.status === 'failed'"><text class="reply-error">{{ turn.result.summary.reason || '执行总结未完成：未取得具体原因' }}</text><button class="execution-retry" :disabled="busy" hover-class="execution-retry--pressed" @tap="$emit('retry-answer')"><uni-icons type="refreshempty" size="14" color="#738177" /><text>重试回答</text></button></view>
    </view>
    <text v-if="turn.error" class="reply-error">{{ turn.error }}</text>
   </view>

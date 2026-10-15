@@ -3,7 +3,7 @@
   <view class="conversation-shell">
    <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" :scroll-top="restoredScrollTop" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner">
-    <view v-if="!isCompany && regionsError" class="region-notice"><text>区域暂不可用</text><button @tap="loadRegionFocus().catch(() => {})">重新读取</button></view>
+    <view v-if="!isCompany && regionsError" class="region-notice"><text>{{ regionsError }}</text><button @tap="loadRegionFocus().catch(() => {})">重新读取</button></view>
     <view v-if="!conversationId && !errorMessage" class="welcome connecting"><text>{{ isCompany ? '公司 Agent' : '办公室 Agent' }}</text><view>正在恢复对话…</view></view>
     <view v-else-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>查询公司环境、能耗和告警，安排定时简报或智慧空调任务。</view></view>
     <view v-else-if="!turns.length" class="welcome"><text>办公室 Agent</text><view>告诉我位置、设备和需要的操作。</view></view>
@@ -300,7 +300,7 @@ async function restore() {
   schedule()
   if (turns.value.some(turn => tasksOf(turn).some(task => task.repeat && task.created))) void refreshScheduledTasks()
   void refreshInboxCount()
- } catch (error) { if (!disposed) { errorMessage.value = error.message === 'request:fail' ? '暂时无法连接，请检查网络后重试' : error.message; schedule() } }
+ } catch (error) { if (!disposed) { errorMessage.value = error.message || '未取得网络响应，网络层未提供具体原因'; schedule() } }
  finally { restoring = false }
 }
 // 消息编辑收编进主输入框（全页面单一键盘链路）：进入编辑暂存 composer 草稿并预填原文，
@@ -455,7 +455,7 @@ function selectDraft(turn, selected) {
      const synced = selectionSynced.get(draftId)
      const failed = liveDraftTurn(draftId)
      if (synced && failed) failed.draft.selectedActionIds = synced
-     uni.showToast({ title: String(error.data?.message || error.message || '选择未保存').slice(0, 24), icon: 'none' })
+     uni.showModal({ title: '选择未保存', content: String(error.data?.message || error.message || '服务端未返回具体原因'), showCancel: false })
      selectionDesired.delete(draftId)
      if (!activeRequest && !confirming.size && !disposed) await restore()
      break
@@ -476,7 +476,7 @@ async function restoreDraft(turn) {
   const live = liveDraftTurn(draftId) ?? turn
   if (live.draft) Object.assign(live.draft, updated)
  } catch (error) {
-  uni.showToast({ title: String(error.data?.message || error.message || '还原失败').slice(0, 24), icon: 'none' })
+  uni.showModal({ title: '还原失败', content: String(error.data?.message || error.message || '服务端未返回具体原因'), showCancel: false })
   if (!activeRequest && !confirming.size && !disposed) await restore()
  }
  finally { mutating.value = false; schedule() }
@@ -504,7 +504,7 @@ async function confirmDraft(turn) {
  } catch (error) {
   const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
   if (['REJECTED', 'INTERRUPTED'].includes(error.data?.status)) { live.result = error.data; live.draft.status = error.data.status }
-  else { errorMessage.value = String(error.message || '').startsWith('request:fail') ? '连接中断，未取得执行结果。请重新读取回执。' : error.message; if (sheetDraftId.value === draftId) sheetError.value = errorMessage.value; resync = true }
+  else { errorMessage.value = error.message ? `${error.message}；请重新读取执行回执` : '未取得执行结果或具体原因，请重新读取回执'; if (sheetDraftId.value === draftId) sheetError.value = errorMessage.value; resync = true }
  } finally { confirming.delete(draftId); mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
@@ -669,7 +669,7 @@ defineExpose({ openMenu, openInbox, clearHistory, openRegion, setReference, pref
 <style scoped>
 .event-host { flex:1;min-height:0;display:flex;flex-direction:column; }.event-back { display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0; }
 
-.region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:12px; padding:8px 0; }.region-notice button { min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:12px; }.region-notice button::after { border:0; }
+.region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:12px; padding:8px 0; }.region-notice text { flex:1; min-width:0; word-break:break-word; }.region-notice button { flex-shrink:0; min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:12px; }.region-notice button::after { border:0; }
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。

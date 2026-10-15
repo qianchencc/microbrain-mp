@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { requestJson, downloadHttpError } from '../apis/agent/request.mjs'
+import { friendlyError } from '../pages/agent/conversation.mjs'
+
+test('Agent requests retain server reasons and identify HTTP failures with no response body', async () => {
+ const original = globalThis.uni
+ try {
+  const reason = '检查点智能分析：模型服务返回 HTTP 503（编号 phase-1）'
+  globalThis.uni = { request: options => options.success({ statusCode: 503, data: { message: reason } }) }
+  await assert.rejects(requestJson('/api/agent/tasks/1', 'GET'), error => error.message === reason)
+  assert.equal(friendlyError(reason), reason)
+  globalThis.uni = { request: options => options.success({ statusCode: 502, data: '<html>private proxy body</html>' }) }
+  await assert.rejects(requestJson('/api/agent/tasks/1', 'GET'), error => /HTTP 502/.test(error.message) && !error.message.includes('private proxy body'))
+ } finally { globalThis.uni = original }
+})
+
+test('PDF download retains the saved HTTP error response instead of replacing it with a generic failure', async () => {
+ const original = globalThis.uni
+ try {
+  const reason = '报告导出失败：存储空间不足（编号 request-2）'
+  globalThis.uni = { getFileSystemManager: () => ({ readFile: options => options.success({ data: JSON.stringify({ message: reason }) }) }) }
+  assert.equal((await downloadHttpError({ statusCode: 503, tempFilePath: '/tmp/download-response' })).message, reason)
+  globalThis.uni = { getFileSystemManager: () => ({ readFile: options => options.success({ data: '<html>proxy unavailable</html>' }) }) }
+  const error = await downloadHttpError({ statusCode: 502, tempFilePath: '/tmp/download-response' })
+  assert.match(error.message, /HTTP 502/)
+  assert.doesNotMatch(error.message, /html|proxy unavailable/)
+  globalThis.uni = { getFileSystemManager: () => { throw new Error('filesystem unavailable') } }
+  assert.match((await downloadHttpError({ statusCode: 503, tempFilePath: '/tmp/download-response' })).message, /HTTP 503/)
+
+ } finally { globalThis.uni = original }
+})

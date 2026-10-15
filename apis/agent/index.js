@@ -3,7 +3,7 @@ import { getAgentHeaders, getAgentStorageScope } from '@/utils/agent-session'
 import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
 import { transportError, createTerminalTracker } from './stream-errors.mjs'
-import { requestJson } from './request.mjs'
+import { requestJson, httpError, downloadHttpError } from './request.mjs'
 import { conversationSourceBody, withConversationSource } from './conversation-source.mjs'
 
 const STREAM_IDLE_TIMEOUT_MS = 60000
@@ -65,13 +65,10 @@ export function downloadReportArtifact(reportId, source = 'company') {
   uni.downloadFile({
    url: globalConfig.agentUrl + `/agent/reports/${encodeURIComponent(reportId)}/download?source=${encodeURIComponent(source)}`,
    header: getAgentHeaders(),
-   success: response => {
+   success: async response => {
     const status = response.statusCode
     if (status !== 200 || !response.tempFilePath) {
-     const error = new Error(status === 401 ? '登录状态已失效，请重新进入'
-      : status === 404 || status === 403 ? '报告不存在或授权已变化' : '下载失败，请重试')
-     error.status = status
-     error.data = { status }
+     const error = status === 200 ? new Error('服务端未返回有效的 PDF 文件') : await downloadHttpError(response)
      reject(error)
      return
     }
@@ -80,9 +77,9 @@ export function downloadReportArtifact(reportId, source = 'company') {
     if (currentScope !== scope) { const error = new Error('登录身份已变化，请重新打开报告'); error.data = { code: 'SCOPE_CHANGED' }; reject(error); return }
     uni.openDocument({ filePath: response.tempFilePath, fileType: 'pdf', showMenu: true,
      success: () => resolve(response.tempFilePath),
-     fail: cause => reject(new Error(cause?.errMsg || '打开 PDF 失败')) })
+     fail: cause => reject(new Error(cause?.errMsg || '打开 PDF 失败：微信未返回具体原因')) })
    },
-   fail: cause => reject(new Error(cause?.errMsg || '下载失败，请重试')),
+   fail: cause => reject(new Error(cause?.errMsg || '报告下载失败：未取得服务端响应，网络层未提供具体原因')),
   })
  })
 }
@@ -126,7 +123,7 @@ export const streamMessage = (conversationId, content, onEvent, focusRegionId, s
 						else reject(transportError())
 					} else {
 						const body = parseErrorBody(response.data)
-						const error = body?.message ? new Error(body.message) : transportError()
+						const error = httpError(response.statusCode, body, '回答请求失败')
 						if (body) error.data = body
 						reject(error)
 					}
@@ -135,7 +132,7 @@ export const streamMessage = (conversationId, content, onEvent, focusRegionId, s
 			fail: error => {
 				watchdog?.stop()
 				console.warn('[agent-stream] 传输失败:', error?.errMsg)
-				reject(transportError())
+				reject(transportError(error?.errMsg))
 			}
 		}
 

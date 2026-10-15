@@ -56,7 +56,7 @@ const selectedTaskId = ref(''), sampleDetail = ref(null), sampleDate = ref('')
 const deviceDrawerMounted = ref(false), taskDetailMounted = ref(false)
 watch(deviceDrawerOpen, open => { if (open) deviceDrawerMounted.value = true }, { flush: 'sync' })
 watch(selectedTaskId, id => { if (id) taskDetailMounted.value = true }, { flush: 'sync' })
-const calendarMarks = ref([]), calendarMonth = ref(''), calendarError = ref(false)
+const calendarMarks = ref([]), calendarMonth = ref(''), calendarError = ref('')
 const now = ref(new Date().toISOString()), today = computed(() => localDate(now.value)), date = ref(localDate(now.value))
 const maxDate = computed(() => shiftDate(today.value, 7))
 const displayNow = computed(() => sampleMode.value ? `${date.value}T14:52:00+08:00` : now.value)
@@ -157,13 +157,13 @@ function extendBottom() {
 }
 function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7), silent = false) {
  const current = ++calendarRequest, region = focusRegionId.value, scope = getAgentStorageScope()
- if (!silent) { calendarMarks.value = []; calendarError.value = false }
+ if (!silent) { calendarMarks.value = []; calendarError.value = '' }
  if (!region) return
  const { from, to } = calendarWindow(month)
  if (sampleMode.value) return
  listRegionCalendar(region, from, to).then(result => {
-  if (current === calendarRequest && region === focusRegionId.value && scope === getAgentStorageScope()) calendarMarks.value = result.days || []
- }).catch(() => { if (!silent && current === calendarRequest) { calendarMarks.value = []; calendarError.value = true } })
+  if (current === calendarRequest && region === focusRegionId.value && scope === getAgentStorageScope()) { calendarError.value = ''; calendarMarks.value = result.days || [] }
+ }).catch(cause => { if (current === calendarRequest && region === focusRegionId.value && scope === getAgentStorageScope()) { if (!silent) calendarMarks.value = []; calendarError.value = cause.message || '日历读取失败：未取得具体原因' } })
 }
 function onCalendarMonth(month) { calendarMonth.value = month; if (visible && !loadingDirectory) loadCalendar(month) }
 function openTask(item) {

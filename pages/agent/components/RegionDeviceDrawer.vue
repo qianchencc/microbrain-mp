@@ -18,7 +18,7 @@
   </template>
   <view class="drawer-content">
    <view class="nav-pane" :class="{ 'pane-before': depth > 0 }" :style="{ zIndex: 0 }">
-    <text v-if="stateError && devices.length" class="state-warning">状态暂不可用</text>
+    <text v-if="stateError && devices.length" class="state-warning">{{ stateError }}</text>
     <scroll-view class="device-scroll" scroll-y enhanced :show-scrollbar="false">
      <view v-if="!regionId" class="empty">{{ regionError || '正在读取关注区域' }}</view>
      <view v-else-if="loading" class="empty">正在读取设备目录</view>

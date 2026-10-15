@@ -12,7 +12,7 @@
    <text class="task-when">{{ detail.whenText }}</text>
    <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ plan ? '周期计划' : `${detail.creator?.displayName || '成员'} 创建 · ${detail.createdText}` }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
-   <text v-if="currentError" class="current-error">状态暂不可用</text>
+   <text v-if="currentError" class="current-error">{{ currentError }}</text>
    <text v-if="actionError" class="action-error">{{ actionError }}</text>
    <text class="section-title">{{ detail.interval ? '检查点' : '阶段' }} · {{ detail.phases.length }}</text>
    <view v-for="(phase, index) in detail.phases" :key="phase.id" class="phase">
@@ -176,7 +176,7 @@ async function load(silent = false) {
   let currentScope = ''
   try { currentScope = getAgentStorageScope() } catch { /* 失效身份不得保留旧报告 */ }
   if (cause.data || !scope || scope !== currentScope) { task.value = null; plan.value = null; currentStates.value = {} }
-  error.value = String(cause.message || '').startsWith('request:fail') ? '任务暂不可用，请检查网络后重新读取' : cause.message || (planId ? '周期计划暂不可用' : '任务暂不可用')
+  error.value = cause.message || (planId ? '周期计划读取失败：未取得具体原因' : '任务读取失败：未取得具体原因')
  } }
  finally { if (!silent && current === requestId) loading.value = false }
  if (loaded) {

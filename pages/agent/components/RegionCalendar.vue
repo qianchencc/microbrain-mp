@@ -16,14 +16,14 @@
     </button>
    </view>
   </view>
-  <button v-if="error" class="calendar-error" @tap="$emit('month-change', month)">日期标记暂不可用 · 重试</button>
+  <button v-if="error" class="calendar-error" @tap="$emit('month-change', month)">{{ typeof error === 'string' ? error : '日期标记读取失败：未取得具体原因' }} · 重试</button>
  </view>
 </template>
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { calendarDates, shiftDate } from '../region-calendar.mjs'
 
-const props = defineProps({ date: String, today: String, minDate: String, maxDate: String, error: Boolean, compact: Boolean, marks: { type: Array, default: () => [] } })
+const props = defineProps({ date: String, today: String, minDate: String, maxDate: String, error: [Boolean, String], compact: Boolean, marks: { type: Array, default: () => [] } })
 const emit = defineEmits(['select', 'month-change'])
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 const month = ref(props.date.slice(0, 7)), expanded = ref(false), gridExpanded = ref(false)
@@ -76,7 +76,7 @@ button::after { border:0; }
 .day-number { font-size:11px; }
 .day-mark { position:absolute; bottom:2px; width:4px; height:4px; border-radius:50%; background:#176b54; }
 .day-mark.abnormal { background:#ad711b; }
-.calendar-error { margin:5px auto 0; color:#986b2d; font-size:10px; }
+.calendar-error { white-space:normal; word-break:break-word; line-height:1.5; margin:5px auto 0; color:#986b2d; font-size:10px; }
 .calendar.compact { padding:4px 9px 8px; }
 .calendar.compact .day { height:38px; }
 @media(prefers-reduced-motion:reduce){.days-wrap,.month-arrow,.day{transition:none}}
