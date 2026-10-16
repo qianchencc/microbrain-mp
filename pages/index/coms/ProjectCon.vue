@@ -56,13 +56,16 @@ export default {
 	methods: {
 		// 项目分页查询，query为外部传入的固定查询条件
 		async getList() {
+			let {projectName, projectYear, projectYearBeginTime, projectYearEndTime,projectType, projectManager} = this.query
 			const res = await fetchProjectPage({
 				page: this.page,
 				size: this.pageSize,
-				projectName: this.query.projectName || '',
-				projectYear: this.query.projectYear || '',
-				projectType: this.query.projectType || '',
-				projectManager: this.query.projectManager || ''
+				...(projectName ? {projectName} : {}),
+				...(projectYear ? {projectYear} : {}),
+				...(projectYearBeginTime ? {projectYearBeginTime} : {}),
+				...(projectYearEndTime ? {projectYearEndTime} : {}),
+				...(projectType ? {projectType} : {}),
+				...(projectManager ? {projectManager} : {})
 			})
 			const content = res?.content
 			this.list = content?.content || []
