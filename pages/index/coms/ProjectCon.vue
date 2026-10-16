@@ -58,7 +58,7 @@ export default {
 		async getList() {
 			let {projectName, projectYear, projectYearBeginTime, projectYearEndTime,projectType, projectManager} = this.query
 			const res = await fetchProjectPage({
-				page: this.page,
+				page: this.page - 1,
 				size: this.pageSize,
 				...(projectName ? {projectName} : {}),
 				...(projectYear ? {projectYear} : {}),
