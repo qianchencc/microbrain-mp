@@ -12,6 +12,7 @@
 - 当前发布：`releases/20261018-6c19708`
 - 当前软链接：`current`
 - Runtime 本地监听：`127.0.0.1:3210`
+- Node：`v22.23.2`（符合 Runtime `>=22.19.0 <23`）
 - 持久化服务：用户级 systemd `iot-agent-runtime.service`
 - 开机恢复：`systemctl --user enable` 已启用，admin 用户 `Linger=yes`
 - IoT 网关：`https://ncim.577119.com`
@@ -31,10 +32,10 @@
 - 公网 `/healthz`：HTTP 200，返回 `iot-agent-runtime`、生产 IoT 模式和 `GLM-5.3-Flash`。
 - 带真实身份的公网公司环境只读查询：HTTP 200，返回环境设备数据。
 - 带真实身份的公网 Agent 探测：`run.started → message.completed → run.completed`，没有 `run.failed`。
+- Node 22 重启后再次完成上述健康、只读和 Agent 流探测。
 - Runtime 与 FRP 服务均由 systemd 管理并在重启后自动恢复。
 
 ## 回滚
 
 - Runtime：将 `current` 指回旧 release 后执行 `systemctl --user restart iot-agent-runtime.service`。
 - FRP：恢复 `/vol2/1000/Plugins/frpc/frpc.toml` 部署前的带时间戳备份，再重启 `frpc.service`。
-
