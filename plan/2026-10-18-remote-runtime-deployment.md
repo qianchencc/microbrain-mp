@@ -16,8 +16,9 @@
 - 运行方式：远端 `tmux` 会话 `iot-agent-runtime`
 - 开机恢复：按当前要求不启用；重启机器后需手动重新创建 tmux 会话
 - IoT 网关：`https://ncim.577119.com`
-- 公网地址：`https://iot-agent.qianc.ltd`
-- 公网通道：远端已有 `frpc.service` 新增 `iot-agent` HTTP 代理
+- 公网主地址：`https://mp-agent.qianc.ltd`
+- 公网备用别名：`https://iot-agent.qianc.ltd`
+- 公网通道：远端已有 `frpc.service` 新增 `mp-agent` 与 `iot-agent` 两个 HTTP 代理，均指向 3210
 
 ## 配置边界
 
@@ -30,6 +31,7 @@
 
 - 远端本地 `/healthz`：HTTP 200。
 - 公网 `/healthz`：HTTP 200，返回 `iot-agent-runtime`、生产 IoT 模式和 `GLM-5.3-Flash`。
+- `mp-agent.qianc.ltd` 与备用别名均已完成公网健康检查。
 - 带真实身份的公网公司环境只读查询：HTTP 200，返回环境设备数据。
 - 带真实身份的公网 Agent 探测：`run.started → message.completed → run.completed`，没有 `run.failed`。
 - Node 22 重启后再次完成上述健康、只读和 Agent 流探测。
