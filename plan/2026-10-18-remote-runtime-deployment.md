@@ -13,8 +13,8 @@
 - 当前软链接：`current`
 - Runtime 本地监听：`127.0.0.1:3210`
 - Node：`v22.23.2`（符合 Runtime `>=22.19.0 <23`）
-- 持久化服务：用户级 systemd `iot-agent-runtime.service`
-- 开机恢复：`systemctl --user enable` 已启用，admin 用户 `Linger=yes`
+- 运行方式：远端 `tmux` 会话 `iot-agent-runtime`
+- 开机恢复：按当前要求不启用；重启机器后需手动重新创建 tmux 会话
 - IoT 网关：`https://ncim.577119.com`
 - 公网地址：`https://iot-agent.qianc.ltd`
 - 公网通道：远端已有 `frpc.service` 新增 `iot-agent` HTTP 代理
@@ -33,9 +33,9 @@
 - 带真实身份的公网公司环境只读查询：HTTP 200，返回环境设备数据。
 - 带真实身份的公网 Agent 探测：`run.started → message.completed → run.completed`，没有 `run.failed`。
 - Node 22 重启后再次完成上述健康、只读和 Agent 流探测。
-- Runtime 与 FRP 服务均由 systemd 管理并在重启后自动恢复。
+- Runtime 当前由 tmux 持有；FRP 公网通道继续由 `frpc.service` 管理。
 
 ## 回滚
 
-- Runtime：将 `current` 指回旧 release 后执行 `systemctl --user restart iot-agent-runtime.service`。
+- Runtime：将 `current` 指回旧 release 后重建 `iot-agent-runtime` tmux 会话。
 - FRP：恢复 `/vol2/1000/Plugins/frpc/frpc.toml` 部署前的带时间戳备份，再重启 `frpc.service`。
