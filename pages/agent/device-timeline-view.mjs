@@ -15,9 +15,10 @@ function summary(steps) {
  if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '明确报错', tone: 'fail' }
  if (steps.some(step => step.phaseStatus === 'executing')) return { text: '执行中', tone: 'active' }
  if (steps.length === 1) return { text: executionResult(steps[0]),
-  tone: settled(steps[0]) ? 'ok' : executionResult(steps[0]) === '未执行' ? 'wait' : 'fail' }
+  tone: settled(steps[0]) ? 'ok' : executionResult(steps[0]) === '未执行' ? 'wait' : executionResult(steps[0]) === '结果待核验' ? 'warn' : 'fail' }
  if (steps.some(step => executionResult(step) === '明确报错')) return { text: '明确报错', tone: 'fail' }
  if (steps.some(step => executionResult(step) === '未执行')) return { text: '未执行', tone: 'wait' }
+ if (steps.some(step => executionResult(step) === '结果待核验')) return { text: '结果待核验', tone: 'warn' }
  if (steps.every(step => executionResult(step) === '不必执行')) return { text: '不必执行', tone: 'ok' }
  return { text: '已执行', tone: 'ok' }
 }

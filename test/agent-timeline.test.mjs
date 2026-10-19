@@ -216,4 +216,9 @@ test('需核验任务的设备结果区分受理未核验与已核验，不以�
  const view = taskDetailView({ agentSource: 'company', status: 'partial', source: { type: 'scheduled' }, phases: [{ at: '2026-10-19T12:00:00Z', status: 'partial', devices }] })
  assert.deepEqual(view.phases[0].devices.map(device => device.resultText), ['已受理 · 目标未核验', '已受理 · 回读失败', '已核验'])
  assert.deepEqual(view.phases[0].devices.map(device => device.resultTone), ['warn', 'warn', 'ok'])
+ const event = device => ({ taskId: 'closure', phaseId: device.id, at: '2026-10-19T12:00:00Z', taskStatus: 'partial', phaseStatus: 'partial', device, target: device.target, outcome: device.outcome, details: device.details })
+ const timeline = deviceTimelineItems([event(devices[0])])[0]
+ assert.equal(timeline.resultText, '结果待核验')
+ assert.equal(timeline.resultTone, 'warn')
+ assert.equal(timeline.faded, false)
 })

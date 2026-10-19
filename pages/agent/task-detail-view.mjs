@@ -8,6 +8,7 @@ const statusLabel = (status, source) => (source === 'company' ? companyStatusTex
 export function executionResult(device) {
  if (device.outcome === 'observed') return '已读取'
  if (device.outcome === 'satisfied') return '不必执行'
+ if (device.outcome === 'unconfirmed' && device.details?.requiresVerification) return '结果待核验'
  if (device.outcome === 'verified' || (device.outcome === 'unconfirmed' && !device.details?.requiresVerification && device.details?.receipt === 'ACCEPTED' && !device.details?.timedOut)) return '已执行'
  if (['pending', 'not_dispatched'].includes(device.outcome)) return '未执行'
  return '明确报错'
