@@ -50,18 +50,12 @@
     </view>
 
     <view class="blk">
-     <view class="k"><text>自动化安排</text><button class="more" @tap="tasksOpen = true">查看安排 <uni-icons type="right" size="10" color="#176b54" /></button></view>
-     <template v-if="snapshot?.automation">
-      <button v-for="task in automationRows.upcoming" :key="task.id" class="row" @tap="tasksOpen = true"><text class="d">{{ relDay(atTime(task)) }} {{ (atTime(task) || '').slice(11, 16) }}</text><text class="t">{{ task.label }}</text><text class="s">{{ task.repeat ? '周期' : '待执行' }}</text></button>
-      <button v-for="task in automationRows.done" :key="task.id" class="row" @tap="tasksOpen = true"><text class="d">{{ fmtMD(task.updatedAt) }}</text><text class="t">{{ task.label }}</text><text class="s" :class="{ ok: task.status === 'completed' }">{{ resultLabel(task.status) }}</text></button>
-      <text v-if="!automationRows.upcoming.length && !automationRows.done.length" class="sec-empty">未来一周没有待执行安排</text>
-     </template>
-     <text v-else class="sec-empty">{{ automationLoading ? '正在更新任务安排' : '任务摘要暂不可用' }}</text>
+     <CompanyTaskOverview :active="pageActive && !tasksOpen" :refresh-key="taskRevision" @open="openTaskSchedule" />
     </view>
 
    </view>
   </scroll-view>
-  <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" @close="tasksOpen = false" @reference="referenceTask" />
+  <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" :initial-view="taskEntry.view" :date="taskEntry.date" :initial-task="taskEntry.task" :refresh-key="taskRevision" @close="tasksOpen = false; taskRevision++" @reference="referenceTask" @changed="taskRevision++" @create="createTask" />
   <DeviceSheet v-if="observationMounted" :open="Boolean(observationType)" :back="observationBack" tall compact-header :title="selectedEvent ? '安全台账详情' : observationTitle" @close="observationType = ''">
    <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" hover-class="event-back--pressed" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
    <SafetyHistoryList v-if="observationType === 'alerts'" class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="observationType === 'alerts' && !selectedEvent" @select="selectedEvent = $event" />
@@ -76,7 +70,7 @@
   <DeviceSheet v-if="drawerMounted" :open="Boolean(drawerKind)" tall compact-header :title="drawerTitle" :meta="drawerDevices.length + ' 台 · 只读目录'" @close="drawerKind = ''">
    <CompanyDeviceDrawer class="event-host" :devices="drawerDevices" :kind="drawerKind" />
   </DeviceSheet>
-  <CompanyAgentFloat ref="agentFloat" :page-active="pageActive" />
+  <CompanyAgentFloat ref="agentFloat" :page-active="pageActive" @tasks-changed="taskRevision++" />
  </view>
 </template>
 <script setup>
@@ -90,6 +84,7 @@ import { backToParent } from './navigation.mjs'
 import { metricValue } from './dashboard-view.mjs'
 import { shiftDate, shanghaiToday, mergeStripDays, STRIP_PAGE_DAYS } from './energy-daily-view.mjs'
 import TaskListSheet from './components/TaskListSheet.vue'
+import CompanyTaskOverview from './components/CompanyTaskOverview.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
 import ObservationCard from './components/ObservationCard.vue'
 import SafetyEventDetail from './components/SafetyEventDetail.vue'
@@ -116,10 +111,12 @@ const ledgerChips = [{ key: 'gas', label: '燃气' }, { key: 'smoke', label: '�
 const WEEKDAYS = '日一二三四五六'
 
 const selectedEvent = ref(null)
-const tasksOpen = ref(false)
+const tasksOpen = ref(false), taskRevision = ref(0), taskEntry = ref({ view: 'schedule', date: '', task: null })
+function openTaskSchedule(entry) { taskEntry.value = entry; tasksOpen.value = true }
+function createTask() { tasksOpen.value = false; openCompanyAgent({ prompt: '帮我安排一个任务' }) }
 const snapshot = ref(null), loading = ref(false), error = ref(''), observationType = ref('')
 const energyLoading = ref(false), devicesLoading = ref(false)
-const alertsLoading = ref(false), automationLoading = ref(false), loadedSections = ref([]), sectionErrors = ref({})
+const alertsLoading = ref(false), loadedSections = ref([]), sectionErrors = ref({})
 const tasksMounted = ref(false), observationMounted = ref(false), energyMounted = ref(false), drawerMounted = ref(false)
 watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync' })
 watch(observationType, type => { selectedEvent.value = null; if (type) observationMounted.value = true }, { flush: 'sync' })
@@ -189,23 +186,7 @@ const alertRows = computed(() => {
 })
 function toggleLedger(key) { ledgerFilter.value = ledgerFilter.value === key ? '' : key }
 function subtypeLabel(value) { return LEDGER_LABEL[value] || '' }
-const automationRows = computed(() => ({
- upcoming: (snapshot.value?.automation?.upcoming || []).slice(0, 2),
- done: (snapshot.value?.automation?.latestResults || []).slice(0, 1)
-}))
-const atTime = task => task?.interval?.startsAt ?? task?.phases?.[0]?.at
-const fmtMD = iso => iso ? iso.slice(5, 10) : ''
 const fmtMDT = iso => iso ? iso.slice(5, 16).replace('T', ' ') : ''
-function relDay(iso) {
- const d = iso?.slice(0, 10)
- if (!d) return ''
- const today = shanghaiToday()
- if (d === today) return '今天'
- if (d === shiftDate(today, 1)) return '明天'
- const diff = Date.parse(d + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')
- if (diff > 0 && diff <= 6 * 864e5) return `周${WEEKDAYS[new Date(d + 'T00:00:00Z').getUTCDay()]}`
- return fmtMD(iso)
-}
 const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '电表统计', alerts: '安全事件台账' })[observationType.value] || '')
 const observation = computed(() => {
  if (!snapshot.value || !observationType.value || (observationType.value === 'alerts' && alertsUnavailable.value)) return null
@@ -214,25 +195,26 @@ const observation = computed(() => {
 })
 
 function resetForScope() {
+ taskRevision.value++
  snapshot.value = null; loadedSections.value = []; observationType.value = ''
  catalogDevices.value = []; devicesLoaded.value = false; devicesError.value = ''
  energyReport.value = null; energyStrip.value = []; selectedStripDate.value = ''
  energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
 }
-function allLoaded() { loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false; devicesLoading.value = false }
+function allLoaded() { loading.value = false; energyLoading.value = false; alertsLoading.value = false; devicesLoading.value = false }
 
 const monthlyRefresh = ref(0)
 let requestId = 0, scope = '', visible = false
 async function load() {
  monthlyRefresh.value++
  const current = ++requestId
- loading.value = true; energyLoading.value = true; alertsLoading.value = true; automationLoading.value = true; devicesLoading.value = true; error.value = ''; sectionErrors.value = {}
+ loading.value = true; energyLoading.value = true; alertsLoading.value = true; devicesLoading.value = true; error.value = ''; sectionErrors.value = {}
  try {
   await waitForAgentSession()
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
   if (nextScope !== scope) { resetForScope(); scope = nextScope }
-  await Promise.allSettled(['environment', 'alerts', 'automation', 'devices', 'energyDaily'].map(async section => {
+  await Promise.allSettled(['environment', 'alerts', 'devices', 'energyDaily'].map(async section => {
    const active = () => current === requestId && visible && getAgentStorageScope() === nextScope
    try {
     if (section === 'devices') {
@@ -255,11 +237,11 @@ async function load() {
     if (!active()) return
     const previous = snapshot.value || { devices: [], errors: [] }
     const kind = section === 'alerts' ? 'safety' : section
-    const devices = section === 'automation' ? previous.devices : [...previous.devices.filter(row => row.kind !== kind), ...result.devices]
+    const devices = [...previous.devices.filter(row => row.kind !== kind), ...result.devices]
     const errors = [...previous.errors.filter(row => row.area !== section), ...result.errors]
     for (const [area, message] of Object.entries(sectionErrors.value)) if (!errors.some(row => row.area === area)) errors.push({ area, message })
     snapshot.value = { ...previous, ...result, devices, [section + 'ObservedAt']: result.observedAt, errors }
-    if (section !== 'automation' && !loadedSections.value.includes(section)) loadedSections.value.push(section)
+    if (!loadedSections.value.includes(section)) loadedSections.value.push(section)
    } catch (cause) {
     if (!active()) return
     if (cause.data?.code === 'UNAUTHORIZED') { resetForScope(); ++requestId; error.value = cause.message; allLoaded(); return }
@@ -270,7 +252,7 @@ async function load() {
      if (snapshot.value) snapshot.value = { ...snapshot.value, errors: [...snapshot.value.errors.filter(row => row.area !== section), { area: section, message: sectionErrors.value[section] }] }
     }
    } finally {
-    if (current === requestId) ({ environment: loading, alerts: alertsLoading, automation: automationLoading, devices: devicesLoading, energyDaily: energyLoading })[section].value = false
+    if (current === requestId) ({ environment: loading, alerts: alertsLoading, devices: devicesLoading, energyDaily: energyLoading })[section].value = false
    }
   }))
   if (current === requestId && !snapshot.value) error.value = '公司数据暂不可用，请重试'
@@ -284,7 +266,6 @@ async function load() {
 }
 function openObservation(type) { if (['alerts', 'environment', 'energy'].includes(type) || snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
-function resultLabel(status) { return ({ completed: '已完成', partial: '部分完成', failed: '失败', missed: '已错过', cancelled: '已取消', unconfirmed: '结果未确认' })[status] || status }
 function observationBack() { if (selectedEvent.value) selectedEvent.value = null; else observationType.value = '' }
 /* 公司 Agent 改为右下角浮层（CompanyAgentFloat），办公室 Agent 仍走独立页面。
    引用/观察窗口直传浮层对象，不再过 URL。 */
@@ -355,7 +336,6 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .row .alert-time { width:auto; white-space:nowrap; }
 .row .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .row .s { flex-shrink:0; font-size:9.5px; color:#97917e; }
-.row .s.ok { color:#176b54; }
 .sec-empty { display:block; padding:14px 0; font-size:11px; color:#a0ab95; }
 .lchips { display:flex; gap:4px; }
 .lchips button { font-size:9.5px; letter-spacing:0; padding:3px 8px; border-radius:8px; color:#809181; background:#edf3e8; }

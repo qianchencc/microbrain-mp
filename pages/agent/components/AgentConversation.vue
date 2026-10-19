@@ -36,7 +36,7 @@
    <SafetyHistoryList class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="eventOpen && !selectedEvent" @select="openSafetyEvent" />
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="eventOpen" @reference="referenceEvent" />
   </DeviceSheet>
-  <TaskListSheet v-if="tasksMounted" :open="tasksOpen" :source="source" @close="tasksOpen = false" @reference="referenceTask" />
+  <TaskListSheet v-if="tasksMounted" :open="tasksOpen" :source="source" :refresh-key="taskRevision" @close="tasksOpen = false" @reference="referenceTask" @changed="tasksChanged" @create="tasksOpen = false; prefill('帮我安排一个任务')" />
   <TaskInboxSheet v-if="inboxMounted" @reference="referenceTask" :open="inboxOpen" :source="source" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
   <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="source" @close="closeCompanyTask" />
  </view>
@@ -66,7 +66,7 @@ import { focusRegion, focusRegionId, regionsLoading, regionsError, loadRegionFoc
 // source: 'office' | 'company'；active: 宿主可见性（页面 onShow / 浮层展开），
 // false 等价页面 onHide——保留草稿、停轮询，但不中止在途流（收起≠销毁）。
 const props = defineProps({ source: { type: String, default: 'office' }, active: Boolean })
-const emit = defineEmits(['status', 'running', 'connected', 'inbox-count', 'error', 'unread', 'navigating'])
+const emit = defineEmits(['status', 'running', 'connected', 'inbox-count', 'error', 'unread', 'navigating', 'tasks-changed'])
 const openingRegion = ref(false)
 watch(openingRegion, value => emit('navigating', value))
 function navigateRegion(url) {
@@ -82,7 +82,8 @@ function openSafetyEvent(snapshot) { if (!isCompany.value) return; selectedEvent
 function openSafetyHistory() { if (!isCompany.value) return; selectedEvent.value = null; eventMounted.value = true; eventOpen.value = true }
 function eventBack() { if (!selectedEvent.value) return false; selectedEvent.value = null; return true }
 function referenceEvent(reference) { eventOpen.value = false; composerReference.value = { ...reference }; composer.value?.focus?.() }
-const tasksOpen = ref(false)
+const tasksOpen = ref(false), taskRevision = ref(0)
+function tasksChanged() { taskRevision.value++; emit('tasks-changed') }
 const inboxOpen = ref(false), inboxUnreadCount = ref(0)
 const companyTaskId = ref(''), companyPlanId = ref('')
 const tasksMounted = ref(false), inboxMounted = ref(false), companyTaskMounted = ref(false)
@@ -518,6 +519,7 @@ async function confirmTaskProposal(task) {
   const result = changeId ? await confirmTaskChange(changeId, props.source) : cancellationId ? await confirmTaskCancellation(cancellationId, props.source) : await confirmScheduledTask(taskId, task.version, props.source)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.changeId || item.cancellationId || item.taskId) === key)
   if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId && !changeId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt } } }
+  tasksChanged()
   if (changeId) resync = true
   if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
  } catch (error) {

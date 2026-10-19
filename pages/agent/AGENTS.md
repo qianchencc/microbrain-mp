@@ -96,3 +96,5 @@
 - Agent每日夜间报告以`params.dailyWindow`区分普通期间统计：主值/分段/排名为20:00→次日08:00用电，日柱及峰值夜间按08:00结束日标记；不显示全天位置占比/小时曲线。缺测主值为“已取得夜间用电”，依据行显示有效/预计夜数及同日占比；历史无标记报告不改口径。见plan/2026-10-15-night-energy-analysis-fix.md。
 
 - 首页月度对比（2026-10-19）：日柱下方复用 `MonthlyEnergyComparison`，自然月1日零点到今日同刻，左右环比/同比；日期与数据投影统一走 `monthly-energy-view.mjs`。采样不齐或授权表集不同保留明确缺数态；旧区域饼环不再承担首页对比。短月、身份/显隐及真实旧采样边界见 `plan/2026-10-19-monthly-energy-dashboard-handoff.md`。
+
+- Company任务日历：入口/选日/计划/收件箱的生产约定见 `../../plan/2026-10-19-task-calendar-production.md`。自然日按上海00:00划分，周期投影参与日程；`TaskInboxContent`复用消息→任务→报告与成功读取后已读。确认成功经tasks-changed刷新宿主；新查询不得先清空同身份快照，身份变化立即清空。

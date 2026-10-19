@@ -1,16 +1,19 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="navigation.title || sheetTitle" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="(view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" @close="closeSheet">
   <template #header-left>
-   <button v-if="selectedTask || selectedPlan" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
+   <button v-if="selectedTask || selectedPlan || inboxNavigation.canBack" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
   </template>
   <template #header-right>
-   <button v-if="!selectedTask && !selectedPlan" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
+   <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
   </template>
   <view class="arrangements-content">
    <view class="list-pane" :style="{ display: selectedTask || selectedPlan ? 'none' : 'flex' }">
-    <view class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
-    <scroll-view class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
-     <view class="list-summary"><text>{{ listSummary }}</text><text>{{ visibleRows.length }} 项</text></view>
+    <view v-if="!inboxNavigation.canBack" class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
+    <TaskInboxContent v-if="source === 'company' && view === 'inbox'" ref="inbox" class="task-content-host" :open="open && view === 'inbox' && !selectedTask && !selectedPlan" :source="source" @navigation="inboxNavigation = $event" @reference="emit('reference', $event)" @unread-count="emit('unread-count', $event)" />
+    <scroll-view v-else class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
+     <TaskCalendarView v-if="source === 'company' && view === 'schedule'" ref="calendar" :active="open && view === 'schedule' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
+     <template v-else>
+     <view class="list-summary"><text>{{ listSummary }}</text><text>{{ listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text></view>
      <view v-if="loading && !listLoaded" class="state-message">加载中…</view>
      <view v-else-if="error && !visibleRows.length" class="state-message"><text>{{ error }}</text><button @tap="load">重试</button></view>
      <view v-else-if="!visibleRows.length" class="state-message">{{ emptyText }}</view>
@@ -39,7 +42,9 @@
      </template>
 
      <view v-if="error && visibleRows.length" class="list-footer list-error"><text>{{ error }}</text><button @tap="load">重试</button></view>
+     </template>
     </scroll-view>
+    <button v-if="source === 'company' && !inboxNavigation.canBack" class="create-task" @tap="emit('create')">让 Agent 安排任务 <uni-icons type="chatbubble" size="14" color="#176b54" /></button>
    </view>
 
    <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text>
@@ -76,15 +81,19 @@ import { repeatText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 import SlidingSegments from './SlidingSegments.vue'
 import TaskResultContent from './TaskResultContent.vue'
+import TaskCalendarView from './TaskCalendarView.vue'
+import TaskInboxContent from './TaskInboxContent.vue'
+import { taskToday, taskLabel as taskStatus } from '../task-calendar.mjs'
 
-const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
-const emit = defineEmits(['close', 'reference'])
-const views = [
+const props = defineProps({ open: Boolean, source: { type: String, default: 'office' }, initialView: String, date: String, initialTask: Object, refreshKey: Number })
+const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-count'])
+const calendar = ref(null), inbox = ref(null), inboxNavigation = ref({ title: '', canBack: false }), selectedDate = ref(props.date || taskToday())
+const views = computed(() => props.source === 'company' ? [{ value: 'schedule', label: '日程' }, { value: 'plans', label: '周期计划' }, { value: 'inbox', label: '收件箱' }] : [
  { value: 'upcoming', label: '待执行' },
  { value: 'results', label: '执行结果' },
  { value: 'plans', label: '周期计划' },
-]
-const view = ref('upcoming')
+])
+const view = ref(props.source === 'company' ? 'schedule' : 'upcoming')
 const tasks = ref([]), plans = ref([])
 const loading = ref(false), error = ref(''), planLoading = ref(false)
 const listLoaded = ref(false)
@@ -92,7 +101,7 @@ const taskRows = new Map()
 let plansLoaded = false
 const selectedTask = ref(null), selectedPlan = ref(null), returnPlan = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
-const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value ? '周期计划' : '我的安排')
+const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value ? '周期计划' : props.source === 'company' ? '任务安排' : '我的安排')
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : '周期安排')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : '暂无周期计划')
@@ -122,9 +131,6 @@ function taskTimeValue(task, kind) {
  if (kind === 'results') return task.report?.generatedAt || task.interval?.endsAt || task.phases?.at(-1)?.endedAt || task.phases?.at(-1)?.at || task.createdAt
  return task.interval?.startsAt || task.phases?.[0]?.at || task.createdAt
 }
-function taskStatus(status) {
- return ({ scheduled: '待执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '执行失败', unconfirmed: '结果待核验', cancelled: '已取消', missed: '已错过', interrupted: '已中断', verified: '已核验', satisfied: '无需执行' })[status] || status || '状态未知'
-}
 function taskTone(status) {
  if (['failed', 'missed', 'interrupted'].includes(status)) return 'fail'
  if (['partial', 'unconfirmed'].includes(status)) return 'warn'
@@ -145,7 +151,7 @@ function planAccessSummary(plan) {
 function selectTaskRows(values, kind) {
  const rows = Array.isArray(values) ? values : []
  const allowed = kind === 'upcoming' ? ['scheduled', 'executing', 'pending'] : ['completed', 'partial', 'failed', 'unconfirmed', 'cancelled', 'missed', 'interrupted', 'verified', 'satisfied']
- return rows.filter(task => (kind !== 'upcoming' || (!task.occurrence && !task.repeat && task.source?.type !== 'recurring_plan'))
+ return rows.filter(task => (props.source !== 'office' || kind !== 'upcoming' || (!task.occurrence && !task.repeat && task.source?.type !== 'recurring_plan'))
    && (allowed.includes(task.status) || (kind === 'results' && Boolean(task.report))))
   .sort((a, b) => {
    const difference = Date.parse(taskTimeValue(a, kind) || '') - Date.parse(taskTimeValue(b, kind) || '')
@@ -155,6 +161,8 @@ function selectTaskRows(values, kind) {
 
 async function load(force = true) {
  if (!props.open || !pageVisible) return
+ if (view.value === 'schedule') { calendar.value?.refresh(); return }
+ if (view.value === 'inbox') { inbox.value?.refresh(); return }
  const current = ++requestId, kind = view.value
  loading.value = true
  error.value = ''
@@ -193,7 +201,7 @@ async function load(force = true) {
 }
 function openTask(task) {
  if (!taskKey(task)) return
- selectedTask.value = task
+ selectedTask.value = props.source === 'company' && view.value === 'schedule' ? { id: taskKey(task) } : task
  selectedPlan.value = null
 }
 async function openPlan(plan) {
@@ -227,8 +235,8 @@ function backToList() {
  selectedTask.value = null
  selectedPlan.value = null
 }
-function goBack() { if (content.value?.back()) return; backToList() }
-function nativeBack() { if (content.value?.back()) return; if (selectedTask.value || selectedPlan.value) backToList(); else closeSheet() }
+function goBack() { if (view.value === 'inbox' && inbox.value?.back()) return; if (content.value?.back()) return; backToList() }
+function nativeBack() { if (view.value === 'inbox' && inbox.value?.back()) return; if (content.value?.back()) return; if (selectedTask.value || selectedPlan.value) backToList(); else closeSheet() }
 function closeSheet() {
  ++planRequest; planLoading.value = false
  selectedTask.value = null
@@ -238,6 +246,7 @@ function closeSheet() {
  emit('close')
 }
 function onTaskCancelled() {
+ emit('changed')
  returnPlan.value = null; selectedPlan.value = null; selectedTask.value = null
  navigation.value = { title: '', canBack: false }
  void load()
@@ -251,7 +260,7 @@ async function cancelWholePlan(scopeType) {
  planLoading.value = true
  try {
   await cancelTaskPlan(plan.planId, plan.version, scopeType, scopeType === 'occurrence' ? plan.nextDate : undefined, source)
-  backToList(); void load()
+  backToList(); emit('changed'); void load()
  } catch (cause) { error.value = cause.message || '取消失败，请刷新后重试'; uni.showToast({ title: error.value, icon: 'none' }) }
  finally { planLoading.value = false }
 }
@@ -260,6 +269,17 @@ function referencePlan() {
  emit('reference', { type: 'task_plan', planId: selectedPlan.value.planId, label: selectedPlan.value.label || '' })
 }
 
+watch(() => props.open, (open, previous) => {
+ if (open && !previous) {
+  ++planRequest; planLoading.value = false
+  selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null
+  navigation.value = { title: '', canBack: false }
+  view.value = props.source === 'company' ? props.initialView || 'schedule' : 'upcoming'
+  selectedDate.value = props.date || taskToday()
+  if (props.initialTask) openTask(props.initialTask)
+ }
+}, { immediate: true })
+watch(() => props.refreshKey, () => { if (props.open) void load() })
 watch(() => props.source, () => {
  resetIdentity()
 })
@@ -281,7 +301,7 @@ button::after { border:0; }
 .plan-row:active,.task-row:active { background:#f5f8f5; }
 .row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
 .row-heading { min-width:0; display:flex; align-items:baseline; justify-content:space-between; gap:9px; }
-.row-title { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#304739; font-size:13px; font-weight:600; }
+.row-title { min-width:0; white-space:normal; word-break:break-word; color:#304739; font-size:13px; font-weight:600; }
 .plan-status,.task-status { flex-shrink:0; font-size:10px; }
 .tone-active,.tone-ok { color:#397b61; }.tone-muted { color:#7e8982; }.tone-warn { color:#a27128; }.tone-fail { color:#a15343; }
 .row-subtitle { color:#78877e; font-size:11px; line-height:1.45; }
@@ -318,4 +338,5 @@ button::after { border:0; }
 .reference-button:active { background:#145841; }
 @keyframes arrangements-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .spinning { animation:none; } }
+.create-task { min-height:44px; margin:6px 18px 10px; display:flex; align-items:center; justify-content:center; gap:8px; color:#176b54; background:#eaf1eb; border-radius:8px; font-size:12px; flex-shrink:0; }
 </style>

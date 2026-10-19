@@ -9,7 +9,7 @@
    </view>
    <AgentConversation ref="conv" class="panel-conv" source="company" :active="open && pageActive"
     @status="value => status = value" @running="onRunning" @connected="value => connected = value"
-    @inbox-count="value => inboxCount = value" @error="value => hasError = value" @unread="unread++" />
+    @tasks-changed="$emit('tasks-changed')" @inbox-count="value => inboxCount = value" @error="value => hasError = value" @unread="unread++" />
   </view>
   <button class="float-orb" :class="{ docked: open, working: running && !open }" :style="orbStyle" :aria-label="open ? '收起公司 Agent' : '打开公司 Agent'" hover-class="float-orb--pressed" @tap="toggle">
    <AgentAvatar class="orb-avatar" :running="running" />
@@ -32,6 +32,7 @@ import { navMetrics } from '../nav-metrics.js'
 // pageActive 由宿主页转发（onShow/onHide）：页面被 navigateTo 压栈时
 // 会话等价收起——保草稿停轮询、在途流继续。
 defineProps({ pageActive: Boolean })
+defineEmits(['tasks-changed'])
 
 const metrics = navMetrics()
 const winInfo = uni.getWindowInfo()
