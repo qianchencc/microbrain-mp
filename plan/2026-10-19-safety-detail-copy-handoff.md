@@ -4,6 +4,8 @@
 
 验证：Agent 测试通过；HBuilderX 微信编译成功，产物已核对字段文字。手机页面尚未复验。
 
+后续按用户截图补充仪表盘列表标签：时间前加“告警”，设备名前加“设备名称：”；时间列按内容宽度显示并保持不换行。验证日志：`/tmp/safety-list-label-tests-20261019.log`、`/tmp/safety-list-label-build-20261019.log`。手机页面尚未复验。
+
 未纳入工作区其他并行修改。验证日志：`/tmp/safety-detail-copy-tests-20261019.log`、`/tmp/safety-detail-copy-build-20261019.log`。
 
 ## 后续技能

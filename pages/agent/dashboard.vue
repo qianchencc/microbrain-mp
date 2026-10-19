@@ -43,7 +43,7 @@
      <view class="k"><text>安全台账</text><view class="lchips"><button v-for="chip in ledgerChips" :key="chip.key" :class="{ on: ledgerFilter === chip.key }" @tap="toggleLedger(chip.key)">{{ chip.label }}</button></view></view>
      <text v-if="alertsUnavailable" class="sec-empty">{{ alertsLoading ? '正在更新摘要' : '摘要暂不可用 · 可查看历史' }}</text>
      <template v-else>
-      <button v-for="record in alertRows" :key="(record.ledger || '') + ':' + (record.eventId || record.occurredAt)" class="row" @tap="openObservation('alerts')"><text class="d">{{ fmtMDT(record.occurredAt) }}</text><text class="t">{{ record.deviceName }}</text><text class="s">{{ subtypeLabel(record.subtype || record.ledger) }}</text></button>
+      <button v-for="record in alertRows" :key="(record.ledger || '') + ':' + (record.eventId || record.occurredAt)" class="row" @tap="openObservation('alerts')"><text class="d alert-time">告警 {{ fmtMDT(record.occurredAt) }}</text><text class="t">设备名称：{{ record.deviceName }}</text><text class="s">{{ subtypeLabel(record.subtype || record.ledger) }}</text></button>
       <text v-if="!alertRows.length" class="sec-empty">{{ alertsLoading ? '正在更新摘要' : '该类型暂无记录' }}</text>
       <button v-if="snapshot?.alerts" class="list-more" @tap="openObservation('alerts')">全部 {{ snapshot.alerts.total ?? alertRows.length }} 条 ›</button>
      </template>
@@ -352,6 +352,7 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 
 .row { display:flex; align-items:baseline; gap:10px; width:100%; padding:9px 0; border-bottom:1px solid #ece8d9; text-align:left; font-size:12px; color:#3c4a3e; }
 .row .d { font-size:10.5px; color:#97917e; font-variant-numeric:tabular-nums; flex-shrink:0; width:78px; }
+.row .alert-time { width:auto; white-space:nowrap; }
 .row .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .row .s { flex-shrink:0; font-size:9.5px; color:#97917e; }
 .row .s.ok { color:#176b54; }
