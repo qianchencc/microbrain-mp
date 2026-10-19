@@ -1,0 +1,137 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView } from '../pages/agent/monthly-energy-view.mjs'
+const now = () => new Date('2026-10-25T18:00:00+08:00')
+const report = (span, value, ids = ['a','b']) => ({
+ kind: 'statistics', params: { span: { requested: span, observed: { from: span.from, to: span.to } } },
+ total: { value, unit: '度' }, coverage: { meters: ids.length, dataMeters: ids.length, noData: [], partial: [], truncated: false },
+ meters: ids.map(id => ({ id, status: 'ok', observed: { fromSample: { readTime: span.from }, toSample: { readTime: span.to } } }))
+})
+const put = (states, span, value) => { states[span.from + '/' + span.to] = value }
+async function load(windows, request) { const states = {}; await readMonthlyEnergy(windows, request, (key, value) => { states[key] = value }); return states }
+
+test('10月25日按自然月同日同刻对比9月及去年10月，本月只读取一次', async () => {
+ const windows = monthlyEnergyWindows(now()), calls = []
+ const states = await load(windows, async query => { calls.push(query); return report({ from: query.from, to: query.to }, 10) })
+ assert.equal(calls.length, 3)
+ assert.deepEqual(calls.map(q => [q.from,q.to]), [
+  ['2026-10-01T00:00:00.000+08:00','2026-10-25T18:00:00.000+08:00'],
+  ['2026-09-01T00:00:00.000+08:00','2026-09-25T18:00:00.000+08:00'],
+  ['2025-10-01T00:00:00.000+08:00','2025-10-25T18:00:00.000+08:00']])
+ assert.ok(calls.every(q => q.kind === 'statistics' && q.scopeLevel === 'all' && q.grain === 'month'))
+ const view = monthlyEnergyView(windows, states)
+ assert.equal(view.current.value, 10)
+ assert.equal(view.pairs[0].pct, '0%')
+ assert.equal(view.pairs[0].summary, '与上月同期持平')
+})
+
+test('跨年、短月及闰年保持有效日期，短月两侧使用共同截止日期', () => {
+ const jan = monthlyEnergyWindows(new Date('2026-01-25T00:15:00+08:00'))
+ assert.equal(jan.pairs[0].baseline.from.slice(0,10),'2025-12-01')
+ const mar = monthlyEnergyWindows(new Date('2026-03-31T18:00:00+08:00'))
+ assert.equal(mar.current.to.slice(0,10),'2026-03-31')
+ assert.equal(mar.pairs[0].current.to.slice(0,10),'2026-03-28')
+ assert.equal(mar.pairs[0].baseline.to.slice(0,10),'2026-02-28')
+ assert.equal(mar.pairs[0].shortened,true)
+ const leap = monthlyEnergyWindows(new Date('2024-02-29T10:00:00+08:00'))
+ assert.equal(leap.pairs[1].current.to.slice(0,10),'2024-02-28')
+ assert.equal(leap.pairs[1].baseline.to.slice(0,10),'2023-02-28')
+})
+
+test('环比与同比按总量独立计算，正负与简短描述对应，不将变少称为已节能', async () => {
+ const windows = monthlyEnergyWindows(now())
+ const states = await load(windows, async q => report(q, q.from.startsWith('2026-10') ? 100 : q.from.startsWith('2026-09') ? 80 : 125))
+ const view = monthlyEnergyView(windows, states)
+ assert.equal(view.pairs[0].pct, '↑ 25%'); assert.equal(view.pairs[0].summary,'较上月同期多用 20 度')
+ assert.equal(view.pairs[1].pct, '↓ 20%'); assert.equal(view.pairs[1].summary,'较去年同期少用 25 度')
+ assert.equal(view.pairs[0].aWidth,100); assert.equal(view.pairs[1].bWidth,100)
+})
+
+test('去年缺数或请求失败不补零，不影响本月与上月结果；保留具体错误', async () => {
+ const windows = monthlyEnergyWindows(now())
+ const states = await load(windows, async q => {
+  if(q.from.startsWith('2025')) throw new Error('HTTP 503：历史采样读取失败')
+  return report(q, q.from.startsWith('2026-10') ? 100 : 80)
+ })
+ const view = monthlyEnergyView(windows,states)
+ assert.equal(view.current.value,100);assert.equal(view.pairs[0].pct,'↑ 25%')
+ assert.equal(view.pairs[1].pct,'—');assert.equal(view.pairs[1].b.value,null)
+ assert.match(view.pairs[1].summary,/503/)
+})
+
+test('两侧电表集合变化、采样日不齐或读取截断均不能生成虚假同比', async () => {
+ const windows=monthlyEnergyWindows(now())
+ for (const change of [r => {r.meters[1].id='c'},r => {r.meters[0].observed.toSample.readTime='2025-10-24T18:00:00+08:00'},r=>{r.coverage.truncated=true}]) {
+  const states=await load(windows,async q=>report(q,100))
+  const key=windows.pairs[1].baseline;change(states[key.from+'/'+key.to].report)
+  const view=monthlyEnergyView(windows,states)
+  assert.equal(view.pairs[1].pct,'—');assert.equal(view.pairs[0].pct,'0%')
+ }
+})
+
+test('缺月初边界不将跨月读数差冒充本月总用电；部分覆盖明确为已取得用电', async () => {
+ const windows=monthlyEnergyWindows(now()),states=await load(windows,async q=>report(q,100))
+ const current=states[windows.current.from+'/'+windows.current.to].report
+ current.meters[0].observed.fromSample.readTime='2026-09-30T20:00:00+08:00'
+ assert.equal(monthlyEnergyView(windows,states).current.value,null)
+ assert.match(monthlyEnergyView(windows,states).current.note,/月初/)
+ current.meters[0].observed.fromSample.readTime=windows.current.from
+ current.coverage.truncated=true
+ assert.equal(monthlyEnergyView(windows,states).title,'本月已取得用电')
+ assert.equal(monthlyEnergyView(windows,states).pairs[0].pct,'—')
+})
+
+test('零基期仍显示差额度，不除零；可见舍入后没有带符号零', async () => {
+ const windows=monthlyEnergyWindows(now()),states=await load(windows,async q=>report(q,q.from.startsWith('2026-10')?0.001:0))
+ const view=monthlyEnergyView(windows,states)
+ assert.equal(view.pairs[0].pct,'—');assert.match(view.pairs[0].note,/基期为零/)
+ assert.equal(view.pairs[0].summary,'与上月同期持平')
+ assert.equal(view.pairs[0].direction,'')
+})
+
+test('读取有明确授权失败标记，供宿主清空整组数据；月初空窗口不发统计请求', async () => {
+ const windows=monthlyEnergyWindows(now())
+ const states=await load(windows,async()=>{throw Object.assign(new Error('授权撤销'),{status:403})})
+ assert.ok(Object.values(states).every(state=>state.denied))
+ let calls=0
+ await load(monthlyEnergyWindows(new Date('2026-10-01T00:00:00+08:00')),async()=>{calls++})
+ assert.equal(calls,0)
+})
+
+test('UTC时间戳按上海日期核对，合法同日采样不被误判为前一天', async () => {
+ const windows=monthlyEnergyWindows(new Date('2026-10-25T00:30:00+08:00'))
+ const states=await load(windows,async q=>{
+  const r=report(q,100)
+  r.params.span.observed.to=new Date(q.to).toISOString()
+  for(const m of r.meters) {
+   m.observed.fromSample.readTime=new Date(q.from).toISOString()
+   m.observed.toSample.readTime=new Date(q.to).toISOString()
+  }
+  return r
+ })
+ const view=monthlyEnergyView(windows,states)
+ assert.equal(view.pairs[0].pct,'0%')
+ assert.equal(view.cutoff,'2026.10.25 00:30')
+})
+
+test('同日08:00不能冒充18:00完整覆盖；当天最新采样可作为三期共同截止时刻', async () => {
+ const windows=monthlyEnergyWindows(now()),states=await load(windows,async q=>{
+  const r=report(q,100)
+  const earlier=q.to.replace('18:00','08:00')
+  for(const meter of r.meters)meter.observed.toSample.readTime=earlier
+  r.params.span.observed.to=earlier
+  return r
+ })
+ const view=monthlyEnergyView(windows,states)
+ assert.equal(view.title,'本月已取得用电')
+ assert.equal(view.pairs[0].pct,'—')
+ const sampled=monthlyEnergyWindows(now(),'2026-10-25T08:00:00+08:00')
+ assert.equal(sampled.current.to,'2026-10-25T08:00:00.000+08:00')
+ assert.equal(sampled.pairs[0].baseline.to,'2026-09-25T08:00:00.000+08:00')
+ assert.equal(sampled.pairs[1].baseline.to,'2025-10-25T08:00:00.000+08:00')
+ const good=monthlyEnergyView(sampled,await load(sampled,async q=>report(q,100)))
+ assert.equal(good.pairs[0].pct,'0%')
+ assert.equal(good.title,'本月总用电')
+ assert.equal(monthlyEnergyWindows(now(),'2026-10-10T08:00:00+08:00').current.to,windows.current.to)
+ assert.equal(monthlyEnergyWindows(now(),'2026-10-25T20:00:00+08:00').current.to,windows.current.to)
+})

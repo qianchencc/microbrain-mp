@@ -36,13 +36,7 @@
      <CompanyEnergyStrip v-if="energyStrip.length" ref="energyStripRef" :days="energyStrip" :selected="selectedStripDate" pull-enabled @select="openEnergy" @pull-open="openEnergy()" @reach-left="loadOlderEnergy" />
      <text v-if="energyError" class="fineprint dim">逐日能耗暂不可用 · {{ energyError }}</text>
      <text v-else-if="!energyStrip.length" class="fineprint">{{ energyLoading ? '正在读取逐日能耗…' : '暂无可统计的计量日' }}</text>
-     <view v-if="pieCards.length" class="pies">
-      <view v-for="card in pieCards" :key="card.key" class="pie">
-       <view class="pair"><image class="donut" :src="card.curImage" mode="aspectFit" /><image class="donut" :src="card.baseImage" mode="aspectFit" /></view>
-       <view class="pc"><text class="pt">{{ card.label }}</text><text class="pv">{{ card.pv }}</text><text class="pd">{{ card.pd }}</text></view>
-      </view>
-     </view>
-     <view v-if="legendItems.length" class="legend"><text v-for="(item, i) in legendItems" :key="item" class="legend-item"><text class="dot" :style="{ background: PIE_COLORS[i % PIE_COLORS.length] }" />{{ item }}</text><text class="legend-item">左环 = {{ pieLeftLabel }}</text></view>
+     <MonthlyEnergyComparison :active="pageActive && !energyLoading" :refresh-key="monthlyRefresh" :cutoff="energyReport?.latestSampleTime || ''" />
     </view>
 
     <view class="blk">
@@ -94,7 +88,7 @@ import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent } from './navigation.mjs'
 import { metricValue } from './dashboard-view.mjs'
-import { shiftDate, shanghaiToday, unitOf, round2, comparePct, mergeStripDays, donutImage, compositionFromUsage, completeDayComparison, PIE_COLORS, STRIP_PAGE_DAYS } from './energy-daily-view.mjs'
+import { shiftDate, shanghaiToday, mergeStripDays, STRIP_PAGE_DAYS } from './energy-daily-view.mjs'
 import TaskListSheet from './components/TaskListSheet.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
 import ObservationCard from './components/ObservationCard.vue'
@@ -104,6 +98,7 @@ import EnvironmentHistoryView from './components/EnvironmentHistoryView.vue'
 import MeterHistoryView from './components/MeterHistoryView.vue'
 import CompanyEnergyStrip from './components/CompanyEnergyStrip.vue'
 import CompanyEnergySheet from './components/CompanyEnergySheet.vue'
+import MonthlyEnergyComparison from './components/MonthlyEnergyComparison.vue'
 import CompanyDeviceDrawer from './components/CompanyDeviceDrawer.vue'
 import CompanyAgentFloat from './components/CompanyAgentFloat.vue'
 import { parseAgentContext, environmentHistoryPrompt, meterHistoryPrompt } from './context-link.mjs'
@@ -160,7 +155,6 @@ const energyReport = ref(null), energyStrip = ref([]), energyError = ref('')
 const energyStripRef = ref(null), selectedStripDate = ref('')
 const energyOpen = ref(false), energyFocusDate = ref('')
 watch(energyOpen, open => { if (open) energyMounted.value = true }, { flush: 'sync' })
-const energyUnit = computed(() => unitOf(energyReport.value))
 const latestCompleteDay = computed(() => energyReport.value?.latestCompleteDay || '')
 function mergeDailyReport(next) {
  energyReport.value = next
@@ -183,38 +177,6 @@ function openEnergy(date) {
  if (date) selectedStripDate.value = date
  energyOpen.value = true
 }
-const meterNameOf = id => energyReport.value?.meters?.find(m => m.id === id)?.name || id
-const mdLabel = date => `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日`
-function pieCard(key, label, usage, meterUsage, baseUsage, baseMeterUsage) {
- const unit = energyUnit.value
- const current = compositionFromUsage(meterUsage, meterNameOf)
- const pct = comparePct(usage, baseUsage)
- const fmt = v => typeof v === 'number' ? String(round2(v)) : '—'
- return { key, label,
-  curImage: donutImage(current.map(i => i.value)),
-  baseImage: donutImage(compositionFromUsage(baseMeterUsage, meterNameOf).map(i => i.value)),
-  pv: `${fmt(usage)} vs ${fmt(baseUsage)}${unit ? ' ' + unit : ''}`,
-  pd: pct == null ? '—' : (pct >= 0 ? '+' : '') + pct + '%',
-  floors: current.map(i => i.label) }
-}
-const pieCards = computed(() => {
- const comparison = energyReport.value?.comparison
- if (typeof comparison?.currentDay?.usage === 'number') {
-  return [['previousDay', '今日至今 vs 昨日同期'], ['lastWeekSameDay', '今日至今 vs 上周同日同期']].map(([key, label]) =>
-   pieCard(key, label, comparison.currentDay.usage, comparison.currentDay.meterUsage, comparison[key]?.usage, comparison[key]?.meterUsage))
- }
- // 今日至今窗口无实测（如边界恰为最新采样点）时退到最新完整日，整日对比前一日/上周同 weekday
- const day = latestCompleteDay.value
- if (!day) return []
- return [shiftDate(day, -1), shiftDate(day, -7)].flatMap(baseDate => {
-  const comp = completeDayComparison(energyReport.value, day, baseDate)
-  return comp ? [pieCard(`complete-${baseDate}`, `${mdLabel(comp.date)} vs ${mdLabel(comp.baseDate)}`, comp.usage, comp.meterUsage, comp.baseUsage, comp.baseMeterUsage)] : []
- })
-})
-const pieLeftLabel = computed(() =>
- typeof energyReport.value?.comparison?.currentDay?.usage === 'number' || !latestCompleteDay.value ? '今日' : mdLabel(latestCompleteDay.value))
-const legendItems = computed(() => pieCards.value[0]?.floors || [])
-
 /* 环境 / 台账 / 自动化 */
 const environment = computed(() => snapshot.value?.environment?.find(row => row.reading) || snapshot.value?.environment?.[0])
 const environmentCells = [{ key: 'temp', label: '温度', unit: '°C' }, { key: 'humidity', label: '湿度', unit: '%' }, { key: 'pm25', label: 'PM2.5', unit: '' }]
@@ -259,8 +221,10 @@ function resetForScope() {
 }
 function allLoaded() { loading.value = false; energyLoading.value = false; alertsLoading.value = false; automationLoading.value = false; devicesLoading.value = false }
 
+const monthlyRefresh = ref(0)
 let requestId = 0, scope = '', visible = false
 async function load() {
+ monthlyRefresh.value++
  const current = ++requestId
  loading.value = true; energyLoading.value = true; alertsLoading.value = true; automationLoading.value = true; devicesLoading.value = true; error.value = ''; sectionErrors.value = {}
  try {
@@ -385,17 +349,6 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .env .u { font-size:11px; color:#8a947f; margin-left:2px; }
 .env .ul { display:block; margin-top:3px; font-size:9.5px; color:#97917e; }
 
-.pies { display:flex; gap:10px; margin-top:16px; }
-.pie { flex:1; min-width:0; display:flex; align-items:center; gap:10px; }
-.pair { display:flex; gap:5px; flex-shrink:0; }
-.donut { width:46px; height:46px; flex-shrink:0; }
-.pc { min-width:0; }
-.pt { display:block; font-size:9.5px; color:#97917e; line-height:1.5; }
-.pv { display:block; font-size:15px; font-weight:600; color:#2e4a38; font-variant-numeric:tabular-nums; margin-top:2px; }
-.pd { display:block; font-size:9.5px; color:#a47b35; margin-top:2px; }
-.legend { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:10px; }
-.legend-item { display:flex; align-items:center; font-size:9px; color:#8fa08c; }
-.dot { display:inline-block; width:6px; height:6px; border-radius:2px; margin-right:4px; }
 
 .row { display:flex; align-items:baseline; gap:10px; width:100%; padding:9px 0; border-bottom:1px solid #ece8d9; text-align:left; font-size:12px; color:#3c4a3e; }
 .row .d { font-size:10.5px; color:#97917e; font-variant-numeric:tabular-nums; flex-shrink:0; width:78px; }
