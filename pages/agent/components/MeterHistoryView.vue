@@ -1,5 +1,5 @@
 <template>
- <CompanyEnergySheet class="history" :active="active" bounded :initial-query="initialQuery" :show-history-action="false" />
+ <CompanyEnergySheet class="history" :active="active" bounded :initial-query="initialQuery" />
 </template>
 <script setup>
 import CompanyEnergySheet from './CompanyEnergySheet.vue'

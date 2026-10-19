@@ -77,7 +77,7 @@
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="Boolean(observationType)" @reference="referenceEvent" />
   </DeviceSheet>
   <DeviceSheet v-if="energyMounted" :open="energyOpen" tall compact-header title="能耗统计" @close="energyOpen = false">
-   <CompanyEnergySheet class="event-host" :active="energyOpen" :focus-date="energyFocusDate" @open-meter-history="openMeterHistory" />
+   <CompanyEnergySheet class="event-host" :active="energyOpen" :focus-date="energyFocusDate" />
   </DeviceSheet>
   <DeviceSheet v-if="drawerMounted" :open="Boolean(drawerKind)" tall compact-header :title="drawerTitle" :meta="drawerDevices.length + ' 台 · 只读目录'" @close="drawerKind = ''">
    <CompanyDeviceDrawer class="event-host" :devices="drawerDevices" :kind="drawerKind" />
@@ -183,7 +183,6 @@ function openEnergy(date) {
  if (date) selectedStripDate.value = date
  energyOpen.value = true
 }
-function openMeterHistory() { energyOpen.value = false; openObservation('energy') }
 const meterNameOf = id => energyReport.value?.meters?.find(m => m.id === id)?.name || id
 const mdLabel = date => `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日`
 function pieCard(key, label, usage, meterUsage, baseUsage, baseMeterUsage) {

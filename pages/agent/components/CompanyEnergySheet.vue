@@ -48,7 +48,6 @@
     </view>
     </template>
     <text class="efoot">{{ footnote }}</text>
-    <view v-if="showHistoryAction" class="eactions"><button class="eaction" @tap="$emit('open-meter-history')">查看电表统计</button></view>
    </template>
   </scroll-view>
  </view>
@@ -63,8 +62,8 @@ import CompanyEnergyStrip from './CompanyEnergyStrip.vue'
 import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView } from '../energy-daily-view.mjs'
 import { fmtDateTime } from '../observation-view.mjs'
 
-const props = defineProps({ active: Boolean, focusDate: String, bounded: Boolean, initialQuery: Object, showHistoryAction: { type: Boolean, default: true } })
-defineEmits(['refresh', 'open-meter-history'])
+const props = defineProps({ active: Boolean, focusDate: String, bounded: Boolean, initialQuery: Object })
+defineEmits(['refresh'])
 const today = shanghaiToday()
 const report = ref(null)
 const strip = ref([])
@@ -366,8 +365,6 @@ button::after { border:0; }
 .mrow-v { flex-shrink:0; font-variant-numeric:tabular-nums; color:#345640; font-size:11.5px; }
 .mrow-share { font-style:normal; font-size:10px; color:#a0ab95; margin-left:6px; }
 .efoot { display:block; font-size:9.5px; color:#a0ab95; line-height:1.8; margin-top:16px; }
-.eactions { display:flex; gap:8px; margin-top:14px; }
-.eaction { flex:1; min-height:38px; display:flex; align-items:center; justify-content:center; border:1px solid #dce7d4; background:#eaf1e4; border-radius:12px; color:#4a7751; font-size:11px; font-weight:600; }
 .efail-row { display:flex; align-items:center; gap:10px; margin-top:8px; font-size:10.5px; color:#a27128; }
 .sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v { background:#e2eadf; border-radius:4px; animation:sk-pulse 1.4s ease-in-out infinite; }
 .sk-num { display:block; width:150px; height:38px; margin-top:4px; border-radius:8px; }
