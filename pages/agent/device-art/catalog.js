@@ -35,15 +35,29 @@ const artwork = Object.freeze({
     src: "/static/device-art/lighting-linear-luminaire.png",
     variant: "linear",
   }),
-  // 观察类暂无位图素材：src=null，由调用处按 variant 渲染（video→CSS 摄像头，observe→CSS 传感点）。
   "video-camera": Object.freeze({
-    key: "video-camera", code: "CAM", label: "视频监控", src: null, variant: "video",
+    key: "video-camera", code: "CAM", label: "视频监控",
+    src: "/static/device-art/video-dome-camera.png", variant: "video",
   }),
   "environment-sensor": Object.freeze({
-    key: "environment-sensor", code: "ENV", label: "环境传感器", src: null, variant: "observe",
+    key: "environment-sensor", code: "ENV", label: "环境传感器",
+    src: "/static/device-art/environment-air-quality-sensor.png", variant: "observe",
   }),
   "energy-meter": Object.freeze({
-    key: "energy-meter", code: "ENG", label: "能耗计量", src: null, variant: "observe",
+    key: "energy-meter", code: "ENG", label: "能耗计量",
+    src: "/static/device-art/energy-digital-meter.png", variant: "observe",
+  }),
+  "safety-smoke": Object.freeze({
+    key: "safety-smoke", code: "SAFE", label: "安全 / 烟感",
+    src: "/static/device-art/safety-smoke-detector.png", variant: "observe",
+  }),
+  "safety-gas": Object.freeze({
+    key: "safety-gas", code: "SAFE", label: "安全 / 燃气",
+    src: "/static/device-art/safety-gas-detector.png", variant: "observe",
+  }),
+  "safety-water": Object.freeze({
+    key: "safety-water", code: "SAFE", label: "安全 / 水浸",
+    src: "/static/device-art/safety-water-leak-sensor.png", variant: "observe",
   }),
   "safety-sensor": Object.freeze({
     key: "safety-sensor", code: "SAFE", label: "安全传感器", src: null, variant: "observe",
@@ -63,7 +77,10 @@ export function resolveDeviceArtwork(device = {}) {
   if (device.kind === "video") return artwork["video-camera"];
   if (device.kind === "environment") return artwork["environment-sensor"];
   if (device.kind === "energy") return artwork["energy-meter"];
-  if (device.kind === "safety") return artwork["safety-sensor"];
+  if (device.kind === "safety") {
+    const subtype = device.subtype === "flooding" ? "water" : device.subtype;
+    return artwork[`safety-${subtype}`] ?? artwork["safety-sensor"];
+  }
 
   const haystack = normalize(`${device.deviceName ?? ""} ${device.location ?? ""}`);
   const matchedRule = artworkRules.find(({ terms }) => terms.some((term) => haystack.includes(term)));

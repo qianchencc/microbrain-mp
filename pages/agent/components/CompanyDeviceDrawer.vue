@@ -52,9 +52,9 @@ function stateLabel(device) {
  if (device.kind === 'safety' && device.subtype) return `只读观察 · ${SUBTYPE_LABEL[device.subtype] || device.subtype}`
  return READ_ONLY_KINDS.has(device.kind) ? '只读观察' : '可控制'
 }
-// 统一设备图：device-art/catalog.js 的位图素材（门禁/中央空调/格栅灯/灯带）+ variant CSS 兜底，与区域抽屉同规。
+// 设备图与区域抽屉共用 catalog；保留 subtype，消防设备按实际类别选图。
 function artOf(device) {
- return resolveDeviceArtwork({ kind: device.kind, deviceName: device.name, location: device.location || device.name })
+ return resolveDeviceArtwork({ ...device, deviceName: device.name, location: device.location || device.name })
 }
 function locationText(device) {
  const key = locationKey(device)
