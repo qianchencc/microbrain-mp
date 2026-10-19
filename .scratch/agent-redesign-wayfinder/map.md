@@ -26,6 +26,8 @@
 - [Pi 协调层与确定性业务接口边界](issues/02-pi-coordinator-contract.md)：Pi 只整理业务请求和解释事实，服务器决定范围、计划、授权、执行和结果，终态必须是用户可观察的业务状态。
 - [大范围计划的效率与执行政策](issues/03-large-operation-efficiency.md)：按阶段记录耗时，范围一次展开，预检一次，确认后固定快照，三路并发为安全基线，未知不重试。
 
+首条源码与后续推进状态见[后续准备](../../plan/2026-10-19-agent-redesign-followup-preparation.md)：01–03 已集成但未完成真实验收；04–06 已准备为真实收口、能耗调查、告警排查。原决策保持有效，后续不重开 Harness 或 UI 原型。
+
 ## Not yet specified
 
 - Office 如何在后续复用这套能力，同时保持个人设备范围和 Company 来源隔离。

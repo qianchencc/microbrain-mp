@@ -1,5 +1,7 @@
 # 项目文档入口
 
+- 2026-10-19 Agent 重设计后续规格与票 04–06 已准备：先真实收口及效率/路径验收，再多期间能耗调查、告警协同排查；均非新增业务已实施声明，见[后续准备与依赖](../plan/2026-10-19-agent-redesign-followup-preparation.md)。
+
 - 2026-10-19 Pi 重设计首条 Company 复杂收口的提案、执行与跨轮澄清源码已集成原开发分支；Runtime 285/285，真实模型配合协议夹具双轮通过、零真实控制。未部署，真实网关/微信/现场验收和照明权威反馈仍开放，见[澄清与引用交接](../plan/2026-10-19-company-closure-clarification-handoff.md)与[执行交接](../plan/2026-10-19-company-night-closure-execution-handoff.md)。
 
 - 2026-10-19 H5 播放页已补部署远端 tmux 9415，`mp-video.qianc.ltd` 保持原地址，SDK 同源代理及视频取流接远端 Runtime 3210。真实浏览器直播 640×368、回放 1920×1080 通过；微信开发者工具仪表盘与当前身份请求恢复可见，真机/WebView 仍待验，见[远端播放器交接](../plan/2026-10-19-remote-video-player-handoff.md)。
