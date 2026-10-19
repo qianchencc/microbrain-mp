@@ -2,6 +2,14 @@
 
 状态：2026-10-19，ask-matt 设计澄清中。以下方案待用户确认，不是已批准规格；尚未修改生产代码或创建真实任务。
 
+## 原型回传：用户偏好 C
+
+用户随后明确要求 `/prototype`，比较后反馈“C感觉不错”。已将 **C：首页直接选日** 设为原型默认方向：周历嵌入首页，选日更新任务预览，执行中/待执行优先；“全部N项”进入完整日程；周期计划和带未读数的收件箱直接可达。展开后为日程、周期计划、收件箱，仍共用任务结果与附带报告。
+
+原型保存在 `prototype/automation-arrangements` 分支，提交 `d670a20`；工作树 `/Users/qianchen/works/新发展/mp-automation-prototype`。打开 `http://127.0.0.1:8438/pages/agent/proto-automation-arrangements.html`，默认 C；A/B 仅保留比较记录。原型源码、截图和验证说明位于该分支 `plan/2026-10-19-automation-prototype-handoff.md`。本地评审票 `.scratch/automation-entry-redesign/issues/01-prototype-review.md` 指向同一产物。
+
+已完成浏览器选日、长名称、消息/报告/依据返回、创建后即时可见、首次执行在明天、加载/错误/空日期及320/375px走查。全部使用固定日期的内存样例；日期计算复用 `region-calendar.mjs`，生产应使用现有 `RegionCalendar.vue`。用户偏好 C 不代表下文全部细节已冻结，也不代表后端刷新和12字限制已修复；生产代码与 Runtime 未改动。
+
 ## 用户要求
 
 - 仪表盘“自动化安排”及展开后的用途、用法需要重新设计。
