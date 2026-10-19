@@ -6,8 +6,7 @@
     <text class="event-name">{{ record.deviceName || '设备名称未提供' }}</text>
     <text v-if="record.currentDevice && !record.currentDevice.name" class="event-note">当前名称未核验，显示告警记录名称</text>
     <view class="event-field"><text>{{ record.currentDevice ? '当前位置' : '此前位置' }}</text><text>{{ record.currentDevice ? record.currentDevice.location || '未核验' : record.location || '未提供' }}</text></view>
-    <view v-if="record.recordedDeviceName && record.recordedDeviceName !== record.deviceName" class="event-field"><text>记录名称</text><text>{{ record.recordedDeviceName }}</text></view>
-    <view class="event-field"><text>记录时间</text><text>{{ fmtDateTime(record.occurredAt) || '未提供' }}</text></view>
+    <view class="event-field"><text>告警时间</text><text>{{ fmtDateTime(record.occurredAt) || '未提供' }}</text></view>
     <view class="event-field"><text>台账来源</text><text>{{ record.ledger === 'gas' ? '燃气台账' : record.ledger === 'smoke' ? '烟感台账' : record.ledger === 'flooding' ? '水浸台账（含历史混表）' : '未提供' }}</text></view>
     <text class="event-observed">{{ verified ? '最新读取于' : '此前读取于' }} {{ fmtDateTime(observedAt) || '时间未提供' }}</text>
    </view>
