@@ -1,6 +1,6 @@
 # 项目文档入口
 
-- 2026-10-19 Agent 重设计后续规格与票 04–06 已准备：先真实收口及效率/路径验收，再多期间能耗调查、告警协同排查；均非新增业务已实施声明，见[后续准备与依赖](../plan/2026-10-19-agent-redesign-followup-preparation.md)。
+- 2026-10-19 Agent 重设计后续规格与票 04–06 已准备：每票包含职责、工具接口、业务结构/引用和用户流程的设计取舍及必要替换；先协调设计与真实收口，再复杂能耗调查、告警排查。均非新增业务已实施声明，见[后续准备与依赖](../plan/2026-10-19-agent-redesign-followup-preparation.md)。
 
 - 2026-10-19 Pi 重设计首条 Company 复杂收口的提案、执行与跨轮澄清源码已集成原开发分支；Runtime 285/285，真实模型配合协议夹具双轮通过、零真实控制。未部署，真实网关/微信/现场验收和照明权威反馈仍开放，见[澄清与引用交接](../plan/2026-10-19-company-closure-clarification-handoff.md)与[执行交接](../plan/2026-10-19-company-night-closure-execution-handoff.md)。
 
