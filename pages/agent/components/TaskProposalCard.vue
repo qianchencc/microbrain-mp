@@ -8,6 +8,12 @@
   <view class="task-phases">
   <view v-for="(phase, index) in task.phases" :key="phase.at" class="task-phase">
     <view class="phase-time"><view class="phase-node" :class="{ ending: !task.interval && index === 1 }" /><text>{{ phaseTitle(index) }} · {{ taskTime(phase.at) }}</text></view>
+    <template v-if="phase.preflight">
+     <text class="device-location preflight-line">范围 · {{ phase.preflight.includedScopes.join('、') }}</text>
+     <text v-if="phase.preflight.excludedScopes.length" class="device-location preflight-line">保留 · {{ phase.preflight.excludedScopes.join('、') }} · {{ phase.preflight.excludedCount }} 台</text>
+     <view class="device-target preflight-line preflight-counts"><text>目标 {{ phase.preflight.targetCount }} 台</text><text>当前已满足 {{ phase.preflight.alreadySatisfiedCount }}</text><text>待下发 {{ phase.preflight.needsDispatchCount }}</text><text>状态未知 {{ phase.preflight.unreadableCount }}</text></view>
+     <text class="device-location preflight-line">预检 {{ taskTime(phase.preflight.observedAt) }} · 到时重新读取状态</text>
+    </template>
     <view v-for="action in actionsOf(phase, index)" :key="action.deviceId" class="task-device">
      <view class="device-cell"><image v-if="artworkOf(action)" class="device-art" :src="artworkOf(action)" mode="aspectFit" /><text class="device-name">{{ action.deviceName }}</text></view><text class="device-target">{{ targetText(action.kind, action.command) }}</text>
     </view>
@@ -84,6 +90,7 @@ const artworkOf = device => resolveDeviceArtwork({ kind: device.kind, deviceName
 function phaseTitle(index) {
  if (isCancellation.value) return state.value === 'confirmed' ? '已取消' : '将取消'
  if (props.task.interval) return `检查点${index + 1}`
+ if (props.task.phases[index]?.preflight) return index === 0 ? '关闭照明' : '关闭空调'
  return props.task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束'
 }
 </script>
@@ -111,6 +118,9 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .device-target { flex-shrink:0; max-width:100%; color:#5c7865; }
 .read-window { display:block; margin:2px 0 3px 16px; color:#917044; font-size:10px; }
 .device-location { width:100%; margin-left:16px; color:#8b9991; font-size:10px; }
+.preflight-line { display:block; width:auto; margin:3px 0 3px 16px; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.preflight-counts { display:flex; flex-wrap:wrap; gap:2px 10px; }
+.preflight-counts text { white-space:nowrap; }
 .phase-more { width:100%; min-height:34px; margin-top:5px; display:flex; align-items:center; justify-content:center; gap:5px; color:#176b54; font-size:11px; font-weight:600; border-radius:0; }
 .phase-more--pressed { background:#eef3ef; }
 .caret-up { transform:rotate(180deg); }
