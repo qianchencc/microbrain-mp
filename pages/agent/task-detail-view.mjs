@@ -8,7 +8,7 @@ const statusLabel = (status, source) => (source === 'company' ? companyStatusTex
 export function executionResult(device) {
  if (device.outcome === 'observed') return '已读取'
  if (device.outcome === 'satisfied') return '不必执行'
- if (device.outcome === 'verified' || (device.outcome === 'unconfirmed' && device.details?.receipt === 'ACCEPTED' && !device.details?.timedOut)) return '已执行'
+ if (device.outcome === 'verified' || (device.outcome === 'unconfirmed' && !device.details?.requiresVerification && device.details?.receipt === 'ACCEPTED' && !device.details?.timedOut)) return '已执行'
  if (['pending', 'not_dispatched'].includes(device.outcome)) return '未执行'
  return '明确报错'
 }
@@ -68,6 +68,10 @@ export function readTargetText(kind) {
 }
 
 export function resultText(device) {
+ if (device.details?.requiresVerification) {
+  if (device.outcome === 'verified') return '已核验'
+  if (device.outcome === 'unconfirmed' && device.details.receipt === 'ACCEPTED') return device.details.readback?.observedState === null ? '已受理 · 回读失败' : '已受理 · 目标未核验'
+ }
  const status = executionResult(device)
  if (status !== '明确报错') return status
  const rejected = (device.details?.fields || []).filter(field => field.outcome === 'REJECTED')
@@ -110,7 +114,7 @@ export function taskDetailView(task) {
    devices: (phase.devices || []).map(device => ({ ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
     targetText: targetText(device.kind, device.target),
     resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device),
-    resultTone: phase.status === 'cancelled' ? 'wait' : executionResult(device) === '明确报错' ? 'fail' : executionResult(device) === '未执行' ? 'wait' : 'ok' })),
+    resultTone: phase.status === 'cancelled' ? 'wait' : device.details?.requiresVerification && device.outcome === 'unconfirmed' ? 'warn' : executionResult(device) === '明确报错' ? 'fail' : executionResult(device) === '未执行' ? 'wait' : 'ok' })),
   }
  })
  const start = interval ? taskTime(interval.startsAt) : phases[0]?.time || ''

@@ -206,3 +206,14 @@ test('区域时间轴不绘制已取消任务，即使取消提案已清空阶�
  assert.deepEqual(regionTimelineItems([kept, { ...tasks[1], status: 'cancelled', phases: [] }]).map(item => item.id), [kept.id])
  assert.deepEqual(regionTimelineItems([{ ...kept, status: 'cancelled' }]), [])
 })
+
+test('需核验任务的设备结果区分受理未核验与已核验，不以受理回执显示完成', () => {
+ const devices = [
+  { id: 'light', kind: 'lighting', name: '26楼走廊灯', target: { closeOrOpen: 0 }, outcome: 'unconfirmed', details: { receipt: 'ACCEPTED', requiresVerification: true } },
+  { id: 'ac-read-failed', kind: 'ac', name: '27楼空调', target: { power: 'off' }, outcome: 'unconfirmed', details: { receipt: 'ACCEPTED', requiresVerification: true, readback: { observedState: null } } },
+  { id: 'ac', kind: 'ac', name: '26楼空调', target: { power: 'off' }, outcome: 'verified', details: { receipt: 'ACCEPTED', requiresVerification: true } },
+ ]
+ const view = taskDetailView({ agentSource: 'company', status: 'partial', source: { type: 'scheduled' }, phases: [{ at: '2026-10-19T12:00:00Z', status: 'partial', devices }] })
+ assert.deepEqual(view.phases[0].devices.map(device => device.resultText), ['已受理 · 目标未核验', '已受理 · 回读失败', '已核验'])
+ assert.deepEqual(view.phases[0].devices.map(device => device.resultTone), ['warn', 'warn', 'ok'])
+})
