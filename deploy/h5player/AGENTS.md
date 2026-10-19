@@ -1,5 +1,7 @@
 # Shared video page
 
+- Remote development hosting uses `serve.mjs` on loopback 9415 in tmux `iot-video-player`; `mp-video.qianc.ltd` is forwarded by remote FRP. SDK assets stay same-origin through the fixed customer asset proxy; only authenticated video-stream routes reach Runtime 3210. Deployment and actual live/playback evidence: `plan/2026-10-19-remote-video-player-handoff.md` (repository root). Local Mac FRP can stay stopped.
+
 - Ship index.html and player.js together. Update the player.js content hash in index.html whenever the script changes; unversioned files were cached for four hours by the development CDN. SDK assets must be same-origin under /owner/static/h5player/ for worker/wasm loading.
 - Navigate before fetching. source/device/session remain explicit on every retry; never share Company and Office catalogs or place WSS in navigation/history/observation cards.
 - Prepare SDK before requesting a short-lived stream. Only firstFrameDisplay means playing. Return waits for JS_Stop; a broken SDK has a bounded return fallback. Hide/unload aborts requests and releases the instance.
