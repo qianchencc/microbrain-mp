@@ -2,7 +2,7 @@
  <view class="conv-root">
   <view class="conversation-shell">
    <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" :scroll-top="restoredScrollTop" @scroll="handleScroll" @scrolltolower="nearBottom = true">
-   <view class="conversation__inner">
+   <view class="conversation__inner" :class="{ clearing }">
     <view v-if="!isCompany && regionsError" class="region-notice"><text>{{ regionsError }}</text><button @tap="loadRegionFocus().catch(() => {})">重新读取</button></view>
     <view v-if="!conversationId && !errorMessage" class="welcome connecting"><text>{{ isCompany ? '公司 Agent' : '办公室 Agent' }}</text><view>正在恢复对话…</view></view>
     <view v-else-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>查询公司环境、能耗和告警，安排定时简报或智慧空调任务。</view></view>
@@ -24,6 +24,7 @@
     <view id="agent-bottom" class="anchor" />
    </view>
   </scroll-view>
+  <view v-if="clearing" class="clearing-hint"><text>正在清除会话…</text></view>
   </view>
   <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
   <DraftSheetLayer v-if="sheetMounted" :source="source" :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline" :error="sheetError"
@@ -117,13 +118,13 @@ const turns = ref([])
 const errorMessage = ref('')
 const isRunning = ref(false)
 const phase = ref('')
-const mutating = ref(false)
+const mutating = ref(false), clearing = ref(false)
 const scrollIntoView = ref(''), restoredScrollTop = ref(0)
 let currentScrollTop = 0, readingHydrated = false
 const nearBottom = ref(true)
 const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
 const busy = computed(() => isRunning.value || mutating.value || hasExecution.value)
-const statusText = computed(() => !conversationId.value ? '正在连接' : busy.value ? '正在处理' : '服务在线')
+const statusText = computed(() => !conversationId.value ? '正在连接' : clearing.value ? '正在清除' : busy.value ? '正在处理' : '服务在线')
 // 宿主状态播报：页面导航头/浮层面板头、浮标运行态都由这组事件驱动
 watch(statusText, value => emit('status', value), { immediate: true })
 watch(isRunning, value => emit('running', value), { immediate: true })
@@ -185,6 +186,8 @@ let disposed = false, visible = false, restoring = false, sequence = 0
 // 回读会把界面冻结成"幻觉待确认"）；纪元用于丢弃跨越确认起点的在途 restore 快照。
 const confirming = new Set()
 let confirmEpoch = 0
+// 清除纪元：确认清除即递增，跨越清除起点取到的恢复快照属于旧会话，整表丢弃。
+let clearEpoch = 0
 // 键盘停靠：adjust-position=false 页面不平移，键盘高度转为 composer-shell 底 padding
 //（键盘高 + 8px 缝），对话区 flex 自动收缩；弹起时仅当用户本在底部才跟到底部锚点。
 const kbHeight = ref(0), kbMs = ref(0)
@@ -247,9 +250,9 @@ function prefill(prompt) {
  else applyHistoryPrompt(prompt)
 }
 async function restore() {
- if (restoring || activeRequest || confirming.size || disposed) return
+ if (restoring || activeRequest || confirming.size || disposed || clearing.value) return
  restoring = true
- const epoch = confirmEpoch
+ const epoch = confirmEpoch, clearMark = clearEpoch
  try {
   await waitForAgentSession()
   const scope = getAgentStorageScope()
@@ -272,7 +275,7 @@ async function restore() {
   const conversation = restored.conversation || await createConversation(props.source)
   const returnedSource = restored.source ?? conversation.source ?? conversation.agent_source
   if (returnedSource && returnedSource !== props.source) throw new Error('会话来源与当前入口不一致')
-  if (disposed || getAgentStorageScope() !== scope) return
+  if (disposed || getAgentStorageScope() !== scope || clearMark !== clearEpoch) return
   // 快照可能取于确认请求到达服务端之前（EXECUTING 提交前的待确认旧态）：
   // 跨越确认起点的快照整表丢弃，由确认结果写回或下一轮轮询收口。
   if (epoch !== confirmEpoch) { schedule(); return }
@@ -611,22 +614,47 @@ async function stopRun() {
  }
 }
 function clearHistory() {
- if (!conversationId.value) return
+ if (!conversationId.value || clearing.value) return
+ // 在途回答/执行中草案服务端同样按 409 拒绝；先本地拦截，省一轮等待。
+ if (busy.value || activeRequest) {
+  uni.showToast({ title: '请等待当前请求结束后清除', icon: 'none' })
+  return
+ }
  uni.showModal({ title: isCompany.value ? '清除公司会话' : '清除会话', content: isCompany.value ? '清除当前公司 Agent 对话记录？' : '清除当前对话和草案记录？', success: async response => {
-  if (!response.confirm) return
+  if (!response.confirm || clearing.value) return
+  const staleId = conversationId.value
+  ++clearEpoch
   mutating.value = true
-  try {
-   await clearConversation(conversationId.value, props.source)
-   const fresh = await createConversation(props.source)
-   conversationId.value = fresh.id
+  clearing.value = true
+  // 退役旧会话与创建新会话互不依赖，并行发出，与淡出动画同时进行；
+  // 失败时保留原轮次回显，不会先清空再恢复。
+  const requests = Promise.allSettled([clearConversation(staleId, props.source), createConversation(props.source)])
+  await new Promise(resolve => setTimeout(resolve, 220))
+  const [cleared, created] = await requests
+  if (cleared.status === 'rejected') {
+   // 并行的新建可能已成功：补删这个空会话，避免它取代旧会话成为可恢复的当前会话。
+   if (created.status === 'fulfilled') clearConversation(created.value.id, props.source).catch(() => {})
+   if (!disposed) errorMessage.value = cleared.reason?.message || '清除会话失败，请重试'
+  } else if (!disposed) {
    turns.value = []
    regionChanges.value = []
    draftBaselines.clear()
-   errorMessage.value = ''
-   follow(true)
+   if (editingTurn.value) cancelEdit()
+   if (created.status === 'fulfilled') {
+    conversationId.value = created.value.id
+    errorMessage.value = ''
+    follow(true)
+   } else {
+    // 旧会话已清除但新会话未建成：补建一次，仍失败则显示错误由用户重新连接。
+    conversationId.value = ''
+    try {
+     const fresh = await createConversation(props.source)
+     if (!disposed) { conversationId.value = fresh.id; errorMessage.value = ''; follow(true) }
+    } catch (error) { if (!disposed) errorMessage.value = error.message }
+   }
   }
-  catch (error) { errorMessage.value = error.message }
-  finally { mutating.value = false }
+  clearing.value = false
+  mutating.value = false
  } })
 }
 // 宿主驱动生命周期：active=true ↔ 页面 onShow / 浮层展开，false ↔ onHide / 收起。
@@ -681,8 +709,11 @@ view, text, input { font-size: inherit; line-height: inherit; }
 /* scroll-view 禁止直接用 flex:1/height:0 撑高（微信 webview 已知塌陷：盒子 0 高、
    内容被 enhanced 层画出但命中盒全灭——2026-09-17 预览"看得见点不中"根因）。
    确定性高度链：flex 包裹层 min-height:0 + 内层 scroll-view height:100%。 */
-.conversation-shell { flex:1; min-height:0; overflow:hidden; }
-.conversation { height:100%; }.conversation__inner { padding:24px 16px 32px; }
+.conversation-shell { flex:1; min-height:0; overflow:hidden; position:relative; }
+.conversation { height:100%; }.conversation__inner { padding:24px 16px 32px; transition:opacity .22s ease, transform .22s ease; }
+.conversation__inner.clearing { opacity:0; transform:translateY(16rpx); pointer-events:none; }
+.clearing-hint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#839186; font-size:24rpx; animation:clearing-hint-in .24s ease .1s backwards; }
+@keyframes clearing-hint-in { from { opacity:0 } to { opacity:1 } }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
 .region-divider { margin:12px 0 22px; text-align:center; font-size:11px; color:#839186; }
 .turn-reference { margin-bottom:8px; padding:6px 10px; border-left:2px solid #b69655; background:#f6f4ee; color:#758176; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
@@ -693,5 +724,5 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
 .error { display:block; margin-top:20rpx; color:#ad711b; font-size:25rpx; }
 .composer-shell { position:relative; z-index:4; padding:8px 18px calc(14px + env(safe-area-inset-bottom)); background:transparent; flex-shrink:0; transition:padding-bottom .25s ease; }.anchor { height:2rpx; }
-@media(prefers-reduced-motion:reduce){.composer-shell{transition:none;}}
+@media(prefers-reduced-motion:reduce){.composer-shell{transition:none;}.conversation__inner{transition:none;}.clearing-hint{animation:none;}}
 </style>
