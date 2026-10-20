@@ -25,7 +25,7 @@
     <text v-if="pair.note" class="data-note">{{ pair.note }}</text>
    </button>
   </view>
-  <button v-if="hasError" class="retry" @tap="load">重新读取月度统计</button>
+  <button v-if="hasError" class="retry" @tap="load(true)">重新读取月度统计</button>
   <DeviceSheet v-if="detailsMounted" :open="detailsOpen" :title="details ? details.title + ' · 逐表对比' : '逐表对比'" tall compact-header @close="detailsOpen = false">
    <scroll-view v-if="details" :key="details.key" class="details-scroll" scroll-y enhanced :show-scrollbar="false">
     <view class="details-content">
@@ -56,7 +56,7 @@
 </template>
 <script setup>
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
-import { getCompanyMeterReport } from '@/apis/agent'
+import { getCompanyMeterReport, companyOverviewCache } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import { monthlyEnergyWindows, monthlyEnergyView, readMonthlyEnergy, monthlyNumber } from '../monthly-energy-view.mjs'
@@ -85,14 +85,23 @@ function failAll(error) {
  detailsOpen.value = false
  states.value = Object.fromEntries([windows.value.current, ...windows.value.pairs.flatMap(pair => [pair.current, pair.baseline])].map(span => [span.from + '/' + span.to, { error }]))
 }
-async function load() {
+async function load(force = false) {
  const id = ++requestId
  detailsOpen.value = false
- windows.value = monthlyEnergyWindows(new Date(), props.cutoff); states.value = {}
+ const nextWindows = monthlyEnergyWindows(new Date(), props.cutoff)
  try {
   await waitForAgentSession()
   if (id !== requestId || !props.active) return
-  scope = getAgentStorageScope()
+  const nextScope = getAgentStorageScope()
+  const sameWindow = JSON.stringify(windows.value) === JSON.stringify(nextWindows)
+  if (scope !== nextScope || !sameWindow) states.value = {}
+  scope = nextScope; windows.value = nextWindows
+  const key = 'monthly-snapshot:' + JSON.stringify(nextWindows)
+  const cached = companyOverviewCache.peek(key)
+  if (cached && force !== true) {
+   states.value = cached.value
+   if (cached.fresh) return
+  }
   const active = () => {
    if (id !== requestId || !props.active) return false
    let sameScope = false
@@ -100,20 +109,21 @@ async function load() {
    if (!sameScope) { ++requestId; failAll('登录身份已变化，请重新读取'); return false }
    return true
   }
-  await readMonthlyEnergy(windows.value, getCompanyMeterReport, (key, result) => {
+  await readMonthlyEnergy(windows.value, query => getCompanyMeterReport(query, { force: force === true }), (key, result) => {
    if (!active()) return
    if (result.denied) {
     // 任一期撤权时整组清空，不能继续保留其他请求已取得的总量。
     ++requestId; failAll(result.error)
    } else states.value = { ...states.value, [key]: result }
   })
+  if (active() && !hasError.value && !Object.values(states.value).some(state => state.report?.coverage?.truncated)) companyOverviewCache.put(key, states.value)
  } catch (error) {
   if (id === requestId && props.active) failAll(error.message || '月度统计读取失败')
  }
 }
-watch([() => props.active, () => props.refreshKey, () => props.cutoff], ([active]) => {
- if (active) void load()
- else { ++requestId; detailsOpen.value = false; states.value = {} }
+watch([() => props.active, () => props.refreshKey, () => props.cutoff], ([active, revision], previous) => {
+ if (active) void load(Boolean(previous && revision !== previous[1]))
+ else { ++requestId; detailsOpen.value = false }
 }, { immediate: true })
 onBeforeUnmount(() => { ++requestId })
 </script>

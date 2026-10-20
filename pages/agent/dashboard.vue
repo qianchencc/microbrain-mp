@@ -13,9 +13,9 @@
       <text class="date">{{ dateLine }}</text>
       <text class="hello">你好{{ userName ? '，' + userName : '' }}</text>
      </view>
-     <button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#567461" /></button>
+     <button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#567461" /></button>
     </view>
-    <view v-if="error" class="notice"><text>{{ error }}</text><button @tap="load">重试</button></view>
+    <view v-if="error" class="notice"><text>{{ error }}</text><button @tap="load(true)">重试</button></view>
     <view v-else-if="snapshot?.errors?.length" class="notice"><text>部分观测暂不可用</text><button @tap="showErrors">查看</button></view>
     <view class="counts">
      <button v-for="cell in KIND_CELLS" :key="cell.kind" class="crow" @tap="openKind(cell.kind)">
@@ -55,7 +55,7 @@
 
    </view>
   </scroll-view>
-  <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" :initial-view="taskEntry.view" :date="taskEntry.date" :initial-task="taskEntry.task" :refresh-key="taskRevision" @close="tasksOpen = false; taskRevision++" @reference="referenceTask" @changed="taskRevision++" @create="createTask" />
+  <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" :initial-view="taskEntry.view" :date="taskEntry.date" :initial-task="taskEntry.task" :refresh-key="taskRevision" @close="tasksOpen = false" @reference="referenceTask" @changed="tasksChanged" @create="createTask" />
   <DeviceSheet v-if="observationMounted" :open="Boolean(observationType)" :back="observationBack" tall compact-header :title="selectedEvent ? '安全台账详情' : observationTitle" @close="observationType = ''">
    <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" hover-class="event-back--pressed" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
    <SafetyHistoryList v-if="observationType === 'alerts'" class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="observationType === 'alerts' && !selectedEvent" @select="selectedEvent = $event" />
@@ -70,13 +70,13 @@
   <DeviceSheet v-if="drawerMounted" :open="Boolean(drawerKind)" tall compact-header :title="drawerTitle" :meta="drawerDevices.length + ' 台 · 只读目录'" @close="drawerKind = ''">
    <CompanyDeviceDrawer class="event-host" :devices="drawerDevices" :kind="drawerKind" />
   </DeviceSheet>
-  <CompanyAgentFloat ref="agentFloat" :page-active="pageActive" @tasks-changed="taskRevision++" />
+  <CompanyAgentFloat ref="agentFloat" :page-active="pageActive" @tasks-changed="tasksChanged" />
  </view>
 </template>
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily } from '@/apis/agent'
+import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, companyOverviewCache } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
@@ -201,21 +201,62 @@ function resetForScope() {
  energyReport.value = null; energyStrip.value = []; selectedStripDate.value = ''
  energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
 }
+function invalidateCompanyDashboard() { companyOverviewCache.clear() }
+function applyCompanyDashboardCache(cached) {
+ snapshot.value = cached.snapshot
+ loadedSections.value = [...cached.loadedSections]
+ sectionErrors.value = { ...cached.sectionErrors }
+ catalogDevices.value = [...cached.catalogDevices]
+ devicesLoaded.value = cached.devicesLoaded
+ devicesError.value = cached.devicesError
+ energyReport.value = cached.energyReport
+ energyStrip.value = [...cached.energyStrip]
+ energyError.value = cached.energyError
+ if (!selectedStripDate.value) selectedStripDate.value = cached.selectedStripDate
+}
+function saveCompanyDashboardCache() {
+ if (!snapshot.value || snapshot.value.errors?.length || Object.keys(sectionErrors.value).length || !devicesLoaded.value || devicesError.value || !energyReport.value || energyReport.value.truncated || energyError.value) return
+ companyOverviewCache.put('dashboard-snapshot', {
+  snapshot: snapshot.value, loadedSections: [...loadedSections.value], sectionErrors: { ...sectionErrors.value },
+  catalogDevices: [...catalogDevices.value], devicesLoaded: devicesLoaded.value, devicesError: devicesError.value,
+  energyReport: energyReport.value, energyStrip: [...energyStrip.value], energyError: energyError.value, selectedStripDate: selectedStripDate.value,
+ })
+}
 function allLoaded() { loading.value = false; energyLoading.value = false; alertsLoading.value = false; devicesLoading.value = false }
 
 const monthlyRefresh = ref(0)
 let requestId = 0, scope = '', visible = false
-async function load() {
- monthlyRefresh.value++
+const dashboardUser = useUserStoreHook()
+watch(() => [dashboardUser.token, dashboardUser.getDistrict?.id, dashboardUser.authorized], () => {
+ if (!scope) return
+ try { if (scope === getAgentStorageScope()) return } catch { /* 登录失效，清理旧快照。 */ }
+ invalidateCompanyDashboard(); ++requestId; resetForScope(); scope = ''; allLoaded()
+ if (visible) void load()
+})
+async function load(force = false) {
  const current = ++requestId
- loading.value = true; energyLoading.value = true; alertsLoading.value = true; devicesLoading.value = true; error.value = ''; sectionErrors.value = {}
  try {
   await waitForAgentSession()
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
-  if (nextScope !== scope) { resetForScope(); scope = nextScope }
+  if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
+  if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++ }
+  const cached = companyOverviewCache.peek('dashboard-snapshot')
+  if (!force && cached) {
+   applyCompanyDashboardCache(cached.value)
+   error.value = ''
+   allLoaded()
+   if (cached.fresh) return
+  }
+  loading.value = true; energyLoading.value = !energyReport.value; alertsLoading.value = !loadedSections.value.includes('alerts'); devicesLoading.value = !devicesLoaded.value; error.value = ''; sectionErrors.value = {}
   await Promise.allSettled(['environment', 'alerts', 'devices', 'energyDaily'].map(async section => {
-   const active = () => current === requestId && visible && getAgentStorageScope() === nextScope
+   const active = () => {
+    if (current !== requestId || !visible) return false
+    try { if (getAgentStorageScope() === nextScope) return true } catch { /* 身份失效时旧概览不能继续可见。 */ }
+    invalidateCompanyDashboard(); ++requestId; resetForScope(); allLoaded()
+    error.value = '登录身份已变化，请重新读取'
+    return false
+   }
    try {
     if (section === 'devices') {
      const result = await getCompanyDevices()
@@ -244,7 +285,7 @@ async function load() {
     if (!loadedSections.value.includes(section)) loadedSections.value.push(section)
    } catch (cause) {
     if (!active()) return
-    if (cause.data?.code === 'UNAUTHORIZED') { resetForScope(); ++requestId; error.value = cause.message; allLoaded(); return }
+    if ([401, 403].includes(cause.status) || cause.code === 'AGENT_READ_INVALIDATED' || ['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code)) { invalidateCompanyDashboard(); resetForScope(); ++requestId; error.value = cause.message; allLoaded(); return }
     if (section === 'devices') devicesError.value = '设备目录暂不可用'
     else if (section === 'energyDaily') energyError.value = cause.message || '暂不可用'
     else {
@@ -252,13 +293,15 @@ async function load() {
      if (snapshot.value) snapshot.value = { ...snapshot.value, errors: [...snapshot.value.errors.filter(row => row.area !== section), { area: section, message: sectionErrors.value[section] }] }
     }
    } finally {
-    if (current === requestId) ({ environment: loading, alerts: alertsLoading, devices: devicesLoading, energyDaily: energyLoading })[section].value = false
+    if (current === requestId && section !== 'environment') ({ alerts: alertsLoading, devices: devicesLoading, energyDaily: energyLoading })[section].value = false
    }
   }))
+  if (current === requestId && visible) saveCompanyDashboardCache()
   if (current === requestId && !snapshot.value) error.value = '公司数据暂不可用，请重试'
  } catch (cause) {
   if (current === requestId && visible) {
    ++requestId; allLoaded()
+   invalidateCompanyDashboard()
    resetForScope()
    error.value = cause.message === 'request:fail' ? '公司数据暂不可用，请检查网络后重试' : cause.message || '公司数据暂不可用'
   }
@@ -276,6 +319,7 @@ let pendingAgentOpen = null
 function openCompanyAgent(payload = {}) { agentFloat.value?.open(payload) }
 function referenceEvent(reference) { selectedEvent.value = null; observationType.value = ''; openCompanyAgent({ reference }) }
 function referenceTask(reference) { tasksOpen.value = false; openCompanyAgent({ reference }) }
+function tasksChanged() { taskRevision.value++; invalidateCompanyDashboard() }
 function openEnvironmentAgent(window) { observationType.value = ''; openCompanyAgent({ prompt: environmentHistoryPrompt(window) }) }
 function openMeterAgent(window) { observationType.value = ''; openCompanyAgent({ prompt: meterHistoryPrompt(window) }) }
 function openAgent(source) {
@@ -292,8 +336,8 @@ onMounted(() => { if (pendingAgentOpen) agentFloat.value?.open(pendingAgentOpen)
 function back() { backToParent('/pages/index/index') }
 onShow(() => {
  visible = true; pageActive.value = true; openingAgent.value = ''
- try { if (scope && scope !== getAgentStorageScope()) resetForScope() }
- catch { resetForScope() }
+ try { if (scope && scope !== getAgentStorageScope()) { resetForScope(); scope = '' } }
+ catch { resetForScope(); scope = '' }
  load()
 })
 function hide() { visible = false; pageActive.value = false; ++requestId; allLoaded() }

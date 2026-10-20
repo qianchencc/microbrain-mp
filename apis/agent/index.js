@@ -6,15 +6,31 @@ import { transportError, createTerminalTracker } from './stream-errors.mjs'
 import { requestJson, httpError } from './request.mjs'
 import { downloadReportFile } from './report-download.mjs'
 import { conversationSourceBody, withConversationSource } from './conversation-source.mjs'
+import { createCompanyReadCache } from './company-read-cache.mjs'
 
 const STREAM_IDLE_TIMEOUT_MS = 60000
 const STREAM_REQUEST_TIMEOUT_MS = 300000
 const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 
-const request = (url, method, data, timeout) => requestJson(globalConfig.agentUrl + url, method, data, getAgentHeaders(), timeout)
+export const companyOverviewCache = createCompanyReadCache(getAgentStorageScope)
+const request = async (url, method, data, timeout) => {
+ const changesDevices = method !== 'GET' && /\/(action-drafts|tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel)(?:\?|$)/.test(url)
+ if (changesDevices) companyOverviewCache.clear()
+ try {
+  const result = await requestJson(globalConfig.agentUrl + url, method, data, getAgentHeaders(), timeout)
+  return result
+ } catch (error) {
+  if ([401, 403].includes(error.status) || error.code === 'AGENT_SESSION_EXPIRED') companyOverviewCache.clear()
+  throw error
+ } finally {
+  if (changesDevices) companyOverviewCache.clear()
+ }
+}
+const companyRead = (url, timeout, options = {}) => companyOverviewCache.read(globalConfig.agentUrl + url, () => request(url, 'GET', undefined, timeout), options.force === true)
+const queryString = query => Object.entries(query).filter(([, value]) => value !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&')
 
 export const createConversation = (source = 'office') => request('/agent/conversations', 'POST', conversationSourceBody(source))
-export const getCompanyDashboard = section => request('/agent/dashboard?source=company' + (section ? '&section=' + encodeURIComponent(section) : ''), 'GET')
+export const getCompanyDashboard = (section, options) => companyRead('/agent/dashboard?source=company' + (section ? '&section=' + encodeURIComponent(section) : ''), undefined, options)
 export const getSafetyEvent = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
 export const getSafetyEventCameras = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}/cameras?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
 export const listRegions = section => request('/agent/regions' + (section ? '?section=' + encodeURIComponent(section) : ''), 'GET')
@@ -49,10 +65,10 @@ export const listSafetyHistory = (query = {}) => {
 
 export const getEnvironmentHistory = (query) => request('/agent/environment-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')
 export const getEnergyHistory = (query = {}) => request('/agent/energy-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')
-export const getCompanyDevices = () => request('/agent/company-devices?source=company', 'GET')
-export const getCompanyEnergyDaily = (query = {}) => request('/agent/company-energy-daily?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET', undefined, 90000)
+export const getCompanyDevices = (options) => companyRead('/agent/company-devices?source=company', undefined, options)
+export const getCompanyEnergyDaily = (query = {}, options) => companyRead('/agent/company-energy-daily?source=company&' + queryString(query), 90000, options)
 // 计量范围×时间统计（meter-report）：scopeLevel all|floor|location|nameMatch + floor/meterId/text，from/to 带时区，grain 可选。
-export const getCompanyMeterReport = (query = {}) => request('/agent/company-meter-report?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET', undefined, 90000)
+export const getCompanyMeterReport = (query = {}, options) => companyRead('/agent/company-meter-report?source=company&' + queryString(query), 90000, options)
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getReportArtifact = (reportId, source = 'company') => request(`/agent/reports/${encodeURIComponent(reportId)}?source=${encodeURIComponent(source)}`, 'GET')
 export function downloadReportArtifact(reportId, source = 'company', format = 'pdf', options = {}) {

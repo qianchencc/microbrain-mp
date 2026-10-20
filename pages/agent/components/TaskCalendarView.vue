@@ -11,7 +11,7 @@
   </button>
   <view v-if="error" class="calendar-error" role="status">
    <text>{{ loaded ? '任务暂未更新' : '任务暂未加载' }}</text>
-   <view class="error-actions"><button class="error-detail" @tap="showError">查看原因</button><button class="error-retry" @tap="load">重试</button></view>
+   <view class="error-actions"><button class="error-detail" @tap="showError">查看原因</button><button class="error-retry" @tap="load(true)">重试</button></view>
   </view>
   <button v-if="compact && loaded && dayTasks.length > 2" class="all-tasks" @tap="$emit('open-date', selected)">全部 {{ dayTasks.length }} 项 <uni-icons type="right" size="11" color="#176b54" /></button>
  </view>
@@ -34,24 +34,34 @@ const marks = computed(() => taskCalendarMarks(tasks.value, window.value.from, w
 const dayTasks = computed(() => tasksOnDate(tasks.value, selected.value, props.compact))
 const visibleTasks = computed(() => props.compact ? dayTasks.value.slice(0, 2) : dayTasks.value)
 let generation = 0, timer = 0, visible = true, loadedScope = ''
+let inFlight = null, loadedAt = 0, loadedKey = ''
 function clock(task) { return taskDayTime(task, selected.value) }
 function selectDate(date) { selected.value = date; emit('date-change', date) }
 function changeMonth(value) { if (month.value !== value) month.value = value }
 function showError() { uni.showModal({ title: '任务加载失败', content: error.value, showCancel: false, confirmText: '知道了' }) }
 function stop() { ++generation; clearTimeout(timer); loading.value = false }
-async function load() {
+async function load(force = false) {
  if (!props.active || !visible) return
  clearTimeout(timer)
  const current = ++generation, source = props.source, queryMonth = month.value
  loading.value = true; error.value = ''
- let scope = ''
+ let scope = '', delay = 30000
  try {
   scope = getAgentStorageScope()
   if (scope !== loadedScope) { tasks.value = []; loaded.value = false; loadedScope = scope }
   const range = calendarWindow(queryMonth)
-  const result = await listAgentTasks({ source, from: `${range.from}T00:00:00+08:00`, to: `${shiftDate(range.to, 1)}T00:00:00+08:00` })
+  const key = JSON.stringify([scope, source, queryMonth, props.refreshKey])
+  const interval = tasks.value.some(task => task.status === 'executing') ? 5000 : 30000
+  delay = interval
+  if (!force && loaded.value && loadedKey === key && Date.now() - loadedAt < interval) { delay = Math.max(1, interval - (Date.now() - loadedAt)); return }
+  if (inFlight?.key !== key) {
+   const promise = listAgentTasks({ source, from: `${range.from}T00:00:00+08:00`, to: `${shiftDate(range.to, 1)}T00:00:00+08:00` })
+   inFlight = { key, promise }
+   promise.then(() => { if (inFlight?.promise === promise) inFlight = null }, () => { if (inFlight?.promise === promise) inFlight = null })
+  }
+  const result = await inFlight.promise
   if (current !== generation || source !== props.source || scope !== getAgentStorageScope() || !props.active || !visible) return
-  tasks.value = result.tasks || []; loaded.value = true
+  tasks.value = result.tasks || []; loaded.value = true; loadedAt = Date.now(); loadedKey = key
   emit('refreshed')
  } catch (cause) {
   if (current !== generation) return
@@ -62,21 +72,21 @@ async function load() {
  } finally {
   if (current === generation) {
    loading.value = false
-   if (props.active && visible) timer = setTimeout(load, tasks.value.some(task => task.status === 'executing') ? 5000 : 30000)
+   if (props.active && visible) timer = setTimeout(() => load(true), delay)
   }
  }
 }
 watch(() => props.date, value => { if (validCalendarDate(value)) selected.value = value })
 watch(selected, value => { month.value = value.slice(0, 7) })
-watch(() => [props.active, props.source, props.refreshKey, month.value], ([active, source, , currentMonth], previous) => {
+watch(() => [props.active, props.source, props.refreshKey, month.value], ([active, source, revision, currentMonth], previous) => {
  stop()
  if (previous && (source !== previous[1] || currentMonth !== previous[3])) { tasks.value = []; loaded.value = false }
- if (active) { today.value = taskToday(); void load() }
+ if (active) { today.value = taskToday(); void load(Boolean(previous && revision !== previous[2])) }
 }, { immediate: true })
 onHide(() => { visible = false; stop() })
 onShow(() => { visible = true; today.value = taskToday(); if (props.active) void load() })
 onBeforeUnmount(stop)
-defineExpose({ refresh: load })
+defineExpose({ refresh: () => load(true) })
 </script>
 <style scoped>
 view,text { font-size:inherit; line-height:inherit; }
