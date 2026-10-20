@@ -1,25 +1,26 @@
 <template>
  <view class="monthly">
   <view class="month-head"><text>{{ view.title }}</text><text v-if="view.cutoff" class="cutoff">{{ view.current.through ? '采样截至' : '统计截至' }} {{ view.cutoff }}</text></view>
-  <view v-if="view.current.pending" class="skeleton hero-skeleton" />
+  <view v-if="view.current.pending" class="hero-placeholder" aria-label="正在读取本月用电"><view class="skeleton hero-skeleton" aria-hidden="true" /></view>
   <text v-else class="hero">{{ monthlyNumber(view.current.value) }}<text class="unit"> 度</text></text>
   <text class="window">{{ view.current.label }} · 全部授权电表合计</text>
   <text class="window">每月 1 日 08:00 起算 · 每日 08:00 / 20:00 更新</text>
   <text v-if="view.current.note && !view.current.pending" class="data-note">{{ view.current.note }}</text>
   <view class="comparisons">
-   <button v-for="pair in view.pairs" :key="pair.key" class="compare" :class="pair.direction" hover-class="compare-pressed" :disabled="pair.a.pending && pair.b.pending" :aria-label="'查看' + pair.title + '逐表对比'" :aria-expanded="detailsOpen && detailsKey === pair.key" @tap="openDetails(pair.key)">
+   <button v-for="pair in view.pairs" :key="pair.key" class="compare" :class="pair.direction" hover-class="compare-pressed" :disabled="pair.a.pending && pair.b.pending" :aria-busy="pair.a.pending || pair.b.pending" :aria-label="'查看' + pair.title + '逐表对比'" :aria-expanded="detailsOpen && detailsKey === pair.key" @tap="openDetails(pair.key)">
     <view class="compare-heading"><text class="title">{{ pair.title }} · {{ pair.label }}</text><uni-icons type="right" size="11" color="#7d8d78" /></view>
-    <view v-if="pair.a.pending || pair.b.pending" class="skeleton pct-skeleton" />
+    <view v-if="pair.a.pending || pair.b.pending" class="pct-placeholder" aria-hidden="true"><view class="skeleton pct-skeleton" /></view>
     <text v-else class="pct">{{ pair.pct }}</text>
     <view class="bar-row">
-     <view class="bar-values"><text>本月</text><text class="amount">{{ monthlyNumber(pair.a.value) }} 度</text></view>
-     <view class="track" :class="{ missing: pair.a.value == null }"><view class="fill" :style="{ width: pair.aWidth + '%' }" /></view>
+     <view class="bar-values"><text>本月</text><view v-if="pair.a.pending" class="skeleton amount-skeleton" aria-hidden="true" /><text v-else class="amount">{{ monthlyNumber(pair.a.value) }} 度</text></view>
+     <view class="track" :class="{ skeleton: pair.a.pending, missing: !pair.a.pending && pair.a.value == null }"><view v-if="!pair.a.pending" class="fill" :style="{ width: pair.aWidth + '%' }" /></view>
     </view>
     <view class="bar-row">
-     <view class="bar-values"><text>{{ pair.label }}</text><text class="amount">{{ monthlyNumber(pair.b.value) }} 度</text></view>
-     <view class="track base" :class="{ missing: pair.b.value == null }"><view class="fill" :style="{ width: pair.bWidth + '%' }" /></view>
+     <view class="bar-values"><text>{{ pair.label }}</text><view v-if="pair.b.pending" class="skeleton amount-skeleton" aria-hidden="true" /><text v-else class="amount">{{ monthlyNumber(pair.b.value) }} 度</text></view>
+     <view class="track base" :class="{ skeleton: pair.b.pending, missing: !pair.b.pending && pair.b.value == null }"><view v-if="!pair.b.pending" class="fill" :style="{ width: pair.bWidth + '%' }" /></view>
     </view>
-    <text class="summary">{{ pair.summary }}</text>
+    <view v-if="pair.a.pending || pair.b.pending" class="summary-placeholder" role="status" aria-label="正在读取同期用电"><view class="skeleton summary-skeleton" aria-hidden="true" /><view class="skeleton summary-short" aria-hidden="true" /></view>
+    <text v-else class="summary">{{ pair.summary }}</text>
     <view class="periods"><text>本期 {{ pair.a.label }}</text><text>对照 {{ pair.b.label }}</text></view>
     <text v-if="pair.note" class="data-note">{{ pair.note }}</text>
    </button>
@@ -126,6 +127,7 @@ view, text, input { font-size:inherit; line-height:inherit; }
 .window { display:block; font-size:9px; color:#7d8d78; margin-top:7px; }
 .comparisons { display:flex; margin-top:18px; padding-top:17px; border-top:1px solid #dce4d9; }
 .compare { flex:1; width:0; min-width:0; margin:0; padding:0 16px 0 0; border-radius:0; background:transparent; line-height:inherit; text-align:left; color:inherit; }
+.compare[disabled] { background:transparent; color:inherit; opacity:1; }
 .compare::after { border:0; }.compare-pressed { opacity:.65; }
 .compare + .compare { border-left:1px solid #dce4d9; padding-right:0; padding-left:16px; }
 .compare-heading { display:flex; align-items:center; justify-content:space-between; gap:4px; }
@@ -133,15 +135,22 @@ view, text, input { font-size:inherit; line-height:inherit; }
 .pct { display:block; margin:7px 0 13px; font:28px/1.2 Georgia,serif; color:#6e816d; letter-spacing:-.8px; }
 .up .pct { color:#9c742d; }.down .pct { color:#176b54; }
 .bar-row { margin-top:10px; }
-.bar-values { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:2px 4px; margin-bottom:5px; font-size:9px; color:#7d8d78; }
+.bar-values { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:2px 4px; min-height:15px; margin-bottom:5px; font-size:9px; color:#7d8d78; }
 .amount { font-size:10px; color:#3a533e; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .track { height:5px; border-radius:3px; background:#dfe6da; overflow:hidden; }.fill { height:100%; border-radius:3px; background:#267655; }.base .fill { background:#b4bfa9; }
 .missing { background:repeating-linear-gradient(120deg,#dfe6da 0 3px,transparent 3px 6px); }
-.summary { display:block; font-size:10px; color:#687b68; line-height:1.6; margin-top:12px; overflow-wrap:anywhere; }
+.summary { display:block; min-height:32px; font-size:10px; color:#687b68; line-height:1.6; margin-top:12px; overflow-wrap:anywhere; }
 .periods { margin-top:10px; font-size:9px; color:#7d8d78; line-height:1.8; }.periods text { display:block; }
 .data-note { display:block; font-size:10px; color:#8c774d; margin-top:7px; line-height:1.5; overflow-wrap:anywhere; }
 .retry { display:block; margin:12px 0 0; padding:5px 0; font-size:11px; color:#176b54; background:transparent; line-height:1.6; }.retry::after { border:0; }
-.skeleton { background:#dfe6da; border-radius:5px; }.hero-skeleton { width:150px; height:40px; margin-top:7px; }.pct-skeleton { width:70px; height:34px; margin:7px 0 13px; }
+.skeleton { position:relative; overflow:hidden; background:#dfe6da; border-radius:3px; }
+.skeleton::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); transform:translateX(-100%); animation:monthly-shimmer 1.6s linear infinite; }
+.hero-placeholder { height:41px; margin-top:7px; display:flex; align-items:center; }.hero-skeleton { width:138px; height:28px; }
+.pct-placeholder { height:34px; margin:7px 0 13px; display:flex; align-items:center; }.pct-skeleton { width:70px; height:22px; }
+.amount-skeleton { width:42px; max-width:45%; height:10px; align-self:center; }
+.summary-placeholder { height:32px; margin-top:12px; display:flex; flex-direction:column; justify-content:center; gap:5px; }.summary-skeleton { width:86%; height:8px; }.summary-short { width:58%; height:8px; }
+@keyframes monthly-shimmer { to { transform:translateX(100%); } }
+@media(prefers-reduced-motion:reduce) { .skeleton::after { animation:none; content:none; } }
 .details-scroll { height:0; flex:1; min-height:0; }
 .details-content { padding:6px 20px 28px; color:#293f31; }
 .detail-periods { font-size:10px; line-height:1.8; color:#7d8d78; }.detail-periods text { display:block; }
