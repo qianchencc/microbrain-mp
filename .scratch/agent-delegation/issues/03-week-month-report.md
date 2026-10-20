@@ -1,6 +1,6 @@
 # 03：周报与自然月报
 
-Status: ready-for-agent
+Status: in-progress
 Parent: [Company Agent 业务闭环实施规格](../spec.md)
 Blocked by: 02：定时能耗日报与原任务收件箱结果
 
@@ -19,3 +19,9 @@ Blocked by: 02：定时能耗日报与原任务收件箱结果
 - [ ] 仅在真实模型、服务版本和微信/手机边界实际核验后，才报告对应环节完成。
 
 **Delivery boundary:** 本票不增加独立报告入口、不建设异常检测，也不等待告警或空调业务完成。
+
+## 2026-10-20 实施起点
+
+- 复用日报的 `read.agent.spec`、报告保存、PDF/XLSX 和原任务收件箱。
+- 周期规则扩展为每周和每月；每月按明确 `dayOfMonth` 发生，短月不存在该日时跳过，不把自然月简化成固定 30 天。
+- 统计期间继续使用 `previous/week` 与 `previous/month`，由每次实际发生时间解析。

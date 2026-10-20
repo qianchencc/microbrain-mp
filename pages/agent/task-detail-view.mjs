@@ -18,6 +18,7 @@ export function repeatText(repeat) {
  if (!repeat) return ''
  const days = ['日', '一', '二', '三', '四', '五', '六', '日']
  const label = repeat.frequency === 'daily' ? '每天' : repeat.frequency === 'weekdays' ? '周一至周五 · 不含节假日调整'
+  : repeat.frequency === 'monthly' ? `每月${repeat.dayOfMonth}日${repeat.dayOfMonth > 28 ? ' · 无此日期则跳过' : ''}`
   : `每周${[...(repeat.weekdays || [])].sort((a, b) => a - b).map(day => days[day]).join('、')}`
  return label + (repeat.until ? ` · 至 ${repeat.until}` : '')
 }
