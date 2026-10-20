@@ -1,6 +1,6 @@
 # 项目文档入口
 
-- 2026-10-20 公司 Agent 客户改进需求已汇总：轻量报告附件、能耗日/周/月报与表格导出、每日告警统计、有限空调条件巡检；报告漏项/错期反例已有离线证据。推进切片为建议，未批准新接口或控制授权，见[需求、可靠性缺口与推进路线](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)。
+- 2026-10-20 公司 Agent 改进需求已收敛：轻量报告附件、能耗日/周/月报与表格导出、每日告警统计、有限空调巡检；只做站内通知，空区块不显示，异常仅作可选解读，不建检测业务。报告漏项/错期反例已冻结，具体接口与实施按[需求、可靠性缺口与推进路线](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)继续收口，真实控制仍需具体授权。
 
 - 2026-10-20 应用户要求完成 Agent 工具体系离线设计盘点与准备：五类业务+答复协议分类、22 个活动工具契约/重叠、候选策略（建议深化业务接口）与各票验证议程；均为探索文档，未实施未批准具体 schema。04 初稿收口设计同日被分阶段范围反例撤回形态拒绝规则、降为历史候选；04 恢复 ready-for-agent 设计探索，05/06 阻塞边不变。见[设计盘点](research/2026-10-20-agent-tool-system-design-audit.md)、[设计准备](../plan/2026-10-20-agent-tool-system-design-preparation.md)、[反例记录](../plan/2026-10-20-company-closure-contract-probe.md)与[初稿设计](../plan/2026-10-20-company-closure-coordination-design.md)。
 
