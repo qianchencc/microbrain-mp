@@ -17,7 +17,11 @@
     <view v-for="action in actionsOf(phase, index)" :key="action.deviceId" class="task-device">
      <view class="device-cell"><image v-if="artworkOf(action)" class="device-art" :src="artworkOf(action)" mode="aspectFit" /><text class="device-name">{{ action.deviceName }}</text></view><text class="device-target">{{ targetText(action.kind, action.command) }}</text>
     </view>
-    <template v-if="source === 'company' && phase.read?.agent">
+    <template v-if="source === 'company' && phase.read?.ac">
+     <text class="read-window">{{ readAcOf(phase).summary }}</text>
+     <text class="read-window">{{ readAcOf(phase).criteriaText }}</text>
+    </template>
+    <template v-else-if="source === 'company' && phase.read?.agent">
      <text class="read-window">{{ readAgentOf(phase).objectiveText }}</text>
      <text v-if="readAgentOf(phase).periodText" class="read-window">{{ readAgentOf(phase).periodText }}</text>
      <text v-if="readAgentOf(phase).comparisonText" class="read-window">{{ readAgentOf(phase).comparisonText }}</text>
@@ -47,7 +51,7 @@
 </template>
 <script setup>
 import { computed, ref } from 'vue'
-import { readAgentView, readTargetText, repeatText, taskTime, targetText } from '../task-detail-view.mjs'
+import { readAcView, readAgentView, readTargetText, repeatText, taskTime, targetText } from '../task-detail-view.mjs'
 import { resolveDeviceArtwork } from '../device-art/catalog.js'
 
 // 单 phase 动作与待读设备共用 4 行预算；公司级任务的长清单默认收成尾巴可展开。
@@ -73,6 +77,7 @@ function phaseRest(phase, index) {
 const props = defineProps({ task: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean })
 defineEmits(['confirm', 'discard', 'open'])
 const readAgentOf = phase => readAgentView(phase.read?.agent)
+const readAcOf = phase => readAcView(phase.read?.ac)
 const isCancellation = computed(() => props.task.kind === 'cancellation')
 const state = computed(() => String(props.task.status || '').toLowerCase())
 const isCreated = computed(() => isCancellation.value ? state.value === 'confirmed'
@@ -94,8 +99,10 @@ const intervalText = computed(() => {
 const artworkOf = device => resolveDeviceArtwork({ kind: device.kind, deviceName: device.deviceName || device.name }).src
 function phaseTitle(index) {
  if (isCancellation.value) return state.value === 'confirmed' ? '已取消' : '将取消'
+ const actualTitle = props.task.phases[index]?.title
+ if (actualTitle) return actualTitle
  if (props.task.interval) return `检查点${index + 1}`
- if (props.task.phases[index]?.preflight) return index === 0 ? '关闭照明' : '关闭空调'
+ if (props.task.phases[index]?.preflight) return `阶段${index + 1}`
  return props.task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束'
 }
 </script>

@@ -29,6 +29,10 @@
       <text v-if="phase.readAgent.periodText" class="task-when">{{ phase.readAgent.periodText }}</text>
       <text v-if="phase.readAgent.comparisonText" class="task-when">{{ phase.readAgent.comparisonText }}</text>
      </template>
+     <template v-else-if="source === 'company' && phase.readAc">
+      <text class="task-when">{{ phase.readAc.summary }}</text>
+      <text class="task-when">{{ phase.readAc.criteriaText }}</text>
+     </template>
      <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" inline-playback read-only />
      <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
      <button v-if="phase.report" class="phase-report" :aria-label="`打开检查点报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">

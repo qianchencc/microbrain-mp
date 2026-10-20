@@ -60,6 +60,17 @@ export function readAgentView(agent) {
  }
 }
 
+const acModeLabels = { inspect: '空调只读巡检' }
+
+export function readAcView(ac) {
+ if (!ac?.mode) return null
+ return {
+  title: acModeLabels[ac.mode] || '空调检查',
+  summary: '空调只读巡检 · 不下发设备控制',
+  criteriaText: '条件 · 已开机 + 制冷 + 设定温度低于26℃',
+ }
+}
+
 export function mergeTaskPlan(task, plan) {
  task.planStatus = plan.status
  task.planId = plan.planId
@@ -103,7 +114,7 @@ export function targetText(kind, target) {
 }
 
 export function readTargetText(kind) {
- return ({ environment: '读取环境数据', energy: '读取最新能耗', safety: '读取告警台账', video: '检查在线状态' })[kind] || '只读检查'
+ return ({ ac: '读取空调状态', environment: '读取环境数据', energy: '读取最新能耗', safety: '读取告警台账', video: '检查在线状态' })[kind] || '只读检查'
 }
 
 export function resultText(device) {
@@ -145,9 +156,9 @@ export function taskDetailView(task) {
   const merged = reportPhase?.observations || phase.observations || []
   const link = merged.find(block => block?.type === 'report_artifact')?.report
   return {
-   ...phase, readAgent: readAgentView(phase.read?.agent), observations: merged.filter(block => block?.type !== 'report_artifact'),
+   ...phase, readAgent: readAgentView(phase.read?.agent), readAc: readAcView(phase.read?.ac), observations: merged.filter(block => block?.type !== 'report_artifact'),
    report: link ? { reportId: link.id, title: link.title, status: link.status, phaseId: phase.id, phaseAt: phase.at } : null,
-   title: interval ? `检查点${index + 1}` : task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束',
+   title: readAcView(phase.read?.ac)?.title || (interval ? `检查点${index + 1}` : task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束'),
    time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusLabel(phase.status, task.agentSource),
    tone: phaseTone(phase.status), link: linkProgress(phase, task.phases[index + 1]),
    devices: (phase.devices || []).map(device => ({ ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
