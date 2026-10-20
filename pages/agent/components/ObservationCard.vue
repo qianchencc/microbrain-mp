@@ -67,11 +67,15 @@
     </template>
 
     <template v-else-if="block.type === 'alerts'">
+     <view v-if="block.byType?.length" class="alert-summary">
+      <view v-for="item in block.byType" :key="item.type" class="alert-summary-row"><text>{{ alertTypeLabel(item.type) }}</text><text>{{ item.total }} 条 · {{ item.deviceCount }} 台</text></view>
+     </view>
      <button v-for="(a, i) in recordsOf(block, index)" :key="a.ledger && a.eventId ? a.ledger + ':' + a.eventId : i" class="arow" :disabled="source !== 'company'" hover-class="arow--pressed" @tap="$emit('select-alert', { record: a, observedAt: observation.observedAt })">
       <view class="alert-copy"><text class="anm">{{ a.deviceName }}<text v-if="a.location && a.location !== a.deviceName"> · {{ a.location }}</text></text><text v-if="a.recordedDeviceName && a.recordedDeviceName !== a.deviceName" class="at">记录名称：{{ a.recordedDeviceName }}</text><text v-if="a.currentDevice && (!a.currentDevice.name || !a.currentDevice.location)" class="at">{{ !a.currentDevice.name ? '当前名称未核验 · 显示记录名称' : '当前位置未核验' }}</text><text class="at">{{ fmtDateTime(a.occurredAt) || '记录时间未知' }}</text></view>
       <uni-icons v-if="source === 'company'" type="right" size="12" color="#95a296" />
      </button>
      <text class="meta">{{ alertsMeta(block) }}</text>
+     <text v-if="block.failures?.length" class="meta alert-warning">部分类别未取得：{{ block.failures.map(item => alertTypeLabel(item.type)).join('、') }}</text>
      <button v-if="source === 'company'" class="omore" hover-class="omore--pressed" @tap="$emit('browse-alerts')">按类别和日期查看历史 <uni-icons type="right" size="11" color="#5f7a6b" /></button>
     </template>
     <button v-if="restOf(block, index) || isExpanded(index)" class="omore" hover-class="omore--pressed" :aria-expanded="isExpanded(index)" @tap="toggleBlock(index)">
@@ -133,7 +137,9 @@ function restOf(block, index) {
 
 const LABELS = { report_artifact: '报告附件', meter_report: '用电统计', energy_report: '计量结果', company_energy: '历史计量报告', energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
 const blockLabel = block => block.type === 'video_playback' && block.report.safetyContext ? '相关监控' : block.type === 'meter_report' && block.report?.kind === 'comparison' ? '用电对比' : LABELS[block.type] || '观察'
-const blockCount = block => block.type === 'report_artifact' ? '' : block.type === 'meter_report' ? `${block.report?.coverage?.meters ?? block.report?.meters?.length ?? 0} 台` : block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
+const alertCount = block => block.failures?.length && !block.total ? '部分结果' : `${block.total ?? 0} 条${block.uniqueDevices === undefined ? '' : ` · ${block.uniqueDevices} 台`}${block.failures?.length ? ' · 部分' : ''}`
+const blockCount = block => block.type === 'report_artifact' ? '' : block.type === 'meter_report' ? `${block.report?.coverage?.meters ?? block.report?.meters?.length ?? 0} 台` : block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? alertCount(block) : `${block.devices?.length ?? 0} 台`
+const alertTypeLabel = type => ({ smoke: '烟感', gas: '燃气', water: '水浸' })[type] || '安全'
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
 const sourceOf = reading => environmentSource(reading)
@@ -161,8 +167,12 @@ async function viewLive(report) {
 }
 
 function alertsMeta(block) {
- if (!(block.records || []).length) return block.windowDays ? `近 ${block.windowDays} 天无记录` : '本次查询无记录'
- return block.latest?.time ? `最新一条 ${fmtDateTime(block.latest.time)}（${ageHint(block.latest.time)}）` : ''
+ const windowText = block.window?.from && block.window?.to
+  ? `${fmtShanghaiDateTime(block.window.from)} 至 ${fmtShanghaiDateTime(block.window.to)}`
+  : block.windowDays ? `近 ${block.windowDays} 天` : '本次查询'
+ const latest = block.windowLatest || block.latest
+ if (!(block.records || []).length) return block.failures?.length ? `${windowText}未取得完整结果 · 不代表已恢复` : `${windowText}无记录 · 不代表已恢复`
+ return latest?.time ? `${windowText} · 最新一条 ${fmtDateTime(latest.time)}（${ageHint(latest.time)}） · 未提供恢复证据` : `${windowText} · 未提供恢复证据`
 }
 </script>
 
@@ -201,6 +211,7 @@ button::after { border:0; }
 .meta.stale { color:#a27128; }
 .meta--wide { flex:1; min-width:0; margin-top:0; }
 .arow { display:flex; align-items:center; gap:9px; width:100%; min-height:52px; padding:8px 0; box-sizing:border-box; text-align:left; border-bottom:1px solid #e5ece3; border-radius:0; color:inherit; }.arow:last-of-type { border-bottom:0; }.arow--pressed { background:#eaf1e7; }.alert-copy { flex:1; min-width:0; }.alert-copy .anm { display:block; max-width:100%; font-size:12px; }.alert-copy .at { display:block; margin-top:3px; }
+.alert-summary { margin-top:9px; padding:7px 9px; border-radius:8px; background:#eef4ed; }.alert-summary-row { display:flex; justify-content:space-between; gap:10px; color:#5e7565; font-size:10px; line-height:1.7; }.alert-summary-row + .alert-summary-row { border-top:1px solid #dfe9df; }.alert-warning { color:#9a7135; }
 .at { flex-shrink:0; color:#6d7e73; font-size:10px; font-variant-numeric:tabular-nums; }
 .anm { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#2c4435; font-size:11px; font-weight:600; }
 .phase-report { width:100%; min-height:44px; margin-top:9px; padding:6px 10px; border:1px solid #dbe7de; border-radius:8px; display:flex; align-items:center; gap:7px; background:linear-gradient(#fdfefd,#f4f8f4); text-align:left; }
