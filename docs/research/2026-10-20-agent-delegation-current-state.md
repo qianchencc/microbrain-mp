@@ -1,6 +1,6 @@
 # 完整业务委托：目标、现状与证据缺口
 
-日期：2026-10-20。本文件是本轮只读核对快照，不是全链路验收、完整规格或排期。决策索引沿用[物联 Agent 重设计地图](../../.scratch/agent-redesign-wayfinder/map.md)。用户已认可从“完整业务委托”校准终点；未因此批准旧修订草案、具体工具形状或新执行政策。
+日期：2026-10-20（续接复核）。本文件是本轮只读核对快照，不是全链路验收、完整规格或排期。决策索引沿用[物联 Agent 重设计地图](../../.scratch/agent-redesign-wayfinder/map.md)。用户已认可从“完整业务委托”校准终点；未因此批准旧修订草案、具体工具形状或新执行政策。
 
 ## 目标锚点
 
@@ -22,13 +22,13 @@
 | 位置 | 已核对版本 | 本轮可确认 | 不能推出 |
 | --- | --- | --- | --- |
 | 原 Runtime 工作树 | `codex/multi-candidate-lighting-draft`，HEAD `4ec44dc` | 已提交主线；另有 adapter/safety/领域说明及测试 WIP，不把 WIP 合并为干净基线 | 不是活动服务构建身份或业务验收 |
-| 原 MP 工作树 | `新世纪办公室`，HEAD `59e3f5f` | 原项目文档和既有页面；仪表盘/能耗等并行 WIP 保留 | 不代表这些未提交修改已发布 |
-| 阶段目标 Runtime 候选 | `codex/company-proposal-convergence-20261020`，HEAD `eab2a9e` | 与主线分离、默认关闭；文档草案未提交，不是新代码能力 | 不等于原 Runtime 已有新阶段输入或后续管理已可靠 |
-| 报告 Runtime 候选 | `codex/company-energy-reports-20261020`，HEAD `3ed5148` | 已提交声明式能耗报告、对话附件与检查点准备；另有 XLSX 源文件/并行边界文档未跟踪 | XLSX 未验收；不能与阶段目标候选视为已合流 |
-| 报告 MP 候选 | `codex/company-energy-reports-20261020`，HEAD `780162f` | 已提交对话附件到报告预览的接线 | 不等于原小程序已有该候选或微信原生已验收 |
-| 当前活动服务/手机 | 本轮未建立版本证明 | 本地 3200 的 lsof 查询未返回监听记录；未发 HTTP、未查远端 | 不能因此断言客户服务整体停机；活动 Runtime、前端构建、代理和真机能力均待核验 |
+| 原 MP 工作树 | `新世纪办公室`，HEAD `70386f8`（本轮设计记录前） | 原项目文档和既有页面；仪表盘/能耗等并行 WIP 保留 | 不代表这些未提交修改已发布 |
+| 阶段目标 Runtime 候选 | `codex/company-proposal-convergence-20261020`，HEAD `af06d94`（代码 `eab2a9e`） | 与主线分离、默认关闭；暂停修订草案已提交，工作树干净 | 不等于原 Runtime 已有新阶段输入或后续管理已可靠 |
+| 报告 Runtime 候选 | `codex/company-energy-reports-20261020`，HEAD `c04ab5d` | S1 声明式报告及 S2 XLSX 已提交，工作树干净 | Excel/微信打开未验；不能与阶段目标候选视为已合流 |
+| 报告 MP 候选 | `codex/company-energy-reports-20261020`，HEAD `8de0a72` | 对话附件、预览及 XLSX 下载接线已提交，工作树干净 | 不等于原小程序已有该候选或微信原生已验收 |
+| 当前活动服务/手机 | 本轮未建立版本证明 | 初次核对本地 3200 未见监听（非本轮复查）；本轮未发 HTTP、未查远端 | 不能因此断言客户服务整体停机；活动 Runtime、前端构建、代理和真机能力均待核验 |
 
-报告候选的 S1 文档仍写“两侧未提交”，但本轮 Git HEAD 已有上述提交；以 Git 事实区分提交状态，文档中的验收边界仍保留。报告并行边界记录两候选在 pi-runner 存在合流冲突；本轮不重跑 merge-tree，也不将单分支通过当组合通过。
+两条 Runtime 候选共同祖先均实查为 `4ec44dc`。本轮复核报告 S2 历史日志记录 Runtime 303、MP 119 通过；类型/构建日志无报错，不等于本轮执行或真实模型/原生验收。报告并行边界记录两候选在 pi-runner 存在合流冲突；本轮未重跑 merge-tree，不将单分支通过当组合通过。
 
 ## 按完整委托对照，而不是按工具数
 
@@ -39,7 +39,7 @@
 | 从告警到核查：看窗口与涉及设备，选记录、核对资料、选择监控并返回继续 | 主线有历史台账、记录引用、当前资料、候选监控、直播/回放入口；多候选需选择 | 完整窗口去重/设备聚合与协同核查票；每日三类告警统计是另一明确需求 | 记录到选定监控路径存在，有历史播放器/微信记录；不证明完整设备级聚合已实现 | 历史位置与当前资料、失败与空台账、真实恢复证据、录像可用性；没有视频理解或消防处置授权 |
 | 立即调整多个目标：保留范围/排除，确认后执行，看到受理、核验和未知 | 主线混合照明/AC 草案、集合展开、显式确认、共享执行器和结果事实 | 不把未来阶段目标候选自动当即时路径替代 | 公开 mixed-scope 回归源码与既有真实模型交接；本轮未控制 | 即时与未来的不同授权/已满足语义如何保留；不能强套成每轮建任务或共享同一完成口径 |
 | 未来委托与持续管理：一次性/区间/周期安排，确认可见，到点结果、追问、改时与停止 | 主线有 Task/Phase、三类重复规则、任务引用/修改/取消、日历和站内收件箱 | 阶段目标候选支持独立阶段范围/排除；不代表后续管理已打通 | 候选历史离线套件及 GLM+夹具窄证据；已冻结“改时重绑”及“88 台改时被 50 项限制”反例 | 整条委托生命周期、暂停未来与取消本次的区别、失效影响范围、完成口径、自然月调度；不能以提案成功代替任务完成 |
-| 取得可交付报告：对话即时报告或检查点报告，附件预览、依据、引用及导出 | 主线有 Task/Phase 报告存储、PDF、引用和既有检查点附件；原统计卡不是正式附件 | 报告候选增加声明期间/比较要求、服务端事实准备、对话附件；XLSX 在独立 S2 工作中 | 本轮读取既有日志：Runtime 298、MP 114 通过；HBuilderX 因工作树未导入拒绝编译。不是本轮复验，也未独立确认该批执行 Node 版本 | 声明是否准确承接自然语言、真实数据/模型/微信、报告与阶段候选的组合、月报与通知；S1 不等于导出/调度全部完成 |
+| 取得可交付报告：对话即时报告或检查点报告，附件预览、依据、引用及导出 | 主线有 Task/Phase 报告存储、PDF、引用和既有检查点附件；原统计卡不是正式附件 | 报告候选增加声明期间/比较要求、服务端事实准备、对话附件；S2 XLSX 已在独立候选提交 | S1 历史记录 Runtime 298、MP 114；本轮补查 S2 日志为 303/119。HBuilderX 原工作树未导入；非本轮复验，Node 执行版本未独立确认 | 声明是否准确承接自然语言、真实数据/模型/微信、报告与阶段候选的组合、月报与通知；S1 不等于导出/调度全部完成 |
 | 有限条件巡检：确认范围与时段，只对满足条件的空调调整并可停止 | 旧固定设温/密集检查点不等于条件巡检；temperature 是设定温度 | 客户需求已收窄为有限、不开机/不切模式的安全方向，尚非已实现事实 | [需求路线](../../plan/2026-10-20-company-automation-requirements-and-roadmap.md) 是边界来源，不是现场授权 | 条件、时效、频率、有界期限、冲突让行、未知防重发和停止的设计；不靠任务点密度替代条件判断 |
 
 ## 跨业务必须一起看的继续路径
@@ -48,7 +48,7 @@
 
 每条业务都要检查：意图到范围/要求声明、可选证据、必要澄清、待确认（适用时）、实际结果/成果、追问与调整/停止、恢复与权限变化。前端卡片、详情、附件和收件箱也是链路的一部分，接口存在不是用户能完成委托。
 
-目前未统一回答：一轮对话何时结束与一项业务何时完成；模型可自主补哪些只读证据；何时必须请求用户选择；哪些变更需要新确认；不同业务的失效与恢复如何衔接。首条收口的[原决议](../../.scratch/agent-redesign-wayfinder/issues/01-company-night-closure-contract.md)已经明确授权/计划快照失效后不得继续下发后续阶段；这是已定约束，不能因实现或测试偏离而改称用户尚未决定。开放的是跨业务推广、周期影响与恢复细节，不重新要求用户批准原契约。
+交付与自主推进已按用户授权收口，见[完整业务委托的交付与自主推进界限](../../.scratch/agent-redesign-wayfinder/issues/05-complete-delegation-outcomes.md)；周期控制的未来发生如何受失效影响仍需单独决定。首条收口的[原决议](../../.scratch/agent-redesign-wayfinder/issues/01-company-night-closure-contract.md)已经明确授权/计划快照失效后不得继续下发后续阶段；这是已定约束，不能因实现或测试偏离而改称用户尚未决定。开放的是跨业务推广、周期影响与恢复细节，不重新要求用户批准原契约。
 
 ## 已知约束与不应外推的结论
 
@@ -64,9 +64,9 @@
 - 主线源码：Runtime `apps/runtime/src/agent/pi-runner.ts`（各暴露面）、`app.ts`（消息/引用/确认/物化）、`iot/execute-devices.ts`、`tasks/{store,management,recurrence,scanner,agent-invocation}.ts`、`reports/{types,routes,store}.ts`；MP `pages/agent/components/AgentConversation.vue`、`conversation.mjs`、Task/Report/Observation 原组件。
 - 公开回归源码：Runtime `mixed-scope-draft`、`task-reference-management`、`task-plan-management`、`company-checkpoint-reports`、`energy-business`、`safety-camera-review`、`video-playback`；它们存在不等于本轮全部通过。
 - [阶段目标候选与冻结 GLM 证据](../../../iot-agent-runtime-company-proposal-convergence/plan/2026-10-20-company-phase-target-candidate.md)；本地设计审查工件 `/var/folders/cf/h00nh8m17jbg28fbq3y9r08m0000gn/T/phase-target-design-review-fdoE2w/`。不重跑、不重新计算成功率。
-- [报告 S1 契约/历史验证记录](../../../iot-agent-runtime-company-energy-reports/plan/2026-10-20-company-energy-report-s1.md)、[报告线并行边界](../../../iot-agent-runtime-company-energy-reports/plan/2026-10-20-report-parallel-boundary-and-s2.md)；本轮读取 `/private/tmp/company-energy-report-s1-runtime/{test-full2,mp-test-agent,mp-compile}.log`。未跟踪的 S2 文档只作为进行中声明，不作为已提交或验收事实。
+- [报告 S1 契约/历史验证记录](../../../iot-agent-runtime-company-energy-reports/plan/2026-10-20-company-energy-report-s1.md)、[报告线并行边界](../../../iot-agent-runtime-company-energy-reports/plan/2026-10-20-report-parallel-boundary-and-s2.md)；初次核对读取 `/private/tmp/company-energy-report-s1-runtime/{test-full2,mp-test-agent,mp-compile}.log`；本轮续接读取 `/private/tmp/company-energy-report-s2/{test-full,mp-test-agent2,typecheck2,build2}.log`。S2 文档和源码现已随 `c04ab5d` 提交；历史验证记录不等于原生/生产验收。
 - [检查点历史交接](../../plan/2026-10-15-company-checkpoint-production-handoff.md)：当时微信/服务验证及未完成手机/正式渠道验收；不是今天的活动版本证明。
 
 ## 地图仍不完备的地方
 
-本轮只完成初始版本/证据分类与横向对照，没有解决新的决策票。实际用户委托的优先级、最低完整交付、自主推进界限、业务间组合、迁移策略和可复核的活动版本仍需逐项解决。只有这些问题足够清楚，才进入修订 spec 和实施拆分；不因本文写成就宣布地图清晰。
+本文件保留设计用事实和证据边界；已解决的职责、交付与迁移选择进入[决策地图](../../.scratch/agent-redesign-wayfinder/map.md)，不在这里重复保存。活动服务与原生证据仍未知；周期控制失效后的未来恢复选择未因源码存在而自动决定。

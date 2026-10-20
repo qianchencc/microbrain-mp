@@ -1,6 +1,6 @@
 # 物联 Agent 重设计 Wayfinder
 
-Status: open（2026-10-20 重新展开）
+Status: open（2026-10-20 常规设计已推进；控制计划失效后的未来恢复待用户决定）
 Labels: wayfinder:map
 
 ## Destination
@@ -17,20 +17,22 @@ Labels: wayfinder:map
 - 先前[局部控制任务修订草案](../../../iot-agent-runtime-company-proposal-convergence/plan/2026-10-20-company-task-design-correction-preparation.md) 已暂停作为实施/排期依据；五个问题是证据，不代表完整路线。
 - 当前只读核对主线/候选/报告线，不合并、不启动或切换服务、不联网试跑、不控制设备。MP/Runtime 的并行 WIP 保留；报告线按其自己的已批准范围继续，本地图不接管或回退它。
 - 本地 tracker 没有原生子票/依赖：issues/ 下各决策票以 Parent 指向本图，以 Status/Assignee/Blocked by 表达开放、认领和阻塞。仅 Labels: wayfinder:<type>，不贴 ready-for-agent；只在所有阻塞票有 resolution 后进入 frontier。建图阶段新票均 open、unassigned，不假装已解决。
-- 每次工作一张决策票，称呼用完整标题；事实由代理核查，产品/风险/授权取舍由用户决定。常规字段不逐一要求用户裁定。每轮先读 wayfinder、grilling、domain-modeling，讨论模块形状时读 codebase-design。
+- 用户2026-10-20明确要求常规设计自主推理、连续推进至必要重要决策；本轮据此逐票收口并接续依赖，覆盖 skill 的每会话单票/常规选择逐项采访限制。称呼用完整标题，真正新增产品/风险/授权取舍仍由用户决定。按需读 wayfinder、grilling、domain-modeling、codebase-design；减少频繁双审与测试。
 
 ## Decisions so far
 
 - [Company 跨区域夜间办公收口业务契约](issues/01-company-night-closure-contract.md)：原首条共享范围收口样本的决议，非全部委托或独立阶段目标的限制。
 - [Pi 协调层与确定性业务接口边界](issues/02-pi-coordinator-contract.md)：首条样本中语言协调与服务器事实责任的依据；不将其单次控制输入直接套到只读调查/报告。
 - [大范围计划的效率与执行政策](issues/03-large-operation-efficiency.md)：保留原效率与证据要求；既有实现与原决议不一致处不因历史测试通过视为已解决。
+- [现状版本、能力与证据缺口基线](issues/04-current-state-evidence-baseline.md)：主线、两候选、WIP 与活动版本分层；S2 已提交，历史通过不等于合流/现场通过。
+- [完整业务委托的交付与自主推进界限](issues/05-complete-delegation-outcomes.md)：只读自主推进，按请求交付事实/部分结果；控制与未来变更确认，登记/收口不冒充业务成功。
+- [Pi 与业务模块的职责和可组合接口](issues/06-business-modules-and-pi-contract.md)：深化现有模块；固定事实与时间变更分离，旧控制入口适配/退出，报告与调查可组合而不套控制终态。
 
 ## Not yet specified
 
-- 用户对完整交付与自主推进的选择之后，业务之间可能出现的组合、引用与转交关系；不能现在就断言一套输入或 Task 能覆盖全部。
-- 真实委托可能暴露的 UI 表达阻塞、上游事实缺口和能力优先级；目前不能先编成实现清单。
-- Office 后续泛化的范围；本轮保留其成熟行为与隔离，不把 Company 来源扩过去。
-- 每项新决策解决后再确定的规格切片、迁移与现场验收顺序；旧 04–06/报告票不因建图自动放行或废弃。
+- 实施或真实委托中发现的 UI 表达障碍与上游事实缺口，按对应业务闭环处理；不预建平台、重新编排所有页面或补一整套评测设施。
+- Office 超出既有成熟行为的后续泛化，保持来源与权限隔离；本轮不承诺同步迁移所有 Office 输入。
+- 真实服务/MP 构建与现场验收产生的具体差异。活动版本未知保留为验收缺口，不阻断已足够明确的本地设计。
 
 ## Out of scope
 

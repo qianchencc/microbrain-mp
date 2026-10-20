@@ -1,6 +1,6 @@
 # 项目文档入口
 
-- 2026-10-20 用户确认按“完整业务委托”重新展开 Agent 重设计地图：主线、阶段目标候选、报告候选与活动服务证据分开；原局部修订草案暂停作为排期依据。见[决策地图](../.scratch/agent-redesign-wayfinder/map.md)与[目标—现状—证据缺口](research/2026-10-20-agent-delegation-current-state.md)。当前仅建图，新决策均未解决，不进入实现或放行候选。
+- 2026-10-20 完整业务委托设计已收敛版本证据、交付/自主推进边界和 Pi/业务模块职责；迁移以能耗调查到即时附件为首条验证，控制候选仍待生命周期修正。周期控制失效后的未来暂停/恢复为新增待决风险；本轮未实施、合并或放行候选。见[决策地图](../.scratch/agent-redesign-wayfinder/map.md)、[现状证据](research/2026-10-20-agent-delegation-current-state.md)与[本轮接续](../plan/2026-10-20-agent-delegation-design-handoff.md)。
 
 - 2026-10-20 公司 Agent 改进需求已收敛：轻量报告附件、能耗日/周/月报与表格导出、每日告警统计、有限空调巡检；只做站内通知，空区块不显示，异常仅作可选解读，不建检测业务。报告漏项/错期反例已冻结，具体接口与实施按[需求、可靠性缺口与推进路线](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)继续收口，真实控制仍需具体授权。
 
