@@ -17,22 +17,6 @@
 			}
 		},
 		{
-			"path": "pages/agent/dashboard",
-			"style": { "navigationStyle": "custom", "navigationBarTitleText": "物联助手", "disableScroll": true }
-		},
-		{
-			"path": "pages/agent/index",
-			"style": {
-				"navigationBarTitleText": "物联 Agent",
-				"navigationStyle": "custom",
-				"navigationBarTextStyle": "black",
-				"navigationBarBackgroundColor": "#fafcfb",
-				"disableScroll": true,
-				"enablePullDownRefresh": false
-			}
-		},
-		{"path":"pages/agent/region","style":{"navigationStyle":"custom","navigationBarTitleText":"区域工作台","navigationBarTextStyle":"black","navigationBarBackgroundColor":"#f4f7f5","disableScroll":true}},
-		{
 			"path": "pages/news/newList",
 			"style": {
 				"navigationBarTitleText": "新闻列表"
@@ -129,6 +113,44 @@
 		"navigationBarTitleText": "微脑3.0",
 		"navigationBarBackgroundColor": "#3974F6",
 		"backgroundColor": "#F7F7F7"
+	},
+	"subPackages": [
+		{
+			"root": "pages/agent",
+			"pages": [
+				{
+					"path": "dashboard",
+					"style": { "navigationStyle": "custom", "navigationBarTitleText": "物联助手", "disableScroll": true }
+				},
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "物联 Agent",
+						"navigationStyle": "custom",
+						"navigationBarTextStyle": "black",
+						"navigationBarBackgroundColor": "#fafcfb",
+						"disableScroll": true,
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "region",
+					"style": {
+						"navigationStyle": "custom",
+						"navigationBarTitleText": "区域工作台",
+						"navigationBarTextStyle": "black",
+						"navigationBarBackgroundColor": "#f4f7f5",
+						"disableScroll": true
+					}
+				}
+			]
+		}
+	],
+	"preloadRule": {
+		"pages/index/index": {
+			"network": "all",
+			"packages": ["pages/agent"]
+		}
 	},
 	"uniIdRouter": {}
 }

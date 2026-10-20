@@ -118,6 +118,9 @@
             "minified" : true
         },
         "usingComponents" : true,
+        "optimization" : {
+            "subPackages" : true
+        },
         "unipush" : {
             "enable" : true
         },

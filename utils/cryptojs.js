@@ -1,22 +1,25 @@
-import CryptoJS from 'crypto-js'
-const key = CryptoJS.enc.Utf8.parse("T#s)STq~whp]b52G"); //十六位十六进制数作为秘钥
-const iv = CryptoJS.enc.Utf8.parse('Yw*M3^6JpV%0U@qk'); //十六位十六进制数作为秘钥偏移量
+import AES from 'crypto-js/aes'
+import Utf8 from 'crypto-js/enc-utf8'
+import Hex from 'crypto-js/enc-hex'
+import Base64 from 'crypto-js/enc-base64'
+import Pkcs7 from 'crypto-js/pad-pkcs7'
+const key = Utf8.parse("T#s)STq~whp]b52G"); //十六位十六进制数作为秘钥
+const iv = Utf8.parse('Yw*M3^6JpV%0U@qk'); //十六位十六进制数作为秘钥偏移量
 //解密方法
 export function aesDecrypt(word) {
-	const encryptedHexStr = CryptoJS.enc.Hex.parse(word);
-	const srcs = CryptoJS.enc.Base64.stringify(encryptedHexStr);
-	const decrypt = CryptoJS.AES.decrypt(srcs, key);
-	const decryptedStr = decrypt.toString(CryptoJS.enc.Utf8);
+	const encryptedHexStr = Hex.parse(word);
+	const srcs = Base64.stringify(encryptedHexStr);
+	const decrypt = AES.decrypt(srcs, key);
+	const decryptedStr = decrypt.toString(Utf8);
 	return decryptedStr.toString();
 }
 
 //加密方法
 export const aesEncrypt = (word) => {
-	let srcs = CryptoJS.enc.Utf8.parse(word)
-	let encrypted = CryptoJS.AES.encrypt(srcs, key, {
+	let srcs = Utf8.parse(word)
+	let encrypted = AES.encrypt(srcs, key, {
 		iv: iv,
-		mode: CryptoJS.mode.CBC,
-		padding: CryptoJS.pad.Pkcs7
+		padding: Pkcs7
 	})
 	return encrypted.toString()
 }
