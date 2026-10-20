@@ -1,6 +1,6 @@
 # 项目文档入口
 
-- 2026-10-20 用户纠偏后，以灵活、可靠、轻量地办成实际业务为主线，按单条完整委托推进。即时能耗报告、依据追问和表格导出已从候选接回原项目源码，验证及未部署/真实模型/手机边界见[本轮交付](../plan/2026-10-20-company-energy-report-delivery.md)；周期启用开关是任务管理的补充，不另立主线。此前[整包规格与八张票](../.scratch/agent-delegation/spec.md)暂不作为默认实施路线；原始需求见[客户需求与边界](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)，版本证据见[现状记录](research/2026-10-20-agent-delegation-current-state.md)。
+- 2026-10-20 用户授权自行安排整体票据，已将[业务规格与八张接续票](../.scratch/agent-delegation/spec.md)收敛为当前执行入口，覆盖能耗调查、定时报表、混合控制/修改/停止、周期管理、告警联查和空调巡检，不以报告一条线代替整体目标。当前先完成连续只读能耗调查；即时附件与表格导出已接回原项目，验证及部署/模型/手机边界见[本轮交付](../plan/2026-10-20-company-energy-report-delivery.md)。周期启用开关归原任务管理；原始需求见[客户需求与边界](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)，版本证据见[现状记录](research/2026-10-20-agent-delegation-current-state.md)。
 
 - 2026-10-20 公司 Agent 改进需求已收敛：轻量报告附件、能耗日/周/月报与表格导出、每日告警统计、有限空调巡检；只做站内通知，空区块不显示，异常仅作可选解读，不建检测业务。报告漏项/错期反例已冻结，具体接口与实施按[需求、可靠性缺口与推进路线](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)继续收口，真实控制仍需具体授权。
 
