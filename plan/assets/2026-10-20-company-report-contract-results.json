@@ -1,0 +1,60 @@
+[
+  {
+    "case": "omitted-comparisons",
+    "syntheticFixture": true,
+    "realModel": false,
+    "expectedSpan": {
+      "from": "2026-10-11T00:00:00+08:00",
+      "to": "2026-10-12T00:00:00+08:00"
+    },
+    "actualRequestedSpan": {
+      "from": "2026-10-11T00:00:00+08:00",
+      "to": "2026-10-12T00:00:00+08:00"
+    },
+    "objective": "Generate yesterday's energy report with total usage, previous-period comparison, year-on-year comparison, highest-usage areas, and abnormal-usage notices.",
+    "taskStatus": "completed",
+    "phaseStatus": "completed",
+    "reportStatus": "completed",
+    "factKinds": [
+      "statistics"
+    ],
+    "comparisonFacts": 0,
+    "savedRequestedSpans": [
+      {
+        "from": "2026-10-11T00:00:00+08:00",
+        "to": "2026-10-12T00:00:00+08:00"
+      }
+    ],
+    "savedSummary": "Total usage is available. The report is complete.",
+    "controlWrites": 0
+  },
+  {
+    "case": "wrong-period",
+    "syntheticFixture": true,
+    "realModel": false,
+    "expectedSpan": {
+      "from": "2026-10-11T00:00:00+08:00",
+      "to": "2026-10-12T00:00:00+08:00"
+    },
+    "actualRequestedSpan": {
+      "from": "2026-10-10T00:00:00+08:00",
+      "to": "2026-10-11T00:00:00+08:00"
+    },
+    "objective": "Generate yesterday's energy report with total usage, previous-period comparison, year-on-year comparison, highest-usage areas, and abnormal-usage notices.",
+    "taskStatus": "completed",
+    "phaseStatus": "completed",
+    "reportStatus": "completed",
+    "factKinds": [
+      "statistics"
+    ],
+    "comparisonFacts": 0,
+    "savedRequestedSpans": [
+      {
+        "from": "2026-10-10T00:00:00+08:00",
+        "to": "2026-10-11T00:00:00+08:00"
+      }
+    ],
+    "savedSummary": "Yesterday's total is available.",
+    "controlWrites": 0
+  }
+]
