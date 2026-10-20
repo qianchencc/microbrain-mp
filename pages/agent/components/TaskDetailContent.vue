@@ -13,7 +13,7 @@
    <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ plan ? '周期计划' : `${detail.creator?.displayName || '成员'} 创建 · ${detail.createdText}` }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
    <view v-if="plan && !sampleTask" class="plan-toggle-row">
     <view class="plan-toggle-copy"><text class="plan-toggle-title">周期计划</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '停用后只影响未来发生' : '重新启用前会核验当前范围和绑定' }}</text></view>
-    <switch :checked="planIsEnabled(plan)" :disabled="!planCanToggle(plan) || cancelling" @change="togglePlanStatus(plan, $event.detail.value)" />
+    <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :disabled="!planCanToggle(plan) || cancelling" @change="togglePlanStatus(plan, $event.detail.value)" />
    </view>
    <text v-if="plan?.pauseReason" class="plan-pause-reason">{{ plan.pauseReason }}</text>
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
@@ -69,7 +69,7 @@
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { cancelTask, cancelTaskPlan, getTaskDetail, getTaskLightingStates, getTaskPlan, setTaskPlanStatus } from '@/apis/agent'
-import { taskDetailView, taskPlanSnapshot } from '../task-detail-view.mjs'
+import { taskDetailView, taskPlanSnapshot, taskTime } from '../task-detail-view.mjs'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { createStateRefresh } from '../state-refresh.mjs'
@@ -80,7 +80,7 @@ const props = defineProps({ active: Boolean, taskId: String, planId: String, sam
 const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
-const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
+const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false), planSwitchRevision = ref(0)
 const detailFresh = ref(false)
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
 const expandedPhases = ref([])
@@ -99,25 +99,43 @@ function planCanToggle(value) {
  if (value?.status === 'paused') return Boolean(value.canResume)
  return false
 }
+function planStatusContextCurrent(planId, source, scope, version, action) {
+ if (action !== planStatusRequest || !props.active || props.source !== source || activePlanId.value !== planId || plan.value?.planId !== planId) return false
+ let currentScope = ''
+ try { currentScope = getAgentStorageScope() } catch { return false }
+ return currentScope === scope && plan.value.version === version
+}
+function resumeContent(value) {
+ const next = value?.resumeNextAt ? taskTime(value.resumeNextAt) : ''
+ return `下一次发生：${next || '暂无未来发生'}。将重新核验当前完整范围和控制绑定，从下一次未来发生继续，不补过去安排。`
+}
 async function togglePlanStatus(value, enabled) {
  if (!value?.planId || !planCanToggle(value) || cancelling.value) return
- const operation = enabled ? 'resume' : 'pause', planId = value.planId, version = value.version
+ const action = ++planStatusRequest, operation = enabled ? 'resume' : 'pause', planId = value.planId, version = value.version
  const source = props.source, scope = getAgentStorageScope()
  const title = operation === 'resume' ? '重新启用' : '停用周期计划'
  const content = operation === 'resume'
-  ? '将重新核验当前完整范围和控制绑定，从下一次未来发生继续，不补过去安排。'
+  ? resumeContent(value)
   : '只停用未来发生；已经生成、执行中或已下发的本次不回滚。'
  const confirmed = await new Promise(resolve => uni.showModal({ title, content, confirmText: title, confirmColor: operation === 'resume' ? '#176b54' : '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
- if (!confirmed || !props.active || source !== props.source || scope !== getAgentStorageScope() || plan.value?.planId !== planId) return
+ if (!confirmed) {
+  if (planStatusContextCurrent(planId, source, scope, version, action)) planSwitchRevision.value += 1
+  return
+ }
+ if (!planStatusContextCurrent(planId, source, scope, version, action)) return
  cancelling.value = true; actionError.value = ''
  try {
   const result = await setTaskPlanStatus(planId, version, operation, source, operation === 'resume')
+  if (!planStatusContextCurrent(planId, source, scope, version, action)) return
   if (result?.plan) plan.value = result.plan
+  planSwitchRevision.value += 1
   emit('changed')
   uni.showToast({ title: operation === 'resume' ? '已重新启用' : '已停用未来发生', icon: 'none' })
  } catch (cause) {
+  if (!planStatusContextCurrent(planId, source, scope, version, action)) return
+  planSwitchRevision.value += 1
   actionError.value = cause.message || '状态更新失败，请刷新后重试'
- } finally { cancelling.value = false }
+ } finally { if (action === planStatusRequest) cancelling.value = false }
 }
 async function cancelPeriod(scope) {
  if (cancelling.value) return
@@ -151,19 +169,19 @@ const currentSummary = computed(() => {
  const unknown = lightIds.value.length - known.length
  return [on && `${on} 开启`, known.length - on && `${known.length - on} 关闭`, unknown && `${unknown} 未知`].filter(Boolean).join(' · ')
 })
-let requestId = 0, currentRequestId = 0, refreshTimer, observedTaskId = '', pageVisible = true, wasHidden = false, detailScope = ''
+let requestId = 0, currentRequestId = 0, planStatusRequest = 0, refreshTimer, observedTaskId = '', pageVisible = true, wasHidden = false, detailScope = ''
 function startPolling() {
  clearInterval(refreshTimer)
  if (props.active && pageVisible && !props.sampleTask) refreshTimer = setInterval(() => {
   if (activePlanId.value || ['scheduled', 'executing'].includes(task.value?.status)) load(true)
  }, 10000)
 }
-onHide(() => { pageVisible = false; wasHidden = true; clearInterval(refreshTimer); stateRefresh.cancel(); ++requestId; ++currentRequestId; loading.value = false; currentLoading.value = false })
+onHide(() => { pageVisible = false; wasHidden = true; clearInterval(refreshTimer); stateRefresh.cancel(); ++requestId; ++currentRequestId; ++planStatusRequest; loading.value = false; currentLoading.value = false; cancelling.value = false; planSwitchRevision.value += 1 })
 onShow(() => {
  pageVisible = true
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 失效身份不保留上一人的报告 */ }
- if (scope !== detailScope) { task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = [] }
+ if (scope !== detailScope) { ++planStatusRequest; task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; cancelling.value = false; planSwitchRevision.value += 1 }
  if (wasHidden && props.active) { load(true); startPolling() }
  wasHidden = false
 })
@@ -274,6 +292,7 @@ async function deleteTask() {
  } finally { cancelling.value = false }
 }
 watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.source], () => {
+ ++planStatusRequest; planSwitchRevision.value += 1
  clearInterval(refreshTimer)
  stateRefresh.cancel(); ++currentRequestId; currentLoading.value = false; currentError.value = ''
  activeTaskId.value = props.taskId || ''
@@ -288,9 +307,9 @@ watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.s
   load()
   startPolling()
  }
- else { ++requestId; loading.value = false } // 保留关闭动画的结果快照；下次打开由 load 重新读取。
+ else { ++requestId; loading.value = false; cancelling.value = false } // 保留关闭动画的结果快照；下次打开由 load 重新读取。
 }, { immediate: true })
-onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId; ++requestId })
+onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId; ++requestId; ++planStatusRequest })
 defineExpose({ returnToPlan })
 </script>
 <style scoped>

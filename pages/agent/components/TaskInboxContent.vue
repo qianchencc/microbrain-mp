@@ -22,7 +22,7 @@
     <view v-else-if="notifications.length && !nextCursor" class="list-footer">已显示全部消息</view>
    </scroll-view>
    <view v-if="selected && markError" class="mark-error"><text>报告已打开，但未读状态未更新</text><button @tap="retryMarkSeen">重试</button></view>
-   <TaskResultContent v-if="selected" ref="content" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @dismiss="backToList" @reference="$emit('reference', $event)" @navigation="navigation = $event" />
+   <TaskResultContent v-if="selected" ref="content" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @changed="$emit('changed')" @dismiss="backToList" @reference="$emit('reference', $event)" @navigation="navigation = $event" />
   </view>
 </template>
 
@@ -34,7 +34,7 @@ import { listNotifications, markNotificationSeen } from '@/apis/agent'
 import TaskResultContent from './TaskResultContent.vue'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
-const emit = defineEmits(['unread-count', 'reference', 'navigation'])
+const emit = defineEmits(['unread-count', 'reference', 'navigation', 'changed'])
 const notifications = ref([]), selected = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const filter = ref('all')
 const filters = [{ value: 'all', label: '全部' }, { value: 'unread', label: '未读' }, { value: 'abnormal', label: '异常结果' }]
