@@ -84,9 +84,10 @@ function targetSummary(template) {
    items.push(`${name} · ${targetText(action.kind, action.command || action.target)}`)
   }
   for (const device of phase.read?.devices || []) {
-   items.push(`${device.name || device.id || '设备'} · ${readTargetText(device.kind)}`)
+   items.push(`${device.name || device.id || '设备'} · ${readTargetText(device.kind, phase.read)}`)
   }
-  if (phase.read?.alertDays) items.push(`安全台账 · 近 ${phase.read.alertDays} 天`)
+  if (phase.read?.alertWindow === 'previous_day') items.push('安全台账 · 阶段计划日期的前一自然日（上海时间）')
+  else if (phase.read?.alertDays) items.push(`安全台账 · 近 ${phase.read.alertDays} 天`)
  }
  const unique = [...new Set(items)]
  return { items: unique.length ? unique.slice(0, 4) : ['无设备目标'], omitted: Math.max(0, unique.length - 4) }

@@ -26,9 +26,10 @@
      <text v-if="readAgentOf(phase).periodText" class="read-window">{{ readAgentOf(phase).periodText }}</text>
      <text v-if="readAgentOf(phase).comparisonText" class="read-window">{{ readAgentOf(phase).comparisonText }}</text>
     </template>
+    <text v-else-if="source === 'company' && phase.read?.alertWindow === 'previous_day'" class="read-window">安全台账 · 阶段计划日期的前一自然日（上海时间）</text>
     <text v-else-if="source === 'company' && phase.read?.alertDays" class="read-window">安全台账 · 近 {{ phase.read.alertDays }} 天</text>
     <view v-for="device in readDevicesOf(phase, index)" :key="device.id" class="task-device read-device">
-     <view class="device-cell"><image class="device-art" :src="artworkOf(device)" mode="aspectFit" /><text class="device-name">{{ device.name }}</text></view><text class="device-target">{{ readTargetText(device.kind) }}</text>
+     <view class="device-cell"><image class="device-art" :src="artworkOf(device)" mode="aspectFit" /><text class="device-name">{{ device.name }}</text></view><text class="device-target">{{ readTargetText(device.kind, phase.read) }}</text>
      <text v-if="device.location" class="device-location">{{ device.location }}</text>
     </view>
     <button v-if="phaseRest(phase, index) || isExpanded(index)" class="phase-more" hover-class="phase-more--pressed" :aria-expanded="isExpanded(index)" @tap="togglePhase(index)">

@@ -102,7 +102,7 @@ export function taskTime(instant) {
 
 export function targetText(kind, target) {
  if (!target || typeof target !== 'object') return '目标未指定'
- if (target.observe === true) return readTargetText(kind)
+ if (target.observe === true) return readTargetText(kind, target)
  const parts = []
  if (typeof target.closeOrOpen === 'number') parts.push(target.closeOrOpen === 1 ? '开启' : '关闭')
  if (target.power) parts.push(target.power === 'on' ? '开启' : '关闭')
@@ -113,7 +113,9 @@ export function targetText(kind, target) {
  return parts.join(' · ') || '目标未指定'
 }
 
-export function readTargetText(kind) {
+export function readTargetText(kind, read) {
+ if (kind === 'safety' && read?.alertWindow === 'previous_day') return '汇总前一自然日告警（上海时间）'
+ if (kind === 'safety' && read?.alertDays) return `读取近 ${read.alertDays} 天告警`
  return ({ ac: '读取空调状态', environment: '读取环境数据', energy: '读取最新能耗', safety: '读取告警台账', video: '检查在线状态' })[kind] || '只读检查'
 }
 
