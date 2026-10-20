@@ -1,0 +1,408 @@
+{
+  "date": "2026-10-20",
+  "model": "GLM-5.3-Flash",
+  "thinkingLevel": "low",
+  "baselineRevision": "5293311",
+  "dataSource": "synthetic in-process IoT fixture; real model; temporary SQLite; no listener",
+  "evidenceDirectory": "/private/tmp/company-energy-continuation-20261020-rBQZRs",
+  "fixtureFacts": {
+    "meter-north": {
+      "location": "26楼北区",
+      "2026-10-11": 15,
+      "2026-10-10": 15
+    },
+    "meter-south": {
+      "location": "26楼南区",
+      "2026-10-11": 10,
+      "2026-10-10": 10
+    },
+    "yearOverYearBaseline": "no 2025 samples"
+  },
+  "cases": {
+    "baseline": {
+      "turns": [
+        {
+          "turn": 1,
+          "request": "请生成2026年10月11日公司用电报告，包含本期总用电、环比2026年10月10日、同比2025年10月11日，并按电表所在区域分别列出。",
+          "latencyMs": 25638,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 1,
+          "toolCalls": [
+            {
+              "tool": "create_energy_report",
+              "arguments": {
+                "spec": {
+                  "comparisons": [
+                    "previousPeriod",
+                    "yearOverYear"
+                  ],
+                  "period": {
+                    "from": "2026-10-11T00:00:00+08:00",
+                    "kind": "absolute",
+                    "to": "2026-10-12T00:00:00+08:00"
+                  }
+                },
+                "title": "2026年10月11日公司用电报告（环比10月10日、同比2025年10月11日）"
+              }
+            },
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "2026年10月11日用电报告已生成（部分完成）：\n\n- 期间为10月11日全天（上海时间），覆盖当前授权的2台电表（均在26楼），本期总用电及按电表所在区域构成已统计，详见报告附件。\n- 环比10月10日：已完成，两期共同有效电表可比。\n- 同比2025年10月11日：基期不可比（两期缺少共同有效电表或基期无有效采样），无法给出同比结果。这是基期数据覆盖问题，不代表当天没有用电。"
+              }
+            }
+          ]
+        },
+        {
+          "turn": 2,
+          "request": "把这份报告改成2026年10月10日重新比较，并生成一份新的报告，仍然包含环比和同比。",
+          "latencyMs": 7589,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 0,
+          "toolCalls": [
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "好的，我为您生成2026年10月10日的新报告，环比基期为10月9日，同比基期为2025年10月10日。请确认或等待生成结果。"
+              }
+            }
+          ]
+        }
+      ],
+      "conclusion": {
+        "firstBusinessSuccess": true,
+        "secondCreatedNewReport": false,
+        "secondHadBusinessToolCall": false,
+        "secondReadOnlyReferencePath": true,
+        "controlsZero": true
+      },
+      "controlCalls": 0
+    },
+    "candidate": {
+      "turns": [
+        {
+          "turn": 1,
+          "request": "请生成2026年10月11日公司用电报告，包含本期总用电、环比2026年10月10日、同比2025年10月11日，并按电表所在区域分别列出。",
+          "latencyMs": 20286,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 1,
+          "toolCalls": [
+            {
+              "tool": "create_energy_report",
+              "arguments": {
+                "spec": {
+                  "comparisons": [
+                    "previousPeriod",
+                    "yearOverYear"
+                  ],
+                  "period": {
+                    "from": "2026-10-11T00:00:00+08:00",
+                    "kind": "absolute",
+                    "to": "2026-10-12T00:00:00+08:00"
+                  }
+                },
+                "title": "2026年10月11日公司用电日报（含环比与同比）"
+              }
+            },
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "2026年10月11日用电日报已生成（部分完成）：\n\n- 本期总用电：已统计，并按电表所在区域分别列示（本期共2台有效电表，位于26楼）。\n- 环比2026年10月10日：已取得。\n- 同比2025年10月11日：不可比，两期缺少共同有效电表或基期无有效采样，同比数据缺失，报告已如实标注。\n\n请在报告附件中查看各项数值；如需换用其他基期或调整统计范围，告诉我即可。"
+              }
+            }
+          ]
+        },
+        {
+          "turn": 2,
+          "request": "请解释这份报告中环比和同比分别说明了什么，只依据已经保存的报告事实，不重新查询。",
+          "latencyMs": 18310,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 0,
+          "toolCalls": [
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "基于已保存报告的事实：\n\n**环比（2026-10-11 对比 2026-10-10）**\n两期计量范围相同（26楼北区、南区共2台电表，两期都有效）：\n- 本期总用电25度，基期也是25度，差额0度，环比0%。\n- 区域贡献：北区两期均为15度（差额0），南区两期均为10度（差额0），说明环比持平是两块表共同持平的结果。\n\n**同比（2026-10-11 对比 2025-10-11）**\n报告标注\"基期不可比\"：两期缺少共同有效电表，或基期（2025年10月11日）无有效采样数据。因此同比没有可解释的数值，报告如实保留缺失状态，不代表本期没有用电。\n\n覆盖说明：本期2台电表均有数据、无缺数；当日按小时分段和负荷形状指标因数据不全未给出数值，报告仅可解释总量层面的计算结果。"
+              }
+            }
+          ]
+        },
+        {
+          "turn": 3,
+          "request": "继续调查这份报告中用电最高的区域，列出该区域的电表和用电量，不创建任务、不控制设备。",
+          "latencyMs": 12598,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 0,
+          "toolCalls": [
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "依据已保存的报告事实，本期用电最高的区域是26楼北区：\n\n- 区域：26楼北区\n- 电表：26楼北区电表（meter-north），共1台\n- 用电量：15度（约占本期总用电25度的60%）\n- 采样依据：2026-10-11 00:00 示数110度 → 2026-10-12 00:00 示数125度，有效差值15度\n\n作为对比，同期26楼南区为10度。本次仅为结果解读，未创建任务、未操作任何设备。"
+              }
+            }
+          ]
+        },
+        {
+          "turn": 4,
+          "request": "把调查期间改成2026年10月10日，重新生成一份包含环比和同比的报告。",
+          "latencyMs": 14389,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 1,
+          "toolCalls": [
+            {
+              "tool": "create_energy_report",
+              "arguments": {
+                "spec": {
+                  "comparisons": [
+                    "previousPeriod",
+                    "yearOverYear"
+                  ],
+                  "period": {
+                    "from": "2026-10-10T00:00:00+08:00",
+                    "kind": "absolute",
+                    "to": "2026-10-11T00:00:00+08:00"
+                  }
+                },
+                "title": "2026年10月10日公司用电日报（含环比与同比）"
+              }
+            },
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "新报告已生成：2026年10月10日用电日报（含环比与同比），统计范围为26楼北区、南区共2台电表。\n\n- 本期（10月10日）总用电：已取得\n- 环比2026年10月9日：已取得\n- 同比2025年10月10日：不可比——两期缺少共同有效电表或基期无有效采样，同比数据缺失，报告已如实标注为部分完成\n\n各项数值与区域构成请在报告附件中查看。"
+              }
+            }
+          ]
+        },
+        {
+          "turn": 5,
+          "request": "继续说明新报告中用电最多的区域，只依据已经保存的事实，不创建控制任务。",
+          "latencyMs": 12181,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 0,
+          "toolCalls": [
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "依据已保存的事实（含上一份报告中基期2026年10月10日的分区数据）：\n\n10月10日用电最多的区域是26楼北区：\n- 区域：26楼北区\n- 电表：26楼北区电表（meter-north），共1台\n- 用电量：15度（当日总用电25度，约占60%），采样示数95度→110度\n\n对比26楼南区为10度。与新报告本期口径一致，仅作结果说明，未创建任务、未操作设备。"
+              }
+            }
+          ]
+        }
+      ],
+      "conclusion": null,
+      "controlCalls": 0,
+      "downloads": [
+        {
+          "format": "pdf",
+          "httpStatus": 200,
+          "bytes": 67758
+        },
+        {
+          "format": "xlsx",
+          "httpStatus": 200,
+          "bytes": 9304
+        }
+      ]
+    },
+    "reference-narrow": {
+      "turns": [
+        {
+          "turn": 1,
+          "request": "请只统计2026年10月11日26楼北区电表的用电报告，包含本期总用电、环比2026年10月10日、同比2025年10月11日。",
+          "latencyMs": 23042,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 1,
+          "toolCalls": [
+            {
+              "tool": "find_device_candidates",
+              "arguments": {
+                "deviceText": "26楼北区电表",
+                "kind": "energy",
+                "scopeTerms": [
+                  "26楼北区"
+                ],
+                "scopeText": "26楼北区"
+              }
+            },
+            {
+              "tool": "create_energy_report",
+              "arguments": {
+                "deviceIds": [
+                  "d1_1"
+                ],
+                "spec": {
+                  "comparisons": [
+                    "previousPeriod",
+                    "yearOverYear"
+                  ],
+                  "period": {
+                    "from": "2026-10-11T00:00:00+08:00",
+                    "kind": "absolute",
+                    "to": "2026-10-12T00:00:00+08:00"
+                  }
+                },
+                "title": "2026年10月11日26楼北区电表用电报告（含环比、同比）"
+              }
+            },
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "报告已生成：2026年10月11日26楼北区电表用电报告（1台电表）。\n\n- 本期总用电（2026-10-11）：已统计完成，明细见报告附件。\n- 环比 2026-10-10：已统计完成，结果见报告。\n- 同比 2025-10-11：不可比——基期缺少该电表的有效采样，无法得出同比结果。\n\n请打开附件查看本期与环比的具体数值与金额估算。"
+              }
+            }
+          ]
+        },
+        {
+          "turn": 2,
+          "request": "把这份报告改成2026年10月10日，保留刚才的电表范围和环比同比，重新生成一份报告。",
+          "latencyMs": 16033,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 1,
+          "toolCalls": [
+            {
+              "tool": "create_energy_report",
+              "arguments": {
+                "deviceIds": [
+                  "meter-north"
+                ],
+                "spec": {
+                  "comparisons": [
+                    "previousPeriod",
+                    "yearOverYear"
+                  ],
+                  "period": {
+                    "from": "2026-10-10T00:00:00+08:00",
+                    "kind": "absolute",
+                    "to": "2026-10-11T00:00:00+08:00"
+                  }
+                },
+                "title": "2026年10月10日26楼北区电表用电报告（含环比、同比）"
+              }
+            },
+            {
+              "tool": "reply_to_user",
+              "arguments": {
+                "answer": "已重新生成报告：2026年10月10日26楼北区电表用电报告（仍为该 1 台电表）。\n\n- 本期总用电（2026-10-10）：已统计完成。\n- 环比 2026-10-09：已统计完成。\n- 同比 2025-10-10：仍不可比——基期缺少该电表的有效采样，无法得出同比结果。\n\n原报告（10月11日）保持不变，本次为新报告，具体数值请查看新附件。"
+              }
+            }
+          ]
+        }
+      ],
+      "conclusion": {
+        "originalWasNarrow": true,
+        "changedStayedNarrow": true,
+        "comparisonsRequestedInChangedTool": true,
+        "changedIsPartialForMissingYearBaseline": true,
+        "controlsZero": true
+      },
+      "controlCalls": 0,
+      "scope": {
+        "original": [
+          "meter-north"
+        ],
+        "changed": [
+          "meter-north"
+        ]
+      }
+    },
+    "natural-explain": {
+      "turns": [
+        {
+          "turn": 1,
+          "request": "请只统计2026年10月11日26楼北区电表的用电报告，包含本期总用电、环比2026年10月10日、同比2025年10月11日。",
+          "latencyMs": 31798,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 1,
+          "toolCalls": [
+            {
+              "tool": "find_device_candidates",
+              "arguments": {
+                "deviceText": "北区电表",
+                "kind": "energy",
+                "scopeTerms": [
+                  "26楼"
+                ],
+                "scopeText": "26楼北区"
+              }
+            },
+            {
+              "tool": "create_energy_report",
+              "arguments": {
+                "deviceIds": [
+                  "d1_1"
+                ],
+                "spec": {
+                  "comparisons": [
+                    "previousPeriod",
+                    "yearOverYear"
+                  ],
+                  "period": {
+                    "from": "2026-10-11T00:00:00+08:00",
+                    "kind": "absolute",
+                    "to": "2026-10-12T00:00:00+08:00"
+                  }
+                },
+                "title": "2026年10月11日26楼北区电表用电报告"
+              }
+            }
+          ]
+        },
+        {
+          "turn": 2,
+          "request": "请解释这份报告的环比和同比。",
+          "latencyMs": 20458,
+          "terminal": {
+            "type": "run.completed",
+            "outcome": "message"
+          },
+          "reportCount": 0,
+          "toolCalls": []
+        }
+      ],
+      "conclusion": {
+        "explanationHadBusinessReadTool": false,
+        "explanationUsedOnlyReply": true,
+        "explanationCreatedNewReport": false,
+        "controlsZero": true
+      },
+      "controlCalls": 0
+    }
+  },
+  "limitations": [
+    "Finite examples do not establish a general success rate.",
+    "No customer gateway, deployment, device control, WeChat native preview or openDocument acceptance.",
+    "Natural narrow-scope trial explicitly supplied meter ID; omitted-ID default is covered by the two-meter HTTP regression.",
+    "The displayed top-region answer reused saved facts; it does not prove arbitrary adaptive investigation."
+  ]
+}

@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Parent: [Company Agent 业务闭环实施规格](../spec.md)
-Blocked by: 01：连续只读能耗调查与即时报告
+Blocked by: 01 的报告产出/保存契约（源码及 HTTP 接缝已具备；其余微信验收可联合进行，不阻断本票开发）
 
 **Lane:** 主线；复用现有 Task/Phase、周期计划、报告附件和唯一任务收件箱。
 
