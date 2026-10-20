@@ -75,6 +75,8 @@
       <uni-icons v-if="source === 'company'" type="right" size="12" color="#95a296" />
      </button>
      <text class="meta">{{ alertsMeta(block) }}</text>
+     <text v-if="block.summaryStatus === 'unavailable'" class="meta alert-warning">未取得有效统计，不能据此判断无记录或已恢复</text>
+     <text v-else-if="block.coverageComplete === false" class="meta alert-warning">分页未读全，以上为已取得的部分统计</text>
      <text v-if="block.failures?.length" class="meta alert-warning">部分类别未取得：{{ block.failures.map(item => alertTypeLabel(item.type)).join('、') }}</text>
      <button v-if="source === 'company'" class="omore" hover-class="omore--pressed" @tap="$emit('browse-alerts')">按类别和日期查看历史 <uni-icons type="right" size="11" color="#5f7a6b" /></button>
     </template>
@@ -137,7 +139,8 @@ function restOf(block, index) {
 
 const LABELS = { report_artifact: '报告附件', meter_report: '用电统计', energy_report: '计量结果', company_energy: '历史计量报告', energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
 const blockLabel = block => block.type === 'video_playback' && block.report.safetyContext ? '相关监控' : block.type === 'meter_report' && block.report?.kind === 'comparison' ? '用电对比' : LABELS[block.type] || '观察'
-const alertCount = block => block.failures?.length && !block.total ? '部分结果' : `${block.total ?? 0} 条${block.uniqueDevices === undefined ? '' : ` · ${block.uniqueDevices} 台`}${block.failures?.length ? ' · 部分' : ''}`
+const alertPartial = block => block.summaryStatus === 'partial' || block.coverageComplete === false || Boolean(block.failures?.length)
+const alertCount = block => block.summaryStatus === 'unavailable' ? '统计不可用' : alertPartial(block) && !block.total ? '部分结果' : `${block.total ?? 0} 条${block.uniqueDevices === undefined ? '' : ` · ${block.uniqueDevices} 台`}${alertPartial(block) ? ' · 部分' : ''}`
 const blockCount = block => block.type === 'report_artifact' ? '' : block.type === 'meter_report' ? `${block.report?.coverage?.meters ?? block.report?.meters?.length ?? 0} 台` : block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? alertCount(block) : `${block.devices?.length ?? 0} 台`
 const alertTypeLabel = type => ({ smoke: '烟感', gas: '燃气', water: '水浸' })[type] || '安全'
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
@@ -171,8 +174,10 @@ function alertsMeta(block) {
   ? `${fmtShanghaiDateTime(block.window.from)} 至 ${fmtShanghaiDateTime(block.window.to)}`
   : block.windowDays ? `近 ${block.windowDays} 天` : '本次查询'
  const latest = block.windowLatest || block.latest
- if (!(block.records || []).length) return block.failures?.length ? `${windowText}未取得完整结果 · 不代表已恢复` : `${windowText}无记录 · 不代表已恢复`
- return latest?.time ? `${windowText} · 最新一条 ${fmtDateTime(latest.time)}（${ageHint(latest.time)}） · 未提供恢复证据` : `${windowText} · 未提供恢复证据`
+ if (block.summaryStatus === 'unavailable') return `${windowText}未取得有效统计 · 不代表已恢复`
+ if (!(block.records || []).length) return alertPartial(block) ? `${windowText}仅取得部分统计 · 不代表已恢复` : `${windowText}无记录 · 不代表已恢复`
+ const partialText = block.coverageComplete === false ? ' · 分页未读完' : block.failures?.length ? ' · 部分类别未取得' : ''
+ return latest?.time ? `${windowText} · 最新一条 ${fmtDateTime(latest.time)}（${ageHint(latest.time)}） · 未提供恢复证据${partialText}` : `${windowText} · 未提供恢复证据${partialText}`
 }
 </script>
 
