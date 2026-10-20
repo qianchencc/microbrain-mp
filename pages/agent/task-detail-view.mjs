@@ -60,13 +60,13 @@ export function readAgentView(agent) {
  }
 }
 
-const acModeLabels = { inspect: '空调只读巡检' }
+const acModeLabels = { inspect: '空调只读巡检', adjust_to_26: '有限条件调温' }
 
 export function readAcView(ac) {
  if (!ac?.mode) return null
  return {
   title: acModeLabels[ac.mode] || '空调检查',
-  summary: '空调只读巡检 · 不下发设备控制',
+  summary: ac.mode === 'adjust_to_26' ? '仅满足条件时设为26℃ · 不开机、不改模式或风速' : '空调只读巡检 · 不下发设备控制',
   criteriaText: '条件 · 已开机 + 制冷 + 设定温度低于26℃',
  }
 }

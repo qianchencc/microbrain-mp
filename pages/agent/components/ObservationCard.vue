@@ -73,7 +73,8 @@
        <text class="nm">{{ d.name }}</text>
        <text class="loc">{{ d.location }}</text>
       </view>
-      <text class="meta">{{ acDispositionText(d) }} · {{ acStateText(d) }}</text>
+      <text class="meta">{{ acDispositionText(d) }} · {{ block.mode === 'adjust_to_26' ? '检查前：' : '' }}{{ acStateText(d) }}</text>
+      <text v-if="d.reason" class="meta">{{ d.reason }}</text>
       <text v-if="d.reportedAt" class="meta">状态时间 · {{ fmtDateTime(d.reportedAt) }}</text>
      </view>
     </template>
@@ -150,12 +151,12 @@ function restOf(block, index) {
 }
 
 const LABELS = { report_artifact: '报告附件', meter_report: '用电统计', energy_report: '计量结果', company_energy: '历史计量报告', energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
-const blockLabel = block => block.type === 'video_playback' && block.report.safetyContext ? '相关监控' : block.type === 'meter_report' && block.report?.kind === 'comparison' ? '用电对比' : block.type === 'ac_inspection' ? '空调巡检' : LABELS[block.type] || '观察'
+const blockLabel = block => block.type === 'video_playback' && block.report.safetyContext ? '相关监控' : block.type === 'meter_report' && block.report?.kind === 'comparison' ? '用电对比' : block.type === 'ac_inspection' ? block.mode === 'adjust_to_26' ? '有限条件调温' : '空调巡检' : LABELS[block.type] || '观察'
 const alertPartial = block => block.summaryStatus === 'partial' || block.coverageComplete === false || Boolean(block.failures?.length)
 const alertCount = block => block.summaryStatus === 'unavailable' ? '统计不可用' : alertPartial(block) && !block.total ? '部分结果' : `${block.total ?? 0} 条${block.uniqueDevices === undefined ? '' : ` · ${block.uniqueDevices} 台`}${alertPartial(block) ? ' · 部分' : ''}`
 const blockCount = block => block.type === 'report_artifact' ? '' : block.type === 'meter_report' ? `${block.report?.coverage?.meters ?? block.report?.meters?.length ?? 0} 台` : block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? alertCount(block) : `${block.devices?.length ?? 0} 台`
 const alertTypeLabel = type => ({ smoke: '烟感', gas: '燃气', water: '水浸' })[type] || '安全'
-const acDispositionText = device => ({ adjustable: '可调', not_needed: '无需调整', unknown: '状态未知' })[device.disposition] || '状态未知'
+const acDispositionText = device => ({ adjustable: '可调', not_needed: '无需调整', unknown: '结果未确认', adjusted: '已核验26℃', not_dispatched: '已让行 · 未下发' })[device.disposition] || '状态未知'
 const acStateText = device => [device.power === 'on' ? '开机' : device.power === 'off' ? '关机' : '电源未知', device.mode === 'cool' ? '制冷' : device.mode ? device.mode : '模式未知', Number.isFinite(device.setpoint) ? `${device.setpoint}℃` : '设定未知'].join(' · ')
 const acDotOf = device => device.disposition === 'adjustable' ? 'on' : device.disposition === 'not_needed' ? 'off' : 'warn'
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
