@@ -54,3 +54,7 @@ Runtime 隔离分支续交 `a8d1e1295052b820e4ac676b924446b3a125ea13`，以默�
 新增 Pi HTTP 回归 7/7，相关窄回归 25/25，显式 Node 22 下最终 Runtime 313/313，typecheck/build 通过。旧形状混入新 targets 可能被静默忽略的问题已由候选 schema 严格化修正并保留红绿证据。离线 SDK 抓包确认根对象、request 内三分支及无损序列化；这不是实际 GLM 接受度或自然调用证据。接口与记录见[Runtime 候选交接](../../iot-agent-runtime-company-proposal-convergence/plan/2026-10-20-company-phase-target-candidate.md)，本轮日志在 `/tmp/runtime-pi-phase-target-candidate-20261020/`。
 
 当前需要单独授权的下一道闸口是现有 GLM 模型服务配合本地虚构设备夹具的联网验证；不含客户真实网关、活动 Runtime 切换、部署或真实设备控制。尚未联网、未合入主工作树、未启用候选或推送；04 保持开放，05/06 阻塞边不变。
+
+## 授权 GLM 联网验证进展（2026-10-20）
+
+经用户明确授权，仅以既有 GLM 模型服务配合进程内虚构设备夹具完成两轮有界验证（无客户网关、无确认/扫描执行、无部署或真实控制）：候选 `{request}` 根对象 schema 被端点接受（HTTP 200，不等于受限解码保证，试跑中观测到非法数组项与新旧混用请求并被拒绝）。首轮三条新路径出现位置字段夹带设备/量词、同刻拆阶段等问题，均未生成提案且零写入；两条兼容场景实际通过（其中两条首轮「失败」是评估断言错误，凭冻结证据更正，未重跑模型）。仅修订候选可见描述后以同一输入复测，三条新路径观察到 [88,30]、114、[84,30] 缺口/重启/改时续接，全程零写入零真实控制。每场景仅一次自然尝试，不构成成功率或措辞因果结论；确认后任务管理、真实网关、微信、服务切换与默认启用仍未验证。冻结数据见 Runtime 工作树 `plan/assets/2026-10-20-company-phase-target-glm-results.json` 与[Runtime 候选交接](../../iot-agent-runtime-company-proposal-convergence/plan/2026-10-20-company-phase-target-candidate.md)；批次原始文件在 Runtime `var/company-phase-target-glm/`（gitignored），日志在 `/tmp/company-phase-target-glm-*.log`。修订后显式 Node 22 全量 Runtime 313/313。04 保持开放，05/06 阻塞边不变。
