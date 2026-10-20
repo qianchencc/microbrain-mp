@@ -25,7 +25,8 @@
         <view class="row-copy">
          <view class="row-heading"><text class="row-title">{{ plan.label || '未命名周期安排' }}</text><text class="plan-status" :class="planIsEnabled(plan) ? 'tone-active' : 'tone-muted'">{{ planStatus(plan) }}</text></view>
          <text class="row-subtitle">{{ repeatText(plan.repeat) || '重复规则未提供' }}</text>
-         <view class="row-meta"><text>{{ plan.nextAt ? `下一次 · ${taskTime(plan.nextAt)}` : '暂无下一次安排' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
+         <text v-if="source === 'company' && taskRequirementsText(plan)" class="row-subtitle">{{ taskRequirementsText(plan) }}</text>
+         <view class="row-meta"><text>{{ plan.nextAt ? `下一次执行 · ${taskTime(plan.nextAt)}` : '暂无下一次执行' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
         </view>
         <uni-icons type="right" size="13" color="#99a59d" />
        </button>
@@ -56,7 +57,8 @@
       <view class="summary-heading"><view class="status-mark" :class="planIsEnabled(selectedPlan) ? 'status-mark--active' : 'status-mark--paused'" /><text class="plan-label">{{ selectedPlan.label || '未命名周期安排' }}</text></view>
       <text class="summary-status" :class="planIsEnabled(selectedPlan) ? 'tone-active' : 'tone-muted'">{{ planStatus(selectedPlan) }}</text>
       <view class="summary-line"><text>重复规则</text><text>{{ repeatText(selectedPlan.repeat) || '未提供' }}</text></view>
-      <view class="summary-line"><text>下一次安排</text><text>{{ selectedPlan.nextAt ? taskTime(selectedPlan.nextAt) : '暂无' }}</text></view>
+      <view v-if="source === 'company' && taskRequirementsText(selectedPlan)" class="summary-line"><text>执行要求</text><text>{{ taskRequirementsText(selectedPlan) }}</text></view>
+      <view class="summary-line"><text>下一次执行</text><text>{{ selectedPlan.nextAt ? taskTime(selectedPlan.nextAt) : '暂无' }}</text></view>
       <view class="summary-line"><text>创建人</text><text>{{ selectedPlan.creator?.displayName || '成员' }}</text></view>
       <text class="summary-note">{{ planAccessSummary(selectedPlan) }}</text>
       <text v-if="selectedPlan.pauseReason" class="pause-reason">{{ selectedPlan.pauseReason }}</text>
@@ -85,7 +87,7 @@ import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { getTaskPlan, cancelTaskPlan, listAgentTasks, listTaskPlans, setTaskPlanStatus } from '@/apis/agent'
-import { repeatText, taskTime } from '../task-detail-view.mjs'
+import { repeatText, taskRequirementsText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 import SlidingSegments from './SlidingSegments.vue'
 import TaskResultContent from './TaskResultContent.vue'
@@ -179,7 +181,7 @@ function planContextCurrent(planId, source, scope, version) {
 }
 function resumeContent(plan) {
  const next = plan?.resumeNextAt ? taskTime(plan.resumeNextAt) : ''
- return `下一次发生：${next || '暂无未来发生'}。将重新核验当前完整范围和控制绑定，从下一次未来发生继续，不补过去安排。`
+ return `下一次执行：${next || '暂无未来发生'}。将重新核验当前完整范围和控制绑定，从下一次未来发生继续，不补过去安排。`
 }
 async function togglePlanStatus(plan, enabled) {
  if (!plan?.planId || !planCanToggle(plan) || planLoading.value) return
@@ -317,7 +319,7 @@ async function cancelWholePlan(scopeType) {
  if (!selectedPlan.value?.canManage || planLoading.value) return
  const plan = selectedPlan.value, source = props.source, scope = getAgentStorageScope()
  const title = scopeType === 'all' ? '取消全部' : '取消本次'
- const confirmed = await new Promise(resolve => uni.showModal({ title, content: scopeType === 'all' ? '取消这个周期全部尚未执行的安排；已执行或已下发的动作不会回滚。' : '只取消下一次安排，后续周期照常执行。', confirmText: title, confirmColor: '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ const confirmed = await new Promise(resolve => uni.showModal({ title, content: scopeType === 'all' ? '取消这个周期全部尚未执行的安排；已执行或已下发的动作不会回滚。' : '只取消下一次执行，后续周期照常执行。', confirmText: title, confirmColor: '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || !props.open || selectedPlan.value?.planId !== plan.planId || source !== props.source || scope !== getAgentStorageScope()) return
  planLoading.value = true
  try {

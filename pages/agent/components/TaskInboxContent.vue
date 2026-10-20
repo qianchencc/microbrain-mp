@@ -32,6 +32,7 @@ import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { listNotifications, markNotificationSeen } from '@/apis/agent'
 import TaskResultContent from './TaskResultContent.vue'
+import { fmtShanghaiDateTime } from '../observation-view.mjs'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
 const emit = defineEmits(['unread-count', 'reference', 'navigation', 'changed'])
@@ -57,10 +58,8 @@ function outcomeTone(value) {
  return 'ok'
 }
 function dateTime(value) {
- const date = new Date(value)
- if (!Number.isFinite(date.getTime())) return ''
- const pad = part => String(part).padStart(2, '0')
- return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+ const text = fmtShanghaiDateTime(value)
+ return text ? `${text.replace(/-/g, '/')}（上海时间）` : ''
 }
 function publishUnreadCount() { emit('unread-count', unreadCount.value) }
 

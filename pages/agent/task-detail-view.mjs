@@ -5,12 +5,13 @@ const statusText = { scheduled: '未执行', executing: '执行中', completed: 
 const companyStatusText = { scheduled: '未执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '执行失败', unconfirmed: '结果待核验', cancelled: '已取消', missed: '执行错过', interrupted: '执行中断', verified: '已核验', satisfied: '无需执行', pending: '未执行' }
 const statusLabel = (status, source) => (source === 'company' ? companyStatusText[status] : statusText[status]) || status
 
-export function executionResult(device) {
+export function executionResult(device, source) {
  if (device.outcome === 'observed') return '已读取'
  if (device.outcome === 'satisfied') return '不必执行'
  if (device.outcome === 'unconfirmed' && device.details?.requiresVerification) return '结果待核验'
  if (device.outcome === 'verified' || (device.outcome === 'unconfirmed' && !device.details?.requiresVerification && device.details?.receipt === 'ACCEPTED' && !device.details?.timedOut)) return '已执行'
  if (['pending', 'not_dispatched'].includes(device.outcome)) return '未执行'
+ if (source === 'company' && device.outcome === 'unknown') return '结果未知'
  return '明确报错'
 }
 
@@ -119,12 +120,42 @@ export function readTargetText(kind, read) {
  return ({ ac: '读取空调状态', environment: '读取环境数据', energy: '读取最新能耗', safety: '读取告警台账', video: '检查在线状态' })[kind] || '只读检查'
 }
 
-export function resultText(device) {
+// 只展示接口可见的阶段要求，不从模板还原被授权裁剪的指令。
+export function taskRequirementsText(task) {
+ const requirements = new Set()
+ let explicitControl = false
+ for (const phase of task?.phases || []) {
+  const agent = readAgentView(phase?.read?.agent)
+  if (agent) {
+   if (agent.spec) {
+    if (agent.periodText) requirements.add(agent.periodText)
+    if (agent.comparisonText) requirements.add(agent.comparisonText)
+   } else if (agent.objective) requirements.add(agent.objectiveText)
+   continue
+  }
+  const ac = readAcView(phase?.read?.ac)
+  if (ac) {
+   requirements.add(ac.title)
+   requirements.add(ac.criteriaText)
+   continue
+  }
+  for (const device of phase?.devices || []) {
+   if (device?.target?.observe === true) {
+    const text = device.kind === 'energy' ? '读取电表数据' : readTargetText(device.kind, device.target)
+    if (text) requirements.add(text)
+   } else if (device?.target && typeof device.target === 'object' && Object.keys(device.target).length) explicitControl = true
+  }
+ }
+ if (!requirements.size && explicitControl) requirements.add('按计划时间执行')
+ return [...requirements].join('；')
+}
+
+export function resultText(device, source) {
  if (device.details?.requiresVerification) {
   if (device.outcome === 'verified') return '已核验'
   if (device.outcome === 'unconfirmed' && device.details.receipt === 'ACCEPTED') return device.details.readback?.observedState === null ? '已受理 · 回读失败' : '已受理 · 目标未核验'
  }
- const status = executionResult(device)
+ const status = executionResult(device, source)
  if (status !== '明确报错') return status
  const rejected = (device.details?.fields || []).filter(field => field.outcome === 'REJECTED')
   .map(field => fieldLabels[field.field] || field.field)
@@ -163,10 +194,13 @@ export function taskDetailView(task) {
    title: readAcView(phase.read?.ac)?.title || (interval ? `检查点${index + 1}` : task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束'),
    time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusLabel(phase.status, task.agentSource),
    tone: phaseTone(phase.status), link: linkProgress(phase, task.phases[index + 1]),
-   devices: (phase.devices || []).map(device => ({ ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
-    targetText: targetText(device.kind, device.target),
-    resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device),
-    resultTone: phase.status === 'cancelled' ? 'wait' : device.details?.requiresVerification && device.outcome === 'unconfirmed' ? 'warn' : executionResult(device) === '明确报错' ? 'fail' : executionResult(device) === '未执行' ? 'wait' : 'ok' })),
+   devices: (phase.devices || []).map(device => {
+    const outcome = executionResult(device, task.agentSource)
+    return { ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
+     targetText: targetText(device.kind, device.target),
+     resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device, task.agentSource),
+     resultTone: phase.status === 'cancelled' ? 'wait' : device.details?.requiresVerification && device.outcome === 'unconfirmed' ? 'warn' : outcome === '明确报错' ? 'fail' : outcome === '结果未知' ? 'warn' : outcome === '未执行' ? 'wait' : 'ok' }
+   }),
   }
  })
  const start = interval ? taskTime(interval.startsAt) : phases[0]?.time || ''

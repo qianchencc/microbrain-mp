@@ -116,6 +116,7 @@ import DeviceSheet from './DeviceSheet.vue'
 import VideoPlaybackForm from './VideoPlaybackForm.vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
 import { meterReportHasData } from '../meter-report-view.mjs'
+import { modeLabels } from '../ac-draft.js'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
 const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, running: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
@@ -157,7 +158,7 @@ const alertCount = block => block.summaryStatus === 'unavailable' ? '统计不�
 const blockCount = block => block.type === 'report_artifact' ? '' : block.type === 'meter_report' ? `${block.report?.coverage?.meters ?? block.report?.meters?.length ?? 0} 台` : block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? alertCount(block) : `${block.devices?.length ?? 0} 台`
 const alertTypeLabel = type => ({ smoke: '烟感', gas: '燃气', water: '水浸' })[type] || '安全'
 const acDispositionText = device => ({ adjustable: '可调', not_needed: '无需调整', unknown: '结果未确认', adjusted: '已核验26℃', not_dispatched: '已让行 · 未下发' })[device.disposition] || '状态未知'
-const acStateText = device => [device.power === 'on' ? '开机' : device.power === 'off' ? '关机' : '电源未知', device.mode === 'cool' ? '制冷' : device.mode ? device.mode : '模式未知', Number.isFinite(device.setpoint) ? `${device.setpoint}℃` : '设定未知'].join(' · ')
+const acStateText = device => [device.power === 'on' ? '开机' : device.power === 'off' ? '关机' : '电源未知', modeLabels[device.mode] || device.mode || '模式未知', Number.isFinite(device.setpoint) ? `${device.setpoint}℃` : '设定未知'].join(' · ')
 const acDotOf = device => device.disposition === 'adjustable' ? 'on' : device.disposition === 'not_needed' ? 'off' : 'warn'
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)

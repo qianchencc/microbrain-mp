@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
 import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
-import { readAgentView, readTargetText, taskDetailView, taskPlanSnapshot, targetText } from '../pages/agent/task-detail-view.mjs'
+import { readAgentView, readTargetText, taskDetailView, taskPlanSnapshot, taskRequirementsText, targetText } from '../pages/agent/task-detail-view.mjs'
 import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/region-sample-tasks.mjs'
 
 test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 34px', () => {
@@ -249,4 +249,42 @@ test('需核验任务的设备结果区分受理未核验与已核验，不以�
  assert.equal(timeline.resultText, '结果待核验')
  assert.equal(timeline.resultTone, 'warn')
  assert.equal(timeline.faded, false)
+})
+
+test('Company 结果未知降为提醒而非明确报错，Office 保持原口径', () => {
+ const phase = outcome => ({ at: '2026-10-20T01:00:00Z', status: 'partial', failureReason: null,
+  devices: [{ id: 'ac-1', kind: 'ac', name: '展示厅空调', target: { power: 'off' }, outcome, details: {} }] })
+ const view = (agentSource, outcome) => taskDetailView({ agentSource, status: 'partial', source: { type: 'scheduled' }, phases: [phase(outcome)] }).phases[0].devices[0]
+ const companyUnknown = view('company', 'unknown')
+ assert.equal(companyUnknown.resultText, '结果未知')
+ assert.equal(companyUnknown.resultTone, 'warn')
+ const officeUnknown = view('office', 'unknown')
+ assert.equal(officeUnknown.resultText, '明确报错 · 结果未知')
+ assert.equal(officeUnknown.resultTone, 'fail')
+ const companyRejected = view('company', 'rejected')
+ assert.equal(companyRejected.resultText, '明确报错 · 平台拒绝')
+ assert.equal(companyRejected.resultTone, 'fail')
+})
+
+test('周期计划执行要求只汇总接口返回的阶段事实，不从模板还原', () => {
+ const agent = { objective: '生成昨日用电报告', output: 'report', spec: { period: { kind: 'previous', unit: 'day' }, comparisons: ['previousPeriod', 'yearOverYear'] } }
+ const alarmPhase = { id: 'alarm', at: '2026-10-20T01:00:00Z', status: 'pending',
+  devices: [{ id: 'smoke-1', kind: 'safety', name: '展示厅烟感', target: { observe: true, alertWindow: 'previous_day' }, outcome: 'pending', details: {} }] }
+ const acPhase = { id: 'ac', at: '2026-10-20T02:00:00Z', status: 'pending', read: { ac: { mode: 'adjust_to_26' } }, devices: [] }
+ const plan = { planId: 'plan-1', agentSource: 'company', label: '每日任务', phases: [
+  { id: 'report', at: '2026-10-20T00:30:00Z', status: 'pending', read: { agent }, devices: [] }, alarmPhase, acPhase] }
+ assert.equal(taskRequirementsText(plan),
+  '统计期间 · 每次执行统计前一日（上海时间）；比较项 · 环比、同比；汇总前一自然日告警（上海时间）；有限条件调温；条件 · 已开机 + 制冷 + 设定温度低于26℃')
+
+ const stripped = { planId: 'plan-1', agentSource: 'company', label: '每日任务',
+  template: { phases: [{ read: { agent } }, { read: { ac: { mode: 'adjust_to_26' } } }] },
+  phases: [{ id: 'report', at: '2026-10-20T00:30:00Z', status: 'pending',
+   devices: [{ id: 'meter-1', kind: 'energy', name: '展示厅电表', target: { observe: true }, outcome: 'pending', details: {} }] }] }
+ assert.equal(taskRequirementsText(stripped), '读取电表数据', '阶段被剥离 read 元数据后不得从 template 恢复旧要求，也不对泛化 observe 目标猜最新/历史期间')
+
+ assert.equal(taskRequirementsText({ phases: [alarmPhase, { ...alarmPhase, id: 'alarm-2' }] }), '汇总前一自然日告警（上海时间）', '相同阶段要求去重')
+ assert.equal(taskRequirementsText({ phases: [{ id: 'ctrl', at: '2026-10-20T03:00:00Z', status: 'pending',
+  devices: [{ id: 'light-1', kind: 'lighting', name: '走廊灯', target: { closeOrOpen: 0 }, outcome: 'pending', details: {} }] }] }), '按计划时间执行')
+ assert.equal(taskRequirementsText({ phases: [] }), '')
+ assert.equal(taskRequirementsText(null), '')
 })
