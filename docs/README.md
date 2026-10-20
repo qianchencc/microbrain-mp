@@ -1,6 +1,6 @@
 # 项目文档入口
 
-- 2026-10-20 Agent 重设计票 04 目标接口决议已记录：Company 新建未来任务收敛为 `propose_task` 单入口（收口分支与通用形态严格二选一），`propose_company_night_closure` 与 Company 侧 `propose_lighting_draft` 目标退役、续接入口独立保留；为设计记录，未实施、未验收，04 保持 open，05/06 阻塞边不变。见[收口协调设计](../plan/2026-10-20-company-closure-coordination-design.md)。
+- 2026-10-20 Agent 重设计票 04 接口收敛初稿因分阶段范围反例重开：动作形态等价不证明业务范围等价，通用形态拒绝规则已撤回；是否把服务端准备提升为 Task/Phase 阶段目标接口待用户裁定，实施暂停、未部署，04 保持 open，05/06 阻塞边不变。见[反例与待决问题](../plan/2026-10-20-company-closure-contract-probe.md)与[初稿设计](../plan/2026-10-20-company-closure-coordination-design.md)。
 
 - 2026-10-19 已认可C任务日历落入生产源码：Company首页选日，日程／周期计划／收件箱共用任务结果；完整名称及确认后刷新同步修复。测试与正式构建、部署边界见[生产实现交接](../plan/2026-10-19-task-calendar-production.md)。
 
