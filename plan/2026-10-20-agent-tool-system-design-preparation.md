@@ -46,3 +46,11 @@ Runtime 隔离分支 `codex/company-proposal-convergence-20261020` 已提交后�
 Runtime 同一隔离分支续交 `02ae1f940cfe2573ae798690e2dfb2a766c881c9`，在 `e3b6253` 上补齐阶段目标的澄清/改时续接。每个范围缺口按阶段与目标定位，精确选择保存在服务端；重启后只补缺口或改指定阶段时间，成员和控制绑定变化即拒绝沿用。确认卡退役/替换、同一轮新旧准备互斥及提案数组形式均保留 taskId 约束，已确认任务不得经续接重复创建。任务事实查询独立于准备引用有效期，仍按当前授权读取实际 Task，不重新展开原范围。
 
 新增续接 HTTP 回归 11/11，与准备/旧收口澄清合计 27/27，最终全量 Runtime 305/305，typecheck/build 通过；本轮审查修正有保留的业务红绿证据。接口与限制仍见[Runtime 候选交接](../../iot-agent-runtime-company-proposal-convergence/plan/2026-10-20-company-phase-target-candidate.md)，日志位于本机 `/tmp/runtime-control-continuation-candidate-20261020/`。上节第一切片列出的“候选澄清续接”现已完成后端验证；Pi 工具注册与旧入口替换、通用任务语义兼容、真实 GLM schema/自然调用及网关/微信/现场验收仍未完成。04 保持开放，05/06 不放行；未合入主工作树、未部署、未推送、无真实设备控制。
+
+## Pi 工具层离线候选进展（2026-10-20）
+
+Runtime 隔离分支续交 `a8d1e1295052b820e4ac676b924446b3a125ea13`，以默认关闭、仅 Company 生效的 `companyPhaseTargets` 接入实际 Pi。候选 `propose_task` 用根对象 `{request}` 承接阶段目标、引用续接或原任务输入；新会话不暴露窄收口创建入口，已有旧收口上下文保留兼容续接。Office 与默认 Company 构造不变。原任务分支的周期、区间、只读检查点及显式动作仍是既有准备语义，未统一到新服务端准备，不能宣称完整收敛。
+
+新增 Pi HTTP 回归 7/7，相关窄回归 25/25，显式 Node 22 下最终 Runtime 313/313，typecheck/build 通过。旧形状混入新 targets 可能被静默忽略的问题已由候选 schema 严格化修正并保留红绿证据。离线 SDK 抓包确认根对象、request 内三分支及无损序列化；这不是实际 GLM 接受度或自然调用证据。接口与记录见[Runtime 候选交接](../../iot-agent-runtime-company-proposal-convergence/plan/2026-10-20-company-phase-target-candidate.md)，本轮日志在 `/tmp/runtime-pi-phase-target-candidate-20261020/`。
+
+当前需要单独授权的下一道闸口是现有 GLM 模型服务配合本地虚构设备夹具的联网验证；不含客户真实网关、活动 Runtime 切换、部署或真实设备控制。尚未联网、未合入主工作树、未启用候选或推送；04 保持开放，05/06 阻塞边不变。
