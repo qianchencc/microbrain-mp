@@ -108,3 +108,29 @@ for (const type of ['energy_comparison', 'company_energy', 'energy_report']) tes
  assert.equal(restored.flatMap(t => t.observations).length, 1)
  assert.equal(restored[0].observations[0].blocks[0].report.explanation.status, 'ready')
 })
+
+test('报告附件按保存 id 去重：重放/跨轮同一链接只更新，run.failed 不丢附件', () => {
+ const artifact = (id, status) => ({ type: 'report_artifact', report: { id, title: '用电报告', status, generatedAt: '2026-10-13T02:00:00.000Z' } })
+ const first = createTurn('t1', '生成昨日用电报告'), second = createTurn('t2', '再看一次')
+ const turns = [first, second]
+ applyEvent(first, { type: 'observation.reported', observedAt: '2026-10-13T02:00:00.000Z', blocks: [artifact('r1', 'partial')] }, turns)
+ applyEvent(first, { type: 'observation.reported', observedAt: '2026-10-13T02:00:01.000Z', blocks: [artifact('r1', 'completed')] }, turns)
+ assert.equal(first.observations.flatMap(obs => obs.blocks).filter(block => block.type === 'report_artifact').length, 1, '同一附件重放不重复')
+ assert.equal(first.observations.flatMap(obs => obs.blocks)[0].report.status, 'completed', '重复事件更新原块')
+ applyEvent(second, { type: 'observation.reported', observedAt: '2026-10-13T02:01:00.000Z', blocks: [artifact('r1', 'completed')] }, turns)
+ applyEvent(second, { type: 'observation.reported', observedAt: '2026-10-13T02:01:01.000Z', blocks: [artifact('r2', 'completed')] }, turns)
+ assert.equal(second.observations.flatMap(obs => obs.blocks).filter(block => block.type === 'report_artifact').length, 1, '跨轮同 id 不另成卡')
+ assert.equal(first.observations.flatMap(obs => obs.blocks)[0].report.id, 'r1')
+ assert.equal(second.observations.flatMap(obs => obs.blocks)[0].report.id, 'r2', '不同附件保留独立链接')
+ applyEvent(second, { type: 'run.failed', message: '模型未返回可展示的消息' }, turns)
+ assert.equal(second.running, false)
+ assert.equal(second.observations.flatMap(obs => obs.blocks).filter(block => block.type === 'report_artifact').length, 1, '答复失败不丢已保存附件')
+ assert.equal(second.draft, null)
+ assert.equal(second.tasks.length, 0)
+ const restored = restoreTurns([
+  { id: 't1', content: '生成昨日用电报告', events: [{ type: 'observation.reported', blocks: [artifact('r1', 'partial')] }, { type: 'observation.reported', blocks: [artifact('r1', 'completed')] }] },
+  { id: 't2', content: '再看一次', events: [{ type: 'observation.reported', blocks: [artifact('r2', 'completed')] }, { type: 'run.failed', message: 'x' }] },
+ ])
+ assert.equal(restored.flatMap(turn => turn.observations).flatMap(obs => obs.blocks).filter(block => block.type === 'report_artifact').length, 2, '恢复保留两个不同附件')
+ assert.equal(restored[0].observations[0].blocks[0].report.status, 'completed')
+})

@@ -4,7 +4,13 @@
    <view class="oblock">
     <view class="oblock-head"><text>{{ blockLabel(block) }}</text><text class="count">{{ blockCount(block) }}</text></view>
 
-    <MeterReportCard v-if="block.type === 'meter_report'" :report="block.report" />
+    <button v-if="block.type === 'report_artifact'" class="phase-report" :aria-label="`打开报告 ${block.report.title || ''}`" @tap="$emit('open-report', { reportId: block.report.id, title: block.report.title })">
+     <uni-icons type="compose" size="13" color="#176b54" />
+     <text class="phase-report-title">{{ block.report.title || '用电报告' }}</text>
+     <text v-if="block.report.status === 'partial'" class="phase-report-tag">部分完成</text>
+     <uni-icons type="right" size="12" color="#99a59d" />
+    </button>
+    <MeterReportCard v-else-if="block.type === 'meter_report'" :report="block.report" />
     <EnergyBusinessReport v-else-if="block.type === 'energy_report'" :report="block.report" :running="running" />
     <CompanyEnergyReport v-else-if="block.type === 'company_energy'" :report="block.report" :running="running" />
     <EnergyComparisonReport v-else-if="block.type === 'energy_comparison'" :report="block.report" />
@@ -94,8 +100,10 @@ import { meterReportHasData } from '../meter-report-view.mjs'
 import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
 const props = defineProps({ observation: { type: Object, required: true }, readOnly: Boolean, running: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
-const visibleBlocks = computed(() => (props.observation?.blocks || []).filter(block => block?.type !== 'meter_report' || meterReportHasData(block.report)))
-defineEmits(['select-alert', 'browse-alerts'])
+const visibleBlocks = computed(() => (props.observation?.blocks || []).filter(block =>
+ block?.type === 'report_artifact' ? props.source === 'company' && typeof block.report?.id === 'string' && Boolean(block.report.id)
+ : block?.type !== 'meter_report' || meterReportHasData(block.report)))
+defineEmits(['select-alert', 'browse-alerts', 'open-report'])
 const fetchingId = ref('')
 const playbackDevice = ref(null)
 const playbackMounted = ref(false)
@@ -123,9 +131,9 @@ function restOf(block, index) {
  return Math.max(0, total - ROW_LIMIT)
 }
 
-const LABELS = { meter_report: '用电统计', energy_report: '计量结果', company_energy: '历史计量报告', energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
+const LABELS = { report_artifact: '报告附件', meter_report: '用电统计', energy_report: '计量结果', company_energy: '历史计量报告', energy_comparison: '电量周比较', video_playback: '录像回放', energy_history: '计量原始历史', environment_history: '环境趋势', video: '视频', environment: '环境', energy: '能耗', safety: '消防安全', alerts: '告警台账' }
 const blockLabel = block => block.type === 'video_playback' && block.report.safetyContext ? '相关监控' : block.type === 'meter_report' && block.report?.kind === 'comparison' ? '用电对比' : LABELS[block.type] || '观察'
-const blockCount = block => block.type === 'meter_report' ? `${block.report?.coverage?.meters ?? block.report?.meters?.length ?? 0} 台` : block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
+const blockCount = block => block.type === 'report_artifact' ? '' : block.type === 'meter_report' ? `${block.report?.coverage?.meters ?? block.report?.meters?.length ?? 0} 台` : block.type === 'energy_report' ? `${block.report?.coverage.requestedMeters ?? 0} 台` : block.type === 'company_energy' ? `${block.report?.meters.length ?? 0} 台` : block.type === 'energy_comparison' ? '单计量点' : block.type === 'video_playback' ? '录像窗口' : block.type === 'energy_history' ? `${block.report?.samples.length ?? 0} 条采样` : block.type === 'environment_history' ? `${block.report?.coverage.readSamples ?? 0} 条采样` : block.type === 'alerts' ? `${block.total ?? 0} 条` : `${block.devices?.length ?? 0} 台`
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
 const sourceOf = reading => environmentSource(reading)
@@ -195,6 +203,10 @@ button::after { border:0; }
 .arow { display:flex; align-items:center; gap:9px; width:100%; min-height:52px; padding:8px 0; box-sizing:border-box; text-align:left; border-bottom:1px solid #e5ece3; border-radius:0; color:inherit; }.arow:last-of-type { border-bottom:0; }.arow--pressed { background:#eaf1e7; }.alert-copy { flex:1; min-width:0; }.alert-copy .anm { display:block; max-width:100%; font-size:12px; }.alert-copy .at { display:block; margin-top:3px; }
 .at { flex-shrink:0; color:#6d7e73; font-size:10px; font-variant-numeric:tabular-nums; }
 .anm { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#2c4435; font-size:11px; font-weight:600; }
+.phase-report { width:100%; min-height:44px; margin-top:9px; padding:6px 10px; border:1px solid #dbe7de; border-radius:8px; display:flex; align-items:center; gap:7px; background:linear-gradient(#fdfefd,#f4f8f4); text-align:left; }
+.phase-report:active { background:#eef4ef; }
+.phase-report-title { flex:1; min-width:0; color:#2f5240; font-size:12px; font-weight:600; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.phase-report-tag { flex-shrink:0; color:#a27128; font-size:10px; }
 .omore { width:100%; min-height:34px; margin-top:7px; display:flex; align-items:center; justify-content:center; gap:5px; color:#3c6b58; font-size:11px; font-weight:600; border-radius:0; }
 .omore--pressed { background:#eef4ef; }
 .omore uni-icons { transition:transform 160ms ease; }

@@ -25,9 +25,9 @@
    <view v-if="error" class="rpc-msg"><text>{{ error }}</text><button class="rpc-btn rpc-retry" @tap="load">重新读取</button></view>
    <view v-else-if="!report" class="rpc-msg">正在读取报告…</view>
    <view v-else class="rpc-body">
-    <view class="rpc-kicker"><text class="rpc-kicker-text">检查点报告</text><text class="rpc-pill" :class="{ 'rpc-pill-partial': report.status === 'partial' }">{{ report.status === 'partial' ? '部分完成' : '已完成' }}</text></view>
+    <view class="rpc-kicker"><text class="rpc-kicker-text">{{ report.checkpointAt ? '检查点报告' : '用电报告' }}</text><text class="rpc-pill" :class="{ 'rpc-pill-partial': report.status === 'partial' }">{{ report.status === 'partial' ? '部分完成' : '已完成' }}</text></view>
     <text class="rpc-title">{{ report.title }}</text>
-    <text class="rpc-meta">检查点 {{ timeText(report.checkpointAt) }}</text>
+    <text v-if="report.checkpointAt" class="rpc-meta">检查点 {{ timeText(report.checkpointAt) }}</text>
     <text class="rpc-meta">生成 {{ timeText(report.generatedAt) }}</text>
     <text class="rpc-summary">{{ report.summary }}</text>
     <view v-for="(block, index) in report.blocks" :key="index" class="rpc-sec">
@@ -39,7 +39,8 @@
     </view>
     <view class="rpc-actions">
      <button class="rpc-btn" :disabled="quoting || downloading" @tap="quote">{{ quoting ? '核验中…' : '引用本报告' }}</button>
-     <button class="rpc-btn" :disabled="downloading || quoting" @tap="download">{{ downloading ? '下载中…' : '下载 PDF' }}</button>
+     <button class="rpc-btn" :disabled="downloading || quoting" @tap="download('pdf')">{{ downloading === 'pdf' ? '下载中…' : '下载 PDF' }}</button>
+     <button class="rpc-btn" :disabled="downloading || quoting" @tap="download('xlsx')">{{ downloading === 'xlsx' ? '下载中…' : '导出表格' }}</button>
     </view>
     <text v-if="actionError" class="rpc-error">{{ actionError }}</text>
    </view>
@@ -58,7 +59,7 @@ import ReportFactSection from './ReportFactSection.vue'
 const props = defineProps({ reportId: String, active: Boolean, source: { type: String, default: 'company' } })
 const emit = defineEmits(['loaded', 'reference', 'navigation'])
 const report = ref(null), error = ref(''), actionError = ref('')
-const downloading = ref(false), quoting = ref(false)
+const downloading = ref(''), quoting = ref(false)
 const evidence = ref(null)
 let requestId = 0, pageVisible = true
 
@@ -88,7 +89,7 @@ function resetTransient() {
  error.value = ''
  actionError.value = ''
  quoting.value = false
- downloading.value = false
+ downloading.value = ''
 }
 async function load() {
  if (!props.active || !props.reportId || !pageVisible) return
@@ -136,20 +137,20 @@ async function quote() {
   else actionError.value = cause?.message || '引用失败，请重试'
  } finally { if (requestAlive(current, id, source, scope)) quoting.value = false }
 }
-async function download() {
+async function download(format = 'pdf') {
  const id = report.value?.id
  if (!id || downloading.value || quoting.value || !props.active || !pageVisible) return
- downloading.value = true; actionError.value = ''
+ downloading.value = format; actionError.value = ''
  const current = requestId, source = props.source, scope = currentScope()
  try {
-  await downloadReportArtifact(id, source)
+  await downloadReportArtifact(id, source, format, { isActive: () => requestAlive(current, id, source, scope) && report.value?.id === id })
  } catch (cause) {
   if (!requestAlive(current, id, source, scope) || report.value?.id !== id) return
   const status = statusOf(cause)
   if (status === 401 || status === 403 || status === 404 || cause?.data?.code === 'SCOPE_CHANGED') { clearContent(); error.value = '报告不存在或授权已变化' }
   else if (status === 503) { clearContent(); error.value = '报告读取授权核验暂不可用，请稍后重试' }
-  else actionError.value = cause?.message || '下载失败，请重试'
- } finally { if (requestAlive(current, id, source, scope)) downloading.value = false }
+  else if (cause?.data?.code !== 'REPORT_VIEW_INACTIVE') actionError.value = cause?.message || '下载失败，请重试'
+ } finally { if (requestAlive(current, id, source, scope)) downloading.value = '' }
 }
 onHide(() => { pageVisible = false; ++requestId; resetTransient() })
 onShow(() => { pageVisible = true; if (props.active && props.reportId) void load() })

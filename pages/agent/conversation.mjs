@@ -63,8 +63,12 @@ export function applyEvent(turn, event, turns = [turn]) {
 	if (event.type === 'message.completed') { turn.text = event.content || turn.text; turn.streaming = false }
 	if (event.type === 'observation.reported') {
 		const blocks = (event.blocks || []).filter(block => {
-			if (!['energy_comparison', 'company_energy', 'energy_report'].includes(block.type) || !block.report?.reportId) return true
-			const existing = turns.flatMap(item => item.observations).flatMap(obs => obs.blocks).find(item => item.type === block.type && item.report?.reportId === block.report.reportId)
+			// report_artifact 用保存附件 id 去重：事件重放/跨轮重复携带同一链接时更新旧块，不重复成卡。
+			const key = block.type === 'report_artifact' ? block.report?.id
+				: ['energy_comparison', 'company_energy', 'energy_report'].includes(block.type) ? block.report?.reportId : undefined
+			if (!key) return true
+			const existing = turns.flatMap(item => item.observations).flatMap(obs => obs.blocks).find(item => item.type === block.type
+				&& (block.type === 'report_artifact' ? item.report?.id === key : item.report?.reportId === key))
 			if (!existing) return true
 			existing.report = block.report
 			return false

@@ -17,7 +17,7 @@
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
       @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)"
-      @confirm-task="confirmTaskProposal($event)" @discard-task="discardTaskProposal($event)" @open-task="openTaskRegion($event)" />
+      @confirm-task="confirmTaskProposal($event)" @discard-task="discardTaskProposal($event)" @open-task="openTaskRegion($event)" @open-report="openReport" />
     </view>
     <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turns.length)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
     <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
@@ -40,6 +40,11 @@
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" :source="source" :refresh-key="taskRevision" @close="tasksOpen = false" @reference="referenceTask" @changed="tasksChanged" @create="tasksOpen = false; prefill('帮我安排一个任务')" />
   <TaskInboxSheet v-if="inboxMounted" @reference="referenceTask" :open="inboxOpen" :source="source" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
   <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="source" @close="closeCompanyTask" />
+  <DeviceSheet v-if="reportMounted" :open="reportOpen" :back="reportBack" tall compact-header :title="reportNav.title || reportTitle" @close="closeReport">
+   <template #header-left><button v-if="reportNav.canBack" class="event-back" aria-label="返回报告" @tap="reportPreview?.back()"><uni-icons type="back" size="16" color="#62766a" /></button></template>
+   <ReportPreviewContent v-if="selectedReportId" ref="reportPreview" class="event-host" :report-id="selectedReportId" :active="active && reportOpen" :source="source"
+    @loaded="reportTitle = $event?.title || reportTitle" @navigation="reportNav = $event" @reference="referenceReport" />
+  </DeviceSheet>
  </view>
 </template>
 <script setup>
@@ -63,6 +68,7 @@ import UserMessage from './UserMessage.vue'
 import TaskListSheet from './TaskListSheet.vue'
 import TaskInboxSheet from './TaskInboxSheet.vue'
 import TaskDetailSheet from './TaskDetailSheet.vue'
+import ReportPreviewContent from './ReportPreviewContent.vue'
 import { focusRegion, focusRegionId, regionsLoading, regionsError, loadRegionFocus, consumeComposePrefill } from '../region-focus.js'
 // source: 'office' | 'company'；active: 宿主可见性（页面 onShow / 浮层展开），
 // false 等价页面 onHide——保留草稿、停轮询，但不中止在途流（收起≠销毁）。
@@ -88,6 +94,22 @@ function tasksChanged() { taskRevision.value++; emit('tasks-changed') }
 const inboxOpen = ref(false), inboxUnreadCount = ref(0)
 const companyTaskId = ref(''), companyPlanId = ref('')
 const tasksMounted = ref(false), inboxMounted = ref(false), companyTaskMounted = ref(false)
+// 即时/检查点报告附件共用同一 DeviceSheet 预览；仅保存 ID，事实由 ReportPreviewContent 按当前授权重读。
+const reportMounted = ref(false), reportOpen = ref(false), selectedReportId = ref('')
+const reportTitle = ref('用电报告'), reportNav = ref({ canBack: false })
+const reportPreview = ref(null)
+watch(reportOpen, open => { if (open) reportMounted.value = true }, { flush: 'sync' })
+function openReport({ reportId, title } = {}) {
+ if (!isCompany.value || !props.active) return
+ if (typeof reportId !== 'string' || !reportId) return
+ reportTitle.value = title || '用电报告'
+ reportNav.value = { canBack: false }
+ selectedReportId.value = reportId
+ reportOpen.value = true
+}
+function reportBack() { if (reportPreview.value?.back() === true) return; closeReport() }
+function closeReport() { reportOpen.value = false; selectedReportId.value = ''; reportNav.value = { canBack: false } }
+function referenceReport(reference) { closeReport(); composerReference.value = { ...reference }; composer.value?.focus?.() }
 watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync' })
 watch(inboxOpen, open => { if (open) inboxMounted.value = true }, { flush: 'sync' })
 watch(() => Boolean(companyTaskId.value || companyPlanId.value), open => { if (open) companyTaskMounted.value = true }, { flush: 'sync' })
@@ -135,6 +157,7 @@ watch(errorMessage, value => emit('error', Boolean(value)), { immediate: true })
 watch(() => turns.value.length, (now, before = 0) => { if (now > before && !props.active) emit('unread') })
 function clearIdentityView() {
  selectedEvent.value = null; eventOpen.value = false
+ closeReport()
  activeRequest?.abort(); presentation?.cancel()
  conversationId.value = ''; turns.value = []; regionChanges.value = []; draftBaselines.clear()
  sheetDraftId.value = ''; sheetError.value = ''; isRunning.value = false; phase.value = ''
@@ -638,6 +661,7 @@ function clearHistory() {
   } else if (!disposed) {
    turns.value = []
    regionChanges.value = []
+   closeReport()
    draftBaselines.clear()
    if (editingTurn.value) cancelEdit()
    if (created.status === 'fulfilled') {
@@ -680,11 +704,13 @@ function activate() {
 }
 function deactivate() {
  preserveCurrentComposerDraft()
+ closeReport()
  visible = false
  composer.value?.interrupt()
  clearTimeout(pollTimer); clearTimeout(taskPollTimer)
 }
 watch(() => props.active, on => { if (on) activate(); else deactivate() }, { immediate: true })
+watch(() => props.source, () => closeReport())
 onBeforeUnmount(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 // 面板头「⋯」按钮走同一套会话菜单（公司面板无工作台项）。
 function openMenu() {

@@ -1,6 +1,6 @@
 # 项目文档入口
 
-- 2026-10-20 完整业务委托决策地图已收口，转[实施规格与业务切片](../.scratch/agent-delegation/spec.md)。用户已选 A：周期控制可信基础失效进入未启用并经原收件箱通知；新增周期计划启用开关，恢复须核验/确认。先验证只读能耗调查→即时报告；开关交互先做独立状态原型。本轮尚未改生产代码、合并或放行候选。见[决策地图](../.scratch/agent-redesign-wayfinder/map.md)、[现状证据](research/2026-10-20-agent-delegation-current-state.md)与[接续/原型入口](../plan/2026-10-20-agent-delegation-design-handoff.md)。
+- 2026-10-20 用户纠偏后，以灵活、可靠、轻量地办成实际业务为主线，按单条完整委托推进。即时能耗报告、依据追问和表格导出已从候选接回原项目源码，验证及未部署/真实模型/手机边界见[本轮交付](../plan/2026-10-20-company-energy-report-delivery.md)；周期启用开关是任务管理的补充，不另立主线。此前[整包规格与八张票](../.scratch/agent-delegation/spec.md)暂不作为默认实施路线；原始需求见[客户需求与边界](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)，版本证据见[现状记录](research/2026-10-20-agent-delegation-current-state.md)。
 
 - 2026-10-20 公司 Agent 改进需求已收敛：轻量报告附件、能耗日/周/月报与表格导出、每日告警统计、有限空调巡检；只做站内通知，空区块不显示，异常仅作可选解读，不建检测业务。报告漏项/错期反例已冻结，具体接口与实施按[需求、可靠性缺口与推进路线](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)继续收口，真实控制仍需具体授权。
 

@@ -3,7 +3,8 @@ import { getAgentHeaders, getAgentStorageScope } from '@/utils/agent-session'
 import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
 import { transportError, createTerminalTracker } from './stream-errors.mjs'
-import { requestJson, httpError, downloadHttpError } from './request.mjs'
+import { requestJson, httpError } from './request.mjs'
+import { downloadReportFile } from './report-download.mjs'
 import { conversationSourceBody, withConversationSource } from './conversation-source.mjs'
 
 const STREAM_IDLE_TIMEOUT_MS = 60000
@@ -54,33 +55,14 @@ export const getCompanyEnergyDaily = (query = {}) => request('/agent/company-ene
 export const getCompanyMeterReport = (query = {}) => request('/agent/company-meter-report?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET', undefined, 90000)
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getReportArtifact = (reportId, source = 'company') => request(`/agent/reports/${encodeURIComponent(reportId)}?source=${encodeURIComponent(source)}`, 'GET')
-export function downloadReportArtifact(reportId, source = 'company') {
- let scope = ''
- try { scope = getAgentStorageScope() } catch (error) { return Promise.reject(error) }
- return new Promise((resolve, reject) => {
-  if (typeof uni.openDocument !== 'function') {
-   reject(new Error('当前环境不支持打开 PDF，请在微信小程序中查看'))
-   return
-  }
-  uni.downloadFile({
-   url: globalConfig.agentUrl + `/agent/reports/${encodeURIComponent(reportId)}/download?source=${encodeURIComponent(source)}`,
-   header: getAgentHeaders(),
-   success: async response => {
-    const status = response.statusCode
-    if (status !== 200 || !response.tempFilePath) {
-     const error = status === 200 ? new Error('服务端未返回有效的 PDF 文件') : await downloadHttpError(response)
-     reject(error)
-     return
-    }
-    let currentScope = ''
-    try { currentScope = getAgentStorageScope() } catch (error) { reject(error); return }
-    if (currentScope !== scope) { const error = new Error('登录身份已变化，请重新打开报告'); error.data = { code: 'SCOPE_CHANGED' }; reject(error); return }
-    uni.openDocument({ filePath: response.tempFilePath, fileType: 'pdf', showMenu: true,
-     success: () => resolve(response.tempFilePath),
-     fail: cause => reject(new Error(cause?.errMsg || '打开 PDF 失败：微信未返回具体原因')) })
-   },
-   fail: cause => reject(new Error(cause?.errMsg || '报告下载失败：未取得服务端响应，网络层未提供具体原因')),
-  })
+export function downloadReportArtifact(reportId, source = 'company', format = 'pdf', options = {}) {
+ return downloadReportFile({ reportId, source, format }, {
+  baseUrl: globalConfig.agentUrl,
+  getHeaders: getAgentHeaders,
+  getScope: getAgentStorageScope,
+  downloadFile: typeof uni.downloadFile === 'function' ? options => uni.downloadFile(options) : undefined,
+  openDocument: typeof uni.openDocument === 'function' ? options => uni.openDocument(options) : undefined,
+  isActive: options.isActive,
  })
 }
 export const restoreConversation = (source = 'office') => request(withConversationSource('/agent/conversations/current', source), 'GET')
