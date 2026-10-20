@@ -11,6 +11,11 @@
    <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">下一次 · {{ detail.nextText }}</text>
    <text class="task-when">{{ detail.whenText }}</text>
    <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ plan ? '周期计划' : `${detail.creator?.displayName || '成员'} 创建 · ${detail.createdText}` }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
+   <view v-if="plan && !sampleTask" class="plan-toggle-row">
+    <view class="plan-toggle-copy"><text class="plan-toggle-title">周期计划</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '停用后只影响未来发生' : '重新启用前会核验当前范围和绑定' }}</text></view>
+    <switch :checked="planIsEnabled(plan)" :disabled="!planCanToggle(plan) || cancelling" @change="togglePlanStatus(plan, $event.detail.value)" />
+   </view>
+   <text v-if="plan?.pauseReason" class="plan-pause-reason">{{ plan.pauseReason }}</text>
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
    <text v-if="currentError" class="current-error">{{ currentError }}</text>
    <text v-if="actionError" class="action-error">{{ actionError }}</text>
@@ -63,7 +68,7 @@
 </template>
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { cancelTask, cancelTaskPlan, getTaskDetail, getTaskLightingStates, getTaskPlan } from '@/apis/agent'
+import { cancelTask, cancelTaskPlan, getTaskDetail, getTaskLightingStates, getTaskPlan, setTaskPlanStatus } from '@/apis/agent'
 import { taskDetailView, taskPlanSnapshot } from '../task-detail-view.mjs'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
@@ -72,7 +77,7 @@ import { creatorVariant } from '../region-device-view.mjs'
 import ObservationCard from './ObservationCard.vue'
 
 const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, initialTask: Object, snapshotScope: String, source: { type: String, default: 'office' } })
-const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss'])
+const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false)
@@ -87,6 +92,32 @@ const detail = computed(() => {
 function referenceCurrent() {
  if (plan.value) emit('reference', { type: 'task_plan', planId: plan.value.planId, label: plan.value.label })
  else if (task.value) emit('reference', { type: 'task', taskId: task.value.id, label: task.value.label })
+}
+function planIsEnabled(value) { return value?.status === 'enabled' && Boolean(value.nextAt) }
+function planCanToggle(value) {
+ if (value?.status === 'enabled') return Boolean(value.canPause)
+ if (value?.status === 'paused') return Boolean(value.canResume)
+ return false
+}
+async function togglePlanStatus(value, enabled) {
+ if (!value?.planId || !planCanToggle(value) || cancelling.value) return
+ const operation = enabled ? 'resume' : 'pause', planId = value.planId, version = value.version
+ const source = props.source, scope = getAgentStorageScope()
+ const title = operation === 'resume' ? '重新启用' : '停用周期计划'
+ const content = operation === 'resume'
+  ? '将重新核验当前完整范围和控制绑定，从下一次未来发生继续，不补过去安排。'
+  : '只停用未来发生；已经生成、执行中或已下发的本次不回滚。'
+ const confirmed = await new Promise(resolve => uni.showModal({ title, content, confirmText: title, confirmColor: operation === 'resume' ? '#176b54' : '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ if (!confirmed || !props.active || source !== props.source || scope !== getAgentStorageScope() || plan.value?.planId !== planId) return
+ cancelling.value = true; actionError.value = ''
+ try {
+  const result = await setTaskPlanStatus(planId, version, operation, source, operation === 'resume')
+  if (result?.plan) plan.value = result.plan
+  emit('changed')
+  uni.showToast({ title: operation === 'resume' ? '已重新启用' : '已停用未来发生', icon: 'none' })
+ } catch (cause) {
+  actionError.value = cause.message || '状态更新失败，请刷新后重试'
+ } finally { cancelling.value = false }
 }
 async function cancelPeriod(scope) {
  if (cancelling.value) return
@@ -284,6 +315,11 @@ button::after { border:0; }
 .state-tag.partial,.state-tag.unconfirmed { color:#936827; background:#f9f0df; }
 .state-tag.failed,.state-tag.interrupted,.state-tag.missed { color:#a15343; background:#f2e3e0; }
 .state-tag.cancelled { color:#7a7f76; background:#eef1ef; }
+.plan-toggle-row { margin-top:14px; padding-top:12px; border-top:1px solid #e8ede9; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.plan-toggle-copy { min-width:0; display:flex; flex-direction:column; gap:4px; }
+.plan-toggle-title { color:#34483b; font-size:12px; font-weight:600; }
+.plan-toggle-note { color:#87948b; font-size:10px; }
+.plan-pause-reason { display:block; margin-top:6px; color:#a27128; font-size:11px; }
 .current-observation { min-height:32px; margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:#4a6654; font-size:11px; }
 .current-observation button { width:32px; height:32px; margin:0; display:flex; align-items:center; justify-content:center; }
 .current-observation button[disabled] { opacity:.5; }

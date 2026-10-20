@@ -11,6 +11,7 @@
      <view class="notification-copy">
       <text class="notification-title">{{ notification.label || '任务执行结果' }}</text>
       <text class="notification-outcome" :class="'tone-' + outcomeTone(notification.outcome)">{{ outcomeLabel(notification.outcome) }}</text>
+      <text v-if="notification.reason" class="notification-reason">{{ notification.reason }}</text>
       <text class="notification-time">{{ dateTime(notification.endedAt) }}</text>
      </view>
      <uni-icons type="right" size="13" color="#99a59d" />
@@ -157,8 +158,8 @@ button::after { border:0; }
 .notification-copy { min-width:0; flex:1; display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:10px; row-gap:4px; align-items:baseline; }
 .notification-title { min-width:0; overflow:hidden; white-space:normal; word-break:break-word; color:#304739; font-size:13px; font-weight:600; }
 .notification-outcome { grid-column:1; font-size:11px; }
-.notification-time { grid-column:2; grid-row:1 / span 2; color:#87958c; font-size:10px; white-space:nowrap; }
-.tone-ok { color:#397b61; }.tone-warn { color:#a27128; }.tone-fail { color:#a15343; }.tone-muted { color:#7e8982; }
+.notification-time { grid-column:2; grid-row:1 / span 3; color:#87958c; font-size:10px; white-space:nowrap; }
+.notification-reason { grid-column:1; color:#a27128; font-size:10px; line-height:1.35; }.tone-ok { color:#397b61; }.tone-warn { color:#a27128; }.tone-fail { color:#a15343; }.tone-muted { color:#7e8982; }
 .state-message { padding:48px 16px; text-align:center; color:#839189; font-size:13px; }
 .state-message text { display:block; }
 .state-message button,.list-footer button,.mark-error button { margin:10px auto 0; color:#176b54; font-size:12px; }

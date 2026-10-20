@@ -39,7 +39,7 @@
   </DeviceSheet>
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" :source="source" :refresh-key="taskRevision" @close="tasksOpen = false" @reference="referenceTask" @changed="tasksChanged" @create="tasksOpen = false; prefill('帮我安排一个任务')" />
   <TaskInboxSheet v-if="inboxMounted" @reference="referenceTask" :open="inboxOpen" :source="source" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
-  <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="source" @close="closeCompanyTask" />
+  <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="source" @close="closeCompanyTask" @changed="tasksChanged" />
   <DeviceSheet v-if="reportMounted" :open="reportOpen" :back="reportBack" tall compact-header :title="reportNav.title || reportTitle" @close="closeReport">
    <template #header-left><button v-if="reportNav.canBack" class="event-back" aria-label="返回报告" @tap="reportPreview?.back()"><uni-icons type="back" size="16" color="#62766a" /></button></template>
    <ReportPreviewContent v-if="selectedReportId" ref="reportPreview" class="event-host" :report-id="selectedReportId" :active="active && reportOpen" :source="source"

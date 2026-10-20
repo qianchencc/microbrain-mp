@@ -2,7 +2,7 @@
  <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="navigation.title || (planId ? (viewingReport ? '最近一次报告' : '周期安排') : '任务')" @close="$emit('close')">
   <template #header-left><button v-if="navigation.canBack" class="back-button" aria-label="返回上一级" @tap="nativeBack"><uni-icons type="back" size="15" color="#63776a" /></button></template>
   <template #header-right><text v-if="regionName" class="region-name">{{ regionName }}</text></template>
-  <TaskResultContent ref="content" class="content-host" :active="open" :task-id="taskId" :plan-id="planId" :source="source" :sample-task="sampleTask" @cancelled="$emit('cancelled')" @dismiss="$emit('close')" @reference="$emit('reference', $event)" @report-open="viewingReport = true" @plan-return="viewingReport = false" @navigation="navigation = $event" />
+  <TaskResultContent ref="content" class="content-host" :active="open" :task-id="taskId" :plan-id="planId" :source="source" :sample-task="sampleTask" @cancelled="$emit('cancelled')" @changed="$emit('changed')" @dismiss="$emit('close')" @reference="$emit('reference', $event)" @report-open="viewingReport = true" @plan-return="viewingReport = false" @navigation="navigation = $event" />
  </DeviceSheet>
 </template>
 <script setup>
@@ -12,7 +12,7 @@ import TaskResultContent from './TaskResultContent.vue'
 
 const props = defineProps({ open: Boolean, taskId: String, planId: String, source: { type: String, default: 'office' }, sampleTask: Object, regionName: String })
 const content = ref(null), viewingReport = ref(false), navigation = ref({ title: '', canBack: false })
-const emit = defineEmits(['close', 'cancelled', 'reference'])
+const emit = defineEmits(['close', 'cancelled', 'changed', 'reference'])
 function nativeBack() { if (content.value?.back()) return; if (viewingReport.value) content.value?.returnToPlan(); else emit('close') }
 watch(() => [props.open, props.taskId, props.planId, props.source], () => { viewingReport.value = false; navigation.value = { title: '', canBack: false } })
 </script>

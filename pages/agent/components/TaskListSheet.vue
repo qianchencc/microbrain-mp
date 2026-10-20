@@ -19,15 +19,18 @@
      <view v-else-if="!visibleRows.length" class="state-message">{{ emptyText }}</view>
 
      <template v-else-if="view === 'plans'">
-      <button v-for="plan in plans" :key="plan.planId" class="plan-row" @tap="openPlan(plan)">
-       <view class="status-mark" :class="planIsEnabled(plan) ? 'status-mark--active' : 'status-mark--paused'" />
-       <view class="row-copy">
-        <view class="row-heading"><text class="row-title">{{ plan.label || '未命名周期安排' }}</text><text class="plan-status" :class="planIsEnabled(plan) ? 'tone-active' : 'tone-muted'">{{ planStatus(plan) }}</text></view>
-        <text class="row-subtitle">{{ repeatText(plan.repeat) || '重复规则未提供' }}</text>
-        <view class="row-meta"><text>{{ plan.nextAt ? `下一次 · ${taskTime(plan.nextAt)}` : '暂无下一次安排' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
-       </view>
-       <uni-icons type="right" size="13" color="#99a59d" />
-      </button>
+      <view v-for="plan in plans" :key="plan.planId" class="plan-row">
+       <button class="plan-main" @tap="openPlan(plan)">
+        <view class="status-mark" :class="planIsEnabled(plan) ? 'status-mark--active' : 'status-mark--paused'" />
+        <view class="row-copy">
+         <view class="row-heading"><text class="row-title">{{ plan.label || '未命名周期安排' }}</text><text class="plan-status" :class="planIsEnabled(plan) ? 'tone-active' : 'tone-muted'">{{ planStatus(plan) }}</text></view>
+         <text class="row-subtitle">{{ repeatText(plan.repeat) || '重复规则未提供' }}</text>
+         <view class="row-meta"><text>{{ plan.nextAt ? `下一次 · ${taskTime(plan.nextAt)}` : '暂无下一次安排' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
+        </view>
+        <uni-icons type="right" size="13" color="#99a59d" />
+       </button>
+       <switch class="plan-switch" :checked="planIsEnabled(plan)" :disabled="!planCanToggle(plan) || planLoading" @change.stop="togglePlanStatus(plan, $event.detail.value)" />
+      </view>
      </template>
 
      <template v-else>
@@ -56,6 +59,11 @@
       <view class="summary-line"><text>下一次安排</text><text>{{ selectedPlan.nextAt ? taskTime(selectedPlan.nextAt) : '暂无' }}</text></view>
       <view class="summary-line"><text>创建人</text><text>{{ selectedPlan.creator?.displayName || '成员' }}</text></view>
       <text class="summary-note">{{ planAccessSummary(selectedPlan) }}</text>
+      <text v-if="selectedPlan.pauseReason" class="pause-reason">{{ selectedPlan.pauseReason }}</text>
+      <view class="plan-toggle-row">
+       <view class="plan-toggle-copy"><text class="plan-toggle-title">周期计划</text><text class="plan-toggle-note">{{ planIsEnabled(selectedPlan) ? '停用后只影响未来发生' : '重新启用前会核验当前范围和绑定' }}</text></view>
+       <switch :checked="planIsEnabled(selectedPlan)" :disabled="!planCanToggle(selectedPlan) || planLoading" @change="togglePlanStatus(selectedPlan, $event.detail.value)" />
+      </view>
       <view v-if="selectedPlan.latestTask" class="latest-result">
        <view class="latest-result-copy"><text class="latest-result-title">最近一次结果</text><text>{{ taskTime(taskTimeValue(selectedPlan.latestTask, 'results')) || '时间未提供' }} · {{ taskStatus(selectedPlan.latestTask.status) }}</text></view>
        <button v-if="selectedPlan.latestTask.id || selectedPlan.latestTask.taskId" class="latest-result-link" @tap="openLatestReport">查看报告 <uni-icons type="right" size="12" color="#176b54" /></button>
@@ -76,7 +84,7 @@
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { getTaskPlan, cancelTaskPlan, listAgentTasks, listTaskPlans } from '@/apis/agent'
+import { getTaskPlan, cancelTaskPlan, listAgentTasks, listTaskPlans, setTaskPlanStatus } from '@/apis/agent'
 import { repeatText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 import SlidingSegments from './SlidingSegments.vue'
@@ -140,13 +148,45 @@ function taskTone(status) {
 }
 function planIsEnabled(plan) { return !['paused', 'disabled', 'ended'].includes(plan?.status) && Boolean(plan?.nextAt) }
 function planStatus(plan) {
- if (plan?.status === 'paused' || plan?.status === 'disabled') return '已暂停'
+ if (plan?.status === 'paused' || plan?.status === 'disabled') return '已停用'
  if (plan?.status === 'ended' || (!plan?.nextAt && plan?.status !== 'paused')) return '周期结束'
  return planIsEnabled(plan) ? '已启用' : '状态待确认'
 }
+function planCanToggle(plan) {
+ if (plan?.status === 'enabled') return Boolean(plan.canPause)
+ if (plan?.status === 'paused') return Boolean(plan.canResume)
+ return false
+}
 function planAccessSummary(plan) {
- if (plan.canManage) return '可取消本次或全部'
+ if (plan?.status === 'enabled' && plan.canPause) return '可停用未来发生；当前已生成的发生继续保留'
+ if (plan?.status === 'paused' && plan.canResume) return '重新启用会重新核验当前完整范围和控制绑定'
+ if (plan?.canManage) return '可取消本次或全部'
  return '当前账号仅可查看'
+}
+function replacePlan(next) {
+ if (!next?.planId) return
+ plans.value = plans.value.map(plan => plan.planId === next.planId ? next : plan)
+ if (selectedPlan.value?.planId === next.planId) selectedPlan.value = next
+}
+async function togglePlanStatus(plan, enabled) {
+ if (!plan?.planId || !planCanToggle(plan) || planLoading.value) return
+ const operation = enabled ? 'resume' : 'pause'
+ const source = props.source, scope = getAgentStorageScope(), planId = plan.planId, version = plan.version
+ const title = operation === 'resume' ? '重新启用' : '停用周期计划'
+ const content = operation === 'resume'
+  ? '将重新核验当前完整范围和控制绑定，从下一次未来发生继续，不补过去安排。'
+  : '只停用未来发生；已经生成、执行中或已下发的本次不回滚。'
+ const confirmed = await new Promise(resolve => uni.showModal({ title, content, confirmText: title, confirmColor: operation === 'resume' ? '#176b54' : '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ if (!confirmed || !props.open || source !== props.source || scope !== getAgentStorageScope() || planId !== plan.planId) return
+ planLoading.value = true
+ try {
+  const result = await setTaskPlanStatus(planId, version, operation, source, operation === 'resume')
+  replacePlan(result?.plan)
+  emit('changed')
+  uni.showToast({ title: operation === 'resume' ? '已重新启用' : '已停用未来发生', icon: 'none' })
+ } catch (cause) {
+  uni.showToast({ title: cause.message || '状态更新失败，请刷新后重试', icon: 'none' })
+ } finally { planLoading.value = false }
 }
 function selectTaskRows(values, kind) {
  const rows = Array.isArray(values) ? values : []
@@ -297,8 +337,10 @@ button::after { border:0; }
 .view-switch { flex-shrink:0; padding:4px 18px 8px; }
 .arrangements-scroll,.detail-scroll { height:0; min-height:0; flex:1; box-sizing:border-box; padding:0 18px 14px; }
 .list-summary { display:flex; justify-content:space-between; padding:7px 2px 10px; border-bottom:1px solid #e5ebe6; color:#75877b; font-size:11px; }
-.plan-row,.task-row { width:100%; min-height:76px; display:flex; align-items:center; gap:11px; padding:12px 2px; border-bottom:1px solid #e8ede9; text-align:left; }
+.plan-row,.task-row { width:100%; min-height:76px; display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid #e8ede9; text-align:left; }
 .plan-row:active,.task-row:active { background:#f5f8f5; }
+.plan-main { min-width:0; flex:1; display:flex; align-items:center; gap:11px; text-align:left; }
+.plan-switch { flex-shrink:0; transform:scale(.78); transform-origin:right center; }
 .row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
 .row-heading { min-width:0; display:flex; align-items:baseline; justify-content:space-between; gap:9px; }
 .row-title { min-width:0; white-space:normal; word-break:break-word; color:#304739; font-size:13px; font-weight:600; }
@@ -327,6 +369,11 @@ button::after { border:0; }
 .summary-line text:first-child { color:#87948b; }
 .summary-line text:last-child { color:#34483b; overflow-wrap:anywhere; text-align:right; }
 .summary-note { display:block; padding:11px 0 3px; color:#87948b; font-size:11px; }
+.pause-reason { display:block; padding-top:4px; color:#a27128; font-size:11px; }
+.plan-toggle-row { margin-top:13px; padding-top:12px; border-top:1px solid #e8ede9; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.plan-toggle-copy { min-width:0; display:flex; flex-direction:column; gap:4px; }
+.plan-toggle-title { color:#34483b; font-size:12px; font-weight:600; }
+.plan-toggle-note { color:#87948b; font-size:10px; }
 .latest-result { margin-top:14px; padding-top:12px; border-top:1px solid #e4eae5; display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .latest-result-copy { min-width:0; display:flex; flex-direction:column; gap:4px; color:#87948b; font-size:10px; }
 .latest-result-title { color:#4d7663; font-size:11px; font-weight:700; }

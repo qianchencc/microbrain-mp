@@ -2,7 +2,7 @@
  <view class="trc-host">
   <view class="trc-pane" :style="{ display: reportRef ? 'none' : 'flex' }">
    <TaskDetailContent ref="content" class="trc-content-host" :active="active && !reportRef" :task-id="taskId" :plan-id="planId" :sample-task="sampleTask" :initial-task="initialTask" :snapshot-scope="snapshotScope" :source="source"
-    @cancelled="$emit('cancelled')" @loaded="$emit('loaded', $event)" @report-open="$emit('report-open')" @open-report="openReport" @plan-return="$emit('plan-return')" @reference="$emit('reference', $event)" @dismiss="$emit('dismiss')" />
+    @cancelled="$emit('cancelled')" @changed="$emit('changed')" @loaded="$emit('loaded', $event)" @report-open="$emit('report-open')" @open-report="openReport" @plan-return="$emit('plan-return')" @reference="$emit('reference', $event)" @dismiss="$emit('dismiss')" />
   </view>
   <ReportPreviewContent v-if="reportRef" ref="report" class="trc-pane trc-report" :report-id="reportRef.reportId" :active="active && Boolean(reportRef)" :source="source"
    @reference="$emit('reference', $event)" @navigation="reportNav = $event" />
@@ -14,7 +14,7 @@ import TaskDetailContent from './TaskDetailContent.vue'
 import ReportPreviewContent from './ReportPreviewContent.vue'
 
 const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, initialTask: Object, snapshotScope: String, source: { type: String, default: 'office' } })
-const emit = defineEmits(['cancelled', 'loaded', 'report-open', 'plan-return', 'reference', 'dismiss', 'navigation'])
+const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'plan-return', 'reference', 'dismiss', 'navigation'])
 const content = ref(null), report = ref(null)
 const reportRef = ref(null), reportNav = ref({ title: '', canBack: false })
 const navigation = computed(() => reportRef.value

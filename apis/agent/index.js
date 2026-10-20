@@ -41,6 +41,7 @@ export const listRegionTimeline = (regionId, date) => request(`/agent/regions/${
 export const listRegionCalendar = (regionId, from, to) => request(`/agent/regions/${encodeURIComponent(regionId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getTaskPlan = (planId, source = 'office') => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}`, source), 'GET')
 export const cancelTaskPlan = (planId, version, scope, date, source = 'office') => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}/cancel`, source), 'POST', { version, scope, ...(date ? { date } : {}) })
+export const setTaskPlanStatus = (planId, version, operation, source = 'office', confirmed = false) => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}/status`, source), 'POST', { version, operation, ...(operation === 'resume' ? { confirmed } : {}) })
 export const listTaskPlans = ({ source = 'office' } = {}) => request(`/agent/task-plans?source=${encodeURIComponent(source)}`, 'GET')
 export const listAgentTasks = ({ source = 'office', from, to } = {}) => request(`/agent/tasks?source=${encodeURIComponent(source)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getTaskDetail = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}`, source), 'GET')
