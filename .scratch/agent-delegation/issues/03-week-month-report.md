@@ -1,6 +1,6 @@
 # 03：周报与自然月报
 
-Status: in-progress
+Status: ready-for-human
 Parent: [Company Agent 业务闭环实施规格](../spec.md)
 Blocked by: 02：定时能耗日报与原任务收件箱结果
 
@@ -25,3 +25,7 @@ Blocked by: 02：定时能耗日报与原任务收件箱结果
 - 复用日报的 `read.agent.spec`、报告保存、PDF/XLSX 和原任务收件箱。
 - 周期规则扩展为每周和每月；每月按明确 `dayOfMonth` 发生，短月不存在该日时跳过，不把自然月简化成固定 30 天。
 - 统计期间继续使用 `previous/week` 与 `previous/month`，由每次实际发生时间解析。
+
+## 2026-10-20 本轮源码交回
+
+周/月规则已接入主线；自然月dayOfMonth、短月跳过和前一完整周/月口径保留。 按用户要求未新增/运行测试、双审或探针；类型检查、构建与微信编译结果及未验边界见[总交接](../../../plan/2026-10-20-agent-delegation-delivery-handoff.md)。源码完成与活动服务/客户/微信/现场验收分开，未执行的验收条件不勾选。
