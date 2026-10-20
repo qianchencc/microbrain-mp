@@ -1,5 +1,7 @@
 # 项目文档入口
 
+- 2026-10-20 Agent 重设计票 04 目标接口决议已记录：Company 新建未来任务收敛为 `propose_task` 单入口（收口分支与通用形态严格二选一），`propose_company_night_closure` 与 Company 侧 `propose_lighting_draft` 目标退役、续接入口独立保留；为设计记录，未实施、未验收，04 保持 open，05/06 阻塞边不变。见[收口协调设计](../plan/2026-10-20-company-closure-coordination-design.md)。
+
 - 2026-10-19 已认可C任务日历落入生产源码：Company首页选日，日程／周期计划／收件箱共用任务结果；完整名称及确认后刷新同步修复。测试与正式构建、部署边界见[生产实现交接](../plan/2026-10-19-task-calendar-production.md)。
 
 - 2026-10-19 Agent 重设计后续规格与票 04–06 已准备：每票包含职责、工具接口、业务结构/引用和用户流程的设计取舍及必要替换；先协调设计与真实收口，再复杂能耗调查、告警排查。均非新增业务已实施声明，见[后续准备与依赖](../plan/2026-10-19-agent-redesign-followup-preparation.md)。
