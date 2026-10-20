@@ -1,6 +1,6 @@
 # 完整业务委托：目标、现状与证据缺口
 
-日期：2026-10-20（续接复核）。本文件是本轮只读核对快照，不是全链路验收、完整规格或排期。决策索引沿用[物联 Agent 重设计地图](../../.scratch/agent-redesign-wayfinder/map.md)。用户已认可从“完整业务委托”校准终点；未因此批准旧修订草案、具体工具形状或新执行政策。
+日期：2026-10-20（续接复核）。本文件是本轮只读核对快照，不是全链路验收、完整规格或排期。决策索引沿用[物联 Agent 重设计地图](../../.scratch/agent-redesign-wayfinder/map.md)。用户已认可从“完整业务委托”校准终点；旧修订草案、具体工具形状或候选上线未因此自动获批。
 
 ## 目标锚点
 
@@ -48,7 +48,7 @@
 
 每条业务都要检查：意图到范围/要求声明、可选证据、必要澄清、待确认（适用时）、实际结果/成果、追问与调整/停止、恢复与权限变化。前端卡片、详情、附件和收件箱也是链路的一部分，接口存在不是用户能完成委托。
 
-交付与自主推进已按用户授权收口，见[完整业务委托的交付与自主推进界限](../../.scratch/agent-redesign-wayfinder/issues/05-complete-delegation-outcomes.md)；周期控制的未来发生如何受失效影响仍需单独决定。首条收口的[原决议](../../.scratch/agent-redesign-wayfinder/issues/01-company-night-closure-contract.md)已经明确授权/计划快照失效后不得继续下发后续阶段；这是已定约束，不能因实现或测试偏离而改称用户尚未决定。开放的是跨业务推广、周期影响与恢复细节，不重新要求用户批准原契约。
+交付与自主推进已按用户授权收口，见[完整业务委托的交付与自主推进界限](../../.scratch/agent-redesign-wayfinder/issues/05-complete-delegation-outcomes.md)；周期控制失效后的未来停止/恢复已由用户选择 A，并新增启用开关，见[最终决议](../../.scratch/agent-redesign-wayfinder/issues/08-control-plan-invalidation-and-resumption.md)。首条收口的[原决议](../../.scratch/agent-redesign-wayfinder/issues/01-company-night-closure-contract.md)已经明确授权/计划快照失效后不得继续下发后续阶段；这是已定约束，不能因实现或测试偏离而改称用户尚未决定。本次与周期恢复的设计已在决策地图收口，尚未据此修正生产行为，不重新要求用户批准原契约。
 
 ## 已知约束与不应外推的结论
 
@@ -69,4 +69,4 @@
 
 ## 地图仍不完备的地方
 
-本文件保留设计用事实和证据边界；已解决的职责、交付与迁移选择进入[决策地图](../../.scratch/agent-redesign-wayfinder/map.md)，不在这里重复保存。活动服务与原生证据仍未知；周期控制失效后的未来恢复选择未因源码存在而自动决定。
+本文件保留设计用事实和证据边界；已解决的职责、交付与迁移选择进入[决策地图](../../.scratch/agent-redesign-wayfinder/map.md)，不在这里重复保存。活动服务与原生证据仍未知；用户已明确周期失效进入未启用并通知，重新确认后恢复；该决定和前台开关尚未实施。

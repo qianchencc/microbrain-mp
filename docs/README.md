@@ -1,6 +1,6 @@
 # 项目文档入口
 
-- 2026-10-20 完整业务委托设计已收敛版本证据、交付/自主推进边界和 Pi/业务模块职责；迁移以能耗调查到即时附件为首条验证，控制候选仍待生命周期修正。周期控制失效后的未来暂停/恢复为新增待决风险；本轮未实施、合并或放行候选。见[决策地图](../.scratch/agent-redesign-wayfinder/map.md)、[现状证据](research/2026-10-20-agent-delegation-current-state.md)与[本轮接续](../plan/2026-10-20-agent-delegation-design-handoff.md)。
+- 2026-10-20 完整业务委托决策地图已收口，转[实施规格与业务切片](../.scratch/agent-delegation/spec.md)。用户已选 A：周期控制可信基础失效进入未启用并经原收件箱通知；新增周期计划启用开关，恢复须核验/确认。先验证只读能耗调查→即时报告；开关交互先做独立状态原型。本轮尚未改生产代码、合并或放行候选。见[决策地图](../.scratch/agent-redesign-wayfinder/map.md)、[现状证据](research/2026-10-20-agent-delegation-current-state.md)与[接续/原型入口](../plan/2026-10-20-agent-delegation-design-handoff.md)。
 
 - 2026-10-20 公司 Agent 改进需求已收敛：轻量报告附件、能耗日/周/月报与表格导出、每日告警统计、有限空调巡检；只做站内通知，空区块不显示，异常仅作可选解读，不建检测业务。报告漏项/错期反例已冻结，具体接口与实施按[需求、可靠性缺口与推进路线](../plan/2026-10-20-company-automation-requirements-and-roadmap.md)继续收口，真实控制仍需具体授权。
 

@@ -1,6 +1,6 @@
 # 物联 Agent 重设计 Wayfinder
 
-Status: open（2026-10-20 常规设计已推进；控制计划失效后的未来恢复待用户决定）
+Status: decided（2026-10-20 决策基线已收口；转正式规格，非能力已交付）
 Labels: wayfinder:map
 
 ## Destination
@@ -13,7 +13,7 @@ Labels: wayfinder:map
 - 沿用本地图，不另起竞争地图。原三张决策票保留原文与日期，作为首条样本的历史决议；局部限制不外推为全 Agent 上限。
 - [完整委托现状与证据缺口](../../docs/research/2026-10-20-agent-delegation-current-state.md) 是本轮低分辨率事实对照；它不是地图已闭合的证明。细节按需进入源码、冻结记录及决策票。
 - Pi 固定；Company 是本轮主要业务范围，Office 成熟行为与来源隔离必须保留。按业务结果而非工具数组织讨论，不预建通用工作流、多 Agent 或新的长期规划对象。
-- 不推翻已确认的零未授权控制、未知不重发、事实可追溯等约束；首条收口原决议已要求授权/快照失效后停止后续下发，不因实现偏离而重开该决定。跨业务结果政策、周期/恢复影响、兼容与整集表达的具体迁移方案仍待审视。
+- 不推翻已确认的零未授权控制、未知不重发、事实可追溯等约束；首条收口原决议已要求授权/快照失效后停止后续下发，不因实现偏离而重开该决定。跨业务职责、周期失效恢复和兼容迁移按下列已决票接续；实际实现及发布验收另行完成。
 - 先前[局部控制任务修订草案](../../../iot-agent-runtime-company-proposal-convergence/plan/2026-10-20-company-task-design-correction-preparation.md) 已暂停作为实施/排期依据；五个问题是证据，不代表完整路线。
 - 当前只读核对主线/候选/报告线，不合并、不启动或切换服务、不联网试跑、不控制设备。MP/Runtime 的并行 WIP 保留；报告线按其自己的已批准范围继续，本地图不接管或回退它。
 - 本地 tracker 没有原生子票/依赖：issues/ 下各决策票以 Parent 指向本图，以 Status/Assignee/Blocked by 表达开放、认领和阻塞。仅 Labels: wayfinder:<type>，不贴 ready-for-agent；只在所有阻塞票有 resolution 后进入 frontier。建图阶段新票均 open、unassigned，不假装已解决。
@@ -27,8 +27,10 @@ Labels: wayfinder:map
 - [现状版本、能力与证据缺口基线](issues/04-current-state-evidence-baseline.md)：主线、两候选、WIP 与活动版本分层；S2 已提交，历史通过不等于合流/现场通过。
 - [完整业务委托的交付与自主推进界限](issues/05-complete-delegation-outcomes.md)：只读自主推进，按请求交付事实/部分结果；控制与未来变更确认，登记/收口不冒充业务成功。
 - [Pi 与业务模块的职责和可组合接口](issues/06-business-modules-and-pi-contract.md)：深化现有模块；固定事实与时间变更分离，旧控制入口适配/退出，报告与调查可组合而不套控制终态。
+- [控制计划失效后的未来执行与恢复](issues/08-control-plan-invalidation-and-resumption.md)：用户选 A；失效进入未启用，结果进原收件箱；周期开关与重新启用确认是前台管理的明确补充。
+- [既有能力保留、候选合流与首条验证选择](issues/07-migration-and-first-validation.md)：只读能耗调查/报告先行；控制按固定快照、停用/通知闭环整合，不整体放行候选。
 
-## Not yet specified
+## 验收中再发现的事项（不阻断本轮设计出口）
 
 - 实施或真实委托中发现的 UI 表达障碍与上游事实缺口，按对应业务闭环处理；不预建平台、重新编排所有页面或补一整套评测设施。
 - Office 超出既有成熟行为的后续泛化，保持来源与权限隔离；本轮不承诺同步迁移所有 Office 输入。
@@ -40,3 +42,7 @@ Labels: wayfinder:map
 - 更换 Pi、通用工作流、多 Agent、永久规则引擎、个人记忆或通用助手平台。
 - 默认启用/合并控制候选、活动服务切换、部署/推送、客户网关或物理控制；均需各自具体授权。
 - 用新地图否定报告线已有独立授权，或以地图编写代替模型、网关、微信与物理设备验收。
+
+## 出口
+
+进入[完整业务委托实施规格](../agent-delegation/spec.md)；按其中业务切片实施，前端开关先验证最小原型。此处闭合只表示设计可构建，不批准合并候选、活动服务切换或真实控制。
