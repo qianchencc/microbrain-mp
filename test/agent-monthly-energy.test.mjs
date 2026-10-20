@@ -181,3 +181,89 @@ test('月初08:00前不显示上个月数据或异常重试，08:00本身也不�
   assert.ok(Object.values(states).every(state=>!state.error))
  }
 })
+
+test('展开逐表对比按稳定ID配对完整列表，以增量排序且明细与两期合计一致', async () => {
+ const windows=monthlyEnergyWindows(now())
+ const states=await load(windows,async q=>{
+  const current=q.from.startsWith('2026-10'), r=report(q,current?120:95,current?['a','b','c']:['c','b','a'])
+  const values=current?{a:100,b:20,c:0}:{a:80,b:5,c:10}
+  for(const m of r.meters)Object.assign(m,{name:'电表'+m.id,areaName:'26楼'+m.id,value:values[m.id]})
+  return r
+ })
+ const pair=monthlyEnergyView(windows,states).pairs[0]
+ assert.deepEqual(pair.rows.map(r=>[r.id,r.a.value,r.b.value,r.delta,r.pctText]),[
+  ['a',100,80,20,'+25%'],['b',20,5,15,'+300%'],['c',0,10,-10,'-100%']
+ ])
+ assert.equal(pair.rows[0].name,'电表a')
+ assert.equal(pair.rows[0].location,'26楼a')
+ assert.equal(pair.rows.reduce((sum,r)=>sum+r.a.value,0),pair.a.value)
+ assert.equal(pair.rows.reduce((sum,r)=>sum+r.b.value,0),pair.b.value)
+ assert.match(pair.a.detailLabel,/08:00/)
+})
+
+test('逐表保留单侧缺数及集合差异，部分采样不计算变化，零基期只给差额', async () => {
+ const windows=monthlyEnergyWindows(now())
+ const states=await load(windows,async q=>{
+  const current=q.from.startsWith('2026-10'), r=report(q,100,current?['a','b','c','d']:['c','b','a','e'])
+  for(const m of r.meters)Object.assign(m,{name:'同名电表',value:current?20:10})
+  if(!current) {
+   r.meters.find(m=>m.id==='b').value=0
+   r.meters.find(m=>m.id==='c').observed.toSample.readTime='2026-09-24T20:00:00+08:00'
+  }
+  return r
+ })
+ const pair=monthlyEnergyView(windows,states).pairs[0], rows=new Map(pair.rows.map(r=>[r.id,r]))
+ assert.equal(rows.size,5)
+ assert.equal(rows.get('a').delta,10)
+ assert.equal(rows.get('b').deltaText,'+20')
+ assert.equal(rows.get('b').pctText,'—')
+ assert.match(rows.get('b').note,/基期为零/)
+ assert.equal(rows.get('c').delta,null)
+ assert.match(rows.get('c').note,/采样不完整/)
+ assert.equal(rows.get('d').b.value,null)
+ assert.equal(rows.get('e').a.value,null)
+ assert.equal(rows.get('d').delta,null)
+ assert.equal(rows.get('e').delta,null)
+ assert.deepEqual(pair.rows.slice(0,2).map(r=>r.id),['b','a'])
+ const base=states[pair.baseline.from+'/'+pair.baseline.to].report
+ base.coverage.truncated=true
+ assert.ok(monthlyEnergyView(windows,states).pairs[0].rows.every(r=>r.delta===null))
+})
+
+test('去年全部缺数仍可展开本月全部电表，错期间或未知单位响应不能泄露为有效对照', async () => {
+ const windows=monthlyEnergyWindows(now()), states=await load(windows,async q=>{
+  const r=report(q,100,['a','b'])
+  for(const m of r.meters)Object.assign(m,{name:'电表'+m.id,value:50})
+  if(q.from.startsWith('2025')) {
+   r.coverage.dataMeters=0;r.coverage.noData=['a','b'];r.coverage.truncated=true;r.total.value=null
+   for(const m of r.meters) {m.status='noData';m.value=null;m.observed={}}
+  }
+  return r
+ })
+ const year=monthlyEnergyView(windows,states).pairs[1]
+ assert.equal(year.rows.length,2)
+ assert.ok(year.rows.every(r=>r.a.value===50 && r.b.value===null && r.delta===null && r.pctText==='—' && /对照无有效数据/.test(r.note)))
+ const baseline=states[year.baseline.from+'/'+year.baseline.to].report
+ for(const invalidate of [()=>{baseline.params.span.requested={...year.baseline,from:'2025-09-01T08:00:00+08:00'}},()=>{baseline.params.span.requested=year.baseline;baseline.total.unit='未知'}]) {
+  invalidate()
+  assert.ok(monthlyEnergyView(windows,states).pairs[1].rows.every(r=>r.b.value===null))
+ }
+})
+
+test('匹配期间但单位未知的独有电表仍保留，错期响应不能注入无关电表名单', async () => {
+ const windows=monthlyEnergyWindows(now()),states=await load(windows,async q=>{
+  const current=q.from.startsWith('2026-10'),r=report(q,100,current?['a']:['a','other'])
+  for(const m of r.meters)Object.assign(m,{name:'电表'+m.id,value:50})
+  if(!current)r.total.unit='未知'
+  return r
+ })
+ let pair=monthlyEnergyView(windows,states).pairs[0]
+ const other=pair.rows.find(r=>r.id==='other')
+ assert.ok(other)
+ assert.equal(other.b.value,null)
+ assert.equal(other.delta,null)
+ assert.match(other.note,/单位未确认/)
+ states[pair.baseline.from+'/'+pair.baseline.to].report.params.span.requested={from:'2026-08-01T08:00:00+08:00',to:pair.baseline.to}
+ pair=monthlyEnergyView(windows,states).pairs[0]
+ assert.deepEqual(pair.rows.map(r=>r.id),['a'])
+})

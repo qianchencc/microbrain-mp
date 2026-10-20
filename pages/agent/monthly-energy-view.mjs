@@ -54,7 +54,8 @@ function periodView(span, states) {
  const boundaryComplete = meters.every(m => Date.parse(m.observed?.fromSample?.readTime || '') === Date.parse(span.from) && Date.parse(m.observed?.toSample?.readTime || '') === Date.parse(span.to))
  const complete = boundaryComplete && value !== null && coverage?.meters > 0 && coverage.dataMeters === coverage.meters && !coverage.truncated
   && !coverage.noData?.length && !coverage.partial?.length && meters.length === coverage.meters && meters.every(m => m.status === 'ok')
- return { span, label: periodLabel(span), value, complete, meters, pending: !state,
+ const detailLabel = `${monthlyDate(span.from)} ${span.from.slice(11, 16)} → ${monthlyDate(span.to)} ${span.to.slice(11, 16)}`
+ return { span, label: periodLabel(span), detailLabel, value, complete, meters: matching ? meters : [], unitValid: report?.total?.unit === '度', truncated: Boolean(coverage?.truncated), pending: !state,
   error: state?.error || '', through: shanghaiTime(report?.params?.span?.observed?.to),
   note: state?.error || (state?.waiting ? '本月用电待首个采样区间完成' : state ? (value === null ? (matching && coverage?.dataMeters > 0 && !insideMonth ? '月初缺少准确边界采样' : '暂无有效用电数据') : !complete ? '数据覆盖不完整，显示已取得用电' : '') : '正在读取月度用电') }
 }
@@ -71,6 +72,28 @@ function sameSampling(a, b) {
  })
 }
 
+function meterComparisonRows(a, b) {
+ const side = (period, meter) => {
+  const from = Date.parse(meter?.observed?.fromSample?.readTime || ''), to = Date.parse(meter?.observed?.toSample?.readTime || '')
+  const start = Date.parse(period.span.from), end = Date.parse(period.span.to)
+  const value = period.unitValid && ['ok', 'partial'].includes(meter?.status) && finite(meter.value) && meter.value >= 0 && from >= start && to <= end && to > from ? round(meter.value) : null
+  const complete = value !== null && meter.status === 'ok' && from === start && to === end && !period.truncated
+  const note = period.pending ? '读取中' : period.error ? '读取失败' : !meter ? '未返回该表' : !period.unitValid ? '单位未确认' : complete ? '' : value === null ? '无有效数据' : period.truncated ? '读取不全' : '采样不完整'
+  return { value, complete, note }
+ }
+ const current = new Map(a.meters.map(meter => [meter.id, meter])), baseline = new Map(b.meters.map(meter => [meter.id, meter]))
+ return [...new Set([...current.keys(), ...baseline.keys()])].map(id => {
+  const meter = current.get(id) || baseline.get(id), x = side(a, current.get(id)), y = side(b, baseline.get(id))
+  const delta = x.complete && y.complete ? round(x.value - y.value) : null
+  const pct = delta !== null && y.value > 0 ? round(delta / y.value * 100) : null
+  const signed = value => value === null ? '—' : `${value > 0 ? '+' : ''}${monthlyNumber(value === 0 ? 0 : value)}`
+  return { id, name: meter.name || meter.areaName || '电表', location: meter.areaName || '', a: x, b: y, delta,
+   deltaText: signed(delta), pctText: pct === null ? '—' : signed(pct) + '%',
+   direction: delta === null || delta === 0 ? '' : delta > 0 ? 'up' : 'down',
+   note: delta === null ? [x.note && `本期${x.note}`, y.note && `对照${y.note}`].filter(Boolean).join(' · ') : y.value === 0 ? '基期为零，不计算百分比' : '' }
+ }).sort((x, y) => x.delta === null && y.delta !== null ? 1 : x.delta !== null && y.delta === null ? -1 : (y.delta ?? 0) - (x.delta ?? 0) || x.name.localeCompare(y.name, 'zh-CN') || x.id.localeCompare(y.id))
+}
+
 export function monthlyEnergyView(windows, states = {}) {
  const current = periodView(windows.current, states)
  const pairs = windows.pairs.map(pair => {
@@ -82,7 +105,7 @@ export function monthlyEnergyView(windows, states = {}) {
   const max = Math.max(a.value || 0, b.value || 0)
   const visibleChange = pct ?? delta
   const direction = visibleChange === null || visibleChange === 0 ? '' : visibleChange > 0 ? 'up' : 'down'
-  return { ...pair, a, b, direction, pct: pct === null ? '—' : `${pct > 0 ? '↑ ' : pct < 0 ? '↓ ' : ''}${monthlyNumber(Math.abs(pct))}%`,
+  return { ...pair, a, b, rows: meterComparisonRows(a, b), direction, pct: pct === null ? '—' : `${pct > 0 ? '↑ ' : pct < 0 ? '↓ ' : ''}${monthlyNumber(Math.abs(pct))}%`,
    aWidth: max && a.value !== null ? a.value / max * 100 : 0, bWidth: max && b.value !== null ? b.value / max * 100 : 0,
    summary: delta === null ? reason : delta === 0 ? `与${pair.label}持平` : `较${pair.label}${delta > 0 ? '多' : '少'}用 ${monthlyNumber(Math.abs(delta))} 度`,
    note: delta !== null && b.value === 0 ? reason : pair.shortened ? '短月按两侧相同日期比较' : '' }
