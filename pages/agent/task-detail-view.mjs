@@ -22,6 +22,43 @@ export function repeatText(repeat) {
  return label + (repeat.until ? ` · 至 ${repeat.until}` : '')
 }
 
+const readComparisonLabels = { previousPeriod: '环比', yearOverYear: '同比' }
+const readRelativePeriodLabels = {
+ day: '每次执行统计前一日（上海时间）',
+ week: '每次执行统计前一周（上海时间）',
+ month: '每次执行统计前一月（上海时间）',
+}
+
+function readPeriodText(period) {
+ if (period?.kind === 'previous') return readRelativePeriodLabels[period.unit] || ''
+ if (period?.kind !== 'absolute') return ''
+ const from = taskTime(period.from), to = taskTime(period.to)
+ return from && to ? `${from} 至 ${to}（上海时间）` : ''
+}
+
+function readAgentSpecView(spec) {
+ if (!spec) return null
+ const period = readPeriodText(spec.period)
+ const comparisons = (spec.comparisons || []).map(kind => readComparisonLabels[kind] || kind).filter(Boolean)
+ return {
+  periodText: period ? `统计期间 · ${period}` : '',
+  comparisonText: `比较项 · ${comparisons.length ? comparisons.join('、') : '不比较'}`,
+  comparisons,
+ }
+}
+
+export function readAgentView(agent) {
+ if (!agent) return null
+ const spec = readAgentSpecView(agent.spec)
+ return {
+  ...agent,
+  objectiveText: `检查点指令 · ${agent.objective}`,
+  periodText: spec?.periodText || '',
+  comparisonText: spec?.comparisonText || '',
+  comparisons: spec?.comparisons || [],
+ }
+}
+
 export function mergeTaskPlan(task, plan) {
  task.planStatus = plan.status
  task.planId = plan.planId
@@ -107,7 +144,7 @@ export function taskDetailView(task) {
   const merged = reportPhase?.observations || phase.observations || []
   const link = merged.find(block => block?.type === 'report_artifact')?.report
   return {
-   ...phase, observations: merged.filter(block => block?.type !== 'report_artifact'),
+   ...phase, readAgent: readAgentView(phase.read?.agent), observations: merged.filter(block => block?.type !== 'report_artifact'),
    report: link ? { reportId: link.id, title: link.title, status: link.status, phaseId: phase.id, phaseAt: phase.at } : null,
    title: interval ? `检查点${index + 1}` : task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束',
    time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusLabel(phase.status, task.agentSource),

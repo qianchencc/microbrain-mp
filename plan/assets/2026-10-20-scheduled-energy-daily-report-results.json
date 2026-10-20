@@ -1,0 +1,203 @@
+{
+  "business": "定时能耗日报 → 原任务收件箱 → 保存报告",
+  "sourceBaseline": "0c4e281",
+  "candidateChanges": "主线工作区增加实际任务统计规则投影；后续未来发生投影由公开接口回归核验",
+  "model": "GLM-5.3-Flash",
+  "request": "每天早上9点给我上一天的公司用电日报，包含环比、同比和各区域用电，发到任务收件箱",
+  "fixture": "两台虚构电表，2026-10-10至2026-10-14累计采样；无去年采样",
+  "baseline": {
+    "latencyMs": 47402,
+    "conclusion": {
+      "proposalCreated": true,
+      "taskLabel": "每天9点上一天用电日报（含环比同比及各区域）",
+      "repeat": {
+        "frequency": "daily"
+      },
+      "proposedFirstAt": "2026-10-13T01:00:00.000Z",
+      "proposedFirstAtExpected": true,
+      "agent": {
+        "objective": "统计公司全部电表前一天的总用电、各区域（26楼北区/南区）用电构成，并生成上一天用电日报，包含环比与同比比较，结果发送到任务收件箱",
+        "output": "report",
+        "spec": {
+          "comparisons": [
+            "previousPeriod",
+            "yearOverYear"
+          ],
+          "period": {
+            "kind": "previous",
+            "unit": "day"
+          }
+        }
+      },
+      "readAgentSpec": {
+        "comparisons": [
+          "previousPeriod",
+          "yearOverYear"
+        ],
+        "period": {
+          "kind": "previous",
+          "unit": "day"
+        }
+      },
+      "specPeriodCorrect": true,
+      "comparisonsCorrect": true,
+      "areaRequirementRetained": true,
+      "noBlockedWrites": true,
+      "noListeningService": true
+    }
+  },
+  "candidate": {
+    "status": "passed",
+    "proposalLatencyMs": 29744,
+    "planVisibleAfterConfirmation": true,
+    "nextAtCorrect": true,
+    "virtualFirstOccurrenceVisible": true,
+    "occurrences": [
+      {
+        "date": "2026-10-13",
+        "due": "2026-10-13T01:00:01.000Z",
+        "taskId": "1cfd51be-0b1f-41ed-a336-64b17305dfa1",
+        "taskStatus": "partial",
+        "phaseStatus": "partial",
+        "reportId": "2f776735-e034-4eb6-85c5-37e8ec11ee72",
+        "reportStatus": "partial",
+        "reportRequirements": {
+          "span": {
+            "from": "2026-10-11T16:00:00.000Z",
+            "to": "2026-10-12T16:00:00.000Z"
+          },
+          "comparisons": [
+            {
+              "kind": "previousPeriod",
+              "span": {
+                "from": "2026-10-10T16:00:00.000Z",
+                "to": "2026-10-11T16:00:00.000Z"
+              }
+            },
+            {
+              "kind": "yearOverYear",
+              "span": {
+                "from": "2025-10-11T16:00:00.000Z",
+                "to": "2025-10-12T16:00:00.000Z"
+              }
+            }
+          ]
+        },
+        "total": {
+          "value": 17,
+          "unit": "度",
+          "yuan": 19.55,
+          "tariff": 1.15
+        },
+        "previousDiff": {
+          "value": -3,
+          "pct": -15,
+          "basis": "total",
+          "unit": "度"
+        },
+        "hasYearOverYearBlock": false,
+        "notificationCountForTask": 1,
+        "duplicateScanGenerations": [],
+        "valid": true,
+        "downloads": [
+          {
+            "format": "pdf",
+            "statusCode": 200,
+            "bytes": 84887,
+            "validPdf": true,
+            "validXlsx": false
+          },
+          {
+            "format": "xlsx",
+            "statusCode": 200,
+            "bytes": 10182,
+            "validPdf": false,
+            "validXlsx": true
+          }
+        ]
+      },
+      {
+        "date": "2026-10-14",
+        "due": "2026-10-14T01:00:01.000Z",
+        "taskId": "a526f523-45b9-46db-a710-f68270e040e6",
+        "taskStatus": "partial",
+        "phaseStatus": "partial",
+        "reportId": "716d3e71-7682-4800-b614-b7ed98f61e58",
+        "reportStatus": "partial",
+        "reportRequirements": {
+          "span": {
+            "from": "2026-10-12T16:00:00.000Z",
+            "to": "2026-10-13T16:00:00.000Z"
+          },
+          "comparisons": [
+            {
+              "kind": "previousPeriod",
+              "span": {
+                "from": "2026-10-11T16:00:00.000Z",
+                "to": "2026-10-12T16:00:00.000Z"
+              }
+            },
+            {
+              "kind": "yearOverYear",
+              "span": {
+                "from": "2025-10-12T16:00:00.000Z",
+                "to": "2025-10-13T16:00:00.000Z"
+              }
+            }
+          ]
+        },
+        "total": {
+          "value": 15,
+          "unit": "度",
+          "yuan": 17.25,
+          "tariff": 1.15
+        },
+        "previousDiff": {
+          "value": -2,
+          "pct": -11.8,
+          "basis": "total",
+          "unit": "度"
+        },
+        "hasYearOverYearBlock": false,
+        "notificationCountForTask": 1,
+        "duplicateScanGenerations": [],
+        "valid": true,
+        "downloads": [
+          {
+            "format": "pdf",
+            "statusCode": 200,
+            "bytes": 80959,
+            "validPdf": true,
+            "validXlsx": false
+          },
+          {
+            "format": "xlsx",
+            "statusCode": 200,
+            "bytes": 9992,
+            "validPdf": false,
+            "validXlsx": true
+          }
+        ]
+      }
+    ],
+    "oneNotificationPerOccurrenceAfterRestart": true,
+    "nextAtAfterSecond": "2026-10-15T01:00:00.000Z"
+  },
+  "retainedFailedProbe": {
+    "directory": "/private/tmp/company-daily-report-20261020-q3rGKz",
+    "cause": "探针误将缺同比阶段期待为completed；修正为partial，补第二天采样边界并按实际baseline字段读取比较结果，未修改产品完成判定"
+  },
+  "boundaries": {
+    "realModel": true,
+    "realCustomerGateway": false,
+    "realDeviceControl": false,
+    "productionDeployment": false,
+    "wechatNativeAcceptance": false,
+    "phoneAcceptance": false
+  },
+  "localEvidence": [
+    "/private/tmp/company-daily-report-20261020-X1gbPM",
+    "/private/tmp/company-daily-report-20261020-9z9FPT",
+    "/private/tmp/company-daily-report-validation-20261020"
+  ]
+}

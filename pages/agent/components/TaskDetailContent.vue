@@ -19,6 +19,11 @@
     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
      <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><text class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+     <template v-if="source === 'company' && phase.readAgent">
+      <text class="task-when">{{ phase.readAgent.objectiveText }}</text>
+      <text v-if="phase.readAgent.periodText" class="task-when">{{ phase.readAgent.periodText }}</text>
+      <text v-if="phase.readAgent.comparisonText" class="task-when">{{ phase.readAgent.comparisonText }}</text>
+     </template>
      <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" inline-playback read-only />
      <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
      <button v-if="phase.report" class="phase-report" :aria-label="`打开检查点报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">

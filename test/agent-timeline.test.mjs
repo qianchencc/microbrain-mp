@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
 import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
-import { readTargetText, taskDetailView, taskPlanSnapshot, targetText } from '../pages/agent/task-detail-view.mjs'
+import { readAgentView, readTargetText, taskDetailView, taskPlanSnapshot, targetText } from '../pages/agent/task-detail-view.mjs'
 import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/region-sample-tasks.mjs'
 
 test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 34px', () => {
@@ -196,6 +196,34 @@ test('Company 周期详情保留下一次安排的只读检查快照', () => {
  assert.equal(snapshot.report, null)
  assert.deepEqual(snapshot.phases, plan.phases)
  assert.equal(taskDetailView(snapshot).phases[0].devices[0].targetText, '读取最新能耗')
+})
+
+test('Company 日报计划在提案与任务详情视图中保留统计期间和比较项，调度时间仍按原阶段显示', () => {
+ const spec = { period: { kind: 'previous', unit: 'day' }, comparisons: ['previousPeriod', 'yearOverYear'] }
+ const agent = { objective: '生成昨日用电报告', output: 'report', spec }
+ const proposalRead = readAgentView(agent)
+ assert.equal(proposalRead.periodText, '统计期间 · 每次执行统计前一日（上海时间）')
+ assert.equal(proposalRead.comparisonText, '比较项 · 环比、同比')
+ assert.equal(readAgentView({ ...agent, spec: { period: { kind: 'absolute', from: '2026-10-11T00:00:00+08:00', to: '2026-10-12T00:00:00+08:00' }, comparisons: [] } }).periodText,
+  '统计期间 · 2026-10-11 00:00 至 2026-10-12 00:00（上海时间）')
+ const phase = { id: 'daily-report', at: '2026-10-12T01:00:00.000Z', status: 'pending',
+  read: { agent }, devices: [{ id: 'meter-1', kind: 'energy', name: '展示厅电表', target: { observe: true }, outcome: 'pending', details: {} }] }
+ const detail = taskDetailView({ id: 'daily-report-task', agentSource: 'company', label: '每日用电日报', status: 'scheduled',
+  createdAt: '2026-10-11T00:00:00.000Z', phases: [phase] })
+ assert.equal(detail.phases[0].time, '2026-10-12 09:00', '调度时间保持原阶段时间')
+ assert.deepEqual(detail.phases[0].readAgent.spec, spec, '详情视图保留原始 read.agent.spec')
+ assert.equal(detail.phases[0].readAgent.objectiveText, '检查点指令 · 生成昨日用电报告')
+ assert.equal(detail.phases[0].readAgent.periodText, '统计期间 · 每次执行统计前一日（上海时间）')
+ assert.equal(detail.phases[0].readAgent.comparisonText, '比较项 · 环比、同比')
+
+ const virtual = taskDetailView({ id: 'occurrence:plan-company-1:2026-10-12', agentSource: 'company', label: '每日用电日报',
+  status: 'scheduled', occurrence: { planId: 'plan-company-1', date: '2026-10-12', virtual: true }, phases: [phase] })
+ assert.equal(virtual.phases[0].readAgent.periodText, '统计期间 · 每次执行统计前一日（上海时间）', '未来安排使用接口返回的已核验 read.agent')
+
+ const revokedActual = taskDetailView({ id: 'actual-report-task', agentSource: 'company', label: '每日用电日报',
+  status: 'completed', occurrence: { planId: 'plan-company-1', date: '2026-10-12', virtual: false },
+  template: { phases: [{ read: { agent } }] }, phases: [{ ...phase, read: undefined }] })
+ assert.equal(revokedActual.phases[0].readAgent, null, '真实 Task 撤权后不能从计划模板恢复旧 read.agent')
 })
 
 
