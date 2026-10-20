@@ -1,6 +1,6 @@
 # 04 收口协调设计决议：目标接口与引用生命周期（2026-10-20）
 
-日期：2026-10-20。状态：**离线反例触发设计重开，暂停实施**，见[分阶段范围反例与待决问题](2026-10-20-company-closure-contract-probe.md)。下列目标接口仅为初稿提案，不是可实施决议；所有启用/退役步骤在待决问题 Q1 有结论前冻结。[票 04](../.scratch/agent-redesign/issues/04-real-closure-delivery.md) 保持 open，[票 05](../.scratch/agent-redesign/issues/05-complex-energy-investigation.md)/[票 06](../.scratch/agent-redesign/issues/06-safety-collaborative-investigation.md) 阻塞边不变，未通过真实网关只读、微信或现场控制验收。
+日期：2026-10-20。状态：**历史候选设计，已被工具体系探索取代**。离线反例（见[分阶段范围反例](2026-10-20-company-closure-contract-probe.md)）撤回了其中通用形态拒绝规则；原「待用户裁定 Q1」经更正改分类为内部设计问题，由[工具体系设计盘点](../docs/research/2026-10-20-agent-tool-system-design-audit.md)与[设计准备](2026-10-20-agent-tool-system-design-preparation.md)继续探索。下列目标接口仅为初稿提案，不是可实施决议，启用/退役步骤不激活；具体接口/schema/命名未定。[票 04](../.scratch/agent-redesign/issues/04-real-closure-delivery.md) 保持 open，[票 05](../.scratch/agent-redesign/issues/05-complex-energy-investigation.md)/[票 06](../.scratch/agent-redesign/issues/06-safety-collaborative-investigation.md) 阻塞边不变，未通过真实网关只读、微信或现场控制验收。
 
 ## 证据基线（2026-10-20 源码检查）
 
@@ -18,7 +18,7 @@
 
 ## 目标接口决议
 
-下表是初稿目标状态，非实现声明。**注意：在[待决问题 Q1](2026-10-20-company-closure-contract-probe.md) 由用户裁定前，表中全部启用/退役步骤暂停，任何一行都不视为已完成或可执行。**
+下表是初稿目标状态，非实现声明，属历史候选。**注意：启用/退役步骤不激活，任何一行都不视为已完成或可执行；具体接口取舍改按[工具体系设计盘点](../docs/research/2026-10-20-agent-tool-system-design-audit.md)与[设计准备](2026-10-20-agent-tool-system-design-preparation.md)的候选设计推进。**
 
 | 入口/能力 | 目标去向 | 说明 |
 | --- | --- | --- |
@@ -82,7 +82,7 @@ Pi 与服务端职责不变：TaskProposal/Task/Phase 结构、确认流程、�
 
 ## 下一步切片（窄，先决条件已插入）
 
-0. **先由用户裁定[待决问题 Q1](2026-10-20-company-closure-contract-probe.md)**（阶段目标接口扩大范围 vs 窄共享范围切片），随后按结论重新设计确切 schema/接口，再进入 TDD；不得把已撤回的形态拒绝规则或相应测试当作当前方向继续推进。
+0. 原列「先由用户裁定 Q1（阶段目标接口扩大范围 vs 窄共享范围切片）」为历史步骤：该问题已改分类为内部设计问题，确切 schema/接口按[工具体系设计准备](2026-10-20-agent-tool-system-design-preparation.md)的候选设计确定后再进入 TDD；不得把已撤回的形态拒绝规则或相应测试当作当前方向继续推进。
 1. 在隔离 worktree 从已记录的 Runtime 提交 HEAD 实施接口替换，保留并行位置改动，不盲目拷贝未提交工作。
 2. 只新增最小 HTTP 公共回归，覆盖：分支混合字段无预检/无提案/无控制；合法收口单计划含完整夹具成员与排除；**各阶段范围/排除不同或用户明确选定设备集合的通用提案保持精确成员，不被合并入共享范围，也不被形态规则误拒**（替代原先「同形态通用收口无法落成弱任务」用例，该用例随撤回规则失效）；空调温度/开启/区间/周期/只读与 Office 正常；重启后续接/改时与已确认任务不重建；旧历史正常恢复。现有相关套件：company-batch-plan、company-closure-clarification、company-night-closure-execution、mixed-scope-draft、scheduled-lighting-scope、task-plan-management。断言业务结果与零外部写入，不断言工具清单、提示词字符串或内部调用顺序。
 3. 继承六类复杂输入各不少于 2 次只读样本：跨楼层/排除、口语同义、真实歧义、待确认改时、已登记任务查询/修改、无效范围/新目标。保留全部尝试、确切候选 SHA、目录证据/成员 ID/读取时刻、所选路由、提案或澄清/失败及时间/token/请求证据，输入冻结可比。无同范围配对基线不宣称提速；共享提案预检计时按一批计，不重复求和。HTTP/流式事实为主，Langfuse 仅作既有锁定插桩的可选辅助，不升级不建数据集。

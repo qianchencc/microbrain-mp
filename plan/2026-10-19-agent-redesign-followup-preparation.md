@@ -19,11 +19,11 @@
 
 | 票 | 交付 | 真正依赖 | 当前状态 |
 | --- | --- | --- | --- |
-| [04 协调设计与真实收口](../.scratch/agent-redesign/issues/04-real-closure-delivery.md) | Pi/业务模块职责、工具及上下文取舍，原业务自然表达、效率与结果验证 | 01–03 源码已满足；发布和现场控制另需当时明确授权 | 2026-10-20 初稿接口提案已记录；同日反例触发设计重开，实施暂停待用户裁定（见下） |
+| [04 协调设计与真实收口](../.scratch/agent-redesign/issues/04-real-closure-delivery.md) | Pi/业务模块职责、工具及上下文取舍，原业务自然表达、效率与结果验证 | 01–03 源码已满足；发布和现场控制另需当时明确授权 | 2026-10-20 初稿接口提案+反例记录；工具体系设计探索进行中（见下），生产替换未就绪 |
 | [05 能耗调查](../.scratch/agent-redesign/issues/05-complex-energy-investigation.md) | 统计/对比/调查的接口设计，多表多周下钻、依据与追问 | 04 的协调设计决议、只读路径/版本基线结论 | 规格就绪，尚未实施 |
 | [06 告警排查](../.scratch/agent-redesign/issues/06-safety-collaborative-investigation.md) | 记录/聚合/建议/查证的业务关系与引用设计，复杂台账到选定监控 | 同上；与 05 无硬依赖 | 规格就绪，顺序排在 05 后 |
 
-2026-10-20：04 的初稿目标接口与引用生命周期提案记录于[收口协调设计](2026-10-20-company-closure-coordination-design.md)；同日[分阶段范围反例与待决问题](2026-10-20-company-closure-contract-probe.md)撤回通用形态拒绝规则，实施暂停，待用户裁定待决问题 Q1。来源与位置共用口径收入[后续规格](../.scratch/agent-redesign/followup-spec.md)「来源与位置口径（共用）」并保持有效。05/06 仍等待 04 协调实现与候选版本/只读路径结论，不因文档记录放行。
+2026-10-20：04 的初稿目标接口与引用生命周期提案记录于[收口协调设计](2026-10-20-company-closure-coordination-design.md)；同日[分阶段范围反例](2026-10-20-company-closure-contract-probe.md)撤回通用形态拒绝规则。原「待用户裁定」的 Q1 已改分类为内部设计问题；应用户要求完成整个工具体系的离线盘点与设计准备，见[设计盘点](../docs/research/2026-10-20-agent-tool-system-design-audit.md)与[设计准备](2026-10-20-agent-tool-system-design-preparation.md)，04 按该议程继续，具体接口未批准未实施。来源与位置共用口径收入[后续规格](../.scratch/agent-redesign/followup-spec.md)「来源与位置口径（共用）」并保持有效。05/06 仍等待 04 协调实现与候选版本/只读路径结论，不因文档记录放行。
 
 04 的设计决议和只读结论形成后，05/06 不等待照明上游新增权威反馈。04 整票及原票 02 的真实控制/结果缺口仍保留，不用新业务的进度冲掉旧缺口。一次只实施一票，不同时修改 Pi 协调入口。
 

@@ -1,6 +1,6 @@
 # 项目文档入口
 
-- 2026-10-20 Agent 重设计票 04 接口收敛初稿因分阶段范围反例重开：动作形态等价不证明业务范围等价，通用形态拒绝规则已撤回；是否把服务端准备提升为 Task/Phase 阶段目标接口待用户裁定，实施暂停、未部署，04 保持 open，05/06 阻塞边不变。见[反例与待决问题](../plan/2026-10-20-company-closure-contract-probe.md)与[初稿设计](../plan/2026-10-20-company-closure-coordination-design.md)。
+- 2026-10-20 应用户要求完成 Agent 工具体系离线设计盘点与准备：五类业务+答复协议分类、22 个活动工具契约/重叠、候选策略（建议深化业务接口）与各票验证议程；均为探索文档，未实施未批准具体 schema。04 初稿收口设计同日被分阶段范围反例撤回形态拒绝规则、降为历史候选；04 恢复 ready-for-agent 设计探索，05/06 阻塞边不变。见[设计盘点](research/2026-10-20-agent-tool-system-design-audit.md)、[设计准备](../plan/2026-10-20-agent-tool-system-design-preparation.md)、[反例记录](../plan/2026-10-20-company-closure-contract-probe.md)与[初稿设计](../plan/2026-10-20-company-closure-coordination-design.md)。
 
 - 2026-10-19 已认可C任务日历落入生产源码：Company首页选日，日程／周期计划／收件箱共用任务结果；完整名称及确认后刷新同步修复。测试与正式构建、部署边界见[生产实现交接](../plan/2026-10-19-task-calendar-production.md)。
 
