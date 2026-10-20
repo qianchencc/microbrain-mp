@@ -2,15 +2,17 @@
  <view class="task-calendar">
   <RegionCalendar :date="selected" :today="today" :max-date="maxDate" :marks="marks" :compact="compact" @select="selectDate" @month-change="changeMonth" />
   <view class="date-summary"><text>{{ selected === today ? '今天' : selected }} · 任务</text><text>{{ loading && !loaded ? '正在读取' : loaded ? `${dayTasks.length} 项` : '' }}</text></view>
-  <view v-if="error && !loaded" class="calendar-state"><text>{{ error }}</text><button @tap="load">重试</button></view>
-  <view v-else-if="!loaded" class="calendar-state">正在读取日程…</view>
-  <view v-else-if="!dayTasks.length" class="calendar-state">这一天暂无任务</view>
+  <view v-if="!loaded && !error" class="calendar-state">正在读取日程…</view>
+  <view v-else-if="loaded && !error && !dayTasks.length" class="calendar-state">这一天暂无任务</view>
   <button v-for="task in visibleTasks" :key="task.taskId || task.id" class="calendar-task" @tap="$emit('select-task', task)">
    <view class="task-clock"><text>{{ clock(task) }}</text><text v-if="task.occurrence || task.repeat" class="repeat-tag">周期</text></view>
    <view class="task-copy"><text class="task-name">{{ task.label || '设备任务' }}</text><text class="task-state" :class="{ abnormal: taskAbnormal(task), executing: task.status === 'executing' }">{{ taskLabel(task.status) }}</text></view>
    <uni-icons type="right" size="12" color="#8a9c90" />
   </button>
-  <view v-if="error && loaded" class="calendar-state"><text>{{ error }}</text><button @tap="load">重试</button></view>
+  <view v-if="error" class="calendar-error" role="status">
+   <text>{{ loaded ? '任务暂未更新' : '任务暂未加载' }}</text>
+   <view class="error-actions"><button class="error-detail" @tap="showError">查看原因</button><button class="error-retry" @tap="load">重试</button></view>
+  </view>
   <button v-if="compact && loaded && dayTasks.length > 2" class="all-tasks" @tap="$emit('open-date', selected)">全部 {{ dayTasks.length }} 项 <uni-icons type="right" size="11" color="#176b54" /></button>
  </view>
 </template>
@@ -35,6 +37,7 @@ let generation = 0, timer = 0, visible = true, loadedScope = ''
 function clock(task) { return taskDayTime(task, selected.value) }
 function selectDate(date) { selected.value = date; emit('date-change', date) }
 function changeMonth(value) { if (month.value !== value) month.value = value }
+function showError() { uni.showModal({ title: '任务加载失败', content: error.value, showCancel: false, confirmText: '知道了' }) }
 function stop() { ++generation; clearTimeout(timer); loading.value = false }
 async function load() {
  if (!props.active || !visible) return
@@ -82,7 +85,11 @@ button::after { border:0; }
 .task-calendar { flex-shrink:0; }
 .date-summary { padding:10px 16px; display:flex; justify-content:space-between; color:#7b8d80; font-size:11px; border-top:1px solid #e4eae4; }
 .calendar-state { padding:22px 16px; color:#859389; font-size:12px; text-align:center; }
-.calendar-state button { color:#176b54; margin:10px auto 0; font-size:12px; }
+.calendar-error { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#7b8d80; font-size:12px; }
+.error-actions { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.error-actions button { display:flex; align-items:center; justify-content:center; min-height:32px; padding:4px; font-size:12px; }
+.error-detail { color:#7b8d80; }.error-retry { color:#176b54; }
+.error-actions button:active { opacity:.65; }
 .calendar-task { width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; text-align:left; border-top:1px solid #e8ede8; }
 .task-clock { width:58px; flex-shrink:0; align-self:flex-start; font-size:11px; color:#466350; display:flex; flex-direction:column; gap:5px; }
 .repeat-tag { color:#8b9c90; font-size:10px; }

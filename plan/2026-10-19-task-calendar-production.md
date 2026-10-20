@@ -29,3 +29,17 @@
 正式编译须以 `/Applications/HBuilderX.app/Contents/HBuilderX/plugins/uniapp-cli-vite` 为工作目录，使用同安装目录 `plugins/node/node`（系统Node与编译器缓存字节码不兼容）。设置UNI_INPUT_DIR为客户MP绝对路径、UNI_OUTPUT_DIR为上述build产物目录、UNI_CLI_CONTEXT为该编译器目录、UNI_HBUILDERX_PLUGINS为plugins目录，再运行 `node_modules/@dcloudio/vite-plugin-uni/bin/uni.js build -p mp-weixin --config vite.config.js`。离开编译器目录直接运行会导致Vue解析路径错误。
 
 双轴审查：Standards与Spec均已复核修复，无剩余阻塞。构建未上传微信；后端完整名称仍等待远端部署，不能把本地编译声明为线上验收。
+
+## 2026-10-20 日历读取失败的展示修正
+
+| Before | After | Why |
+| --- | --- | --- |
+| 原始设备范围错误和请求编号占据日历正文 | 紧凑提示“任务暂未加载/更新”，附重试与查看原因 | 区分日程读取失败和任务执行失败，完整诊断仍可查阅 |
+
+`TaskCalendarView` 复用现有系统弹窗展示完整原始原因及编号；成功读取到空数组才展示空日程。沿用同身份快照与身份变化清理规则，不修改请求、授权或自动刷新策略。
+
+验证：Agent 测试123/123；HBuilderX微信开发编译成功；真实Vue组件的隔离浏览器夹具覆盖首次失败、完整原因、重试成功空日程、刷新失败保留任务、身份切换清理，并检查320/355/390px宽度无横向溢出。证据在 `/private/tmp/task-calendar-error-ui/evidence.json`，测试/构建日志为 `/private/tmp/task-calendar-error-tests.log` 与 `/private/tmp/task-calendar-error-build.log`。
+
+本次仅修正展示，截图中的上游超时原因未因此解决；系统弹窗为浏览器夹具捕获调用参数，微信真机点击验收仍待完成。未修改Runtime或执行设备控制。浏览器任务与临时服务已关闭。
+
+后续技能：diagnosing-bugs（如继续排查接口超时）、ego-browser（界面复验）。
