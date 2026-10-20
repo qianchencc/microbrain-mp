@@ -103,3 +103,5 @@
 - 能耗详情选日（2026-10-20）：同身份重开保留选日，历史空数据不改选今天；“现在”允许上海今天，今日至今只用comparison.currentDay及同窗对比。历史合并不覆盖最新比较上下文，迟到请求不重定位新选日；truncated缺数显示读取失败并允许重新请求，不能冒充普通无数据。见 `../../plan/2026-10-20-meter-history-navigation-fix.md`。
 
 - 首页缓存（2026-10-20）：Company概览、目录、逐日与期间统计使用apis/agent/company-read-cache.mjs同身份内存缓存，60秒内复用并合并在途，最多40项；过期快照最多保留5分钟作后台刷新占位。刷新按钮强制绕过，换Token/园区、401/403或确认/取消控制与任务时清理；失败/截断结果不延长有效期。月度对比隐藏时保留同身份快照，重新展示不清空闪烁。任务日历仍按执行中5秒/其他30秒刷新，短时返回复用该有效期；关闭任务抽屉不算业务变更。见 `../../plan/2026-10-20-company-overview-cache-handoff.md`。
+
+- 报告图表 SVG 必须同时声明与 viewBox 一致的数值 width/height；仅 viewBox 搭配 preserveAspectRatio="none" 会使图片固有尺寸退回 300×150，widthFix 下文字和条形被压扁。修复记录见 `../../plan/2026-10-20-report-chart-aspect-ratio-fix.md`。
