@@ -1,9 +1,10 @@
 <template>
  <view class="monthly">
-  <view class="month-head"><text>{{ view.title }}</text><text class="cutoff">{{ view.current.through ? '采样截至' : '统计截至' }} {{ view.cutoff }}</text></view>
+  <view class="month-head"><text>{{ view.title }}</text><text v-if="view.cutoff" class="cutoff">{{ view.current.through ? '采样截至' : '统计截至' }} {{ view.cutoff }}</text></view>
   <view v-if="view.current.pending" class="skeleton hero-skeleton" />
   <text v-else class="hero">{{ monthlyNumber(view.current.value) }}<text class="unit"> 度</text></text>
   <text class="window">{{ view.current.label }} · 全部授权电表合计</text>
+  <text class="window">每月 1 日 08:00 起算 · 每日 08:00 / 20:00 更新</text>
   <text v-if="view.current.note && !view.current.pending" class="data-note">{{ view.current.note }}</text>
   <view class="comparisons">
    <view v-for="pair in view.pairs" :key="pair.key" class="compare" :class="pair.direction">

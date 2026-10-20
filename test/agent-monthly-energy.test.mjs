@@ -10,14 +10,14 @@ const report = (span, value, ids = ['a','b']) => ({
 const put = (states, span, value) => { states[span.from + '/' + span.to] = value }
 async function load(windows, request) { const states = {}; await readMonthlyEnergy(windows, request, (key, value) => { states[key] = value }); return states }
 
-test('10月25日按自然月同日同刻对比9月及去年10月，本月只读取一次', async () => {
+test('每月1日08:00起算，白天截止已到达的08:00采样，三期同日同刻且本月只读取一次', async () => {
  const windows = monthlyEnergyWindows(now()), calls = []
  const states = await load(windows, async query => { calls.push(query); return report({ from: query.from, to: query.to }, 10) })
  assert.equal(calls.length, 3)
  assert.deepEqual(calls.map(q => [q.from,q.to]), [
-  ['2026-10-01T00:00:00.000+08:00','2026-10-25T18:00:00.000+08:00'],
-  ['2026-09-01T00:00:00.000+08:00','2026-09-25T18:00:00.000+08:00'],
-  ['2025-10-01T00:00:00.000+08:00','2025-10-25T18:00:00.000+08:00']])
+  ['2026-10-01T08:00:00.000+08:00','2026-10-25T08:00:00.000+08:00'],
+  ['2026-09-01T08:00:00.000+08:00','2026-09-25T08:00:00.000+08:00'],
+  ['2025-10-01T08:00:00.000+08:00','2025-10-25T08:00:00.000+08:00']])
  assert.ok(calls.every(q => q.kind === 'statistics' && q.scopeLevel === 'all' && q.grain === 'month'))
  const view = monthlyEnergyView(windows, states)
  assert.equal(view.current.value, 10)
@@ -111,13 +111,13 @@ test('UTC时间戳按上海日期核对，合法同日采样不被误判为前�
  })
  const view=monthlyEnergyView(windows,states)
  assert.equal(view.pairs[0].pct,'0%')
- assert.equal(view.cutoff,'2026.10.25 00:30')
+ assert.equal(view.cutoff,'2026.10.24 20:00')
 })
 
-test('同日08:00不能冒充18:00完整覆盖；当天最新采样可作为三期共同截止时刻', async () => {
- const windows=monthlyEnergyWindows(now()),states=await load(windows,async q=>{
+test('未对齐请求的采样仍为部分覆盖；实际最新采样作为三期共同截止时刻', async () => {
+ const windows=monthlyEnergyWindows(new Date('2026-10-25T21:00:00+08:00')),states=await load(windows,async q=>{
   const r=report(q,100)
-  const earlier=q.to.replace('18:00','08:00')
+  const earlier=q.to.replace('20:00','08:00')
   for(const meter of r.meters)meter.observed.toSample.readTime=earlier
   r.params.span.observed.to=earlier
   return r
@@ -132,6 +132,52 @@ test('同日08:00不能冒充18:00完整覆盖；当天最新采样可作为三�
  const good=monthlyEnergyView(sampled,await load(sampled,async q=>report(q,100)))
  assert.equal(good.pairs[0].pct,'0%')
  assert.equal(good.title,'本月总用电')
- assert.equal(monthlyEnergyWindows(now(),'2026-10-10T08:00:00+08:00').current.to,windows.current.to)
- assert.equal(monthlyEnergyWindows(now(),'2026-10-25T20:00:00+08:00').current.to,windows.current.to)
+ assert.equal(monthlyEnergyWindows(now(),'2026-10-10T08:00:00+08:00').current.to,sampled.current.to)
+ assert.equal(monthlyEnergyWindows(now(),'2026-10-25T20:00:00+08:00').current.to,sampled.current.to)
+})
+
+
+test('08:00与20:00之间不请求不存在的任意时刻，凌晨沿用前晚20:00', async () => {
+ for (const [clock, cutoff] of [
+  ['2026-10-20T07:59:59+08:00', '2026-10-19T20:00:00.000+08:00'],
+  ['2026-10-20T08:00:00+08:00', '2026-10-20T08:00:00.000+08:00'],
+  ['2026-10-20T13:45:00+08:00', '2026-10-20T08:00:00.000+08:00'],
+  ['2026-10-20T19:59:59+08:00', '2026-10-20T08:00:00.000+08:00'],
+  ['2026-10-20T20:00:00+08:00', '2026-10-20T20:00:00.000+08:00'],
+  ['2026-10-21T03:00:00+08:00', '2026-10-20T20:00:00.000+08:00']
+ ]) {
+  const windows=monthlyEnergyWindows(new Date(clock))
+  assert.equal(windows.current.from,'2026-10-01T08:00:00.000+08:00')
+  assert.equal(windows.current.to,cutoff)
+  const view=monthlyEnergyView(windows,await load(windows,async q=>report(q,100)))
+  assert.equal(view.current.complete,true)
+  assert.equal(view.current.note,'')
+  assert.equal(view.pairs[0].pct,'0%')
+  assert.equal(view.pairs[1].pct,'0%')
+ }
+})
+
+test('凌晨接受前晚实际采样，交接时允许上一采样周期，停更多天或非采样时刻不缩短本月', () => {
+ const early=new Date('2026-10-21T06:00:00+08:00')
+ assert.equal(monthlyEnergyWindows(early,'2026-10-20T20:00:00+08:00').current.to,'2026-10-20T20:00:00.000+08:00')
+ const evening=new Date('2026-10-20T20:10:00+08:00')
+ assert.equal(monthlyEnergyWindows(evening,'2026-10-20T08:00:00+08:00').current.to,'2026-10-20T08:00:00.000+08:00')
+ for(const stale of ['2026-10-18T20:00:00+08:00','2026-10-20T17:00:00+08:00']) {
+  assert.equal(monthlyEnergyWindows(evening,stale).current.to,'2026-10-20T20:00:00.000+08:00')
+ }
+})
+
+test('月初08:00前不显示上个月数据或异常重试，08:00本身也不请求零时长区间', async () => {
+ for(const clock of ['2026-10-01T06:00:00+08:00','2026-10-01T08:00:00+08:00']) {
+  const windows=monthlyEnergyWindows(new Date(clock),'2026-09-30T20:00:00+08:00')
+  let calls=0
+  const states=await load(windows,async()=>{ calls++ })
+  const view=monthlyEnergyView(windows,states)
+  assert.equal(windows.current.from,'2026-10-01T08:00:00.000+08:00')
+  assert.equal(calls,0)
+  assert.equal(view.current.pending,false)
+  assert.equal(view.current.value,null)
+  assert.equal(view.current.note,'本月用电待首个采样区间完成')
+  assert.ok(Object.values(states).every(state=>!state.error))
+ }
 })
