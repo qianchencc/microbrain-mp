@@ -6,7 +6,7 @@
     <view class="calrow">
      <button v-if="!bounded || selected" class="calchip" @tap="calOpen = !calOpen"><uni-icons type="calendar" size="13" color="#37513f" /><text>{{ labelOf(selected) }}</text><uni-icons :type="calOpen ? 'up' : 'down'" size="11" color="#71877a" /></button>
     </view>
-    <RegionCalendar v-if="calOpen && selected && (!bounded || bounds)" class="ecal" :date="selected" :today="today" :min-date="bounded ? bounds?.min : undefined" :max-date="bounded ? (bounds?.max || today) : (latestCompleteDay || today)" compact @select="onCalendar" />
+    <RegionCalendar v-if="calOpen && selected && (!bounded || bounds)" class="ecal" :date="selected" :today="today" :min-date="bounded ? bounds?.min : undefined" :max-date="bounded ? (bounds?.max || today) : today" compact @select="onCalendar" />
     <view class="esec"><text>每日用电</text><text v-if="basisNote">{{ basisNote }}</text></view>
     <CompanyEnergyStrip ref="stripRef" :days="strip" :selected="selected" @select="onSelectDay" @reach-left="loadOlder" />
     <view v-if="loading" class="estate-msg"><text>正在读取逐日能耗…</text></view>
@@ -20,7 +20,7 @@
       <text class="enum">{{ selectedDay?.usage == null ? '—' : selectedDay.usage }}<text class="u">{{ unit ? ' ' + unit : '' }}</text></text>
       <text v-if="boundedEmpty" class="edelta">所选统计期间无可计算用电</text>
       <text v-if="selectedDay?.usage != null" class="edelta">较前一日 <text class="b">{{ pctText(dod) }}</text>　较上周同日 <text class="b">{{ pctText(wow) }}</text></text>
-      <text v-if="selectedDay && todayInBounds && (selectedDay.elapsedUsage != null || todayUsage != null)" class="edelta">当日同时段 {{ fmtUsage(selectedDay.elapsedUsage, unit) }} · 今日至今 {{ fmtUsage(todayUsage, unit) }}<text v-if="vsToday != null">　今日较当日同时段 <text class="b">{{ pctText(vsToday) }}</text></text></text>
+      <text v-if="selectedDay && selected !== today && todayInBounds && (selectedDay.elapsedUsage != null || todayUsage != null)" class="edelta">当日同时段 {{ fmtUsage(selectedDay.elapsedUsage, unit) }} · 今日至今 {{ fmtUsage(todayUsage, unit) }}<text v-if="vsToday != null">　今日较当日同时段 <text class="b">{{ pctText(vsToday) }}</text></text></text>
      </template>
     </view>
     <view class="esec"><text>当日构成</text></view>
@@ -98,9 +98,14 @@ const usageOf = date => {
  return strip.value.find(d => d.date === date)?.usage
 }
 const selectedUsage = computed(() => props.bounded ? (selectedDay.value?.complete ? selectedDay.value.usage : null) : selectedDay.value?.usage)
-const dod = computed(() => comparePct(selectedUsage.value, usageOf(shiftDate(selected.value, -1))))
-const wow = computed(() => comparePct(selectedUsage.value, usageOf(shiftDate(selected.value, -7))))
-const labelOf = date => props.bounded ? (date ? `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日` : '') : dayLabel(date, latestCompleteDay.value)
+const dod = computed(() => comparePct(selectedUsage.value, !props.bounded && selected.value === today ? report.value?.comparison?.previousDay?.usage : usageOf(shiftDate(selected.value, -1))))
+const wow = computed(() => comparePct(selectedUsage.value, !props.bounded && selected.value === today ? report.value?.comparison?.lastWeekSameDay?.usage : usageOf(shiftDate(selected.value, -7))))
+const labelOf = date => {
+ if (!date) return ''
+ const year = date.slice(0, 4) === today.slice(0, 4) ? '' : `${date.slice(0, 4)}年`
+ if (props.bounded) return `${year}${Number(date.slice(5, 7))}月${Number(date.slice(8))}日`
+ return year + (date === today ? `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日 · 今日至今` : dayLabel(date, latestCompleteDay.value))
+}
 const todayInBounds = computed(() => !props.bounded || Boolean(bounds.value && today >= bounds.value.min && today <= bounds.value.max))
 const boundedEmpty = computed(() => Boolean(props.bounded && report.value && bounds.value && !loading.value && !strip.value.some(d => d.pending || d.usage != null)))
 // 与今日对比的公平口径：所选日只取与“今日至今”相同的 elapsed 窗口（08:00 → 当前时刻），
@@ -123,6 +128,7 @@ const footnote = computed(() => {
  }
  const parts = [`数据截至 ${fmtDateTime(latestSampleTime.value)}`]
  if (report.value.truncated) parts.push('读取窗口被截断')
+ else if (strip.value.some(day => day.failed)) parts.push('部分日期读取未完成')
  parts.push(report.value.basis?.cycle || '')
  if (report.value.aggregation?.note) parts.push(report.value.aggregation.note)
  return parts.filter(Boolean).join(' · ')
@@ -143,9 +149,23 @@ function mergeReport(next, replace = true) {
   report.value = { ...report.value, meters }
  }
  strip.value = mergeStripDays(strip.value, next.days || [])
+ if (next.truncated) {
+  const missing = new Set((next.days || []).filter(day => day.usage == null).map(day => day.date))
+  strip.value = strip.value.map(day => missing.has(day.date) ? { ...day, failed: true } : day)
+ }
+ const currentDay = !props.bounded && replace && next.comparison?.currentDay?.date === today ? next.comparison.currentDay : null
+ if (!props.bounded && replace) {
+  // 今天尚未形成完整采样日，独立使用今日至今；不能把“现在”禁用或补成零用电。
+  strip.value = mergeStripDays(strip.value, [{ date: today, usage: currentDay?.usage ?? null, complete: false,
+   coveredMeters: currentDay?.coveredMeters ?? 0, expectedMeters: currentDay?.expectedMeters ?? 0 }])
+ }
  const md = { ...meterDaily.value }
  ;(next.meters || []).forEach(meter => {
   md[meter.id] = { id: meter.id, name: meter.name, location: meter.location, daily: { ...(md[meter.id]?.daily || {}), ...(meter.daily || {}) } }
+  if (!props.bounded && replace) {
+   const usage = currentDay?.meterUsage?.[meter.id] ?? null
+   md[meter.id].daily[today] = { usage, status: usage == null ? 'not_computable' : 'comparable' }
+  }
  })
  meterDaily.value = md
 }
@@ -155,16 +175,19 @@ async function fetchWindow(end) {
 }
 async function init() {
  const current = ++requestId
- const scope = getAgentStorageScope()
+ const requestScope = getAgentStorageScope()
+ if (scope.value !== requestScope) selected.value = ''
+ scope.value = requestScope
  loading.value = true; error.value = ''
  try {
   if (props.bounded) { await initBounded(current); return }
   const next = await fetchWindow()
-  if (current !== requestId || !props.active || scope !== getAgentStorageScope()) return
+  if (current !== requestId || !props.active || requestScope !== getAgentStorageScope()) return
   strip.value = []; meterDaily.value = {}
   mergeReport(next)
-  selected.value = props.focusDate || latestCompleteDay.value || next.days?.at(-1)?.date || today
-  if (props.focusDate) await ensureDateLoaded(props.focusDate)
+  selected.value = selected.value || props.focusDate || latestCompleteDay.value || next.days?.at(-1)?.date || today
+  await ensureDateLoaded(selected.value)
+  nextTick(() => stripRef.value?.centerOn(selected.value))
  } catch (cause) {
   if (current === requestId) error.value = cause?.data?.message || cause.message || '逐日能耗暂不可用'
  } finally { if (current === requestId) loading.value = false }
@@ -267,6 +290,12 @@ function resumeBounded() {
  void init()
 }
 function retrySelected() {
+ if (!props.bounded) {
+  const date = selected.value
+  strip.value = strip.value.map(day => day.date === date ? { ...day, failed: false, pending: true } : day)
+  ensureDateLoaded(date, true).then(() => { if (selected.value === date && props.active) stripRef.value?.centerOn(date) })
+  return
+ }
  if (!props.bounded || !bounds.value || !selected.value || !boundedJob) return
  const end = boundedChunkEnd(selected.value), from = boundedChunkFrom(end)
  strip.value = strip.value.map(d => d.failed && d.date >= from && d.date <= end ? { ...d, failed: false, pending: true } : d)
@@ -281,14 +310,14 @@ async function loadOlder(firstDate) {
   const next = await fetchWindow(shiftDate(firstDate, -1))
   if (current !== requestId || scope.value !== getAgentStorageScope()) return
   const before = strip.value.length
-  mergeReport(next)
+  mergeReport(next, false)
   const added = strip.value.length - before
   if (added) stripRef.value?.didPrepend(added)
  } catch { /* 旧的窗口读取失败不破坏当前视图 */ } finally { if (current === requestId) loading.value = false }
 }
 const scope = ref('')
-async function ensureDateLoaded(date) {
- if (props.bounded || strip.value.some(d => d.date === date)) return
+async function ensureDateLoaded(date, retry = false) {
+ if (props.bounded || (!retry && strip.value.some(d => d.date === date))) return
  const edge = latestCompleteDay.value || today
  const end = shiftDate(date, 15) > edge ? edge : shiftDate(date, 15)
  const current = ++requestId
@@ -296,13 +325,13 @@ async function ensureDateLoaded(date) {
   const next = await fetchWindow(end)
   if (current !== requestId) return
   const firstBefore = strip.value[0]?.date
-  mergeReport(next)
+  mergeReport(next, false)
   // 新窗口在现有条带左侧拼接时做位移补偿，随后由调用方 centerOn 选中日。
   if (firstBefore && strip.value[0]?.date < firstBefore) {
    const added = strip.value.findIndex(d => d.date === firstBefore)
    if (added > 0) stripRef.value?.didPrepend(added)
   }
- } catch { /* 日期窗口读取失败，条上保持缺省 */ }
+ } catch { /* 日期窗口读取失败，条上保持缺省 */ } finally { if (current === requestId) loading.value = false }
 }
 function onSelectDay(date) {
  if (props.bounded) { selectBounded(date); return }
@@ -312,10 +341,10 @@ function onCalendar(date) {
  calOpen.value = false
  if (props.bounded) { selectBounded(date); return }
  selected.value = date
- ensureDateLoaded(date).then(() => stripRef.value?.centerOn(date))
+ ensureDateLoaded(date).then(() => { if (selected.value === date && props.active) stripRef.value?.centerOn(date) })
 }
 watch([() => props.active, () => props.initialQuery], ([active]) => {
- if (!props.bounded) { if (active) { scope.value = getAgentStorageScope(); init() } return }
+ if (!props.bounded) { if (active) init(); return }
  if (active && sheetVisible) { void init(); return }
  requestId++; boundedJob = null; loading.value = false
  if (active) clearBoundedData()
@@ -324,9 +353,10 @@ onHide(() => { if (props.bounded) { sheetVisible = false; requestId++; boundedJo
 onShow(() => { if (!props.bounded) return; sheetVisible = true; resumeBounded() })
 onBeforeUnmount(() => { if (props.bounded) { requestId++; boundedJob = null } })
 watch(() => props.focusDate, date => {
+ if (date && !props.bounded) selected.value = date
  if (!date || !props.active) return
  if (props.bounded) { selectBounded(date); return }
- selected.value = date; ensureDateLoaded(date).then(() => stripRef.value?.centerOn(date))
+ selected.value = date; ensureDateLoaded(date).then(() => { if (selected.value === date && props.active) stripRef.value?.centerOn(date) })
 })
 </script>
 <style scoped>
