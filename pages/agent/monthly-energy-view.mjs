@@ -33,14 +33,27 @@ export function monthlyEnergyWindows(now = new Date(), sampleTime = '') {
  return { current, pairs }
 }
 
-export async function readMonthlyEnergy(windows, request, publish) {
+export async function readMonthlyEnergy(windows, request, publish, options = {}) {
+ const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)))
+ const now = options.now ?? (() => Date.now())
+ const deadlineMs = options.deadlineMs ?? 120_000
  const spans = [windows.current, ...windows.pairs.flatMap(pair => [pair.current, pair.baseline])]
  const unique = [...new Map(spans.map(span => [span.from + '/' + span.to, span])).values()]
  await Promise.all(unique.map(async span => {
   const key = span.from + '/' + span.to
   // 月初 08:00 尚无用电区间，属于等待采样，不是请求错误。
   if (Date.parse(span.to) <= Date.parse(span.from)) { publish(key, { waiting: true }); return }
-  try { publish(key, { report: await request({ kind: 'statistics', scopeLevel: 'all', from: span.from, to: span.to, grain: 'month' }) }) }
+  try {
+   let report = await request({ kind: 'statistics', scopeLevel: 'all', from: span.from, to: span.to, grain: 'month' })
+   const deadline = now() + deadlineMs
+   while (report?.status === 'preparing' && now() < deadline) {
+    publish(key, { preparing: true, message: report.message || '数据准备中' })
+    await sleep(report.retryAfterMs ?? 2000)
+    report = await request({ kind: 'statistics', scopeLevel: 'all', from: span.from, to: span.to, grain: 'month' })
+   }
+   if (report?.status === 'preparing') publish(key, { error: report.message || '数据准备中，请稍后重试' })
+   else publish(key, { report })
+  }
   catch (error) { publish(key, { error: error.message || '月度统计读取失败', denied: [401, 403].includes(error.statusCode ?? error.status) || ['UNAUTHORIZED', 'FORBIDDEN'].includes(error.data?.code) }) }
  }))
 }
@@ -55,9 +68,9 @@ function periodView(span, states) {
  const complete = boundaryComplete && value !== null && coverage?.meters > 0 && coverage.dataMeters === coverage.meters && !coverage.truncated
   && !coverage.noData?.length && !coverage.partial?.length && meters.length === coverage.meters && meters.every(m => m.status === 'ok')
  const detailLabel = `${monthlyDate(span.from)} ${span.from.slice(11, 16)} → ${monthlyDate(span.to)} ${span.to.slice(11, 16)}`
- return { span, label: periodLabel(span), detailLabel, value, complete, meters: matching ? meters : [], unitValid: report?.total?.unit === '度', truncated: Boolean(coverage?.truncated), pending: !state,
+ return { span, label: periodLabel(span), detailLabel, value, complete, meters: matching ? meters : [], unitValid: report?.total?.unit === '度', truncated: Boolean(coverage?.truncated), pending: !state || Boolean(state?.preparing),
   error: state?.error || '', through: shanghaiTime(report?.params?.span?.observed?.to),
-  note: state?.error || (state?.waiting ? '本月用电待首个采样区间完成' : state ? (value === null ? (matching && coverage?.dataMeters > 0 && !insideMonth ? '月初缺少准确边界采样' : '暂无有效用电数据') : !complete ? '数据覆盖不完整，显示已取得用电' : '') : '正在读取月度用电') }
+  note: state?.error || (state?.waiting ? '本月用电待首个采样区间完成' : state?.preparing ? (state.message || '数据准备中') : state ? (value === null ? (matching && coverage?.dataMeters > 0 && !insideMonth ? '月初缺少准确边界采样' : '暂无有效用电数据') : !complete ? '数据覆盖不完整，显示已取得用电' : '') : '正在读取月度用电') }
 }
 // 比较原始采样的相对月初偏移，避免以本月 10 日的旧采样对比基期 25 日。
 function sameSampling(a, b) {

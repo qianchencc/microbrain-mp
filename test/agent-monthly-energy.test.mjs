@@ -267,3 +267,30 @@ test('匹配期间但单位未知的独有电表仍保留，错期响应不能�
  pair=monthlyEnergyView(windows,states).pairs[0]
  assert.deepEqual(pair.rows.map(r=>r.id),['a'])
 })
+
+test('快照准备中应答不渲染为空数据：轮询到就绪后按真实报告呈现，超时保留准备中文案', async () => {
+ const windows = monthlyEnergyWindows(now())
+ const publishes = []
+ let clock = 0
+ const seen = {}
+ await readMonthlyEnergy(windows, async q => {
+  seen[q.from] = (seen[q.from] || 0) + 1
+  if (q.from.startsWith('2026-10') && seen[q.from] <= 2) return { status: 'preparing', message: '电表数据准备中，请稍后重试', retryAfterMs: 2000 }
+  return report(q, 100)
+ }, (key, value) => { publishes.push([key, value]) }, { sleep: async () => { clock += 2000 }, now: () => clock, deadlineMs: 120000 })
+ const states = Object.fromEntries(publishes)
+ const currentKey = windows.current.from + '/' + windows.current.to
+ assert.equal(states[currentKey].report.total.value, 100)
+ assert.ok(publishes.some(([k, v]) => k === currentKey && v.preparing === true), '准备中状态须先发布，不能直接落在空数据')
+ const preparingView = monthlyEnergyView(windows, { [currentKey]: { preparing: true, message: '电表数据准备中' } })
+ assert.equal(preparingView.current.pending, true)
+ assert.match(preparingView.current.note, /准备中/)
+ assert.equal(monthlyEnergyView(windows, states).current.value, 100)
+
+ clock = 0
+ const timeoutStates = {}
+ await readMonthlyEnergy(windows, async () => ({ status: 'preparing', message: '电表数据准备中，请稍后重试', retryAfterMs: 2000 }),
+  (key, value) => { timeoutStates[key] = value }, { sleep: async () => { clock += 2000 }, now: () => clock, deadlineMs: 6000 })
+ assert.match(timeoutStates[currentKey].error, /准备中/)
+ assert.equal(monthlyEnergyView(windows, timeoutStates).current.value, null)
+})

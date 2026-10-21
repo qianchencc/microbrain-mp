@@ -1,3 +1,5 @@
+import { readWhenReady } from './preparing-read.mjs'
+
 const DAY = 86400000
 const OFFSET = 8 * 3600000
 const localIso = ms => new Date(ms + OFFSET).toISOString().replace('Z', '+08:00')
@@ -46,7 +48,7 @@ export function meterPanelScopes(devices = []) {
  ]
 }
 
-export function createMeterPanelLoader({ fetchReport, fetchDevices, getScope, waitSession, onChange, now = Date.now }) {
+export function createMeterPanelLoader({ fetchReport, fetchDevices, getScope, waitSession, onChange, now = Date.now, sleep, deadlineMs }) {
  let seq = 0
  let scope = null
  const state = { report: null, scopes: [], loading: false, error: '' }
@@ -81,11 +83,12 @@ export function createMeterPanelLoader({ fetchReport, fetchDevices, getScope, wa
    if (stale()) return
    if (drifted()) { clearData(); fail('客户登录已变化，请重新读取'); return }
    const [report, devices] = await Promise.all([
-    fetchReport(meterPanelQuery(selection, now())),
+    readWhenReady(() => fetchReport(meterPanelQuery(selection, now())), { active: () => !stale(), ...(sleep ? { sleep } : {}), ...(deadlineMs ? { deadlineMs } : {}), now }),
     fetchDevices(),
    ])
    if (stale()) return
    if (drifted()) { clearData(); fail('客户登录已变化，请重新读取'); return }
+   if (report?.status === 'preparing') { clearData(); fail(report.message || '数据仍在准备中，请稍后重试'); return }
    state.report = report || null
    state.scopes = meterPanelScopes((Array.isArray(devices) ? devices : devices && devices.devices) || [])
    state.error = ''
