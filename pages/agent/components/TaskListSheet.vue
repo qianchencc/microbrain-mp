@@ -64,14 +64,17 @@
        <button class="plan-main" @tap="openPlan(plan)">
         <view class="status-mark" :class="planIsEnabled(plan) ? 'status-mark--active' : 'status-mark--paused'" />
         <view class="row-copy">
-         <view class="row-heading"><text class="row-title">{{ plan.label || '未命名周期安排' }}</text><text class="plan-status" :class="planIsEnabled(plan) ? 'tone-active' : 'tone-muted'">{{ planStatus(plan) }}</text></view>
+         <view class="row-heading"><text class="row-title">{{ plan.label || '未命名周期安排' }}</text><text v-if="!planCanToggle(plan) && ['enabled', 'paused'].includes(plan.status)" class="plan-access-tag">仅可查看</text><text v-else class="plan-status" :class="planIsEnabled(plan) ? 'tone-active' : 'tone-muted'">{{ planStatus(plan) }}</text></view>
          <text class="row-subtitle">{{ repeatText(plan.repeat) || '重复规则未提供' }}</text>
          <text v-if="source === 'company' && taskRequirementsText(plan)" class="row-subtitle">{{ taskRequirementsText(plan) }}</text>
          <view class="row-meta"><text>{{ plan.nextAt ? `下一次执行 · ${taskTime(plan.nextAt)}` : '暂无下一次执行' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
         </view>
         <uni-icons type="right" size="13" color="#99a59d" />
        </button>
-       <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" class="plan-switch" :checked="planIsEnabled(plan)" :disabled="!planCanToggle(plan) || planLoading" @change.stop="togglePlanStatus(plan, $event.detail.value)" />
+       <view v-if="!planCanToggle(plan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(plan)">
+        <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" class="plan-switch" :checked="planIsEnabled(plan)" disabled />
+       </view>
+       <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" class="plan-switch" :checked="planIsEnabled(plan)" :disabled="planLoading" @change.stop="togglePlanStatus(plan, $event.detail.value)" />
       </view>
      </template>
 
@@ -92,7 +95,7 @@
     <button v-if="source === 'company' && !inboxNavigation.canBack && !stackedView" class="create-task" @tap="emit('create')">让 Agent 安排任务 <uni-icons type="chatbubble" size="14" color="#176b54" /></button>
    </view>
 
-   <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text>
+   <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text><text v-if="planDetailError" class="detail-error">{{ planDetailError }}</text>
     <scroll-view class="detail-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="plan-summary">
       <view class="summary-heading"><view class="status-mark" :class="planIsEnabled(selectedPlan) ? 'status-mark--active' : 'status-mark--paused'" /><text class="plan-label">{{ selectedPlan.label || '未命名周期安排' }}</text></view>
@@ -105,7 +108,10 @@
       <text v-if="selectedPlan.pauseReason" class="pause-reason">{{ selectedPlan.pauseReason }}</text>
       <view class="plan-toggle-row">
        <view class="plan-toggle-copy"><text class="plan-toggle-title">周期计划</text><text class="plan-toggle-note">{{ planIsEnabled(selectedPlan) ? '停用后只影响未来发生' : '重新启用前会核验当前范围和绑定' }}</text></view>
-       <switch :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" :disabled="!planCanToggle(selectedPlan) || planLoading" @change="togglePlanStatus(selectedPlan, $event.detail.value)" />
+       <view v-if="!planCanToggle(selectedPlan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(selectedPlan)">
+        <switch :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" disabled />
+       </view>
+       <switch v-else :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" :disabled="planLoading" @change="togglePlanStatus(selectedPlan, $event.detail.value)" />
       </view>
       <view v-if="selectedPlan.latestTask" class="latest-result">
        <view class="latest-result-copy"><text class="latest-result-title">最近一次结果</text><text>{{ taskTime(taskTimeValue(selectedPlan.latestTask, 'results')) || '时间未提供' }} · {{ taskStatus(selectedPlan.latestTask.status) }}</text></view>
@@ -156,7 +162,7 @@ const hasMore = computed(() => props.source === 'company' && view.value === 'all
 const listLoaded = ref(false)
 const taskRows = new Map()
 const plansLoaded = ref(false)
-const selectedTask = ref(null), selectedPlan = ref(null), returnPlan = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
+const selectedTask = ref(null), selectedPlan = ref(null), planDetailError = ref(''), returnPlan = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
 const stackedView = computed(() => props.source === 'company' && (view.value === 'inbox' || view.value === 'plans'))
 const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value || (props.source === 'company' && view.value === 'plans') ? '周期计划' : props.source === 'company' ? '任务管理' : '我的安排')
@@ -219,6 +225,10 @@ function planAccessSummary(plan) {
  if (plan?.status === 'paused' && plan.canResume) return '重新启用会重新核验当前完整范围和控制绑定'
  if (plan?.canManage) return '可取消本次或全部'
  return '当前账号仅可查看'
+}
+function explainPlanAccess(plan) {
+ if (!plan || ['ended', 'deleted'].includes(plan.status)) return
+ uni.showToast({ title: '需使用创建者账号，且当前范围覆盖全部设备才能管理', icon: 'none' })
 }
 function replacePlan(next) {
  if (!next?.planId) return
@@ -371,7 +381,7 @@ function openTask(task) {
 async function openPlan(plan) {
  ++planStatusRequest; resetPlanSwitch()
  const current = ++planRequest, source = props.source, scope = getAgentStorageScope()
- selectedPlan.value = plan; selectedTask.value = null; returnPlan.value = null
+ selectedPlan.value = plan; selectedTask.value = null; planDetailError.value = ''; returnPlan.value = null
  planLoading.value = true
  try {
   const result = await getTaskPlan(plan.planId, source)
@@ -379,7 +389,12 @@ async function openPlan(plan) {
    if (!result.plan) throw new Error('计划不存在或已无权查看')
    selectedPlan.value = result.plan
   }
- } catch (cause) { if (current === planRequest && props.open) { selectedPlan.value = null; error.value = cause.message || '周期计划暂不可用' } }
+ } catch (cause) {
+  if (current === planRequest && props.open) {
+   planDetailError.value = cause.message || '周期计划读取失败，请刷新后重试'
+   uni.showToast({ title: planDetailError.value, icon: 'none' })
+  }
+ }
  finally { if (current === planRequest) planLoading.value = false }
 }
 function openLatestReport() {
@@ -417,6 +432,7 @@ function closeSheet() {
  ++planRequest; ++planStatusRequest; planLoading.value = false; resetPlanSwitch()
  selectedTask.value = null
  selectedPlan.value = null
+ planDetailError.value = ''
  returnPlan.value = null
  navigation.value = { title: '', canBack: false }
  emit('close')
@@ -481,10 +497,13 @@ button::after { border:0; }
 .plan-row:active,.task-row:active { background:#f5f8f5; }
 .plan-main { min-width:0; flex:1; display:flex; align-items:center; gap:11px; text-align:left; }
 .plan-switch { flex-shrink:0; transform:scale(.78); transform-origin:right center; }
+.plan-switch-wrap { flex-shrink:0; min-width:52px; min-height:32px; display:flex; align-items:center; justify-content:flex-end; }
+.plan-switch-wrap--disabled { opacity:.72; }
 .row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
 .row-heading { min-width:0; display:flex; align-items:baseline; justify-content:space-between; gap:9px; }
 .row-title { min-width:0; white-space:normal; word-break:break-word; color:#304739; font-size:13px; font-weight:600; }
 .plan-status,.task-status { flex-shrink:0; font-size:10px; }
+.plan-access-tag { flex-shrink:0; color:#8b7561; font-size:10px; }
 .tone-active,.tone-ok { color:#397b61; }.tone-muted { color:#7e8982; }.tone-warn { color:#a27128; }.tone-fail { color:#a15343; }
 .row-subtitle { color:#78877e; font-size:11px; line-height:1.45; }
 .row-meta { min-width:0; display:flex; justify-content:space-between; gap:8px; color:#929e96; font-size:10px; }
@@ -496,6 +515,7 @@ button::after { border:0; }
 .state-message button,.list-footer button { margin:10px auto 0; color:#176b54; font-size:12px; }
 .list-footer { padding:16px 0 22px; text-align:center; color:#99a39d; font-size:11px; }
 .list-error { color:#a15343; }
+.detail-error { display:block; flex-shrink:0; padding:8px 18px 0; color:#a15343; font-size:11px; text-align:center; }
 .plan-strip { width:100%; min-height:40px; display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid #e5ebe6; text-align:left; }
 .plan-strip:active { opacity:.65; }
 .strip-title { color:#34483b; font-size:12px; font-weight:600; }

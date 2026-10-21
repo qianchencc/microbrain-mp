@@ -305,3 +305,11 @@ test('任务结果的安全台账点击在同层导航，不再丢弃告警事�
  assert.match(resultSource, /title: '安全事件台账', canBack: true/)
  assert.match(resultSource, /title: '安全台账详情', canBack: true/)
 })
+
+test('周期计划无管理权限时给出只读原因，详情读取失败保留可见反馈', () => {
+ const listSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskListSheet.vue'), 'utf8')
+ const detailSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskDetailContent.vue'), 'utf8')
+ assert.match(listSource, /需使用创建者账号，且当前范围覆盖全部设备才能管理/)
+ assert.match(listSource, /planDetailError/)
+ assert.match(detailSource, /plan-switch-wrap--disabled/)
+})

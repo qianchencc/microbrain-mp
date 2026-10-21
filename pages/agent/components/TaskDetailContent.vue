@@ -13,7 +13,10 @@
    <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ plan ? '周期计划' : `${detail.creator?.displayName || '成员'} 创建 · ${detail.createdText}` }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
    <view v-if="plan && !sampleTask" class="plan-toggle-row">
     <view class="plan-toggle-copy"><text class="plan-toggle-title">周期计划</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '停用后只影响未来发生' : '重新启用前会核验当前范围和绑定' }}</text></view>
-    <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :disabled="!planCanToggle(plan) || cancelling" @change="togglePlanStatus(plan, $event.detail.value)" />
+    <view v-if="!planCanToggle(plan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(plan)">
+     <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" disabled />
+    </view>
+    <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :disabled="cancelling" @change="togglePlanStatus(plan, $event.detail.value)" />
    </view>
    <text v-if="plan?.pauseReason" class="plan-pause-reason">{{ plan.pauseReason }}</text>
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
@@ -102,6 +105,10 @@ function planCanToggle(value) {
  if (value?.status === 'enabled') return Boolean(value.canPause)
  if (value?.status === 'paused') return Boolean(value.canResume)
  return false
+}
+function explainPlanAccess(value) {
+ if (!value || ['ended', 'deleted'].includes(value.status)) return
+ uni.showToast({ title: '需使用创建者账号，且当前范围覆盖全部设备才能管理', icon: 'none' })
 }
 function planStatusContextCurrent(planId, source, scope, version, action) {
  if (action !== planStatusRequest || !props.active || props.source !== source || activePlanId.value !== planId || plan.value?.planId !== planId) return false
@@ -339,6 +346,8 @@ button::after { border:0; }
 .state-tag.failed,.state-tag.interrupted,.state-tag.missed { color:#a15343; background:#f2e3e0; }
 .state-tag.cancelled { color:#7a7f76; background:#eef1ef; }
 .plan-toggle-row { margin-top:14px; padding-top:12px; border-top:1px solid #e8ede9; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.plan-switch-wrap { min-width:52px; min-height:32px; display:flex; align-items:center; justify-content:flex-end; }
+.plan-switch-wrap--disabled { opacity:.72; }
 .plan-toggle-copy { min-width:0; display:flex; flex-direction:column; gap:4px; }
 .plan-toggle-title { color:#34483b; font-size:12px; font-weight:600; }
 .plan-toggle-note { color:#87948b; font-size:10px; }
