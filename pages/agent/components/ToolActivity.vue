@@ -3,7 +3,8 @@
 		<view v-for="(item, index) in items" :key="item.id" class="activity__item">
 			<view class="activity__rail">
 				<view class="activity__marker">
-					<view v-if="item.status === 'completed'" class="activity__badge activity__badge--done"><view class="activity__check" /></view>
+					<view v-if="item.kind === 'idea'" class="activity__badge activity__badge--idea"><view class="activity__idea-dot" /></view>
+					<view v-else-if="item.status === 'completed'" class="activity__badge activity__badge--done"><view class="activity__check" /></view>
 					<view v-else-if="item.status === 'failed'" class="activity__badge activity__badge--failed"><view class="activity__cross" /></view>
 					<view v-else-if="isActive(item)" class="activity__pulse" />
 					<view v-else-if="item.status === 'skipped'" class="activity__muted" />
@@ -12,7 +13,7 @@
 				<view v-if="index < items.length - 1" class="activity__line" />
 			</view>
 			<view class="activity__content">
-				<view class="activity__title">
+				<view class="activity__title" :class="{ 'activity__title--idea': item.kind === 'idea' }">
 					<text>{{ item.label || labels[item.tool] || '处理设备请求' }}</text>
 					<text v-if="stateWord(item)" class="activity__state" :class="'activity__state--' + item.status">{{ stateWord(item) }}</text>
 				</view>
@@ -84,6 +85,14 @@ view, text, input { font-size: inherit; line-height: inherit; }
 
 		&--done { background: rgba(23,107,84,.13); }
 		&--failed { background: rgba(176,77,59,.13); }
+		&--idea { background: rgba(181,140,75,.16); }
+	}
+
+	&__idea-dot {
+		width: 10rpx;
+		height: 10rpx;
+		border-radius: 50%;
+		background: #b58c4b;
 	}
 
 	&__check {
@@ -163,6 +172,8 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		font-weight: 600;
 		line-height: 40rpx;
 		color: #1d2923;
+
+		&--idea { color: #8a6d3a; }
 	}
 
 	&__state {

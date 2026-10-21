@@ -1,366 +1,637 @@
 <!DOCTYPE html>
 <!--
   PROTOTYPE — throwaway, do not ship.
-  Question: 普通 assistant 文本在“后面可能跟工具调用”时，应该如何尽早出现，同时不让内部规划冒充最终答复？
-  - ?variant=a|b|c，底部原型栏或 ←/→ 切换；&case=plain|tool。
-  - A 内联草稿：同一回复气泡内先流草稿，工具调用到来时折叠成一行“处理过程”，不删除。
-  - B 工作通道：草稿进入独立缩进工作区，工具调用时折叠；最终答复单独出现在主气泡。
-  - C 状态门控：不显示草稿，只显示思考状态；工具卡后最终答复整段出现（当前行为的对照）。
-  - 普通问答与设备查询两种剧本；全部为前端模拟，不发请求。
+  Question: 工具调用前的普通文本如何尽早可见，又不冒充最终答复？卡片与文字的落位规则是什么？
+  Answer being tested: 一轮答复 = 有序类型化 item 流（社群共识：UIMessage.parts / ACP / Pi /
+    AI Elements Reasoning）。item 按事件序追加落位，永不重排、永不在已渲染内容上方插入：
+    过程 item（草稿文字、工具调用）进顶部「处理记录」台账；业务 item（观察卡、操作卡、
+    回执、终稿文字）按到达序排入正文流——卡片随 tool.completed 先到先落，终稿文字落在
+    卡片下方解读它（修正生产现状：正文区固定在卡片区之上）。已渲染文字永不消失。
+  - ?variant=settle|stay|gate（a|b|c 别名），底部原型栏或 ←/→ 切换；&case=plain|tool|ctrl。
+  - settle 沉淀（推荐）：草稿在答复位以轻权重流出，终态原地变墨；工具来则折叠进处理记录。
+  - stay   驻留：草稿不折叠，原地降级为一行黄铜「检索思路」注记，保持可见。
+  - gate   门控（现状对照）：不显示草稿，思考 orb + 处理记录 + 卡片 + 终稿。
+  - 场景：plain 普通问答（草稿沉淀）；tool 设备查询（电表报告卡先落、终稿随后）；
+    ctrl 灯控确认（操作卡落位后等待真实点击，确认后回执+终稿续流）。
+  - 时序按真实测量压缩约 2.5 倍：发送→headers ~1.6s → 草稿 ~1.2s → 工具 2.6s+3s → 卡片 → 终稿。
   Open: 在仓库根目录 python3 -m http.server 8432 → http://127.0.0.1:8432/pages/agent/proto-draft-streaming.html
 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>草稿流式呈现 · Prototype</title>
+<title>答复流式 · Prototype</title>
 <style>
 :root {
-  --paper: #f4f7f5; --paper-2: #eef2ee; --ink: #24382d; --ink-2: #2b4034;
-  --muted: #738278; --muted-2: #8a978f; --jade: #176b54; --jade-hi: #2a876c;
-  --jade-soft: #e4eee8; --line: #e0e7e2; --amber: #a66a13;
+  --paper: #f4f7f5; --ink: #24382d; --ink-body: #253b30; --name: #21382d;
+  --muted: #66776d; --muted-2: #73817a; --jade: #176b54; --jade-2: #247b62;
+  --brass: #b58c4b; --brass-bg: #f6f4ee; --brass-ink: #806338;
+  --trace-bg: rgba(232,239,234,.58); --trace-bg-open: rgba(235,241,237,.88);
+  --summary-bg: rgba(29,53,42,.05); --rail: rgba(29,53,42,.08);
   --ease-out: cubic-bezier(.23,1,.32,1);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { height:100%; }
-body { font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif; background:#e8ecea; color:var(--ink);
-  -webkit-font-smoothing:antialiased; display:flex; align-items:flex-start; justify-content:center; padding-top:14px; }
+body { font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif; background:#dfe6e2; color:var(--ink);
+  -webkit-font-smoothing:antialiased; display:flex; align-items:flex-start; justify-content:center; padding-top:16px; }
 button { font:inherit; border:0; background:none; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.phone { width:min(375px,calc(100vw - 20px)); height:min(780px,calc(100dvh - 140px)); border-radius:44px;
+.phone { width:min(375px,calc(100vw - 20px)); height:min(800px,calc(100dvh - 150px)); border-radius:44px;
   background:#0e1512; padding:10px; box-shadow:0 30px 80px rgba(20,40,30,.28),0 4px 16px rgba(20,40,30,.14); }
 .screen { width:100%; height:100%; border-radius:36px; overflow:hidden; display:flex; flex-direction:column;
   background:var(--paper); position:relative; }
 .statusbar { height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
-  padding:0 22px; font-size:11px; font-weight:600; color:var(--ink-2); }
-.statusbar .icons { opacity:.72; font-size:10px; letter-spacing:.5px; }
+  padding:0 22px; font-size:11px; font-weight:600; color:#315846; }
+.statusbar .icons { opacity:.7; font-size:10px; letter-spacing:.5px; }
 .nav { height:46px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px 0 8px;
-  border-bottom:1px solid rgba(44,75,58,.06); background:linear-gradient(180deg,#fcfdfc,#f4f7f5); }
+  background:linear-gradient(180deg,#fbfcfb,#f4f7f5); border-bottom:1px solid rgba(44,75,58,.05); }
 .nav .back { width:32px; height:32px; border-radius:11px; font-size:18px; color:#315846; }
-.nav .title { font-size:14.5px; font-weight:650; letter-spacing:.2px; }
+.nav .title { font-size:14.5px; font-weight:650; letter-spacing:.2px; color:var(--name); }
 .nav .sub { font-size:10px; color:var(--muted); margin-left:2px; }
-.chat { flex:1; min-height:0; overflow-y:auto; padding:14px 14px 10px; scrollbar-width:none;
-  background:radial-gradient(120% 45% at 50% 0%,#fbfdfc 0%,transparent 55%),var(--paper); }
+
+.chat { flex:1; min-height:0; overflow-y:auto; scrollbar-width:none; }
 .chat::-webkit-scrollbar { display:none; }
-.thread { display:flex; flex-direction:column; gap:12px; }
-.user { align-self:flex-end; max-width:82%; background:linear-gradient(165deg,#2a876c,#176b54); color:#fff;
-  padding:9px 12px; border-radius:15px 15px 4px 15px; font-size:13px; line-height:1.5;
-  box-shadow:0 2px 8px rgba(23,107,84,.18); }
-.assistant { display:flex; gap:8px; align-items:flex-start; max-width:100%; animation:rise .28s var(--ease-out) both; }
-.assistant .avatar { width:26px; height:26px; border-radius:9px; flex-shrink:0; margin-top:1px;
-  background:linear-gradient(150deg,#f7faf8,#dfe9e3); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.14);
-  display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--jade); font-weight:700; }
-.assistant .col { min-width:0; flex:1; }
-.assistant .who { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
-.assistant .name { font-size:11px; font-weight:650; color:#3d5146; }
-.chip { font-size:9px; padding:2px 6px; border-radius:999px; letter-spacing:.2px; white-space:nowrap; }
-.chip.draft { color:#8a5a12; background:#fbf1df; box-shadow:inset 0 0 0 .5px rgba(166,106,19,.18); }
-.chip.final { color:var(--jade); background:var(--jade-soft); }
-.bubble { background:#fff; border:1px solid var(--line); border-radius:4px 15px 15px 15px;
-  padding:10px 12px; font-size:13px; line-height:1.62; color:var(--ink-2);
-  box-shadow:0 1px 2px rgba(25,45,35,.03); }
-.bubble .text { white-space:pre-wrap; }
-.bubble .caret { display:inline-block; width:1.5px; height:13px; background:var(--jade); margin-left:1px;
-  vertical-align:-2px; animation:blink .9s steps(1) infinite; }
-.bubble.draft { background:linear-gradient(180deg,#fffefb,#fffdf8); border-color:#eee3cf; }
-.collapse { margin-top:8px; border-top:1px dashed #e4ddd0; padding-top:7px; display:flex; align-items:center; gap:6px;
-  font-size:10.5px; color:var(--muted); }
-.collapse .dot { width:5px; height:5px; border-radius:50%; background:#c9a56a; }
-.collapse button { margin-left:auto; color:var(--jade); font-size:10px; font-weight:650; }
-.hidden { display:none !important; }
-.toolcard { margin-top:8px; background:#f7faf8; border:1px solid var(--line); border-radius:12px; padding:9px 11px;
-  display:flex; gap:9px; align-items:flex-start; animation:rise .25s var(--ease-out) both; }
-.toolcard .glyph { width:22px; height:22px; border-radius:8px; background:var(--jade-soft); color:var(--jade);
-  display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
-.toolcard .t { font-size:11.5px; font-weight:650; color:#3c5145; }
-.toolcard .s { font-size:10.5px; color:var(--muted); margin-top:1px; }
-.orb { display:flex; align-items:center; gap:7px; color:#647169; font-size:11.5px; min-height:24px; }
-.orb .glyph2 { position:relative; width:18px; height:18px; flex-shrink:0; }
+.thread { padding:24px 16px 32px; display:flex; flex-direction:column; }
+
+/* 用户气泡 —— 与生产一致：玉绿渐变 + 内嵌高光 */
+.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
+.user-msg { max-width:88%; padding:12px 15px; border-radius:15px 15px 4px 15px;
+  background:linear-gradient(155deg,#247b62,#145b46); color:#fff; font-size:15px; line-height:1.6;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 2px 5px rgba(19,73,49,.10);
+  animation:message-in .18s var(--ease-out) both; overflow-wrap:anywhere; }
+
+/* 答复身份行 —— 头像 + 名称 + 思考 orb，与 AgentReplySurface 同构 */
+.reply { animation:rise .24s var(--ease-out) both; }
+.reply-identity { display:flex; align-items:center; gap:8px; min-height:30px; }
+.avatar { width:30px; height:30px; border-radius:10px; flex-shrink:0; position:relative;
+  background:linear-gradient(150deg,#fdfefb,#e3ece6);
+  box-shadow:inset 0 0 0 .5px rgba(26,55,43,.14), inset 0 1px 0 rgba(255,255,255,.8), 0 1px 3px rgba(26,55,43,.10);
+  display:flex; align-items:center; justify-content:center; }
+.avatar .eyes { position:relative; width:14px; height:5px; }
+.avatar .eye { position:absolute; top:0; width:4.5px; height:5px; border-radius:2.4px;
+  background:#2c5b47; animation:blink 4.6s ease-in-out infinite; }
+.avatar .eye:last-child { right:0; }
+.avatar.running .eyes { animation:breathe 1.9s ease-in-out infinite; }
+.reply-meta { display:flex; align-items:center; gap:8px; min-width:0; }
+.reply-name { flex-shrink:0; color:var(--name); font-size:14px; font-weight:650; letter-spacing:-.1px; }
+
+/* ThinkingOrb 复刻：3×3 lattice 波纹 + 文案 */
+.orb { display:flex; align-items:center; gap:6px; color:#647169; font-size:12px; min-height:24px; white-space:nowrap; }
+.orb .glyph { position:relative; width:20px; height:20px; flex-shrink:0; }
 .orb .cell { position:absolute; width:3px; height:3px; border-radius:50%; background:currentColor; opacity:.14;
   animation:wave 1.7s cubic-bezier(.66,0,.34,1) infinite both; }
-.worklog { border-left:2px solid #dce6e0; padding:0 0 0 10px; margin:0 0 8px 4px; animation:rise .25s var(--ease-out) both; }
-.worklog .head { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--muted); letter-spacing:.3px;
-  text-transform:uppercase; margin-bottom:4px; }
-.worklog .body { font-size:12px; line-height:1.55; color:#7c8a82; white-space:pre-wrap; }
-.worklog.collapsed .body { display:none; }
-.worklog .summary { display:none; font-size:11px; color:var(--muted); }
-.worklog.collapsed .summary { display:block; }
-.worklog .summary button { color:var(--jade); font-size:10px; margin-left:6px; font-weight:650; }
-.answer { margin-top:8px; }
-.finalnote { margin-top:7px; font-size:9.5px; color:var(--muted-2); }
-.scenario { flex-shrink:0; display:flex; gap:6px; padding:8px 14px 0; }
-.scenario button { font-size:10.5px; padding:5px 9px; border-radius:999px; color:var(--muted);
-  background:#fff; box-shadow:inset 0 0 0 .5px var(--line); }
-.scenario button.on { color:var(--jade); background:var(--jade-soft); box-shadow:inset 0 0 0 .5px rgba(23,107,84,.18); }
-.composer { flex-shrink:0; display:flex; gap:8px; align-items:center; padding:8px 12px calc(10px + env(safe-area-inset-bottom)); }
-.composer .field { flex:1; height:38px; border-radius:19px; background:#fff; border:1px solid var(--line);
-  display:flex; align-items:center; padding:0 13px; font-size:12px; color:var(--muted-2); }
-.composer .send { height:38px; padding:0 16px; border-radius:19px; background:linear-gradient(165deg,#2a876c,#176b54);
-  color:#fff; font-size:12px; font-weight:650; box-shadow:0 3px 10px rgba(23,107,84,.22); }
-.composer .send:active { transform:scale(.96); }
+.orb .done-mark { width:13px; height:13px; display:flex; align-items:center; justify-content:center; }
+.orb .done-mark svg { display:block; }
+
+.reply-content { min-width:0; margin-top:8px; }
+
+/* 草稿：答案位置上的过程权重 —— muted、无标签、无容器边框 */
+.draft { font-size:15px; line-height:1.8; color:var(--muted); white-space:pre-wrap; overflow-wrap:anywhere;
+  overflow:hidden; max-height:320px; opacity:1;
+  transition:color .45s ease, max-height .3s var(--ease-out), opacity .2s ease, margin .3s var(--ease-out); }
+.draft.settled { color:var(--ink-body); }
+.draft.folded { max-height:0; opacity:0; margin-bottom:-4px; }
+.caret { display:inline-block; width:1.5px; height:14px; background:var(--jade); margin-left:1px;
+  vertical-align:-2px; animation:blink .9s steps(1) infinite; }
+
+/* stay 变体：草稿原地降级为黄铜注记，保持可见 */
+.draft.demoted { font-size:12px; line-height:1.6; color:var(--brass-ink);
+  border-left:2px solid var(--brass); background:var(--brass-bg); border-radius:0 8px 8px 0;
+  padding:5px 9px; margin:2px 0 2px; }
+
+/* 处理记录 —— 与生产 .trace 同构 */
+.trace { margin:0 0 8px; border-radius:12px; background:var(--trace-bg); transition:background-color .18s ease;
+  animation:rise .22s var(--ease-out) both; }
+.trace.open { background:var(--trace-bg-open); }
+.trace__toggle { display:flex; align-items:center; justify-content:space-between; width:100%;
+  min-height:40px; padding:0 11px; border-radius:12px; color:#67776d; font-size:12px; line-height:1;
+  transition:transform .14s var(--ease-out),opacity .14s ease; }
+.trace__toggle:active { transform:scale(.985); opacity:.72; }
+.trace__label { display:flex; align-items:center; gap:7px; }
+.trace__chev { transition:transform .22s var(--ease-out); font-size:10px; color:#7f8d85; }
+.trace.open .trace__chev { transform:rotate(180deg); }
+.trace__expand { overflow:hidden; max-height:0; opacity:0; transition:max-height .3s var(--ease-out),opacity .2s ease; }
+.trace.open .trace__expand { max-height:640px; opacity:1; }
+.trace__clip { padding:0 11px 10px; }
+
+/* 折叠进处理记录的草稿 → 「检索思路」行 */
+.idea { display:flex; gap:0; margin:2px 0 10px; }
+.idea .rail { display:flex; flex-direction:column; align-items:center; width:20px; flex:0 0 20px; }
+.idea .rail .dot { width:16px; height:16px; border-radius:50%; background:rgba(181,140,75,.16);
+  display:flex; align-items:center; justify-content:center; margin-top:2px; }
+.idea .rail .dot::after { content:''; width:5px; height:5px; border-radius:50%; background:var(--brass); }
+.idea .rail .line { flex:1; width:2px; min-height:8px; background:var(--rail); }
+.idea .body { min-width:0; flex:1; padding:0 0 4px 8px; }
+.idea .t { font-size:13px; font-weight:600; line-height:20px; color:#8a6d3a; }
+.idea .s { margin-top:4px; padding:6px 8px; border-radius:7px; background:var(--summary-bg);
+  font-size:11.5px; line-height:1.6; color:#5d6a62; white-space:pre-wrap; }
+
+/* ToolActivity 复刻 */
+.activity__item { display:flex; }
+.activity__rail { display:flex; flex-direction:column; align-items:center; width:20px; flex:0 0 20px; }
+.activity__marker { width:20px; height:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.pulse { width:7px; height:7px; border-radius:50%; background:var(--jade); animation:act-pulse 1.6s ease-in-out infinite; }
+.badge-done { width:16px; height:16px; border-radius:50%; background:rgba(23,107,84,.13);
+  display:flex; align-items:center; justify-content:center; animation:act-pop .2s var(--ease-out) both; }
+.badge-done::after { content:''; width:5px; height:3px; border-left:1.5px solid var(--jade);
+  border-bottom:1.5px solid var(--jade); transform:translateY(-.5px) rotate(-45deg); }
+.activity__line { flex:1; width:2px; min-height:5px; background:var(--rail); }
+.activity__content { min-width:0; flex:1; padding:0 0 13px 8px; }
+.activity__item:last-child .activity__content { padding-bottom:2px; }
+.activity__title { display:flex; align-items:center; gap:5px; min-height:20px;
+  font-size:13px; font-weight:600; line-height:20px; color:#1d2923; }
+.activity__state { font-size:10px; font-weight:400; letter-spacing:.5px; color:var(--jade); }
+.activity__summary { margin-top:5px; padding:6px 8px; border-radius:7px; background:var(--summary-bg);
+  font-size:11.5px; line-height:1.6; color:#5d6a62; }
+
+/* 终稿正文 —— 与 AssistantMarkdown 同权重，直接排纸面 */
+.final { font-size:15px; line-height:1.8; color:var(--ink-body); white-space:pre-wrap; overflow-wrap:anywhere; }
+
+/* —— 业务 item：观察卡（ObservationCard .oblock 复刻） —— */
+.oblock { border-radius:12px; background:#f7faf6; box-shadow:inset 0 0 0 .5px #dfe8e0,0 2px 8px -6px rgba(30,52,40,.4);
+  padding:10px 12px; margin:10px 0 14px; animation:rise .24s var(--ease-out) both; }
+.oblock-head { display:flex; align-items:center; justify-content:space-between; font-size:11px; color:#7d8f75; }
+.mparam { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:4px;
+  font-size:11px; color:#6d8069; }
+.mhero { padding:10px 0 8px; }
+.mhero-label { font-size:11px; color:#71856d; }
+.mnum { margin-top:3px; font-size:32px; letter-spacing:-1.2px; line-height:1.25; font-weight:650;
+  font-variant-numeric:tabular-nums; color:#253b30; }
+.mnum .u { font-size:12px; font-weight:400; margin-left:6px; color:#788d74; }
+.myuan { display:block; margin-top:5px; font-size:11px; color:#80907f; }
+.mmetrics { display:flex; gap:8px; margin-top:10px; }
+.mcell { flex:1; padding:7px 8px 6px; border-radius:7px; background:#eef3ee; box-shadow:inset 0 0 0 .5px #dfe6e0; }
+.mcell .k { font-size:10px; color:#7d8f75; }
+.mcell .v { margin-top:1px; font-size:15px; font-weight:600; color:#2f4a3a; font-variant-numeric:tabular-nums; }
+.mcell .v .u { font-size:10px; font-weight:400; color:#80907f; margin-left:3px; }
+.mshead { display:flex; align-items:center; justify-content:space-between; margin-top:12px; font-size:11px; color:#7d8f75; }
+.seg { display:flex; gap:2px; padding:2px; border-radius:10px; background:#e9ede9; box-shadow:inset 0 0 0 .5px rgba(26,55,43,.08); }
+.seg button { font-size:10px; padding:0 10px; line-height:20px; border-radius:8px; color:#67736b; }
+.seg button.on { background:#fdfefd; color:#176b54; font-weight:600; box-shadow:0 1px 2px rgba(28,57,42,.10); }
+.bars { display:flex; align-items:flex-end; gap:3px; height:44px; margin-top:8px; }
+.bars i { flex:1; border-radius:3px 3px 1px 1px; background:linear-gradient(180deg,#3d9a76,#2c7a5c);
+  transform-origin:bottom; animation:bar-grow .5s var(--ease-out) both; }
+.bars i.dim { background:linear-gradient(180deg,#c7d4cc,#b4c3b8); }
+@keyframes bar-grow { from { transform:scaleY(0); } }
+
+/* —— 业务 item：操作卡（ActionPanel 复刻） —— */
+.panel { margin:10px 0 14px; padding:12px; border-radius:16px; background:linear-gradient(#fdfefd,#f6f8f5);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(26,55,43,.10),0 1px 2px rgba(28,57,42,.07),0 10px 24px rgba(28,57,42,.07);
+  animation:rise .24s var(--ease-out) both; }
+.panel-head { display:flex; align-items:center; justify-content:space-between; }
+.panel-meta { font-size:12px; color:#63756b; }
+.pstats { display:flex; margin-top:10px; border-radius:12px; background:linear-gradient(#fafbfa,#f1f4f0);
+  box-shadow:inset 0 0 0 .5px rgba(26,55,43,.08),inset 0 1px 0 rgba(255,255,255,.8); }
+.pstat { flex:1; position:relative; padding:8px 4px 7px; text-align:center; }
+.pstat + .pstat::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:.5px; background:#dbe2dc; }
+.pstat .n { display:block; font-size:18px; font-weight:650; line-height:1.15; letter-spacing:-.3px;
+  color:#17251f; font-variant-numeric:tabular-nums; }
+.pstat.act .n { color:var(--jade); }
+.pstat .l { display:block; margin-top:1px; font-size:10px; color:#8b9991; }
+.roster { margin-top:6px; }
+.rrow { display:flex; align-items:center; gap:8px; padding:7px 2px; border-bottom:.5px solid #e6ece7; }
+.rrow:last-child { border-bottom:0; }
+.rrow .dot { width:7px; height:7px; flex-shrink:0; border-radius:50%; background:#3f9d74; box-shadow:0 0 0 3px rgba(63,157,116,.12); }
+.rrow .nm { font-size:12px; color:#2b4034; }
+.rrow .lc { flex:1; min-width:0; font-size:10px; color:#8b9991; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rrow .st { flex-shrink:0; font-size:10px; color:#176b54; background:#e4f2ea; border-radius:7px; padding:1px 7px; }
+.pfoot { display:flex; align-items:center; gap:4px; margin-top:8px; padding-top:8px; border-top:.5px solid #dbe3dd; }
+.foot-count { margin-right:auto; font-size:11px; color:#7a8880; }
+.foot-quiet { min-height:34px; padding:0 12px; border-radius:10px; font-size:12px; color:#718078;
+  transition:transform .12s var(--ease-out),background-color .16s ease; }
+.foot-quiet:active { transform:scale(.975); background:#eef3ef; }
+.foot-primary { min-height:34px; padding:0 16px; border-radius:10px; font-size:12px; background:var(--jade);
+  color:#fff; box-shadow:0 4px 10px rgba(23,107,84,.13); transition:transform .12s var(--ease-out),opacity .16s ease; }
+.foot-primary:active { transform:scale(.975); }
+.foot-primary[disabled] { opacity:.52; box-shadow:none; }
+.receipt { display:flex; align-items:center; gap:7px; margin-right:auto; font-size:12px; color:#526d5e; }
+.spin { width:13px; height:13px; flex-shrink:0; box-sizing:border-box; border:1.5px solid #ccd6d0;
+  border-top-color:#738177; border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* 场景切换与输入区 —— 生产 composer 风格 */
+.scenario { flex-shrink:0; display:flex; gap:6px; padding:6px 16px 0; }
+.scenario button { font-size:10.5px; padding:5px 10px; border-radius:999px; color:var(--muted);
+  background:#fff; box-shadow:inset 0 0 0 .5px #d5ded8; }
+.scenario button.on { color:var(--jade); background:#e4eee8; box-shadow:inset 0 0 0 .5px rgba(23,107,84,.18); }
+.composer { flex-shrink:0; padding:8px 16px 12px; }
+.composer .box { display:flex; align-items:center; gap:4px; padding:5px; min-height:46px;
+  border:1px solid #cbd9d0; border-radius:24px; background:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.10),0 7px 22px rgba(28,57,42,.12); }
+.composer .field { flex:1; padding:6px 10px; font-size:13.5px; line-height:20px; color:#263d30;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.composer .send { width:36px; height:36px; flex:0 0 36px; border-radius:50%;
+  background:linear-gradient(155deg,#2a876c,#145c46); color:#fff; font-size:15px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.23),0 2px 4px rgba(20,76,50,.15);
+  transition:transform .14s var(--ease-out); }
+.composer .send:active { transform:scale(.94); }
+
 .proto-bar { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; align-items:center; gap:12px;
   background:#18211d; color:#eaf3ee; border-radius:999px; padding:8px 10px; box-shadow:0 8px 24px rgba(0,0,0,.25);
   font-size:11px; z-index:99; }
 .proto-bar button { width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.1); color:#fff; }
-.proto-bar .label { min-width:190px; text-align:center; letter-spacing:.2px; }
+.proto-bar .label { min-width:200px; text-align:center; letter-spacing:.2px; }
 .proto-bar .hint { font-size:9px; color:#93a99e; }
+
 @keyframes rise { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
-@keyframes blink { 50% { opacity:0; } }
-@keyframes wave { 0%,100% { opacity:.12; transform:scale(.7); } 50% { opacity:.75; transform:scale(1); } }
+@keyframes message-in { from { opacity:0; transform:translateY(6px) scale(.98); } to { opacity:1; transform:none; } }
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+@keyframes wave { 0%,56%,100% { opacity:.14; transform:scale(1); } 28% { opacity:1; transform:scale(1.18); } }
+@keyframes act-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.45; transform:scale(.82); } }
+@keyframes act-pop { from { opacity:0; transform:scale(.85); } to { opacity:1; transform:none; } }
+@keyframes breathe { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
+@keyframes blink-eye { 0%,92%,100% { transform:scaleY(1); } 96% { transform:scaleY(.15); } }
+.avatar .eye { animation:blink-eye 4.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .orb .cell, .pulse, .caret, .avatar .eyes, .avatar .eye, .spin, .bars i { animation:none !important; }
+  .caret { opacity:.7; } .orb .cell { opacity:.36; }
+  .draft, .draft.demoted, .trace__expand, .trace__chev, .seg button { transition:none !important; }
+  .reply, .user-msg, .trace, .oblock, .panel { animation:none !important; }
+}
 </style>
 </head>
 <body>
 <div class="phone"><div class="screen">
   <div class="statusbar"><span>9:41</span><span class="icons">••• ▮</span></div>
-  <div class="nav"><button class="back">‹</button><span class="title">物联助手</span><span class="sub">· 草稿流式实验</span></div>
+  <div class="nav"><button class="back">‹</button><span class="title">物联助手</span><span class="sub">· 答复流式实验</span></div>
   <div class="chat"><div class="thread" id="thread"></div></div>
   <div class="scenario">
-    <button data-case="plain" class="on">普通问答</button>
+    <button data-case="plain">普通问答</button>
     <button data-case="tool">设备查询</button>
+    <button data-case="ctrl">灯控确认</button>
     <button id="replay">重放</button>
   </div>
-  <div class="composer">
+  <div class="composer"><div class="box">
     <div class="field" id="prompt">26楼运营部昨天用了多少电？</div>
-    <button class="send" id="send">发送</button>
-  </div>
+    <button class="send" id="send">↑</button>
+  </div></div>
 </div></div>
 
 <div class="proto-bar">
   <button id="prev">←</button>
-  <div><div class="label" id="label"></div><div class="hint">?variant= · ←/→ 切换</div></div>
+  <div><div class="label" id="label"></div><div class="hint">variant · ←/→ · 时序≈真实×0.4</div></div>
   <button id="next">→</button>
 </div>
 
 <script>
 const variants = {
-  a: { name: 'A · 内联草稿', desc: '同一气泡内先流草稿，工具调用时折叠' },
-  b: { name: 'B · 工作通道', desc: '草稿在独立工作区，最终答复另起气泡' },
-  c: { name: 'C · 状态门控', desc: '不显示草稿，只显示状态，结束后给全文' },
+  settle: '沉淀 · 草稿在答复位沉淀/折叠进处理记录',
+  stay:   '驻留 · 草稿原地降级为思路注记',
+  gate:   '门控 · 现状对照，不显示草稿',
 };
+const aliases = { a:'settle', b:'stay', c:'gate' };
 const params = new URLSearchParams(location.search);
-const variant = variants[params.get('variant')] ? params.get('variant') : 'a';
-let currentCase = params.get('case') === 'tool' ? 'tool' : 'plain';
-let timers = [];
+let variant = params.get('variant') || 'a';
+if (aliases[variant]) variant = aliases[variant];
+if (!variants[variant]) variant = 'settle';
+let currentCase = ['plain', 'tool', 'ctrl'].includes(params.get('case')) ? params.get('case') : 'plain';
+let timers = [], runId = 0;
 const thread = document.getElementById('thread');
 const label = document.getElementById('label');
 const prompt = document.getElementById('prompt');
 
+const caseQ = {
+  plain: '用一句话说明你能帮我做什么。',
+  tool: '26楼运营部昨天用了多少电？',
+  ctrl: '把 26 楼走廊灯调到 50%。',
+};
+const texts = {
+  plain: '我可以帮你查看楼宇的照明、空调、环境、能耗与安全台账，也可以把自然语言请求整理成待你确认的设备操作或定时安排。',
+  toolDraft: '我先核对 26 楼运营部的计量点，再取最近有效采样计算用电量。',
+  toolFinal: '以上是 26 楼运营部昨天的用电统计：4.25 度，按目录电价约 4.89 元。依据为 10月19日20:00 至 10月20日20:00 两次有效采样；小时级采样较稀疏，未生成逐时曲线。',
+  ctrlDraft: '我先确认 26 楼走廊灯的范围与可调能力，再生成待你确认的操作草案。',
+  ctrlFinal: '已将 26 楼 12 台走廊灯调至 50% 亮度，全部执行成功。',
+  ctrlCancel: '已取消本次操作，设备保持原状态。',
+};
+const caseTools = {
+  tool: [
+    { label: '检索计量设备', mid: '正在修正检索范围…', done: '已定位 26 楼运营部 · 22 台电表', ms: 2600 },
+    { label: '读取历史采样', mid: null, done: '7 台有效采样 · 按 08:00 边界截取', ms: 3000 },
+  ],
+  ctrl: [
+    { label: '检索设备候选', mid: '正在修正检索范围…', done: '已定位 26 楼走廊灯 · 12 台', ms: 2200 },
+    { label: '核验设备能力', mid: '正在比对可调亮度…', done: '12 台支持亮度调节 · 生成草案', ms: 2800 },
+  ],
+};
+
 function setVariant(next) {
+  variant = next;
   params.set('variant', next);
   history.replaceState(null, '', '?' + params.toString());
-  label.textContent = `${next.toUpperCase()} · ${variants[next].name.split(' · ')[1]}`;
+  label.textContent = variants[next];
 }
 function setCase(next) {
   currentCase = next;
   params.set('case', next);
   history.replaceState(null, '', '?' + params.toString());
-  document.querySelectorAll('.scenario [data-case]').forEach(button => button.classList.toggle('on', button.dataset.case === next));
-  prompt.textContent = next === 'tool' ? '26楼运营部昨天用了多少电？' : '用一句话说明你能帮我做什么。';
+  document.querySelectorAll('.scenario [data-case]').forEach(b => b.classList.toggle('on', b.dataset.case === next));
+  prompt.textContent = caseQ[next];
   run();
 }
-function clearTimers() { timers.forEach(clearInterval); timers.forEach(clearTimeout); timers = []; }
-function later(fn, ms) { const id = setTimeout(fn, ms); timers.push(id); return id; }
-function interval(fn, ms) { const id = setInterval(fn, ms); timers.push(id); return id; }
-function el(tag, cls, html) { const node = document.createElement(tag); if (cls) node.className = cls; if (html !== undefined) node.innerHTML = html; return node; }
-function scroll() { const chat = document.querySelector('.chat'); chat.scrollTop = chat.scrollHeight; }
-function avatar() { return el('div', 'avatar', 'AI'); }
-function assistantShell(status, chipClass) {
-  const wrap = el('div', 'assistant');
-  wrap.append(avatar());
-  const col = el('div', 'col');
-  const who = el('div', 'who', `<span class="name">物联助手</span><span class="chip ${chipClass}">${status}</span>`);
-  col.append(who);
-  wrap.append(col);
-  return { wrap, col, who };
+function later(fn, ms) { const id = setTimeout(() => { if (!timers.includes(id)) return; fn(); }, ms); timers.push(id); return id; }
+function clearTimers() { runId += 1; timers.forEach(clearTimeout); timers.forEach(clearInterval); timers = []; }
+function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html !== undefined) n.innerHTML = html; return n; }
+function scroll() { const c = document.querySelector('.chat'); c.scrollTop = c.scrollHeight; }
+
+function orbEl() {
+  const wrap = el('div', 'orb');
+  const g = el('div', 'glyph');
+  for (let i = 0; i < 9; i += 1) {
+    const c = el('i', 'cell');
+    c.style.left = `${(i % 3) * 6}px`;
+    c.style.top = `${Math.floor(i / 3) * 6}px`;
+    const d = Math.hypot(i % 3 - 1, Math.floor(i / 3) - 1);
+    c.style.animationDelay = `${d * 700 - (d === 0 ? 180 : 0)}ms`;
+    g.append(c);
+  }
+  const txt = el('span', '', '思考中');
+  wrap.append(g, txt);
+  return { wrap, g, txt };
 }
-function type(text, target, done, speed = 18) {
-  let index = 0;
+function orbDone(orb, seconds) {
+  orb.g.remove();
+  orb.txt.textContent = `已思考 ${seconds} 秒`;
+  const mark = el('span', 'done-mark',
+    '<svg width="13" height="13" viewBox="0 0 13 13"><path d="M2.5 7l2.6 2.6L10.5 3.5" fill="none" stroke="#176b54" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  orb.wrap.prepend(mark);
+}
+function avatarEl(running) {
+  const a = el('div', 'avatar' + (running ? ' running' : ''));
+  a.innerHTML = '<span class="eyes"><span class="eye"></span><span class="eye"></span></span>';
+  return a;
+}
+function replyShell() {
+  const reply = el('div', 'reply');
+  const identity = el('div', 'reply-identity');
+  const avatar = avatarEl(true);
+  const meta = el('div', 'reply-meta');
+  meta.append(el('span', 'reply-name', '物联助手'));
+  const orb = orbEl();
+  meta.append(orb.wrap);
+  identity.append(avatar, meta);
+  const content = el('div', 'reply-content');
+  reply.append(identity, content);
+  thread.append(reply);
+  scroll();
+  return { reply, content, orb, avatar, t0: Date.now() };
+}
+function finishRun(shell) {
+  shell.avatar.classList.remove('running');
+  orbDone(shell.orb, Math.max(1, Math.round((Date.now() - shell.t0) / 1000)));
+}
+function typeInto(target, text, speed, done) {
+  let i = 0;
   const caret = el('span', 'caret');
-  target.textContent = '';
   target.append(caret);
-  const id = interval(() => {
-    index += 1;
+  const id = setInterval(() => {
+    if (!timers.includes(id)) { clearInterval(id); return; }
+    i += 1;
     caret.remove();
-    target.textContent = text.slice(0, index);
+    target.appendChild(document.createTextNode(text.slice(i - 1, i)));
     target.append(caret);
     scroll();
-    if (index >= text.length) {
-      clearInterval(id);
-      caret.remove();
-      done && done();
-    }
+    if (i >= text.length) { clearInterval(id); caret.remove(); done && done(); }
   }, speed);
-  return id;
+  timers.push(id);
 }
-function toolCard(parent) {
-  const card = el('div', 'toolcard');
-  card.innerHTML = `<div class="glyph">⚡</div><div><div class="t">用电统计 · 26楼运营部</div><div class="s">读取计量点与采样，正在汇总…</div></div>`;
-  parent.append(card);
+function typeFinal(content, text, done) {
+  const node = el('div', 'final');
+  content.append(node);
   scroll();
+  typeInto(node, text, 15, done);
+}
+function traceEl(open) {
+  const trace = el('div', 'trace' + (open ? ' open' : ''));
+  const toggle = el('button', 'trace__toggle',
+    '<span class="trace__label"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3.5h9M2 6.5h9M2 9.5h6" stroke="#6c7d73" stroke-width="1.4" stroke-linecap="round"/></svg><text>处理记录</text></span><span class="trace__chev">▾</span>');
+  const expand = el('div', 'trace__expand');
+  const clip = el('div', 'trace__clip');
+  expand.append(clip);
+  trace.append(toggle, expand);
+  toggle.onclick = () => trace.classList.toggle('open');
+  return { trace, clip };
+}
+function ideaRow(draftText) {
+  const item = el('div', 'idea');
+  item.innerHTML = '<div class="rail"><div class="dot"></div><div class="line"></div></div>' +
+    `<div class="body"><div class="t">检索思路</div><div class="s">${draftText}</div></div>`;
+  return item;
+}
+function activityItem(clip, tool, isLast) {
+  const item = el('div', 'activity__item');
+  const rail = el('div', 'activity__rail');
+  const marker = el('div', 'activity__marker');
+  marker.append(el('div', 'pulse'));
+  rail.append(marker);
+  if (!isLast) rail.append(el('div', 'activity__line'));
+  const body = el('div', 'activity__content');
+  body.innerHTML = `<div class="activity__title"><text>${tool.label}</text><text class="activity__state">进行中</text></div>`;
+  const summary = el('div', 'activity__summary');
+  summary.style.display = 'none';
+  body.append(summary);
+  item.append(rail, body);
+  clip.append(item);
+  scroll();
+  return { item, marker, body, summary, stateEl: body.querySelector('.activity__state') };
+}
+function finishItem(ctx, tool) {
+  ctx.marker.innerHTML = '';
+  ctx.marker.append(el('div', 'badge-done'));
+  ctx.stateEl.textContent = '';
+  ctx.summary.textContent = tool.done;
+  ctx.summary.style.display = '';
+  scroll();
+}
+
+/* —— 业务 item 工厂 —— */
+function meterCard() {
+  const card = el('div', 'oblock');
+  card.innerHTML =
+    '<div class="oblock-head"><text>用电统计</text><text class="count">22 台</text></div>' +
+    '<div class="mparam"><text>26楼运营部 · 22台电表 · 10/19 20:00 → 10/20 20:00</text><text>›</text></div>' +
+    '<div class="mhero"><text class="mhero-label">用电量</text>' +
+    '<div class="mnum">4.25<span class="u">度</span></div>' +
+    '<text class="myuan">按目录电价约 4.89 元</text></div>' +
+    '<div class="mmetrics">' +
+    '<div class="mcell"><div class="k">有效采样</div><div class="v">7<span class="u">台</span></div></div>' +
+    '<div class="mcell"><div class="k">日均用电</div><div class="v">4.25<span class="u">度</span></div></div>' +
+    '<div class="mcell"><div class="k">采样边界</div><div class="v">20:00</div></div>' +
+    '</div>' +
+    '<div class="mshead"><text>时间分布 · 度</text><div class="seg"><button class="on">日</button><button>时</button></div></div>' +
+    '<div class="bars"></div>';
+  const bars = card.querySelector('.bars');
+  [62, 78, 45, 88, 70, 40, 96, 55].forEach((h, i) => {
+    const b = el('i', i >= 6 ? 'dim' : '');
+    b.style.height = `${h}%`;
+    b.style.animationDelay = `${i * 45}ms`;
+    bars.append(b);
+  });
   return card;
 }
-function orb() {
-  const wrap = el('div', 'orb');
-  const glyph = el('div', 'glyph2');
-  for (let i = 0; i < 9; i += 1) {
-    const cell = el('i', 'cell');
-    cell.style.left = `${(i % 3) * 6}px`;
-    cell.style.top = `${Math.floor(i / 3) * 6}px`;
-    cell.style.animationDelay = `${Math.hypot(i % 3 - 1, Math.floor(i / 3) - 1) * 700 - 180}ms`;
-    glyph.append(cell);
-  }
-  wrap.append(glyph, el('span', '', '思考中 · 正在读取事实'));
-  return wrap;
+function panelCard(handlers) {
+  const panel = el('div', 'panel');
+  panel.innerHTML =
+    '<div class="panel-head"><text class="panel-meta">灯控 · 26 楼走廊</text>' +
+    '<div class="seg"><button class="on">概览</button><button>草案</button></div></div>' +
+    '<div class="pstats">' +
+    '<div class="pstat"><span class="n">12</span><span class="l">共找到</span></div>' +
+    '<div class="pstat act"><span class="n">12</span><span class="l">拟执行</span></div>' +
+    '<div class="pstat"><span class="n">0</span><span class="l">不动</span></div>' +
+    '</div>' +
+    '<div class="roster">' +
+    '<div class="rrow"><span class="dot"></span><span class="nm">走廊灯 A-01</span><span class="lc">26F 走廊东段</span><span class="st">调至 50%</span></div>' +
+    '<div class="rrow"><span class="dot"></span><span class="nm">走廊灯 A-02</span><span class="lc">26F 走廊东段</span><span class="st">调至 50%</span></div>' +
+    '<div class="rrow"><span class="dot"></span><span class="nm">走廊灯 B-05</span><span class="lc">26F 走廊西段 · 等 10 台</span><span class="st">调至 50%</span></div>' +
+    '</div>' +
+    '<div class="pfoot"><text class="foot-count">已选 12 项</text>' +
+    '<button class="foot-quiet">取消</button><button class="foot-primary">执行操作</button></div>';
+  panel.querySelector('.foot-quiet').onclick = handlers.cancel;
+  panel.querySelector('.foot-primary').onclick = handlers.confirm;
+  return panel;
 }
-const caseText = {
-  plain: '我可以帮你查看楼宇的照明、空调、环境、能耗与安全台账，并把自然语言请求整理成待你确认的设备操作或定时安排。',
-  tool: '我先核对 26 楼运营部的计量点与最近有效采样，再给出这期间的用电量和计算口径。',
-};
-const finalText = {
-  plain: '我可以帮你查看楼宇的照明、空调、环境、能耗与安全台账，并把自然语言请求整理成待你确认的设备操作或定时安排。',
-  tool: '昨天（10月20日）26楼运营部电表用电 4.25 度，按目录电价约 4.89 元。统计依据是 10月19日20:00 至 10月20日20:00 的两次有效采样；小时采样较稀疏，未给出逐时曲线。',
-};
-
-function runA() {
-  const { wrap, col } = assistantShell('草稿', 'draft');
-  const bubble = el('div', 'bubble draft');
-  const text = el('div', 'text');
-  bubble.append(text);
-  const collapse = el('div', 'collapse hidden', '<span class="dot"></span><span>已收起内部草稿，继续处理设备</span><button>查看</button>');
-  bubble.append(collapse);
-  col.append(bubble);
-  thread.append(wrap);
-  type(caseText[currentCase], text, () => {
-    if (currentCase === 'plain') {
-      later(() => {
-        bubble.classList.remove('draft');
-        wrap.querySelector('.chip').className = 'chip final';
-        wrap.querySelector('.chip').textContent = '已回复';
-      }, 350);
-      return;
-    }
-    later(() => {
-      text.classList.add('hidden');
-      collapse.classList.remove('hidden');
-      const card = toolCard(bubble);
-      later(() => {
-        card.querySelector('.s').textContent = '已读取 22 台电表，7 台有效采样';
-        const answer = el('div', 'answer');
-        const body = el('div', 'text');
-        answer.append(body);
-        bubble.append(answer);
-        type(finalText.tool, body, () => {
-          wrap.querySelector('.chip').className = 'chip final';
-          wrap.querySelector('.chip').textContent = '已回复';
-          bubble.classList.remove('draft');
-        });
-      }, 900);
-    }, 400);
-  });
+function panelFoot(panel, html) {
+  panel.querySelector('.pfoot').innerHTML = html;
 }
 
-function runB() {
-  const { wrap, col } = assistantShell('处理中', 'draft');
-  const log = el('div', 'worklog');
-  log.innerHTML = '<div class="head"><span>处理过程</span><span>· 草稿</span></div>';
-  const body = el('div', 'body');
-  const summary = el('div', 'summary', '草稿已折叠 · 继续处理设备 <button>展开</button>');
-  log.append(body, summary);
-  col.append(log);
-  const answerBubble = el('div', 'bubble hidden');
-  const answerText = el('div', 'text');
-  answerBubble.append(answerText);
-  col.append(answerBubble);
-  thread.append(wrap);
-  type(caseText[currentCase], body, () => {
-    if (currentCase === 'plain') {
-      later(() => {
-        log.classList.add('collapsed');
-        answerBubble.classList.remove('hidden');
-        type(finalText.plain, answerText, () => {
-          wrap.querySelector('.chip').className = 'chip final';
-          wrap.querySelector('.chip').textContent = '已回复';
-        });
-      }, 400);
-      return;
-    }
-    later(() => {
-      log.classList.add('collapsed');
-      const card = toolCard(col);
-      col.insertBefore(card, answerBubble);
-      later(() => {
-        card.querySelector('.s').textContent = '已读取 22 台电表，7 台有效采样';
-        answerBubble.classList.remove('hidden');
-        type(finalText.tool, answerText, () => {
-          wrap.querySelector('.chip').className = 'chip final';
-          wrap.querySelector('.chip').textContent = '已回复';
-        });
-      }, 900);
-    }, 450);
-  });
-}
-
-function runC() {
-  const { wrap, col } = assistantShell('思考中', 'draft');
-  const state = el('div', 'bubble');
-  state.append(orb());
-  col.append(state);
-  thread.append(wrap);
+/* —— 通用：草稿段 → 命运分岔（settle 折叠 / stay 降级 / gate 无草稿）—— */
+function playDraft(shell, draftText, variant, onReclassify) {
+  const { content } = shell;
+  if (variant === 'gate') { later(onReclassify, 1600); return; }
+  const draft = el('div', 'draft');
+  content.append(draft);
   later(() => {
-    if (currentCase === 'tool') {
-      const card = toolCard(col);
+    typeInto(draft, draftText, 15, () => {
       later(() => {
-        card.querySelector('.s').textContent = '已读取 22 台电表，7 台有效采样';
-        showFinal();
-      }, 900);
-    } else {
-      showFinal();
-    }
-  }, 900);
-  function showFinal() {
-    state.remove();
-    const bubble = el('div', 'bubble');
-    const text = el('div', 'text');
-    bubble.append(text);
-    col.append(bubble);
-    type(finalText[currentCase], text, () => {
-      wrap.querySelector('.chip').className = 'chip final';
-      wrap.querySelector('.chip').textContent = '已回复';
+        if (variant === 'settle') {
+          draft.classList.add('folded');
+          onReclassify(draftText);
+        } else {
+          draft.classList.add('demoted');
+          draft.innerHTML = `<b style="font-weight:600">检索思路</b>　${draftText}`;
+          onReclassify(null);
+        }
+      }, 800);
     });
+  }, 1600);
+}
+function playTools(clip, tools, done) {
+  let at = 300;
+  tools.forEach((tool, idx) => {
+    later(() => {
+      const ctx = activityItem(clip, tool, idx < tools.length - 1);
+      if (tool.mid) later(() => { ctx.summary.textContent = tool.mid; ctx.summary.style.display = ''; scroll(); }, tool.ms / 2);
+      later(() => finishItem(ctx, tool), tool.ms);
+    }, at);
+    at += tool.ms + 500;
+  });
+  later(done, at + 200);
+}
+
+/* —— 剧本：设备查询（草稿 → 工具 → 电表卡 → 终稿落在卡下）—— */
+function runTool(shell, variant) {
+  const { content } = shell;
+  playDraft(shell, texts.toolDraft, variant, (idea) => {
+    const { trace, clip } = traceEl(true);
+    if (idea) clip.append(ideaRow(idea));
+    content.append(trace);
+    scroll();
+    playTools(clip, caseTools.tool, () => {
+      later(() => {
+        content.append(meterCard());
+        scroll();
+      }, 400);
+      later(() => typeFinal(content, texts.toolFinal, () => finishRun(shell)), 1100);
+    });
+  });
+}
+
+/* —— 剧本：灯控确认（草稿 → 工具 → 操作卡等待真实点击 → 回执 → 终稿）—— */
+function runCtrl(shell, variant) {
+  const { content } = shell;
+  playDraft(shell, texts.ctrlDraft, variant, (idea) => {
+    const { trace, clip } = traceEl(true);
+    if (idea) clip.append(ideaRow(idea));
+    content.append(trace);
+    scroll();
+    playTools(clip, caseTools.ctrl, () => {
+      const exec = activityItem(clip, { label: '执行灯控指令' }, true);
+      exec.item.style.display = 'none';
+      later(() => {
+        finishRun(shell);
+        const panel = panelCard({
+          cancel: () => {
+            panelFoot(panel, '<text class="foot-count" style="color:#93a19a">已取消，设备保持原状态</text>');
+            later(() => typeFinal(content, texts.ctrlCancel, null), 350);
+          },
+          confirm: (e) => {
+            e.target.disabled = true;
+            panelFoot(panel, '<span class="receipt"><span class="spin"></span><text>正在执行，请稍候</text></span>');
+            exec.item.style.display = '';
+            scroll();
+            later(() => {
+              exec.marker.innerHTML = '';
+              exec.marker.append(el('div', 'badge-done'));
+              exec.stateEl.textContent = '';
+              exec.summary.textContent = '12/12 下发成功';
+              exec.summary.style.display = '';
+              panelFoot(panel, '<span class="receipt"><svg width="14" height="14" viewBox="0 0 13 13"><path d="M2.5 7l2.6 2.6L10.5 3.5" fill="none" stroke="#526d5e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><text>12 台已下发 · 回执确认中</text></span>');
+              scroll();
+            }, 2400);
+            later(() => typeFinal(content, texts.ctrlFinal, null), 3400);
+          },
+        });
+        content.append(panel);
+        scroll();
+      }, 500);
+    });
+  });
+}
+
+/* —— 剧本：普通问答（草稿即终稿）—— */
+function runPlain(shell, variant) {
+  const { content } = shell;
+  if (variant === 'gate') {
+    later(() => typeFinal(content, texts.plain, () => finishRun(shell)), 2200);
+    return;
   }
+  const draft = el('div', 'draft');
+  content.append(draft);
+  later(() => {
+    typeInto(draft, texts.plain, 15, () => {
+      later(() => { draft.classList.add('settled'); finishRun(shell); }, 500);
+    });
+  }, 1600);
 }
 
 function run() {
   clearTimers();
   thread.innerHTML = '';
-  const question = currentCase === 'tool' ? '26楼运营部昨天用了多少电？' : '用一句话说明你能帮我做什么。';
-  thread.append(el('div', 'user', question));
+  const row = el('div', 'user-row');
+  row.append(el('div', 'user-msg', caseQ[currentCase]));
+  thread.append(row);
   scroll();
   later(() => {
-    if (variant === 'a') runA();
-    else if (variant === 'b') runB();
-    else runC();
-  }, 260);
+    const shell = replyShell();
+    if (currentCase === 'tool') runTool(shell, variant);
+    else if (currentCase === 'ctrl') runCtrl(shell, variant);
+    else runPlain(shell, variant);
+  }, 280);
 }
 
 document.getElementById('prev').onclick = () => {
   const keys = Object.keys(variants);
-  setVariant(keys[(keys.indexOf(variant) + keys.length - 1) % keys.length]);
-  run();
+  setVariant(keys[(keys.indexOf(variant) + keys.length - 1) % keys.length]); run();
 };
 document.getElementById('next').onclick = () => {
   const keys = Object.keys(variants);
-  setVariant(keys[(keys.indexOf(variant) + 1) % keys.length]);
-  run();
+  setVariant(keys[(keys.indexOf(variant) + 1) % keys.length]); run();
 };
 document.getElementById('send').onclick = run;
 document.getElementById('replay').onclick = run;
-document.querySelectorAll('.scenario [data-case]').forEach(button => {
-  button.onclick = () => setCase(button.dataset.case);
-});
-document.addEventListener('keydown', event => {
+document.querySelectorAll('.scenario [data-case]').forEach(b => { b.onclick = () => setCase(b.dataset.case); });
+document.addEventListener('keydown', e => {
   if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
-  if (event.key === 'ArrowLeft') document.getElementById('prev').click();
-  if (event.key === 'ArrowRight') document.getElementById('next').click();
+  if (e.key === 'ArrowLeft') document.getElementById('prev').click();
+  if (e.key === 'ArrowRight') document.getElementById('next').click();
 });
 setVariant(variant);
 setCase(currentCase);

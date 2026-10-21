@@ -10,7 +10,7 @@
 - 消防搬迁资料：`currentDevice`表示本次核验的当前名称/安装位置，空字段显示未核验；`recordedDeviceName`保留告警原名称。列表重新打开静默更新，摄像头查询返回的同事件资料同步详情，入口明确“按当前位置查找监控”，不把当前位置解释为记录时位置。
 
 - 微信分块事件的 `data` 是 `ArrayBuffer`，中文 UTF-8 字节可能跨 chunk；所有 NDJSON 解析继续复用 `apis/agent/ndjson.mjs`。
-- 正文事件是 `message.delta`（增量，后端已合并）+ `message.completed`（权威终稿）；终稿覆盖累积文本，`tool.started` 会收起工具前的中间评注。
+- 正文事件是 `message.delta`（增量，后端已合并，带 `phase`）+ `message.completed`（权威终稿）+ `message.reclassified`；终稿覆盖累积文本。`phase:'draft'` 的增量以过程权重实时落在答复位（`draftText` 条目），无工具调用时由 completed 原地沉淀为终稿色，带工具调用时由 reclassified 折叠为处理记录里的「检索思路」行——已渲染内容不删除、不移位、不重打。一轮答复按事件序渲染为有序条目流（`turn.items`：正文/草稿/观察卡/操作卡/任务卡），卡片可先落位、终稿随后；`tool.started` 对旧协议无 phase 的未收正文同样折叠为思路行而非丢弃。
 - `tool.progress` 原位更新运行中步骤摘要（0 命中重试聚合为“正在修正检索范围…”）；`run.*` 收尾必须同时清 `running` 与 `streaming`，光标不得滞留。
 - 失败轮的恢复入口是最近用户气泡的重试/编辑与错误卡片：重试沿用 `turn.content` 重发，失败轮本就未入服务端会话，无需新接口。
 - Android 优先消费 `onChunkReceived`，其他平台保留完整 response 回退，两条路径必须产生相同业务事件。

@@ -40,6 +40,56 @@ test('message.completed 以终稿覆盖流式文本，工具评注在工具开�
 	assert.equal(turn.streaming, false)
 })
 
+test('草稿正文实时公开，工具调用到来时重分类折叠为思路行而不删除', () => {
+	const turn = createTurn('turn', '查 26 楼用电')
+	applyEvent(turn, { type: 'message.delta', content: '我先查一下', phase: 'draft' })
+	applyEvent(turn, { type: 'message.delta', content: '电表读数。', phase: 'draft' })
+	assert.equal(turn.items.at(-1).kind, 'draftText')
+	assert.equal(turn.items.at(-1).text, '我先查一下电表读数。')
+	applyEvent(turn, { type: 'message.reclassified', to: 'process', content: '我先查一下电表读数。' })
+	assert.equal(turn.streaming, false)
+	assert.equal(turn.items.length, 0, '草稿不在正文流重复出现')
+	const idea = turn.activities.at(-1)
+	assert.equal(idea.kind, 'idea')
+	assert.equal(idea.summary, '我先查一下电表读数。')
+	applyEvent(turn, { type: 'tool.started', tool: 'read_device_states' })
+	assert.equal(turn.activities.at(-1).tool, 'read_device_states')
+})
+
+test('无工具轮草稿在原地沉淀为终稿，不移动不重复', () => {
+	const turn = createTurn('turn', '你好')
+	applyEvent(turn, { type: 'message.delta', content: '你好，', phase: 'draft' })
+	applyEvent(turn, { type: 'message.delta', content: '我是物联助手。', phase: 'draft' })
+	applyEvent(turn, { type: 'message.completed', content: '你好，我是物联助手。' })
+	applyEvent(turn, { type: 'run.completed', outcome: 'message' })
+	assert.deepEqual(turn.items.map(item => item.kind), ['draftText'])
+	assert.equal(turn.items[0].settled, true, '草稿原地沉淀，不换条目')
+	assert.equal(turn.text, '你好，我是物联助手。')
+	assert.equal(turn.activities.length, 0, '普通答复不产生处理记录')
+})
+
+test('观察卡按事件序先落位，终稿文字落在卡片下方，恢复顺序一致', () => {
+	const events = [
+		{ type: 'message.delta', content: '我先读表。', phase: 'draft' },
+		{ type: 'message.reclassified', to: 'process', content: '我先读表。' },
+		{ type: 'tool.started', tool: 'read_device_states' },
+		{ type: 'tool.completed', tool: 'read_device_states', status: 'completed' },
+		{ type: 'observation.reported', observedAt: '2026-10-22T01:00:00Z', blocks: [{ type: 'energy', devices: [] }] },
+		{ type: 'message.delta', content: '以上是读数。', phase: 'draft' },
+		{ type: 'message.completed', content: '以上是读数。' },
+		{ type: 'run.completed', outcome: 'message' },
+	]
+	const turn = createTurn('turn', '昨天用了多少电')
+	for (const event of events) applyEvent(turn, event)
+	assert.deepEqual(turn.items.map(item => item.kind), ['obs', 'draftText'])
+	assert.equal(turn.items[1].settled, true, '终稿文字在卡片下方沉淀')
+	assert.equal(turn.activities.some(item => item.kind === 'idea'), true)
+	const [restored] = restoreTurns([{ id: 'turn', content: '昨天用了多少电', events }])
+	assert.deepEqual(restored.items.map(item => item.kind), ['obs', 'draftText'])
+	assert.equal(restored.streaming, false)
+	assert.equal(restored.running, false)
+})
+
 test('run 收尾同时清除流式标记，恢复重放后不残留光标', () => {
 	const turn = createTurn('turn', '查询设备')
 	applyEvent(turn, { type: 'message.delta', content: '部分正文' })

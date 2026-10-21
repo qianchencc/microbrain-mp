@@ -17,21 +17,24 @@
     <view class="trace__expand"><view class="trace__clip"><ToolActivity :items="turn.activities" /></view></view>
    </view>
 
-   <AssistantMarkdown v-if="turn.text" :content="turn.text" />
-   <ObservationCard v-for="(obs, index) in turn.observations || []" :key="turn.id + '-obs-' + index" :observation="obs" :running="turn.running" :source="source" @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" @open-report="$emit('open-report', $event)" :read-only="readOnly || source === 'company'" />
-   <template v-if="!readOnly">
-    <ActionPanel :source="source" v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
-     @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
-     @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
-     @configure="$emit('configure', $event)" @browse="$emit('browse')" />
-    <template v-for="task in turn.tasks || (turn.task ? [turn.task] : [])" :key="task.changeId || task.cancellationId || task.taskId">
-     <TaskChangeCard v-if="task.kind === 'change'" :change="task" :busy="busy"
-      @confirm="$emit('confirm-task', task)" @discard="$emit('discard-task', task)" />
-     <TaskProposalCard v-else :task="task" :source="source" :busy="busy"
-      @confirm="$emit('confirm-task', task)" @discard="$emit('discard-task', task)" @open="$emit('open-task', $event || task)" />
+   <template v-for="item in turn.items" :key="item.id">
+    <AssistantMarkdown v-if="item.kind === 'text'" :content="turn.text" />
+    <view v-else-if="item.kind === 'draftText'" class="reply-draft" :class="{ 'reply-draft--settled': item.settled }"><AssistantMarkdown :content="item.settled ? turn.text : item.text" /></view>
+    <ObservationCard v-else-if="item.kind === 'obs'" :observation="item.obs" :running="turn.running" :source="source" @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" @open-report="$emit('open-report', $event)" :read-only="readOnly || source === 'company'" />
+    <template v-else-if="item.kind === 'panel' && !readOnly">
+     <ActionPanel :source="source" v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
+      @select="$emit('select', $event)" @confirm="$emit('confirm')" @cancel="$emit('cancel')"
+      @revalidate="$emit('revalidate')" @updated="$emit('updated', $event)" @editing="$emit('editing', $event)"
+      @configure="$emit('configure', $event)" @browse="$emit('browse')" />
+    </template>
+    <template v-else-if="item.kind === 'task' && !readOnly">
+     <TaskChangeCard v-if="item.task.kind === 'change'" :change="item.task" :busy="busy"
+      @confirm="$emit('confirm-task', item.task)" @discard="$emit('discard-task', item.task)" />
+     <TaskProposalCard v-else :task="item.task" :source="source" :busy="busy"
+      @confirm="$emit('confirm-task', item.task)" @discard="$emit('discard-task', item.task)" @open="$emit('open-task', $event || item.task)" />
     </template>
    </template>
-   <view v-else-if="turn.draft || turn.tasks?.length || turn.task || turn.result" class="read-only-boundary">此来源当前仅开放只读查询，操作能力尚未接入。</view>
+   <view v-if="readOnly && (turn.draft || turn.tasks?.length || turn.task || turn.result)" class="read-only-boundary">此来源当前仅开放只读查询，操作能力尚未接入。</view>
    <view v-if="!readOnly && turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
     <text v-if="turn.result.summary.status === 'completed'" class="execution-answer">{{ turn.result.summary.text }}</text>
     <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>
@@ -82,6 +85,9 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .trace--open .trace__expand { max-height:640px; opacity:1; }
 .trace__clip { padding:0 11px; }
 .trace :deep(.activity) { margin:2px 0 10px; }
+/* 未定稿正文：与答复同位、以过程权重呈现；reclassified 折叠进处理记录，completed 原地沉淀为终稿色（同一元素过渡，不换节点）。 */
+.reply-draft { color:#66776d; transition:color .45s ease; }
+.reply-draft--settled { color:#253b30; }
 .execution-summary { margin-top:16px; }
 .read-only-boundary { margin-top:12px; padding:8px 10px; border-left:2px solid #b58c4b; background:#f8f4eb; color:#806338; font-size:12px; line-height:1.55; }
 .execution-answer { display:block; color:#253b30; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
