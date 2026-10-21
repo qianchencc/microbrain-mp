@@ -55,6 +55,7 @@
         </button>
        </view>
       </view>
+      <view v-if="moreLoading || moreError || hasMore" class="list-footer"><button v-if="moreError" @tap="loadMore">更晚任务加载失败 · 重试</button><button v-else-if="!moreLoading" @tap="loadMore">加载更晚任务</button><text v-else>加载中…</text></view>
       </template>
      </template>
 
@@ -140,6 +141,7 @@ const props = defineProps({ open: Boolean, source: { type: String, default: 'off
 const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-count'])
 const calendar = ref(null), inbox = ref(null), inboxNavigation = ref({ title: '', canBack: false }), selectedDate = ref(props.date || taskToday())
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
+const ALL_CHUNK_DAYS = 62, ALL_MAX_DAYS = 371
 const views = computed(() => props.source === 'company' ? [{ value: 'all', label: '全部任务' }, { value: 'calendar', label: '日历' }] : [
  { value: 'upcoming', label: '待执行' },
  { value: 'results', label: '执行结果' },
@@ -149,6 +151,8 @@ const view = ref(props.source === 'company' ? 'all' : 'upcoming')
 const tasks = ref([]), plans = ref([])
 const loading = ref(false), error = ref(''), planLoading = ref(false), planSwitchRevision = ref(0)
 const plansError = ref(''), plansLoading = ref(false), inboxUnread = ref(0)
+const allLoadedTo = ref(0), moreLoading = ref(false), moreError = ref('')
+const hasMore = computed(() => props.source === 'company' && view.value === 'all' && listLoaded.value && allLoadedTo.value > 0 && allLoadedTo.value < ALL_MAX_DAYS)
 const listLoaded = ref(false)
 const taskRows = new Map()
 const plansLoaded = ref(false)
@@ -164,10 +168,10 @@ const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' :
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无周期计划')
 function railNum(date) { const today = taskToday(); return date.slice(5, 7) === today.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
 function railText(date) { const today = taskToday(); return date === today ? '今天' : date === shiftDate(today, 1) ? '明天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
-let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, loadedScope = '', pageVisible = true
+let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, moreRequest = 0, loadedScope = '', pageVisible = true
 function resetPlanSwitch() { planSwitchRevision.value += 1 }
-function resetIdentity() { ++planStatusRequest; ++plansRequest; tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded.value = false; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false }; planLoading.value = false; plansLoading.value = false; plansError.value = ''; inboxUnread.value = 0; resetPlanSwitch() }
-onHide(() => { pageVisible = false; ++requestId; ++planRequest; ++planStatusRequest; ++plansRequest; loading.value = false; planLoading.value = false; plansLoading.value = false; resetPlanSwitch() })
+function resetIdentity() { ++planStatusRequest; ++plansRequest; ++moreRequest; tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded.value = false; allLoadedTo.value = 0; moreLoading.value = false; moreError.value = ''; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false }; planLoading.value = false; plansLoading.value = false; plansError.value = ''; inboxUnread.value = 0; resetPlanSwitch() }
+onHide(() => { pageVisible = false; ++requestId; ++planRequest; ++planStatusRequest; ++plansRequest; ++moreRequest; loading.value = false; planLoading.value = false; plansLoading.value = false; moreLoading.value = false; resetPlanSwitch() })
 onShow(() => { pageVisible = true; if (props.open) void load() })
 
 function startOfDay(date) {
@@ -183,7 +187,7 @@ function dayOffset(date, amount) {
 function taskRange(kind) {
  const now = new Date()
  const today = startOfDay(now)
- if (kind === 'all') return { from: today.toISOString(), to: dayOffset(today, 371).toISOString() }
+ if (kind === 'all') return { from: today.toISOString(), to: dayOffset(today, ALL_CHUNK_DAYS).toISOString() }
  if (kind === 'upcoming') return { from: today.toISOString(), to: dayOffset(today, 31).toISOString() }
  return { from: dayOffset(today, -30).toISOString(), to: now.toISOString() }
 }
@@ -327,6 +331,7 @@ async function load(force = true) {
   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) {
    tasks.value = selectTaskRows(result?.tasks, kind)
    taskRows.set(kind, tasks.value); listLoaded.value = true
+   if (kind === 'all') { allLoadedTo.value = ALL_CHUNK_DAYS; moreError.value = '' }
   }
  } catch (cause) {
   if (current === requestId && props.open && view.value === kind) {
@@ -338,6 +343,25 @@ async function load(force = true) {
  } finally {
   if (current === requestId) loading.value = false
  }
+}
+async function loadMore() {
+ if (view.value !== 'all' || moreLoading.value || !hasMore.value || !props.open || !pageVisible) return
+ const current = ++moreRequest
+ moreLoading.value = true; moreError.value = ''
+ try {
+  const scope = getAgentStorageScope(), source = props.source
+  const today = startOfDay(new Date())
+  const from = dayOffset(today, allLoadedTo.value).toISOString()
+  const to = dayOffset(today, Math.min(allLoadedTo.value + ALL_CHUNK_DAYS, ALL_MAX_DAYS)).toISOString()
+  const result = await listAgentTasks({ source, from, to })
+  if (current !== moreRequest || !pageVisible || !props.open || view.value !== 'all' || source !== props.source || scope !== getAgentStorageScope()) return
+  const seen = new Set(tasks.value.map(taskKey))
+  tasks.value = [...tasks.value, ...(result?.tasks || []).filter(task => !seen.has(taskKey(task)))]
+  taskRows.set('all', tasks.value)
+  allLoadedTo.value = Math.min(allLoadedTo.value + ALL_CHUNK_DAYS, ALL_MAX_DAYS)
+ } catch (cause) {
+  if (current === moreRequest) moreError.value = cause.message || '加载失败'
+ } finally { if (current === moreRequest) moreLoading.value = false }
 }
 function openTask(task) {
  if (!taskKey(task)) return

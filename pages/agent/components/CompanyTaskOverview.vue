@@ -15,7 +15,7 @@
      <text v-if="day.more" class="row-more">还有 {{ day.more }} 项</text>
     </view>
    </view>
-   <view v-if="!loading && !previewDays.length" class="agenda-state">暂无待执行任务</view>
+   <view v-if="!loading && !previewDays.length" class="agenda-state">近两个月暂无待执行任务</view>
    <view v-if="error && previewDays.length" class="agenda-error agenda-error--stale"><text>任务暂未更新</text><view class="error-actions"><button class="error-detail" @tap="showError">查看原因</button><button class="error-retry" @tap="load(true)">重试</button></view></view>
   </view>
   <button class="overview-foot" @tap="open('all')">查看所有任务 ›</button>
@@ -36,7 +36,7 @@ const tasks = ref([]), unread = ref(0), loading = ref(false), loaded = ref(false
 const previewDays = computed(() => {
  const days = []
  let total = 0
- for (const day of agendaGroups(tasks.value, today.value, 370).days) {
+ for (const day of agendaGroups(tasks.value, today.value, 62).days) {
   if (total >= 4) break
   const rows = day.rows.filter(task => !taskSettled(task))
   if (!rows.length) continue
@@ -65,7 +65,7 @@ async function load(force = false) {
   if (scope !== loadedScope) { tasks.value = []; loaded.value = false; loadedScope = scope }
   const executing = tasks.value.some(task => task.status === 'executing')
   delay = executing ? 5000 : 30000
-  const from = `${today.value}T00:00:00+08:00`, to = `${shiftDate(today.value, 371)}T00:00:00+08:00`
+  const from = `${today.value}T00:00:00+08:00`, to = `${shiftDate(today.value, 62)}T00:00:00+08:00`
   const result = await listAgentTasks({ source: 'company', from, to })
   if (current !== generation || scope !== getAgentStorageScope() || !props.active || !visible) return
   tasks.value = result.tasks || []; loaded.value = true
