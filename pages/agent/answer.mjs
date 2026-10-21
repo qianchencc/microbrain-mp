@@ -1,9 +1,12 @@
-// 回复正文的轻量渲染：段落 / 无序列表 / 加粗。流式期间前端只展示纯文本，
+// 回复正文的轻量渲染：段落 / 无序列表 / 管道表格 / 加粗。流式期间前端只展示纯文本，
 // 完成后才切换到这里的 rich-text 节点，避免流中反复重排。
 // 微信 rich-text 契约：文本叶子必须是 { type: 'text', text }，元素样式只能放 attrs.style。
 const paragraphStyle = 'margin:0 0 10px;line-height:1.8;'
 const listStyle = 'margin:0 0 10px;padding-left:22px;line-height:1.8;'
 const itemStyle = 'margin:4px 0;'
+const tableStyle = 'margin:0 0 10px;border-collapse:collapse;font-size:13px;line-height:1.6;'
+const headCellStyle = 'padding:6px 9px;border:1px solid rgba(140,157,148,.35);background:rgba(232,239,234,.5);font-weight:650;text-align:left;'
+const cellStyle = 'padding:6px 9px;border:1px solid rgba(140,157,148,.35);vertical-align:top;'
 
 const textNode = text => ({ type: 'text', text })
 const elementNode = (name, style, children) => ({
@@ -12,13 +15,40 @@ const elementNode = (name, style, children) => ({
 	children,
 })
 
+const tableDivider = /^\s*\|?[\s:|-]+\|?\s*$/
+const tableCells = line => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim())
+
 export function renderAnswer(text) {
 	const blocks = []
 	let list = null
 	const closeList = () => {
 		if (list) { blocks.push(list); list = null }
 	}
-	for (const line of String(text || '').split('\n')) {
+	const lines = String(text || '').split('\n')
+	for (let i = 0; i < lines.length; i += 1) {
+		const line = lines[i]
+		if (line.includes('|') && i + 1 < lines.length && tableDivider.test(lines[i + 1])) {
+			const head = tableCells(line)
+			const body = []
+			let cursor = i + 2
+			while (cursor < lines.length && lines[cursor].includes('|') && lines[cursor].trim()) {
+				body.push(tableCells(lines[cursor]))
+				cursor += 1
+			}
+			if (head.length >= 2 && body.length) {
+				closeList()
+				const width = head.length
+				const cells = row => Array.from({ length: width }, (_, index) => row[index] ?? '')
+				blocks.push(elementNode('table', tableStyle, [
+					elementNode('thead', '', [
+						elementNode('tr', '', cells(head).map(cell => elementNode('th', headCellStyle, inline(cell)))),
+					]),
+					elementNode('tbody', '', body.map(row => elementNode('tr', '', cells(row).map(cell => elementNode('td', cellStyle, inline(cell)))))),
+				]))
+				i = cursor - 1
+				continue
+			}
+		}
 		const bullet = /^\s*(?:[-*•])\s+(.*)$/.exec(line)
 		if (bullet) {
 			list ??= elementNode('ul', listStyle, [])
