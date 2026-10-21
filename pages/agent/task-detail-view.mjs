@@ -116,6 +116,7 @@ export function targetText(kind, target) {
 
 export function readTargetText(kind, read) {
  if (kind === 'safety' && read?.alertWindow === 'previous_day') return '汇总前一自然日告警（上海时间）'
+ if (kind === 'safety' && read?.alertWindow === 'previous_week') return '汇总上一自然周告警（上海时间，周一至周日）'
  if (kind === 'safety' && read?.alertDays) return `读取近 ${read.alertDays} 天告警`
  return ({ ac: '读取空调状态', environment: '读取环境数据', energy: '读取最新能耗', safety: '读取告警台账', video: '检查在线状态' })[kind] || '只读检查'
 }

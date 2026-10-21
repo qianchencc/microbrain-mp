@@ -87,6 +87,7 @@ function targetSummary(template) {
    items.push(`${device.name || device.id || '设备'} · ${readTargetText(device.kind, phase.read)}`)
   }
   if (phase.read?.alertWindow === 'previous_day') items.push('安全台账 · 阶段计划日期的前一自然日（上海时间）')
+  else if (phase.read?.alertWindow === 'previous_week') items.push('安全台账 · 上一自然周，周一至周日（上海时间）')
   else if (phase.read?.alertDays) items.push(`安全台账 · 近 ${phase.read.alertDays} 天`)
  }
  const unique = [...new Set(items)]

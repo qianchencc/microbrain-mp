@@ -267,6 +267,8 @@ test('Company 结果未知降为提醒而非明确报错，Office 保持原口�
 })
 
 test('周期计划执行要求只汇总接口返回的阶段事实，不从模板还原', () => {
+ assert.equal(taskRequirementsText({ phases: [{ devices: [{ kind: 'safety', target: { observe: true, alertWindow: 'previous_week' } }] }] }),
+  '汇总上一自然周告警（上海时间，周一至周日）')
  const agent = { objective: '生成昨日用电报告', output: 'report', spec: { period: { kind: 'previous', unit: 'day' }, comparisons: ['previousPeriod', 'yearOverYear'] } }
  const alarmPhase = { id: 'alarm', at: '2026-10-20T01:00:00Z', status: 'pending',
   devices: [{ id: 'smoke-1', kind: 'safety', name: '展示厅烟感', target: { observe: true, alertWindow: 'previous_day' }, outcome: 'pending', details: {} }] }
