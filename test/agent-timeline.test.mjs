@@ -5,6 +5,8 @@ import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
 import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
 import { readAgentView, readTargetText, taskDetailView, taskPlanSnapshot, taskRequirementsText, targetText } from '../pages/agent/task-detail-view.mjs'
 import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/region-sample-tasks.mjs'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 test('区域时间轴按上海时间连续映射，午夜无空隙且每小时 34px', () => {
  assert.equal(timelineYOf('2026-09-25T01:00:00+08:00', '2026-09-25') - timelineYOf('2026-09-25T00:00:00+08:00', '2026-09-25'), 34)
@@ -289,4 +291,17 @@ test('周期计划执行要求只汇总接口返回的阶段事实，不从模�
   devices: [{ id: 'light-1', kind: 'lighting', name: '走廊灯', target: { closeOrOpen: 0 }, outcome: 'pending', details: {} }] }] }), '按计划时间执行')
  assert.equal(taskRequirementsText({ phases: [] }), '')
  assert.equal(taskRequirementsText(null), '')
+})
+
+test('任务结果的安全台账点击在同层导航，不再丢弃告警事件', () => {
+ const detailSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskDetailContent.vue'), 'utf8')
+ const resultSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskResultContent.vue'), 'utf8')
+ assert.match(detailSource, /@select-alert="\$emit\('select-alert', \$event\)"/)
+ assert.match(detailSource, /@browse-alerts="\$emit\('browse-alerts'\)"/)
+ assert.match(resultSource, /@select-alert="openSafetyEvent"/)
+ assert.match(resultSource, /@browse-alerts="openSafetyHistory"/)
+ assert.match(resultSource, /<SafetyHistoryList[\s\S]*@select="openSafetyEvent"/)
+ assert.match(resultSource, /<SafetyEventDetail[\s\S]*:snapshot="safetyRef\.snapshot"/)
+ assert.match(resultSource, /title: '安全事件台账', canBack: true/)
+ assert.match(resultSource, /title: '安全台账详情', canBack: true/)
 })

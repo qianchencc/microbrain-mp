@@ -33,7 +33,7 @@
       <text class="task-when">{{ phase.readAc.summary }}</text>
       <text class="task-when">{{ phase.readAc.criteriaText }}</text>
      </template>
-     <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" inline-playback read-only />
+     <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" />
      <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
      <button v-if="phase.report" class="phase-report" :aria-label="`打开检查点报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
       <uni-icons type="compose" size="13" color="#176b54" />
@@ -81,7 +81,7 @@ import { creatorVariant } from '../region-device-view.mjs'
 import ObservationCard from './ObservationCard.vue'
 
 const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, initialTask: Object, snapshotScope: String, source: { type: String, default: 'office' } })
-const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss'])
+const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss', 'select-alert', 'browse-alerts'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false), planSwitchRevision = ref(0)
