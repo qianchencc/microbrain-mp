@@ -1,22 +1,62 @@
 <template>
  <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="(view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" @close="closeSheet">
   <template #header-left>
-   <button v-if="selectedTask || selectedPlan || inboxNavigation.canBack" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
+   <button v-if="selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
   </template>
   <template #header-right>
    <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
+   <button v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button inbox-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /><text v-if="inboxUnread" class="inbox-badge">{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></button>
   </template>
   <view class="arrangements-content">
    <view class="list-pane" :style="{ display: selectedTask || selectedPlan ? 'none' : 'flex' }">
-    <view v-if="!inboxNavigation.canBack" class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
-    <TaskInboxContent v-if="source === 'company' && view === 'inbox'" ref="inbox" class="task-content-host" :open="open && view === 'inbox' && !selectedTask && !selectedPlan" :source="source" @navigation="inboxNavigation = $event" @reference="emit('reference', $event)" @unread-count="emit('unread-count', $event)" @changed="emit('changed')" />
+    <view v-if="!inboxNavigation.canBack && !stackedView" class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
+    <TaskInboxContent v-if="source === 'company' && view === 'inbox'" ref="inbox" class="task-content-host" :open="open && view === 'inbox' && !selectedTask && !selectedPlan" :source="source" @navigation="inboxNavigation = $event" @reference="emit('reference', $event)" @unread-count="inboxUnread = $event; emit('unread-count', $event)" @changed="emit('changed')" />
     <scroll-view v-else class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
-     <TaskCalendarView v-if="source === 'company' && view === 'schedule'" ref="calendar" :active="open && view === 'schedule' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
+     <TaskCalendarView v-if="source === 'company' && view === 'calendar'" ref="calendar" :active="open && view === 'calendar' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
      <template v-else>
-     <view class="list-summary"><text>{{ listSummary }}</text><text>{{ listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text></view>
+     <button v-if="view === 'all' && source === 'company'" class="plan-strip" @tap="view = 'plans'">
+      <text class="strip-title">周期计划</text>
+      <text v-if="plansError" class="strip-meta strip-meta--fail">未能加载</text>
+      <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已启用 {{ enabledPlansCount }}</text>
+      <text v-else class="strip-meta">读取中…</text>
+      <uni-icons type="right" size="13" color="#99a59d" />
+     </button>
+     <view class="list-summary"><text>{{ listSummary }}</text><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text></view>
      <view v-if="loading && !listLoaded" class="state-message">加载中…</view>
      <view v-else-if="error && !visibleRows.length" class="state-message"><text>{{ error }}</text><button @tap="load">重试</button></view>
-     <view v-else-if="!visibleRows.length" class="state-message">{{ emptyText }}</view>
+     <view v-else-if="!visibleRows.length && view !== 'all'" class="state-message">{{ emptyText }}</view>
+
+     <template v-else-if="view === 'all'">
+      <view v-if="!agendaHasDays && !agenda.later.length" class="state-message">{{ emptyText }}</view>
+      <template v-else>
+      <view v-if="!agendaHasDays" class="day-empty">近 10 天暂无任务</view>
+      <view v-for="day in agendaHasDays ? agenda.days : []" :key="day.date" class="agenda-day">
+       <view class="agenda-rail"><text class="day-num">{{ railNum(day.date) }}</text><text class="day-wd">{{ railText(day.date) }}</text></view>
+       <view class="agenda-rows">
+        <button v-for="task in day.rows" :key="taskKey(task)" class="task-row task-row--agenda" @tap="openTask(task)">
+         <text class="row-clock">{{ taskDayTime(task, day.date) }}</text>
+         <view class="row-copy">
+          <view class="row-heading"><text class="row-title">{{ task.label || '任务安排' }}</text><text class="task-status" :class="'tone-' + taskTone(task.status)">{{ taskStatus(task.status) }}</text></view>
+          <text v-if="task.repeat || task.occurrence" class="row-subtitle">周期 · {{ repeatText(task.repeat) || '按周期执行' }}</text>
+         </view>
+        </button>
+        <text v-if="!day.rows.length" class="day-empty">暂无任务</text>
+       </view>
+      </view>
+      <view v-if="agenda.later.length" class="agenda-day">
+       <view class="agenda-rail"><text class="day-num day-num--later">更晚</text></view>
+       <view class="agenda-rows">
+        <button v-for="item in agenda.later" :key="taskKey(item.task)" class="task-row task-row--agenda" @tap="openTask(item.task)">
+         <view class="row-clock row-clock--later"><text>{{ item.date.slice(5) }}</text><text>{{ taskDayTime(item.task, item.date) }}</text></view>
+         <view class="row-copy">
+          <view class="row-heading"><text class="row-title">{{ item.task.label || '任务安排' }}</text><text class="task-status" :class="'tone-' + taskTone(item.task.status)">{{ taskStatus(item.task.status) }}</text></view>
+          <text v-if="item.task.repeat || item.task.occurrence" class="row-subtitle">周期 · {{ repeatText(item.task.repeat) || '按周期执行' }}</text>
+         </view>
+        </button>
+       </view>
+      </view>
+      </template>
+     </template>
 
      <template v-else-if="view === 'plans'">
       <view v-for="plan in plans" :key="plan.planId" class="plan-row">
@@ -48,7 +88,7 @@
      <view v-if="error && visibleRows.length" class="list-footer list-error"><text>{{ error }}</text><button @tap="load">重试</button></view>
      </template>
     </scroll-view>
-    <button v-if="source === 'company' && !inboxNavigation.canBack" class="create-task" @tap="emit('create')">让 Agent 安排任务 <uni-icons type="chatbubble" size="14" color="#176b54" /></button>
+    <button v-if="source === 'company' && !inboxNavigation.canBack && !stackedView" class="create-task" @tap="emit('create')">让 Agent 安排任务 <uni-icons type="chatbubble" size="14" color="#176b54" /></button>
    </view>
 
    <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text>
@@ -86,39 +126,48 @@
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { getTaskPlan, cancelTaskPlan, listAgentTasks, listTaskPlans, setTaskPlanStatus } from '@/apis/agent'
+import { getTaskPlan, cancelTaskPlan, listAgentTasks, listNotifications, listTaskPlans, setTaskPlanStatus } from '@/apis/agent'
 import { repeatText, taskRequirementsText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 import SlidingSegments from './SlidingSegments.vue'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskCalendarView from './TaskCalendarView.vue'
 import TaskInboxContent from './TaskInboxContent.vue'
-import { taskToday, taskLabel as taskStatus } from '../task-calendar.mjs'
+import { agendaGroups, taskDayTime, taskToday, taskLabel as taskStatus } from '../task-calendar.mjs'
+import { shiftDate } from '../region-calendar.mjs'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' }, initialView: String, date: String, initialTask: Object, refreshKey: Number })
 const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-count'])
 const calendar = ref(null), inbox = ref(null), inboxNavigation = ref({ title: '', canBack: false }), selectedDate = ref(props.date || taskToday())
-const views = computed(() => props.source === 'company' ? [{ value: 'schedule', label: '日程' }, { value: 'plans', label: '周期计划' }, { value: 'inbox', label: '收件箱' }] : [
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
+const views = computed(() => props.source === 'company' ? [{ value: 'all', label: '全部任务' }, { value: 'calendar', label: '日历' }] : [
  { value: 'upcoming', label: '待执行' },
  { value: 'results', label: '执行结果' },
  { value: 'plans', label: '周期计划' },
 ])
-const view = ref(props.source === 'company' ? 'schedule' : 'upcoming')
+const view = ref(props.source === 'company' ? 'all' : 'upcoming')
 const tasks = ref([]), plans = ref([])
 const loading = ref(false), error = ref(''), planLoading = ref(false), planSwitchRevision = ref(0)
+const plansError = ref(''), plansLoading = ref(false), inboxUnread = ref(0)
 const listLoaded = ref(false)
 const taskRows = new Map()
-let plansLoaded = false
+const plansLoaded = ref(false)
 const selectedTask = ref(null), selectedPlan = ref(null), returnPlan = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
-const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value ? '周期计划' : props.source === 'company' ? '任务安排' : '我的安排')
+const stackedView = computed(() => props.source === 'company' && (view.value === 'inbox' || view.value === 'plans'))
+const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value || (props.source === 'company' && view.value === 'plans') ? '周期计划' : props.source === 'company' ? '任务管理' : '我的安排')
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
-const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : '周期安排')
-const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : '暂无周期计划')
-let requestId = 0, planRequest = 0, planStatusRequest = 0, loadedScope = '', pageVisible = true
+const agenda = computed(() => agendaGroups(tasks.value, taskToday(), 10))
+const agendaHasDays = computed(() => agenda.value.days.some(day => day.rows.length))
+const enabledPlansCount = computed(() => plans.value.filter(plan => planIsEnabled(plan)).length)
+const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '全部任务' : '周期安排')
+const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无周期计划')
+function railNum(date) { const today = taskToday(); return date.slice(5, 7) === today.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
+function railText(date) { const today = taskToday(); return date === today ? '今天' : date === shiftDate(today, 1) ? '明天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
+let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, loadedScope = '', pageVisible = true
 function resetPlanSwitch() { planSwitchRevision.value += 1 }
-function resetIdentity() { ++planStatusRequest; tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded = false; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false }; planLoading.value = false; resetPlanSwitch() }
-onHide(() => { pageVisible = false; ++requestId; ++planRequest; ++planStatusRequest; loading.value = false; planLoading.value = false; resetPlanSwitch() })
+function resetIdentity() { ++planStatusRequest; ++plansRequest; tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded.value = false; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false }; planLoading.value = false; plansLoading.value = false; plansError.value = ''; inboxUnread.value = 0; resetPlanSwitch() }
+onHide(() => { pageVisible = false; ++requestId; ++planRequest; ++planStatusRequest; ++plansRequest; loading.value = false; planLoading.value = false; plansLoading.value = false; resetPlanSwitch() })
 onShow(() => { pageVisible = true; if (props.open) void load() })
 
 function startOfDay(date) {
@@ -134,6 +183,7 @@ function dayOffset(date, amount) {
 function taskRange(kind) {
  const now = new Date()
  const today = startOfDay(now)
+ if (kind === 'all') return { from: today.toISOString(), to: dayOffset(today, 371).toISOString() }
  if (kind === 'upcoming') return { from: today.toISOString(), to: dayOffset(today, 31).toISOString() }
  return { from: dayOffset(today, -30).toISOString(), to: now.toISOString() }
 }
@@ -213,18 +263,47 @@ async function togglePlanStatus(plan, enabled) {
 }
 function selectTaskRows(values, kind) {
  const rows = Array.isArray(values) ? values : []
- const allowed = kind === 'upcoming' ? ['scheduled', 'executing', 'pending'] : ['completed', 'partial', 'failed', 'unconfirmed', 'cancelled', 'missed', 'interrupted', 'verified', 'satisfied']
- return rows.filter(task => (props.source !== 'office' || kind !== 'upcoming' || (!task.occurrence && !task.repeat && task.source?.type !== 'recurring_plan'))
-   && (allowed.includes(task.status) || (kind === 'results' && Boolean(task.report))))
+ const allowed = kind === 'all' ? null : kind === 'upcoming' ? ['scheduled', 'executing', 'pending'] : ['completed', 'partial', 'failed', 'unconfirmed', 'cancelled', 'missed', 'interrupted', 'verified', 'satisfied']
+ return rows.filter(task => !allowed || allowed.includes(task.status) || (kind === 'results' && Boolean(task.report)))
   .sort((a, b) => {
    const difference = Date.parse(taskTimeValue(a, kind) || '') - Date.parse(taskTimeValue(b, kind) || '')
    return kind === 'results' ? -difference : difference
   })
 }
 
+async function loadPlans(force = true) {
+ if (!props.open || !pageVisible) return
+ const current = ++plansRequest
+ let scope = ''
+ try {
+  scope = getAgentStorageScope()
+  const source = props.source
+  if (scope !== loadedScope) return
+  if (!force && plansLoaded.value) return
+  plansLoading.value = true; plansError.value = ''
+  const result = await listTaskPlans({ source })
+  if (current === plansRequest && pageVisible && props.open && source === props.source && scope === getAgentStorageScope()) {
+   plans.value = Array.isArray(result?.plans) ? result.plans : []
+   plansLoaded.value = true; plansError.value = ''
+  }
+ } catch (cause) {
+  if (current === plansRequest && props.open) plansError.value = cause.message || '周期计划暂不可用'
+ } finally { if (current === plansRequest) plansLoading.value = false }
+}
+
+async function refreshUnread() {
+ if (props.source !== 'company' || !props.open) return
+ const current = ++unreadRequest
+ try {
+  const scope = getAgentStorageScope()
+  const result = await listNotifications({ source: 'company', limit: 1 })
+  if (current === unreadRequest && props.open && scope === getAgentStorageScope()) inboxUnread.value = Number(result?.unreadCount) || 0
+ } catch { /* 未读角标失败不阻塞列表 */ }
+}
+
 async function load(force = true) {
  if (!props.open || !pageVisible) return
- if (view.value === 'schedule') { calendar.value?.refresh(); return }
+ if (view.value === 'calendar') { calendar.value?.refresh(); return }
  if (view.value === 'inbox') { inbox.value?.refresh(); return }
  const current = ++requestId, kind = view.value
  loading.value = true
@@ -235,21 +314,19 @@ async function load(force = true) {
   const source = props.source
   if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
   tasks.value = taskRows.get(kind) || []
-  listLoaded.value = kind === 'plans' ? plansLoaded : taskRows.has(kind)
-  if (!force && listLoaded.value) return
+  listLoaded.value = kind === 'plans' ? plansLoaded.value : taskRows.has(kind)
   if (kind === 'plans') {
-   const result = await listTaskPlans({ source: props.source })
-   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) {
-    plans.value = Array.isArray(result?.plans) ? result.plans : []
-    plansLoaded = true; listLoaded.value = true
-   }
-  } else {
-   const range = taskRange(kind)
-   const result = await listAgentTasks({ source: props.source, ...range })
-   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) {
-    tasks.value = selectTaskRows(result?.tasks, kind)
-    taskRows.set(kind, tasks.value); listLoaded.value = true
-   }
+   await loadPlans(force)
+   if (current === requestId && view.value === 'plans') { listLoaded.value = plansLoaded.value; error.value = plansError.value }
+   return
+  }
+  if (kind === 'all' && props.source === 'company') void loadPlans(force)
+  if (!force && listLoaded.value) return
+  const range = taskRange(kind)
+  const result = await listAgentTasks({ source: props.source, ...range })
+  if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) {
+   tasks.value = selectTaskRows(result?.tasks, kind)
+   taskRows.set(kind, tasks.value); listLoaded.value = true
   }
  } catch (cause) {
   if (current === requestId && props.open && view.value === kind) {
@@ -264,7 +341,7 @@ async function load(force = true) {
 }
 function openTask(task) {
  if (!taskKey(task)) return
- selectedTask.value = props.source === 'company' && view.value === 'schedule' ? { id: taskKey(task) } : task
+ selectedTask.value = props.source === 'company' ? { id: taskKey(task) } : task
  selectedPlan.value = null
 }
 async function openPlan(plan) {
@@ -299,8 +376,19 @@ function backToList() {
  selectedTask.value = null
  selectedPlan.value = null
 }
-function goBack() { if (view.value === 'inbox' && inbox.value?.back()) return; if (content.value?.back()) return; backToList() }
-function nativeBack() { if (view.value === 'inbox' && inbox.value?.back()) return; if (content.value?.back()) return; if (selectedTask.value || selectedPlan.value) backToList(); else closeSheet() }
+function goBack() {
+ if (view.value === 'inbox' && inbox.value?.back()) return
+ if (content.value?.back()) return
+ if (selectedTask.value || selectedPlan.value || !stackedView.value) { backToList(); return }
+ view.value = 'all'
+}
+function nativeBack() {
+ if (view.value === 'inbox' && inbox.value?.back()) return
+ if (content.value?.back()) return
+ if (selectedTask.value || selectedPlan.value) { backToList(); return }
+ if (stackedView.value) { view.value = 'all'; return }
+ closeSheet()
+}
 function closeSheet() {
  ++planRequest; ++planStatusRequest; planLoading.value = false; resetPlanSwitch()
  selectedTask.value = null
@@ -338,8 +426,11 @@ watch(() => props.open, (open, previous) => {
   ++planRequest; planLoading.value = false
   selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null
   navigation.value = { title: '', canBack: false }
-  view.value = props.source === 'company' ? props.initialView || 'schedule' : 'upcoming'
+  inboxNavigation.value = { title: '', canBack: false }
+  const initial = props.initialView === 'schedule' ? 'all' : props.initialView
+  view.value = props.source === 'company' ? initial || 'all' : 'upcoming'
   selectedDate.value = props.date || taskToday()
+  void refreshUnread()
   if (props.initialTask) openTask(props.initialTask)
  }
 }, { immediate: true })
@@ -347,7 +438,8 @@ watch(() => props.refreshKey, () => { if (props.open) void load() })
 watch(() => props.source, () => {
  resetIdentity()
 })
-watch(() => [props.open, props.source, view.value], ([isOpen, source], previous) => {
+watch(() => [props.open, props.source, view.value], ([isOpen, source, currentView], previous) => {
+ if (currentView !== 'inbox') inboxNavigation.value = { title: '', canBack: false }
  if (isOpen) void load(!previous || !previous[0] || previous[1] !== source)
  else { ++requestId; ++planStatusRequest; loading.value = false; planLoading.value = false; resetPlanSwitch(); navigation.value = { title: '', canBack: false } }
 }, { immediate: true })
@@ -380,6 +472,24 @@ button::after { border:0; }
 .state-message button,.list-footer button { margin:10px auto 0; color:#176b54; font-size:12px; }
 .list-footer { padding:16px 0 22px; text-align:center; color:#99a39d; font-size:11px; }
 .list-error { color:#a15343; }
+.plan-strip { width:100%; min-height:40px; display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid #e5ebe6; text-align:left; }
+.plan-strip:active { opacity:.65; }
+.strip-title { color:#34483b; font-size:12px; font-weight:600; }
+.strip-meta { min-width:0; flex:1; color:#929e96; font-size:11px; text-align:right; }
+.strip-meta--fail { color:#a15343; }
+.agenda-day { display:flex; gap:10px; padding-top:8px; }
+.agenda-rail { width:32px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding-top:14px; }
+.day-num { font-size:15px; font-weight:700; color:#33503d; line-height:1.2; }
+.day-num--later { font-size:12px; color:#75877b; }
+.day-wd { font-size:10px; color:#8b9a90; }
+.agenda-rows { min-width:0; flex:1; }
+.day-empty { display:block; padding:14px 0; border-bottom:1px solid #e8ede9; color:#b4bfb8; font-size:11px; }
+.task-row--agenda { min-height:0; gap:10px; }
+.row-clock { width:46px; flex-shrink:0; align-self:flex-start; padding-top:2px; font-size:11px; color:#466350; line-height:1.4; }
+.row-clock--later { display:flex; flex-direction:column; gap:3px; }
+.row-clock--later text:first-child { font-weight:600; }
+.inbox-button { position:relative; }
+.inbox-badge { position:absolute; top:-4px; right:-2px; min-width:15px; padding:1px 4px; border-radius:9px; background:#a15343; color:#fff; font-size:9px; line-height:1.4; }
 .back-button,.refresh-button { width:32px; height:32px; margin-right:8px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:#eff3ef; }
 .refresh-button { margin:0 14px 0 0; }
 .refresh-button[disabled] { opacity:.5; }

@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" :back="goBack" tall compact-header :title="navigation.title || '任务收件箱'" @close="$emit('close')">
+ <DeviceSheet :open="open" :back="goBack" tall compact-header :title="navigation.title || '通知中心'" @close="$emit('close')">
   <template #header-left><button v-if="navigation.canBack" class="back-button" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button></template>
   <TaskInboxContent ref="content" class="inbox-host" :open="open" :source="source" @navigation="navigation = $event" @unread-count="$emit('unread-count', $event)" @reference="$emit('reference', $event)" />
  </DeviceSheet>

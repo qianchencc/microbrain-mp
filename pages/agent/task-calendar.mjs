@@ -25,6 +25,38 @@ export function taskCalendarMarks(tasks, from, to) {
  return marks
 }
 
+export const taskSettled = task => ['completed', 'verified', 'cancelled', 'satisfied'].includes(task.status)
+
+function occurrenceDates(task) {
+ const dates = []
+ if (task.interval) {
+  const starts = taskDate(task.interval.startsAt), ends = taskDate(task.interval.endsAt)
+  if (starts) dates.push(starts)
+  if (ends && ends > starts) dates.push(ends)
+ }
+ for (const phase of task.phases || []) dates.push(taskDate(phase.at))
+ dates.push(taskDate(task.at), taskDate(task.nextAt))
+ return dates.filter(Boolean)
+}
+
+export function agendaGroups(tasks, today, dayCount = 10) {
+ const days = []
+ for (let i = 0; i < dayCount; i += 1) {
+  const date = shiftDate(today, i)
+  days.push({ date, rows: tasksOnDate(tasks, date, true) })
+ }
+ const shown = new Set(days.flatMap(day => day.rows))
+ const lastDate = days.at(-1)?.date || today
+ const later = []
+ for (const task of tasks) {
+  if (shown.has(task)) continue
+  const date = occurrenceDates(task).filter(value => value > lastDate).sort()[0]
+  if (date) later.push({ date, task })
+ }
+ later.sort((a, b) => a.date === b.date ? Date.parse(taskStart(a.task) || '') - Date.parse(taskStart(b.task) || '') : a.date < b.date ? -1 : 1)
+ return { days, later }
+}
+
 export function taskDayTime(task, date) {
  const clock = value => new Date(Date.parse(value) + 8 * 3600000).toISOString().slice(11, 16)
  if (task.interval) {

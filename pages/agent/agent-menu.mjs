@@ -4,8 +4,8 @@ export function openAgentMenu({ workbench = false, workbenchBusy = false, disabl
  const actions = []
  if (workbench) actions.push({ label: workbenchBusy ? '正在打开工作台…' : '前往工作台', event: 'workbench' })
  if (!disabled) actions.push({ label: '清除当前会话', event: 'clear' })
- if (tasksEnabled) actions.push({ label: '我的安排与周期计划', event: 'open-tasks' })
- if (inboxEnabled) actions.push({ label: inboxUnreadCount ? `任务收件箱（${inboxUnreadCount} 条未读）` : '任务收件箱', event: 'open-inbox' })
+ if (tasksEnabled) actions.push({ label: '任务管理', event: 'open-tasks' })
+ if (inboxEnabled) actions.push({ label: inboxUnreadCount ? `通知中心（${inboxUnreadCount} 条未读）` : '通知中心', event: 'open-inbox' })
  const itemList = actions.map(action => action.label)
  if (!itemList.length) {
   uni.showToast({ title: '暂无可清除的会话', icon: 'none' })

@@ -123,7 +123,7 @@ async function refreshInboxCount() {
  try {
   const result = await listNotifications({ source: props.source, limit: 1 })
   if (current === inboxCountRequest && !disposed) setInboxUnreadCount(result.unreadCount)
- } catch { /* 收件箱读取失败不影响会话 */ }
+ } catch { /* 通知读取失败不影响会话 */ }
 }
 const draftScope = ref('')
 const input = ref('')

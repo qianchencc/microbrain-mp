@@ -40,7 +40,7 @@ const notifications = ref([]), selected = ref(null), content = ref(null), naviga
 const filter = ref('all')
 const filters = [{ value: 'all', label: '全部' }, { value: 'unread', label: '未读' }, { value: 'abnormal', label: '异常结果' }]
 const visibleNotifications = computed(() => notifications.value.filter(item => filter.value === 'unread' ? !item.readAt : filter.value === 'abnormal' ? ['partial', 'failed', 'missed', 'interrupted', 'unconfirmed'].includes(item.outcome) : true))
-watch(() => [selected.value, navigation.value.title, navigation.value.canBack], () => emit('navigation', { title: navigation.value.title || (selected.value ? '任务结果' : '收件箱'), canBack: Boolean(selected.value) }), { immediate: true })
+watch(() => [selected.value, navigation.value.title, navigation.value.canBack], () => emit('navigation', { title: navigation.value.title || (selected.value ? '任务结果' : '通知中心'), canBack: Boolean(selected.value) }), { immediate: true })
 const unreadCount = ref(0), nextCursor = ref('')
 const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref('')
 let requestId = 0, loadedScope = '', pageVisible = true
@@ -91,7 +91,7 @@ async function load(reset) {
    let currentScope = ''
    try { currentScope = getAgentStorageScope() } catch { /* 失效身份不得保留旧列表 */ }
    if (cause.data || !scope || scope !== currentScope) resetIdentity()
-   error.value = cause.message || '收件箱暂不可用'
+   error.value = cause.message || '通知中心暂不可用'
   }
  } finally {
   if (current === requestId) { loading.value = false; loadingMore.value = false }
