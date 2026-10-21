@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE — throwaway, do not ship.
+  Question: 普通 assistant 文本在“后面可能跟工具调用”时，应该如何尽早出现，同时不让内部规划冒充最终答复？
+  - ?variant=a|b|c，底部原型栏或 ←/→ 切换；&case=plain|tool。
+  - A 内联草稿：同一回复气泡内先流草稿，工具调用到来时折叠成一行“处理过程”，不删除。
+  - B 工作通道：草稿进入独立缩进工作区，工具调用时折叠；最终答复单独出现在主气泡。
+  - C 状态门控：不显示草稿，只显示思考状态；工具卡后最终答复整段出现（当前行为的对照）。
+  - 普通问答与设备查询两种剧本；全部为前端模拟，不发请求。
+  Open: 在仓库根目录 python3 -m http.server 8432 → http://127.0.0.1:8432/pages/agent/proto-draft-streaming.html
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>草稿流式呈现 · Prototype</title>
+<style>
+:root {
+  --paper: #f4f7f5; --paper-2: #eef2ee; --ink: #24382d; --ink-2: #2b4034;
+  --muted: #738278; --muted-2: #8a978f; --jade: #176b54; --jade-hi: #2a876c;
+  --jade-soft: #e4eee8; --line: #e0e7e2; --amber: #a66a13;
+  --ease-out: cubic-bezier(.23,1,.32,1);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; }
+body { font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif; background:#e8ecea; color:var(--ink);
+  -webkit-font-smoothing:antialiased; display:flex; align-items:flex-start; justify-content:center; padding-top:14px; }
+button { font:inherit; border:0; background:none; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.phone { width:min(375px,calc(100vw - 20px)); height:min(780px,calc(100dvh - 140px)); border-radius:44px;
+  background:#0e1512; padding:10px; box-shadow:0 30px 80px rgba(20,40,30,.28),0 4px 16px rgba(20,40,30,.14); }
+.screen { width:100%; height:100%; border-radius:36px; overflow:hidden; display:flex; flex-direction:column;
+  background:var(--paper); position:relative; }
+.statusbar { height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+  padding:0 22px; font-size:11px; font-weight:600; color:var(--ink-2); }
+.statusbar .icons { opacity:.72; font-size:10px; letter-spacing:.5px; }
+.nav { height:46px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px 0 8px;
+  border-bottom:1px solid rgba(44,75,58,.06); background:linear-gradient(180deg,#fcfdfc,#f4f7f5); }
+.nav .back { width:32px; height:32px; border-radius:11px; font-size:18px; color:#315846; }
+.nav .title { font-size:14.5px; font-weight:650; letter-spacing:.2px; }
+.nav .sub { font-size:10px; color:var(--muted); margin-left:2px; }
+.chat { flex:1; min-height:0; overflow-y:auto; padding:14px 14px 10px; scrollbar-width:none;
+  background:radial-gradient(120% 45% at 50% 0%,#fbfdfc 0%,transparent 55%),var(--paper); }
+.chat::-webkit-scrollbar { display:none; }
+.thread { display:flex; flex-direction:column; gap:12px; }
+.user { align-self:flex-end; max-width:82%; background:linear-gradient(165deg,#2a876c,#176b54); color:#fff;
+  padding:9px 12px; border-radius:15px 15px 4px 15px; font-size:13px; line-height:1.5;
+  box-shadow:0 2px 8px rgba(23,107,84,.18); }
+.assistant { display:flex; gap:8px; align-items:flex-start; max-width:100%; animation:rise .28s var(--ease-out) both; }
+.assistant .avatar { width:26px; height:26px; border-radius:9px; flex-shrink:0; margin-top:1px;
+  background:linear-gradient(150deg,#f7faf8,#dfe9e3); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.14);
+  display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--jade); font-weight:700; }
+.assistant .col { min-width:0; flex:1; }
+.assistant .who { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.assistant .name { font-size:11px; font-weight:650; color:#3d5146; }
+.chip { font-size:9px; padding:2px 6px; border-radius:999px; letter-spacing:.2px; white-space:nowrap; }
+.chip.draft { color:#8a5a12; background:#fbf1df; box-shadow:inset 0 0 0 .5px rgba(166,106,19,.18); }
+.chip.final { color:var(--jade); background:var(--jade-soft); }
+.bubble { background:#fff; border:1px solid var(--line); border-radius:4px 15px 15px 15px;
+  padding:10px 12px; font-size:13px; line-height:1.62; color:var(--ink-2);
+  box-shadow:0 1px 2px rgba(25,45,35,.03); }
+.bubble .text { white-space:pre-wrap; }
+.bubble .caret { display:inline-block; width:1.5px; height:13px; background:var(--jade); margin-left:1px;
+  vertical-align:-2px; animation:blink .9s steps(1) infinite; }
+.bubble.draft { background:linear-gradient(180deg,#fffefb,#fffdf8); border-color:#eee3cf; }
+.collapse { margin-top:8px; border-top:1px dashed #e4ddd0; padding-top:7px; display:flex; align-items:center; gap:6px;
+  font-size:10.5px; color:var(--muted); }
+.collapse .dot { width:5px; height:5px; border-radius:50%; background:#c9a56a; }
+.collapse button { margin-left:auto; color:var(--jade); font-size:10px; font-weight:650; }
+.hidden { display:none !important; }
+.toolcard { margin-top:8px; background:#f7faf8; border:1px solid var(--line); border-radius:12px; padding:9px 11px;
+  display:flex; gap:9px; align-items:flex-start; animation:rise .25s var(--ease-out) both; }
+.toolcard .glyph { width:22px; height:22px; border-radius:8px; background:var(--jade-soft); color:var(--jade);
+  display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+.toolcard .t { font-size:11.5px; font-weight:650; color:#3c5145; }
+.toolcard .s { font-size:10.5px; color:var(--muted); margin-top:1px; }
+.orb { display:flex; align-items:center; gap:7px; color:#647169; font-size:11.5px; min-height:24px; }
+.orb .glyph2 { position:relative; width:18px; height:18px; flex-shrink:0; }
+.orb .cell { position:absolute; width:3px; height:3px; border-radius:50%; background:currentColor; opacity:.14;
+  animation:wave 1.7s cubic-bezier(.66,0,.34,1) infinite both; }
+.worklog { border-left:2px solid #dce6e0; padding:0 0 0 10px; margin:0 0 8px 4px; animation:rise .25s var(--ease-out) both; }
+.worklog .head { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--muted); letter-spacing:.3px;
+  text-transform:uppercase; margin-bottom:4px; }
+.worklog .body { font-size:12px; line-height:1.55; color:#7c8a82; white-space:pre-wrap; }
+.worklog.collapsed .body { display:none; }
+.worklog .summary { display:none; font-size:11px; color:var(--muted); }
+.worklog.collapsed .summary { display:block; }
+.worklog .summary button { color:var(--jade); font-size:10px; margin-left:6px; font-weight:650; }
+.answer { margin-top:8px; }
+.finalnote { margin-top:7px; font-size:9.5px; color:var(--muted-2); }
+.scenario { flex-shrink:0; display:flex; gap:6px; padding:8px 14px 0; }
+.scenario button { font-size:10.5px; padding:5px 9px; border-radius:999px; color:var(--muted);
+  background:#fff; box-shadow:inset 0 0 0 .5px var(--line); }
+.scenario button.on { color:var(--jade); background:var(--jade-soft); box-shadow:inset 0 0 0 .5px rgba(23,107,84,.18); }
+.composer { flex-shrink:0; display:flex; gap:8px; align-items:center; padding:8px 12px calc(10px + env(safe-area-inset-bottom)); }
+.composer .field { flex:1; height:38px; border-radius:19px; background:#fff; border:1px solid var(--line);
+  display:flex; align-items:center; padding:0 13px; font-size:12px; color:var(--muted-2); }
+.composer .send { height:38px; padding:0 16px; border-radius:19px; background:linear-gradient(165deg,#2a876c,#176b54);
+  color:#fff; font-size:12px; font-weight:650; box-shadow:0 3px 10px rgba(23,107,84,.22); }
+.composer .send:active { transform:scale(.96); }
+.proto-bar { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; align-items:center; gap:12px;
+  background:#18211d; color:#eaf3ee; border-radius:999px; padding:8px 10px; box-shadow:0 8px 24px rgba(0,0,0,.25);
+  font-size:11px; z-index:99; }
+.proto-bar button { width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.1); color:#fff; }
+.proto-bar .label { min-width:190px; text-align:center; letter-spacing:.2px; }
+.proto-bar .hint { font-size:9px; color:#93a99e; }
+@keyframes rise { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+@keyframes blink { 50% { opacity:0; } }
+@keyframes wave { 0%,100% { opacity:.12; transform:scale(.7); } 50% { opacity:.75; transform:scale(1); } }
+</style>
+</head>
+<body>
+<div class="phone"><div class="screen">
+  <div class="statusbar"><span>9:41</span><span class="icons">••• ▮</span></div>
+  <div class="nav"><button class="back">‹</button><span class="title">物联助手</span><span class="sub">· 草稿流式实验</span></div>
+  <div class="chat"><div class="thread" id="thread"></div></div>
+  <div class="scenario">
+    <button data-case="plain" class="on">普通问答</button>
+    <button data-case="tool">设备查询</button>
+    <button id="replay">重放</button>
+  </div>
+  <div class="composer">
+    <div class="field" id="prompt">26楼运营部昨天用了多少电？</div>
+    <button class="send" id="send">发送</button>
+  </div>
+</div></div>
+
+<div class="proto-bar">
+  <button id="prev">←</button>
+  <div><div class="label" id="label"></div><div class="hint">?variant= · ←/→ 切换</div></div>
+  <button id="next">→</button>
+</div>
+
+<script>
+const variants = {
+  a: { name: 'A · 内联草稿', desc: '同一气泡内先流草稿，工具调用时折叠' },
+  b: { name: 'B · 工作通道', desc: '草稿在独立工作区，最终答复另起气泡' },
+  c: { name: 'C · 状态门控', desc: '不显示草稿，只显示状态，结束后给全文' },
+};
+const params = new URLSearchParams(location.search);
+const variant = variants[params.get('variant')] ? params.get('variant') : 'a';
+let currentCase = params.get('case') === 'tool' ? 'tool' : 'plain';
+let timers = [];
+const thread = document.getElementById('thread');
+const label = document.getElementById('label');
+const prompt = document.getElementById('prompt');
+
+function setVariant(next) {
+  params.set('variant', next);
+  history.replaceState(null, '', '?' + params.toString());
+  label.textContent = `${next.toUpperCase()} · ${variants[next].name.split(' · ')[1]}`;
+}
+function setCase(next) {
+  currentCase = next;
+  params.set('case', next);
+  history.replaceState(null, '', '?' + params.toString());
+  document.querySelectorAll('.scenario [data-case]').forEach(button => button.classList.toggle('on', button.dataset.case === next));
+  prompt.textContent = next === 'tool' ? '26楼运营部昨天用了多少电？' : '用一句话说明你能帮我做什么。';
+  run();
+}
+function clearTimers() { timers.forEach(clearInterval); timers.forEach(clearTimeout); timers = []; }
+function later(fn, ms) { const id = setTimeout(fn, ms); timers.push(id); return id; }
+function interval(fn, ms) { const id = setInterval(fn, ms); timers.push(id); return id; }
+function el(tag, cls, html) { const node = document.createElement(tag); if (cls) node.className = cls; if (html !== undefined) node.innerHTML = html; return node; }
+function scroll() { const chat = document.querySelector('.chat'); chat.scrollTop = chat.scrollHeight; }
+function avatar() { return el('div', 'avatar', 'AI'); }
+function assistantShell(status, chipClass) {
+  const wrap = el('div', 'assistant');
+  wrap.append(avatar());
+  const col = el('div', 'col');
+  const who = el('div', 'who', `<span class="name">物联助手</span><span class="chip ${chipClass}">${status}</span>`);
+  col.append(who);
+  wrap.append(col);
+  return { wrap, col, who };
+}
+function type(text, target, done, speed = 18) {
+  let index = 0;
+  const caret = el('span', 'caret');
+  target.textContent = '';
+  target.append(caret);
+  const id = interval(() => {
+    index += 1;
+    caret.remove();
+    target.textContent = text.slice(0, index);
+    target.append(caret);
+    scroll();
+    if (index >= text.length) {
+      clearInterval(id);
+      caret.remove();
+      done && done();
+    }
+  }, speed);
+  return id;
+}
+function toolCard(parent) {
+  const card = el('div', 'toolcard');
+  card.innerHTML = `<div class="glyph">⚡</div><div><div class="t">用电统计 · 26楼运营部</div><div class="s">读取计量点与采样，正在汇总…</div></div>`;
+  parent.append(card);
+  scroll();
+  return card;
+}
+function orb() {
+  const wrap = el('div', 'orb');
+  const glyph = el('div', 'glyph2');
+  for (let i = 0; i < 9; i += 1) {
+    const cell = el('i', 'cell');
+    cell.style.left = `${(i % 3) * 6}px`;
+    cell.style.top = `${Math.floor(i / 3) * 6}px`;
+    cell.style.animationDelay = `${Math.hypot(i % 3 - 1, Math.floor(i / 3) - 1) * 700 - 180}ms`;
+    glyph.append(cell);
+  }
+  wrap.append(glyph, el('span', '', '思考中 · 正在读取事实'));
+  return wrap;
+}
+const caseText = {
+  plain: '我可以帮你查看楼宇的照明、空调、环境、能耗与安全台账，并把自然语言请求整理成待你确认的设备操作或定时安排。',
+  tool: '我先核对 26 楼运营部的计量点与最近有效采样，再给出这期间的用电量和计算口径。',
+};
+const finalText = {
+  plain: '我可以帮你查看楼宇的照明、空调、环境、能耗与安全台账，并把自然语言请求整理成待你确认的设备操作或定时安排。',
+  tool: '昨天（10月20日）26楼运营部电表用电 4.25 度，按目录电价约 4.89 元。统计依据是 10月19日20:00 至 10月20日20:00 的两次有效采样；小时采样较稀疏，未给出逐时曲线。',
+};
+
+function runA() {
+  const { wrap, col } = assistantShell('草稿', 'draft');
+  const bubble = el('div', 'bubble draft');
+  const text = el('div', 'text');
+  bubble.append(text);
+  const collapse = el('div', 'collapse hidden', '<span class="dot"></span><span>已收起内部草稿，继续处理设备</span><button>查看</button>');
+  bubble.append(collapse);
+  col.append(bubble);
+  thread.append(wrap);
+  type(caseText[currentCase], text, () => {
+    if (currentCase === 'plain') {
+      later(() => {
+        bubble.classList.remove('draft');
+        wrap.querySelector('.chip').className = 'chip final';
+        wrap.querySelector('.chip').textContent = '已回复';
+      }, 350);
+      return;
+    }
+    later(() => {
+      text.classList.add('hidden');
+      collapse.classList.remove('hidden');
+      const card = toolCard(bubble);
+      later(() => {
+        card.querySelector('.s').textContent = '已读取 22 台电表，7 台有效采样';
+        const answer = el('div', 'answer');
+        const body = el('div', 'text');
+        answer.append(body);
+        bubble.append(answer);
+        type(finalText.tool, body, () => {
+          wrap.querySelector('.chip').className = 'chip final';
+          wrap.querySelector('.chip').textContent = '已回复';
+          bubble.classList.remove('draft');
+        });
+      }, 900);
+    }, 400);
+  });
+}
+
+function runB() {
+  const { wrap, col } = assistantShell('处理中', 'draft');
+  const log = el('div', 'worklog');
+  log.innerHTML = '<div class="head"><span>处理过程</span><span>· 草稿</span></div>';
+  const body = el('div', 'body');
+  const summary = el('div', 'summary', '草稿已折叠 · 继续处理设备 <button>展开</button>');
+  log.append(body, summary);
+  col.append(log);
+  const answerBubble = el('div', 'bubble hidden');
+  const answerText = el('div', 'text');
+  answerBubble.append(answerText);
+  col.append(answerBubble);
+  thread.append(wrap);
+  type(caseText[currentCase], body, () => {
+    if (currentCase === 'plain') {
+      later(() => {
+        log.classList.add('collapsed');
+        answerBubble.classList.remove('hidden');
+        type(finalText.plain, answerText, () => {
+          wrap.querySelector('.chip').className = 'chip final';
+          wrap.querySelector('.chip').textContent = '已回复';
+        });
+      }, 400);
+      return;
+    }
+    later(() => {
+      log.classList.add('collapsed');
+      const card = toolCard(col);
+      col.insertBefore(card, answerBubble);
+      later(() => {
+        card.querySelector('.s').textContent = '已读取 22 台电表，7 台有效采样';
+        answerBubble.classList.remove('hidden');
+        type(finalText.tool, answerText, () => {
+          wrap.querySelector('.chip').className = 'chip final';
+          wrap.querySelector('.chip').textContent = '已回复';
+        });
+      }, 900);
+    }, 450);
+  });
+}
+
+function runC() {
+  const { wrap, col } = assistantShell('思考中', 'draft');
+  const state = el('div', 'bubble');
+  state.append(orb());
+  col.append(state);
+  thread.append(wrap);
+  later(() => {
+    if (currentCase === 'tool') {
+      const card = toolCard(col);
+      later(() => {
+        card.querySelector('.s').textContent = '已读取 22 台电表，7 台有效采样';
+        showFinal();
+      }, 900);
+    } else {
+      showFinal();
+    }
+  }, 900);
+  function showFinal() {
+    state.remove();
+    const bubble = el('div', 'bubble');
+    const text = el('div', 'text');
+    bubble.append(text);
+    col.append(bubble);
+    type(finalText[currentCase], text, () => {
+      wrap.querySelector('.chip').className = 'chip final';
+      wrap.querySelector('.chip').textContent = '已回复';
+    });
+  }
+}
+
+function run() {
+  clearTimers();
+  thread.innerHTML = '';
+  const question = currentCase === 'tool' ? '26楼运营部昨天用了多少电？' : '用一句话说明你能帮我做什么。';
+  thread.append(el('div', 'user', question));
+  scroll();
+  later(() => {
+    if (variant === 'a') runA();
+    else if (variant === 'b') runB();
+    else runC();
+  }, 260);
+}
+
+document.getElementById('prev').onclick = () => {
+  const keys = Object.keys(variants);
+  setVariant(keys[(keys.indexOf(variant) + keys.length - 1) % keys.length]);
+  run();
+};
+document.getElementById('next').onclick = () => {
+  const keys = Object.keys(variants);
+  setVariant(keys[(keys.indexOf(variant) + 1) % keys.length]);
+  run();
+};
+document.getElementById('send').onclick = run;
+document.getElementById('replay').onclick = run;
+document.querySelectorAll('.scenario [data-case]').forEach(button => {
+  button.onclick = () => setCase(button.dataset.case);
+});
+document.addEventListener('keydown', event => {
+  if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  if (event.key === 'ArrowLeft') document.getElementById('prev').click();
+  if (event.key === 'ArrowRight') document.getElementById('next').click();
+});
+setVariant(variant);
+setCase(currentCase);
+</script>
+</body>
+</html>
