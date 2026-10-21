@@ -7,7 +7,7 @@
 
   <template v-if="isComparison">
    <view class="hero">
-    <text class="hero-label">{{ hero.label || '用电量 · 与上期相比' }}</text>
+    <text class="hero-label">{{ hero.label || '用电量 · 月份对比' }}</text>
     <view class="number" :class="{ words: hero.value === null }">
      <template v-if="isRegion">
       <text v-if="hero.value !== null">{{ hero.value }}</text>

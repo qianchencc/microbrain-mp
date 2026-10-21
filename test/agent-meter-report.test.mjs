@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportCompareViews, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText, meterReportPowerFactor, meterReportHasData } from '../pages/agent/meter-report-view.mjs'
+import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportCompareViews, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText, meterReportPowerFactor, meterReportHasData, meterReportPeriodLabels } from '../pages/agent/meter-report-view.mjs'
 import { loadShapeChart, contributionChart, meterBarChart } from '../pages/agent/energy-chart.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
@@ -252,18 +252,27 @@ const compare = {
  ],
 }
 
-test('对比参数行：本期 vs 基期 · 范围台数 · 覆盖尾注', () => {
+test('对比参数行：月份 · 范围台数 · 覆盖尾注', () => {
  assert.equal(meterReportIsComparison(compare), true)
  assert.equal(meterReportParamLine(compare), '10-01 → 10-08 vs 09-24 → 10-01 · 全部电表 4台 · 1台数据截至10/04 · 1台无数据')
- assert.equal(meterReportSpanText(compare), '本期 10-01 → 10-08 · 上期 09-24 → 10-01')
+ assert.equal(meterReportSpanText(compare), '10月 10-01 → 10-08 · 9月 09-24 → 10-01')
  assert.equal(meterReportIsComparison(report), false) // 统计报告不走对比分支
 })
 
-test('对比主数字：带符号差值 + 环比 + 本期/上期小字；基期为 0 时比例给说明', () => {
+test('对比月份标签：同年显示月份，跨年保留年份', () => {
+ assert.deepEqual(meterReportPeriodLabels(compare), { a: '10月', b: '9月' })
+ const crossYear = { ...compare, params: { ...compare.params,
+  span: { requested: { from: '2026-10-01T00:00:00+08:00' } },
+  baseline: { requested: { from: '2025-10-01T00:00:00+08:00' } },
+ } }
+ assert.deepEqual(meterReportPeriodLabels(crossYear), { a: '2026年10月', b: '2025年10月' })
+})
+
+test('对比主数字：带符号差值 + 环比 + 月份小字；基期为 0 时比例给说明', () => {
  const hero = meterReportHero(compare)
  assert.equal(hero.value, '−35')
  assert.equal(hero.pct, '环比 −16.7%')
- assert.equal(hero.sub, '本期 175 度 · 上期 210 度')
+ assert.equal(hero.sub, '10月 175 度 · 9月 210 度')
  const flat = { ...compare, diff: { value: 70, pct: null, pctNote: '基期为零' } }
  const hero0 = meterReportHero(flat)
  assert.equal(hero0.value, '+70')
@@ -280,16 +289,16 @@ test('relation 标记决定卡面口径：同比/环比标签、去年同期表�
  assert.equal(meterReportHero(marked('yearOverYear')).pct, '同比 −16.7%')
  assert.equal(meterReportHero(marked('previousPeriod')).pct, '环比 −16.7%')
  assert.equal(meterReportHero(marked('custom')).pct, '较基期 −16.7%')
- assert.equal(meterReportHero(marked('yearOverYear')).sub, '本期 175 度 · 去年同期 210 度')
- assert.equal(meterReportHero(marked('previousPeriod')).sub, '本期 175 度 · 上期 210 度')
- assert.deepEqual(meterReportMetricHeads(marked('yearOverYear')), ['本期', '去年同期', '变化'])
- assert.deepEqual(meterReportMetricHeads(marked('previousPeriod')), ['本期', '上期', '变化'])
- assert.deepEqual(meterReportMetricHeads(compare), ['本期', '上期', '变化'])
- assert.equal(meterReportHero(compare).label, '用电量 · 与上期相比')
- assert.deepEqual(meterReportBarLegend(marked('yearOverYear')).map(l => l.label), ['本期', '去年同期'])
- assert.deepEqual(meterReportBarLegend(compare).map(l => l.label), ['本期', '上期'])
+ assert.equal(meterReportHero(marked('yearOverYear')).sub, '10月 175 度 · 9月 210 度')
+ assert.equal(meterReportHero(marked('previousPeriod')).sub, '10月 175 度 · 9月 210 度')
+ assert.deepEqual(meterReportMetricHeads(marked('yearOverYear')), ['10月', '9月', '变化'])
+ assert.deepEqual(meterReportMetricHeads(marked('previousPeriod')), ['10月', '9月', '变化'])
+ assert.deepEqual(meterReportMetricHeads(compare), ['10月', '9月', '变化'])
+ assert.equal(meterReportHero(compare).label, '用电量 · 10月 vs 9月')
+ assert.deepEqual(meterReportBarLegend(marked('yearOverYear')).map(l => l.label), ['10月', '9月'])
+ assert.deepEqual(meterReportBarLegend(compare).map(l => l.label), ['10月', '9月'])
  const yearCurve = meterReportLoadCurve(marked('yearOverYear'))
- assert.ok(decodeURIComponent(yearCurve.src).includes('去年同期'))
+ assert.ok(decodeURIComponent(yearCurve.src).includes('9月'))
  const yearCompare = { ...marked('yearOverYear'), params: { ...marked('yearOverYear').params,
   span: { requested: { from: '2026-09-01T00:00:00+08:00', to: '2026-10-01T00:00:00+08:00' }, observed: compare.params.span.observed },
   baseline: { requested: { from: '2025-09-01T00:00:00+08:00', to: '2025-10-01T00:00:00+08:00' }, observed: { from: null, to: null } } } }
@@ -304,27 +313,27 @@ test('单侧有效：主数字显示有效侧实际总量而非空占位，标�
   sides: { ...compare.sides, b: { ...compare.sides.b, dataMeters: 0 } },
   diff: { value: null, pct: null, pctNote: '数据不足' } }
  const hB = meterReportHero(bEmpty)
- assert.equal(hB.label, '用电同比 · 本期用电')
+ assert.equal(hB.label, '用电同比 · 10月用电')
  assert.equal(hB.value, '175')
  assert.equal(hB.unit, '度')
  assert.equal(hB.pct, '')
- assert.equal(hB.pctNote, '去年同期无有效采样')
- assert.equal(hB.sub, '本期 175 度 · 去年同期 —')
+ assert.equal(hB.pctNote, '9月无有效采样')
+ assert.equal(hB.sub, '10月 175 度 · 9月 —')
  const aEmpty = { ...compare,
   sides: { ...compare.sides, a: { ...compare.sides.a, dataMeters: 0 } },
   diff: { value: null, pct: null, pctNote: '数据不足' } }
  const hA = meterReportHero(aEmpty)
- assert.equal(hA.label, '用电量 · 与上期相比 · 上期用电')
+ assert.equal(hA.label, '用电量 · 10月 vs 9月 · 9月用电')
  assert.equal(hA.value, '210')
  assert.equal(hA.unit, '度')
  assert.equal(hA.pct, '')
- assert.equal(hA.pctNote, '本期无有效采样')
- assert.equal(hA.sub, '本期 — · 上期 210 度')
+ assert.equal(hA.pctNote, '10月无有效采样')
+ assert.equal(hA.sub, '10月 — · 9月 210 度')
  const both = { ...aEmpty, sides: { a: { ...aEmpty.sides.a, dataMeters: 0 }, b: { ...aEmpty.sides.b, dataMeters: 0 } } }
  assert.equal(meterReportHero(both).value, null)
 })
 
-test('对比指标表：指标/本期/上期/变化 四列，变化给涨跌色', () => {
+test('对比指标表：指标/月度标签/变化 四列，变化给涨跌色', () => {
  const rows = meterReportMetricTable(compare)
  assert.deepEqual(rows.map(r => r.label), ['日均', '工作日日均', '夜间基荷', '峰值日'])
  const daily = rows[0]
@@ -416,8 +425,8 @@ test('曲线/分段切换：两种投影视图互不改变主数字与指标', (
  const curve = meterReportLoadCurve(compare)
  assert.ok(curve?.hasData)
  const svg = decodeURIComponent(curve.src.slice('data:image/svg+xml;utf8,'.length))
- assert.match(svg, /本期/)
- assert.match(svg, /上期/)
+ assert.match(svg, /10月/)
+ assert.match(svg, /9月/)
  assert.match(svg, /stroke-dasharray="5 4"/) // 上期虚线
  const bars = meterReportCompareBuckets(compare)
  assert.equal(bars.points.length, 7)
@@ -519,10 +528,10 @@ test('对比依据行：两期采样与 Δ；未计入表给出两侧原因', ()
  const ok = rows[0]
  assert.equal(ok.statusText, '计入对比')
  assert.equal(ok.valueText, '+35 度')
- assert.match(ok.bounds, /本期 起 2026-10-01 00:00 · 示数 170 · 止 2026-10-08 00:00 · 示数 275/)
- assert.match(ok.bounds, /上期 起 2026-09-24 00:00 · 示数 100 · 止 2026-10-01 00:00 · 示数 170/)
+ assert.match(ok.bounds, /10月 起 2026-10-01 00:00 · 示数 170 · 止 2026-10-08 00:00 · 示数 275/)
+ assert.match(ok.bounds, /9月 起 2026-09-24 00:00 · 示数 100 · 止 2026-10-01 00:00 · 示数 170/)
  const excluded = rows[2]
- assert.equal(excluded.statusText, '未计入（本期数据不全·上期计入）')
+ assert.equal(excluded.statusText, '未计入（10月数据不全·9月计入）')
  assert.equal(excluded.valueText, '—')
  // 原始采样查询覆盖基期起点 → 本期终点（与周比较卡的含基期窗口一致）
  assert.deepEqual(meterReportHistoryQuery(compare, 'm-a'), { equipmentId: 'm-a', from: '2026-09-24T00:00:00.000+08:00', to: '2026-10-08T00:00:00+08:00' })
@@ -606,7 +615,7 @@ test('区域指标表头用 A/B 范围标签，首行单台日均', () => {
  assert.equal(rows[0].label, '单台日均')
  assert.equal(rows[0].a.text, '36 度/台·日')
  assert.equal(rows[0].change.text, '−12')
- assert.deepEqual(meterReportMetricHeads(compare), ['本期', '上期', '变化'])
+ assert.deepEqual(meterReportMetricHeads(compare), ['10月', '9月', '变化'])
 })
 
 test('区域曲线：A 玉绿 B 黄铜实线，单台平均后缀图例', () => {
@@ -672,8 +681,8 @@ test('04 修正：跨日/跨年与日内时刻保留、分段默认回退、空�
  const emptyHero = meterReportHero(emptyCohort)
  assert.equal(emptyHero.value, null)
  assert.equal(emptyHero.pctNote, '数据不足')
- assert.match(emptyHero.sub, /本期 — · 上期 —/)
- assert.ok(!/0/.test(emptyHero.sub))
+ assert.match(emptyHero.sub, /10月 — · 9月 —/)
+ assert.equal(emptyHero.sub, '10月 — · 9月 —')
  assert.match(meterReportParamLine({ ...report, coverage: { ...report.coverage, truncated: true } }), /读取不全$/)
 })
 
@@ -698,11 +707,11 @@ test('09 修正：不等长周期按日均对比、单侧有效保留该侧总�
   diff: { value: 15, pct: 50, basis: 'dailyAvg', unit: '度/日' },
  }
  const hUnequal = meterReportHero(unequalCmp)
- assert.equal(hUnequal.label, '日均用电 · 与上期相比')
+ assert.equal(hUnequal.label, '日均用电 · 10月 vs 9月')
  assert.equal(hUnequal.value, '+15')
  assert.equal(hUnequal.unit, '度/日')
  assert.equal(hUnequal.pct, '较基期 +50%')
- assert.equal(hUnequal.sub, '本期 135 度（3天） · 上期 210 度（7天）')
+ assert.equal(hUnequal.sub, '10月 135 度（3天） · 9月 210 度（7天）')
 
  // 3. 单侧有效对比：本期 0 台有效、上期 2 台有效（210 度）→ 保留上期 210 度，本期显示 —，meterReportHasData 为 true
  const oneSideCmp = {
@@ -712,13 +721,13 @@ test('09 修正：不等长周期按日均对比、单侧有效保留该侧总�
    a: { ...compare.sides.a, total: { value: 0, unit: '度', yuan: 0 }, dataMeters: 0, effectiveDays: 7 },
    b: { ...compare.sides.b, total: { value: 210, unit: '度', yuan: 241.5 }, dataMeters: 2, effectiveDays: 7 },
   },
-  diff: { value: null, pct: null, pctNote: '本期无有效采样' },
+  diff: { value: null, pct: null, pctNote: '10月无有效采样' },
  }
  const hOneSide = meterReportHero(oneSideCmp)
  assert.equal(hOneSide.value, '210')
  assert.equal(hOneSide.unit, '度')
- assert.equal(hOneSide.pctNote, '本期无有效采样')
- assert.equal(hOneSide.sub, '本期 — · 上期 210 度')
+ assert.equal(hOneSide.pctNote, '10月无有效采样')
+ assert.equal(hOneSide.sub, '10月 — · 9月 210 度')
  assert.equal(meterReportHasData(oneSideCmp), true)
 
  // 4. 两侧均无有效数据：meterReportHasData 为 false
@@ -741,10 +750,11 @@ test('分段双柱：A 缺测仍画 B；B 缺测不画假零线', () => {
  const neither = meterBarChart([{ value: null, baseline: null, label: '10/01' }], { paired: true })
  assert.equal(neither.hasData, false)
  assert.ok(decodeURIComponent(neither.src).includes('缺测'))
- assert.deepEqual(meterReportBarLegend(compare).map(i => i.label), ['本期', '上期'])
+ assert.deepEqual(meterReportBarLegend(compare).map(i => i.label), ['10月', '9月'])
  assert.deepEqual(meterReportBarLegend(region).map(i => i.label), ['26楼', '27楼'])
  assert.equal(meterReportBarLegend(report).length, 0)
 })
+
 
 import { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../pages/agent/meter-panel-view.mjs'
 
@@ -960,8 +970,8 @@ test('meterReportPowerFactor formats per-meter PF lines: statistics/region singl
  assert.deepEqual(meterReportPowerFactor(stats, 'm-x'), [])
  assert.deepEqual(meterReportPowerFactor({ kind: 'statistics', meters: [meter('m-a', { mean: null, min: null, samples: 0, complete: true })] }, 'm-a'), ['功率因数 采样均值 — · 最低 —'])
  assert.deepEqual(meterReportPowerFactor({ kind: 'statistics', meters: [meter('m-a', { mean: 0, min: 0, samples: 1, complete: false })] }, 'm-a'), ['功率因数 采样均值 0 · 最低 0 · 1 次有效采样 · 读取不全'])
- const time = { kind: 'comparison', params: { axis: 'time' }, meters: [{ id: 'm-a', a: { powerFactor: { mean: 0.85, min: 0.8, samples: 2, complete: true } }, b: { powerFactor: { mean: 0.5, min: 0.4, samples: 2, complete: true } } }] }
- assert.deepEqual(meterReportPowerFactor(time, 'm-a'), ['本期功率因数 采样均值 0.85 · 最低 0.8 · 2 次有效采样', '上期功率因数 采样均值 0.5 · 最低 0.4 · 2 次有效采样'])
+ const time = { kind: 'comparison', params: { axis: 'time', span: { requested: { from: '2026-10-01T00:00:00+08:00' } }, baseline: { requested: { from: '2026-09-01T00:00:00+08:00' } } }, meters: [{ id: 'm-a', a: { powerFactor: { mean: 0.85, min: 0.8, samples: 2, complete: true } }, b: { powerFactor: { mean: 0.5, min: 0.4, samples: 2, complete: true } } }] }
+ assert.deepEqual(meterReportPowerFactor(time, 'm-a'), ['10月功率因数 采样均值 0.85 · 最低 0.8 · 2 次有效采样', '9月功率因数 采样均值 0.5 · 最低 0.4 · 2 次有效采样'])
  assert.deepEqual(meterReportPowerFactor({ kind: 'comparison', params: { axis: 'time' }, meters: [{ id: 'm-a', a: {}, b: {} }] }, 'm-a'), [])
  const region = { kind: 'comparison', params: { axis: 'region' }, sides: { a: { meters: [meter('m-a', { mean: 0.9, min: 0.9, samples: 1, complete: true })] }, b: { meters: [meter('m-c', { mean: 0.5, min: 0.5, samples: 1, complete: true })] } }, meters: [meter('m-a'), meter('m-c')] }
  assert.deepEqual(meterReportPowerFactor(region, 'm-c'), ['功率因数 采样均值 0.5 · 最低 0.5 · 1 次有效采样'])

@@ -9,7 +9,7 @@
 
   <template v-if="isComparison">
    <view class="rfs-hero">
-    <text class="rfs-hero-label">{{ hero.label || '用电量 · 与上期相比' }}</text>
+    <text class="rfs-hero-label">{{ hero.label || '用电量 · 月份对比' }}</text>
     <view class="rfs-number" :class="{ words: hero.value === null }">
      <template v-if="isRegion">
       <text v-if="hero.value !== null">{{ hero.value }}</text>
@@ -91,7 +91,7 @@
 </template>
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { meterReportIsComparison, meterReportAxis, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution } from '../meter-report-view.mjs'
+import { meterReportIsComparison, meterReportAxis, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportPeriodLabels } from '../meter-report-view.mjs'
 
 const props = defineProps({ report: { type: Object, required: true } })
 const emit = defineEmits(['evidence'])
@@ -117,13 +117,14 @@ const rankingTitle = computed(() => meterReportRankingTitle(props.report))
 const ranking = computed(() => meterReportRanking(props.report))
 const regionRankings = computed(() => meterReportRegionRankings(props.report))
 const contribution = computed(() => meterReportContribution(props.report))
+const periodLabels = computed(() => meterReportPeriodLabels(props.report))
 const coverageLines = computed(() => {
  const report = props.report, coverage = report?.coverage
  if (!coverage) return []
  const lines = []
  if (isComparison.value && !isRegion.value) {
   lines.push(`计量范围：${report?.params?.scope?.label || '全部电表'} ${report?.params?.scope?.meterCount ?? coverage.meters ?? 0}台`)
-  lines.push(`两期共同可比 ${coverage.dataMeters ?? 0} 台 · 本期有效 ${report?.sides?.a?.dataMeters ?? 0} 台 · 基期有效 ${report?.sides?.b?.dataMeters ?? 0} 台`)
+  lines.push(`两期共同可比 ${coverage.dataMeters ?? 0} 台 · ${periodLabels.value.a}有效 ${report?.sides?.a?.dataMeters ?? 0} 台 · ${periodLabels.value.b}有效 ${report?.sides?.b?.dataMeters ?? 0} 台`)
  } else if (isRegion.value) {
   const a = report?.sides?.a?.coverage, b = report?.sides?.b?.coverage
   lines.push(`计量范围：${report?.params?.scope?.label || '全部电表'} vs ${report?.params?.other?.label || '全部电表'}`)
