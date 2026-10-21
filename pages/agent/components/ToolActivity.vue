@@ -17,7 +17,7 @@
 					<text>{{ item.label || labels[item.tool] || '处理设备请求' }}</text>
 					<text v-if="stateWord(item)" class="activity__state" :class="'activity__state--' + item.status">{{ stateWord(item) }}</text>
 				</view>
-				<view v-if="item.summary" class="activity__summary">{{ item.summary }}</view>
+				<view v-if="item.summary" class="activity__summary">{{ plain(item.summary) }}</view>
 			</view>
 		</view>
 	</view>
@@ -38,6 +38,8 @@
 		propose_action_draft: '生成操作草案'
 	}
 
+	// 台账行是紧凑过程文字：去掉行内 markdown 记号，保留原文文字本身。
+	const plain = text => String(text ?? '').replace(/\*\*([^*]+)\*\*|`([^`]+)`/g, (_m, bold, code) => bold ?? code ?? '')
 	const isActive = item => ['running', 'searching'].includes(item.status)
 	const stateWord = item => isActive(item) ? '进行中' : item.status === 'failed' ? '失败' : item.status === 'skipped' ? '已跳过' : ''
 </script>

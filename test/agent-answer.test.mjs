@@ -46,3 +46,16 @@ test('renderAnswer 把管道表格渲染为 table 节点，缺少分隔行的竖
 	assert.deepEqual(firstBodyCell.children[0], { name: 'strong', children: [{ type: 'text', text: '1338.95' }] })
 	assert.deepEqual(nodes[3].children, [{ type: 'text', text: '设备 A | 设备 B 对照，不是表格' }])
 })
+
+test('renderAnswer 支持标题、有序列表、行内代码与分隔线', () => {
+	const nodes = renderAnswer('## 用电对比\n\n1. 总用电 **1989.63** 度\n2. 日均 `66.32` 度/日\n\n---\n\n以上为统计口径。')
+	assertRichTextSchema(nodes)
+	assert.deepEqual(nodes.map(node => node.name), ['p', 'ol', 'hr', 'p'])
+	assert.deepEqual(nodes[0].children[0], { type: 'text', text: '用电对比' })
+	assert.equal(nodes[1].children.length, 2)
+	assert.deepEqual(nodes[1].children[0].children[0], { type: 'text', text: '总用电 ' })
+	assert.deepEqual(nodes[1].children[0].children[1], { name: 'strong', children: [{ type: 'text', text: '1989.63' }] })
+	assert.deepEqual(nodes[1].children[1].children[0], { type: 'text', text: '日均 ' })
+	assert.deepEqual(nodes[1].children[1].children[1].name, 'code')
+	assert.deepEqual(nodes[1].children[1].children[1].children, [{ type: 'text', text: '66.32' }])
+})
