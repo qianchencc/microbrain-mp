@@ -33,7 +33,7 @@ export function createCompanyReadCache(getScope, now = Date.now) {
   if (!job) {
    job = Promise.resolve().then(load).then(value => {
     if (scope() !== requestScope || version !== generation) throw Object.assign(new Error('读取已失效，请重新读取当前身份数据'), { code: 'AGENT_READ_INVALIDATED' })
-    if (!value?.truncated && !value?.coverage?.truncated && !value?.errors?.length) put(key, value)
+    if (value?.status !== 'preparing' && !value?.truncated && !value?.coverage?.truncated && !value?.errors?.length) put(key, value)
     else entries.delete(key)
     return value
    }).catch(error => {
