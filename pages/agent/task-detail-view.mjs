@@ -69,6 +69,38 @@ export function readAcView(ac) {
   title: acModeLabels[ac.mode] || '空调检查',
   summary: ac.mode === 'adjust_to_26' ? '仅满足条件时设为26℃ · 不开机、不改模式或风速' : '空调只读巡检 · 不下发设备控制',
   criteriaText: '条件 · 已开机 + 制冷 + 设定温度低于26℃',
+  cadenceText: ac.cadenceMinutes ? `频率 · 每 ${ac.cadenceMinutes} 分钟检查一次` : '',
+  actionText: ac.mode === 'adjust_to_26' ? '动作 · 满足条件时把设定温度调整为26℃' : '动作 · 只读取状态，不调整设备',
+  limitText: '限制 · 不自动开机、不切换模式、不调整风速',
+ }
+}
+
+/** 任务报告的执行摘要与节能口径投影；数字缺失时保留原因，不补零。 */
+export function energyImpactView(impact) {
+ if (!impact) return null
+ if (impact.status === 'measured') {
+  const span = impact.from && impact.to ? ` · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}` : ''
+  const value = impact.value === null || impact.value === undefined ? '差额不可比' : `${impact.value} ${impact.unit}`
+  return { text: `${impact.label || '关联能耗变化'} · ${value} · ${impact.meterCount} 只电表${span}`, tone: 'ok' }
+ }
+ if (impact.status === 'estimated') {
+  const span = impact.from && impact.to ? ` · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}` : ''
+  return { text: `关联用电估算 · ${impact.value} ${impact.unit} · ${impact.meterCount} 只电表${span}；${impact.reason}`, tone: 'warn' }
+ }
+ return { text: impact.reason || '暂无法可靠估算节能情况', tone: 'muted' }
+}
+
+export function taskExecutionSummaryView(summary) {
+ if (!summary?.devices) return null
+ const devices = summary.devices
+ const counts = [`已调 ${devices.adjusted || 0}`, `无需 ${devices.satisfied || 0}`, `跳过 ${devices.skipped || 0}`]
+ if (devices.failed) counts.push(`失败 ${devices.failed}`)
+ if (devices.unknown) counts.push(`未知 ${devices.unknown}`)
+ if (devices.unverified) counts.push(`待核验 ${devices.unverified}`)
+ return {
+  checkpointsText: `${summary.checkpoints || 0} 次检查`,
+  devicesText: `涉及 ${devices.total || 0} 台 · ${counts.join(' · ')}`,
+  energy: energyImpactView(summary.energyImpact),
  }
 }
 
@@ -138,6 +170,8 @@ export function taskRequirementsText(task) {
   if (ac) {
    requirements.add(ac.title)
    requirements.add(ac.criteriaText)
+   if (ac.cadenceText) requirements.add(ac.cadenceText)
+   requirements.add(ac.actionText)
    continue
   }
   for (const device of phase?.devices || []) {
@@ -213,6 +247,7 @@ export function taskDetailView(task) {
   outcomeText: statusLabel(task.report.outcome, task.agentSource),
   checkpoints: task.report.phases.length,
   devicesVisible: new Set(task.report.phases.flatMap(phase => phase.devices.map(device => device.id))).size,
+  summary: taskExecutionSummaryView(task.report.summary),
  } : null
  return { ...task, phases, whenText, report, repeatText: repeatText(task.repeat), nextText: task.nextAt ? taskTime(task.nextAt) : '', createdText: taskTime(task.createdAt),
   statusText: task.occurrence?.virtual ? '未来安排' : interval && task.status === 'executing'

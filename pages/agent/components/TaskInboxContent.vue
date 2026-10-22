@@ -11,6 +11,7 @@
      <view class="notification-copy">
       <text class="notification-title">{{ notification.label || '任务执行结果' }}</text>
       <text class="notification-outcome" :class="'tone-' + outcomeTone(notification.outcome)">{{ outcomeLabel(notification.outcome) }}</text>
+      <text v-if="notification.summary" class="notification-facts">{{ summaryLine(notification.summary) }}</text>
       <text v-if="notification.reason" class="notification-reason">{{ notification.reason }}</text>
       <text class="notification-time">{{ dateTime(notification.endedAt) }}</text>
      </view>
@@ -51,6 +52,14 @@ const marking = new Set(), seenFailed = new Set()
 
 const labels = { completed: '执行完成', partial: '部分完成', failed: '执行失败', unconfirmed: '结果待核验', interrupted: '执行中断', missed: '执行错过', cancelled: '已取消', verified: '已核验', satisfied: '无需执行' }
 function outcomeLabel(value) { return labels[value] || value || '结果已保存' }
+function summaryLine(summary) {
+ const devices = summary.devices || {}
+ const parts = [`${summary.checkpoints || 0} 次检查`, `涉及 ${devices.total || 0} 台`, `已调 ${devices.adjusted || 0}`, `无需 ${devices.satisfied || 0}`]
+ if (devices.failed) parts.push(`失败 ${devices.failed}`)
+ if (devices.unknown) parts.push(`未知 ${devices.unknown}`)
+ if (devices.unverified) parts.push(`待核验 ${devices.unverified}`)
+ return parts.join(' · ')
+}
 function outcomeTone(value) {
  if (['failed', 'missed', 'interrupted'].includes(value)) return 'fail'
  if (['partial', 'unconfirmed'].includes(value)) return 'warn'
@@ -159,6 +168,7 @@ button::after { border:0; }
 .notification-outcome { grid-column:1; font-size:11px; }
 .notification-time { grid-column:2; grid-row:1 / span 3; color:#87958c; font-size:10px; white-space:nowrap; }
 .notification-reason { grid-column:1; color:#a27128; font-size:10px; line-height:1.35; }.tone-ok { color:#397b61; }.tone-warn { color:#a27128; }.tone-fail { color:#a15343; }.tone-muted { color:#7e8982; }
+.notification-facts { grid-column:1; color:#6d7f73; font-size:10px; line-height:1.35; }
 .state-message { padding:48px 16px; text-align:center; color:#839189; font-size:13px; }
 .state-message text { display:block; }
 .state-message button,.list-footer button,.mark-error button { margin:10px auto 0; color:#176b54; font-size:12px; }

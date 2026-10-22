@@ -6,7 +6,7 @@
   <text v-if="task.repeat && isCreated && task.nextAt" class="task-interval">下一次 · {{ taskTime(task.nextAt) }}</text>
   <text v-if="task.interval" class="task-interval">{{ intervalText }}</text>
   <view class="task-phases">
-  <view v-for="(phase, index) in task.phases" :key="phase.at" class="task-phase">
+  <view v-for="(phase, index) in phasesShown" :key="phase.at" class="task-phase">
     <view class="phase-time"><view class="phase-node" :class="{ ending: !task.interval && index === 1 }" /><text>{{ phaseTitle(index) }} · {{ taskTime(phase.at) }}</text></view>
     <template v-if="phase.preflight">
      <text class="device-location preflight-line">范围 · {{ phase.preflight.includedScopes.join('、') }}</text>
@@ -20,6 +20,8 @@
     <template v-if="source === 'company' && phase.read?.ac">
      <text class="read-window">{{ readAcOf(phase).summary }}</text>
      <text class="read-window">{{ readAcOf(phase).criteriaText }}</text>
+     <text v-if="readAcOf(phase).cadenceText" class="read-window">{{ readAcOf(phase).cadenceText }}{{ acWindow ? ` · 共 ${acWindow.count} 个检查点` : '' }}</text>
+     <text class="read-window">{{ readAcOf(phase).actionText }}</text>
     </template>
     <template v-else-if="source === 'company' && phase.read?.agent">
      <text class="read-window">{{ readAgentOf(phase).objectiveText }}</text>
@@ -80,6 +82,13 @@ const props = defineProps({ task: { type: Object, required: true }, source: { ty
 defineEmits(['confirm', 'discard', 'open'])
 const readAgentOf = phase => readAgentView(phase.read?.agent)
 const readAcOf = phase => readAcView(phase.read?.ac)
+// 频率展开后的检查点共享同一窗口与设备；提案只展示一份窗口事实，避免把 18–48 个检查点铺成重复卡片。
+const acWindow = computed(() => {
+ const phases = props.task.phases || []
+ if (phases.length < 2 || !phases.every(phase => phase.read?.ac)) return null
+ return { ...readAcOf(phases[0]), count: phases.length }
+})
+const phasesShown = computed(() => acWindow.value ? [props.task.phases[0]] : props.task.phases || [])
 const isCancellation = computed(() => props.task.kind === 'cancellation')
 const state = computed(() => String(props.task.status || '').toLowerCase())
 const isCreated = computed(() => isCancellation.value ? state.value === 'confirmed'

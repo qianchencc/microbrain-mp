@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
 import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
-import { readAgentView, readTargetText, taskDetailView, taskPlanSnapshot, taskRequirementsText, targetText } from '../pages/agent/task-detail-view.mjs'
+import { energyImpactView, readAcView, readAgentView, readTargetText, taskDetailView, taskExecutionSummaryView, taskPlanSnapshot, taskRequirementsText, targetText } from '../pages/agent/task-detail-view.mjs'
 import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/region-sample-tasks.mjs'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -278,7 +278,7 @@ test('周期计划执行要求只汇总接口返回的阶段事实，不从模�
  const plan = { planId: 'plan-1', agentSource: 'company', label: '每日任务', phases: [
   { id: 'report', at: '2026-10-20T00:30:00Z', status: 'pending', read: { agent }, devices: [] }, alarmPhase, acPhase] }
  assert.equal(taskRequirementsText(plan),
-  '统计期间 · 每次执行统计前一日（上海时间）；比较项 · 环比、同比；汇总前一自然日告警（上海时间）；有限条件调温；条件 · 已开机 + 制冷 + 设定温度低于26℃')
+  '统计期间 · 每次执行统计前一日（上海时间）；比较项 · 环比、同比；汇总前一自然日告警（上海时间）；有限条件调温；条件 · 已开机 + 制冷 + 设定温度低于26℃；动作 · 满足条件时把设定温度调整为26℃')
 
  const stripped = { planId: 'plan-1', agentSource: 'company', label: '每日任务',
   template: { phases: [{ read: { agent } }, { read: { ac: { mode: 'adjust_to_26' } } }] },
@@ -312,4 +312,34 @@ test('周期计划无管理权限时给出只读原因，详情读取失败保�
  assert.match(listSource, /需使用创建者账号，且当前范围覆盖全部设备才能管理/)
  assert.match(listSource, /planDetailError/)
  assert.match(detailSource, /plan-switch-wrap--disabled/)
+})
+
+test('空调检查展示频率、条件与动作，报告摘要区分检查点和节能口径', () => {
+ const ac = readAcView({ mode: 'adjust_to_26', cadenceMinutes: 30 })
+ assert.equal(ac.cadenceText, '频率 · 每 30 分钟检查一次')
+ assert.equal(ac.actionText, '动作 · 满足条件时把设定温度调整为26℃')
+ assert.equal(ac.limitText, '限制 · 不自动开机、不切换模式、不调整风速')
+ assert.equal(readAcView({ mode: 'inspect' }).cadenceText, '')
+ assert.match(taskRequirementsText({ phases: [{ read: { ac: { mode: 'adjust_to_26', cadenceMinutes: 60 } } }] }), /频率 · 每 60 分钟检查一次/)
+
+ const summary = taskExecutionSummaryView({ checkpoints: 2, devices: { total: 3, adjusted: 1, satisfied: 2, skipped: 0, failed: 0, unknown: 0, unverified: 0 },
+  energyImpact: { status: 'unavailable', reason: '暂无法可靠估算节电' } })
+ assert.equal(summary.checkpointsText, '2 次检查')
+ assert.equal(summary.devicesText, '涉及 3 台 · 已调 1 · 无需 2 · 跳过 0')
+ assert.deepEqual(summary.energy, { text: '暂无法可靠估算节电', tone: 'muted' })
+ assert.equal(taskExecutionSummaryView(null), null)
+
+ assert.equal(energyImpactView({ status: 'measured', label: '关联能耗变化', value: 3.5, unit: '度', meterCount: 3,
+  from: '2026-10-01T00:00:00+08:00', to: '2026-10-02T00:00:00+08:00' }).text,
+ '关联能耗变化 · 3.5 度 · 3 只电表 · 2026-10-01 00:00 至 2026-10-02 00:00')
+ assert.equal(energyImpactView({ status: 'estimated', value: 42, unit: '度', meterCount: 3, reason: '无法拆分空调贡献',
+  from: '2026-10-01T00:00:00+08:00', to: '2026-10-02T00:00:00+08:00' }).tone, 'warn')
+ assert.match(energyImpactView({ status: 'estimated', value: 42, unit: '度', meterCount: 3, reason: '无法拆分空调贡献' }).text, /无法拆分空调贡献/)
+
+ const proposalSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskProposalCard.vue'), 'utf8')
+ assert.match(proposalSource, /v-for="\(phase, index\) in phasesShown"/, '频率展开的检查点只展示一份窗口事实')
+ assert.match(proposalSource, /共 \$\{acWindow\.count\} 个检查点/)
+ const inboxSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskInboxContent.vue'), 'utf8')
+ assert.match(inboxSource, /notification\.summary/)
+ assert.match(inboxSource, /次检查/)
 })

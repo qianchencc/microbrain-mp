@@ -35,6 +35,8 @@
      <template v-else-if="source === 'company' && phase.readAc">
       <text class="task-when">{{ phase.readAc.summary }}</text>
       <text class="task-when">{{ phase.readAc.criteriaText }}</text>
+      <text v-if="phase.readAc.cadenceText" class="task-when">{{ phase.readAc.cadenceText }}</text>
+      <text class="task-when">{{ phase.readAc.actionText }}</text>
      </template>
      <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" />
      <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
@@ -60,6 +62,8 @@
    <view v-if="detail.report" class="task-report">
     <text class="report-title">执行报告 · {{ detail.report.generatedText }}</text>
     <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 个检查点 · {{ detail.report.devicesVisible }} 台设备</text>
+    <text v-if="detail.report.summary" class="report-summary">{{ detail.report.summary.checkpointsText }} · {{ detail.report.summary.devicesText }}</text>
+    <text v-if="detail.report.summary?.energy" class="report-energy" :class="'energy-' + detail.report.summary.energy.tone">{{ detail.report.summary.energy.text }}</text>
    </view>
    <view v-if="plan && latestReport" class="task-report">
     <text class="report-title">最近一次执行 · {{ latestReport.generatedText }}</text>
@@ -404,6 +408,10 @@ button::after { border:0; }
 .latest-report-link { width:100%; margin:8px 0 0; color:#176b54; font-size:11px; text-align:left; }
 .report-title { display:block; color:#4d7663; font-size:11px; font-weight:700; }
 .report-summary { display:block; margin-top:5px; color:#263c2e; font-size:12px; font-weight:600; }
+.report-energy { display:block; margin-top:5px; font-size:11px; line-height:1.4; }
+.report-energy.energy-ok { color:#397b61; }
+.report-energy.energy-warn { color:#a27128; }
+.report-energy.energy-muted { color:#7e8982; }
 .report-note { display:block; margin-top:5px; color:#85958a; font-size:11px; }
 .source { display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid #e2e9e3; color:#85958a; font-size:11px; }
 .task-delete { width:100%; height:38px; margin:18px 0 0; border:1px solid #ead6d1; border-radius:8px; background:#fff; color:#a15343; font-size:12px; line-height:36px; }
