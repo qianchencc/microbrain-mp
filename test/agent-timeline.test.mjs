@@ -320,6 +320,8 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
  assert.equal(ac.actionText, '动作 · 满足条件时把设定温度调整为26℃')
  assert.equal(ac.limitText, '限制 · 不自动开机、不切换模式、不调整风速')
  assert.equal(readAcView({ mode: 'inspect' }).cadenceText, '')
+ assert.equal(readAcView({ mode: 'inspect' }).scheduleText, '排程 · 指定时刻检查一次')
+ assert.equal(readAcView({ mode: 'adjust_to_26' }).scheduleText, '排程 · 指定时刻检查一次')
  assert.match(taskRequirementsText({ phases: [{ read: { ac: { mode: 'adjust_to_26', cadenceMinutes: 60 } } }] }), /频率 · 每 60 分钟检查一次/)
 
  const summary = taskExecutionSummaryView({ checkpoints: 2, devices: { total: 3, adjusted: 1, satisfied: 2, skipped: 0, failed: 0, unknown: 0, unverified: 0 },
@@ -353,6 +355,9 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
  const proposalSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskProposalCard.vue'), 'utf8')
  assert.match(proposalSource, /v-for="\(phase, index\) in phasesShown"/, '频率展开的检查点只展示一份窗口事实')
  assert.match(proposalSource, /共 \$\{acWindow\.count\} 个检查点/)
+ assert.match(proposalSource, /scheduleText/, '单次空调检查必须显示一次性排程')
+ const detailContentSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskDetailContent.vue'), 'utf8')
+ assert.match(detailContentSource, /phase\.readAc\.scheduleText/, '任务详情必须显示一次性排程')
  const inboxSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskInboxContent.vue'), 'utf8')
  assert.match(inboxSource, /notification\.summary/)
  assert.match(inboxSource, /次检查/)

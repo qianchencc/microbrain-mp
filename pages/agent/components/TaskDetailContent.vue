@@ -36,6 +36,7 @@
       <text class="task-when">{{ phase.readAc.summary }}</text>
       <text class="task-when">{{ phase.readAc.criteriaText }}</text>
       <text v-if="phase.readAc.cadenceText" class="task-when">{{ phase.readAc.cadenceText }}</text>
+      <text v-else class="task-when">{{ phase.readAc.scheduleText }}</text>
       <text class="task-when">{{ phase.readAc.actionText }}</text>
      </template>
      <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" />

@@ -70,6 +70,7 @@ export function readAcView(ac) {
   summary: ac.mode === 'adjust_to_26' ? '仅满足条件时设为26℃ · 不开机、不改模式或风速' : '空调只读巡检 · 不下发设备控制',
   criteriaText: '条件 · 已开机 + 制冷 + 设定温度低于26℃',
   cadenceText: ac.cadenceMinutes ? `频率 · 每 ${ac.cadenceMinutes} 分钟检查一次` : '',
+  scheduleText: ac.cadenceMinutes ? '' : '排程 · 指定时刻检查一次',
   actionText: ac.mode === 'adjust_to_26' ? '动作 · 满足条件时把设定温度调整为26℃' : '动作 · 只读取状态，不调整设备',
   limitText: '限制 · 不自动开机、不切换模式、不调整风速',
  }

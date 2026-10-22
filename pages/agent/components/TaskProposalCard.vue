@@ -21,6 +21,7 @@
      <text class="read-window">{{ readAcOf(phase).summary }}</text>
      <text class="read-window">{{ readAcOf(phase).criteriaText }}</text>
      <text v-if="readAcOf(phase).cadenceText" class="read-window">{{ readAcOf(phase).cadenceText }}{{ acWindow ? ` · 共 ${acWindow.count} 个检查点` : '' }}</text>
+     <text v-else class="read-window">{{ readAcOf(phase).scheduleText }}</text>
      <text class="read-window">{{ readAcOf(phase).actionText }}</text>
     </template>
     <template v-else-if="source === 'company' && phase.read?.agent">
