@@ -27,6 +27,19 @@
 - 提前取消按 `min(区间终点, 报告生成时间)` 截断，不算到计划终点。
 - 实测电表比较优先于假设估算；假设估算始终标注“估算 / 非实测”。
 
+## 演示记录
+
+- 任务：`3eb58ab1-a929-47db-a5d8-d6fac5c4a44e`，标签 `演示 · 26楼办公区空调调至26℃`，状态 `completed`。
+- 阶段：`031e917a-a622-4e1f-9efc-9f60a205d32b`，单检查点，2 小时窗口；5 台 26 楼空调，调前设定 24/24/25/25/25℃，估算 `2.4 度 / ¥2.0`。
+- 通知：`c71018b8-af32-4b18-afae-370004feed25`，未读，点击回到同一任务。
+- 性质：直接写入演示 Runtime 数据库的展示夹具，**不是真实设备执行**；任务和通知标签均带“演示”。插入前备份：`shared/backups/demo-record-20261022T142351Z.sqlite`。
+- 任务列表按租户/来源共享，其他 Company 账号也可能看到这条“演示”记录；演示结束应删除。
+- 清理顺序：
+  1. `DELETE FROM task_notifications WHERE task_id='3eb58ab1-a929-47db-a5d8-d6fac5c4a44e';`
+  2. `DELETE FROM task_phase_devices WHERE phase_id='031e917a-a622-4e1f-9efc-9f60a205d32b';`
+  3. `DELETE FROM task_phases WHERE task_id='3eb58ab1-a929-47db-a5d8-d6fac5c4a44e';`
+  4. `DELETE FROM tasks WHERE id='3eb58ab1-a929-47db-a5d8-d6fac5c4a44e';`
+
 ## 当前限制
 
 - 2026-10-22 晚间只读核验：公司 49 台空调全部 `power=off`，最近状态上报也已过期；因此今晚不会发生真实调温，也就不会生成估算数字。这是“没有调温”，不是“取不到状态”。
