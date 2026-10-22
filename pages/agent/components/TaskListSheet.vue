@@ -4,8 +4,10 @@
    <button v-if="selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
   </template>
   <template #header-right>
-   <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
-   <button v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button inbox-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /><text v-if="inboxUnread" class="inbox-badge">{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></button>
+   <view class="header-actions">
+    <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
+    <button v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button inbox-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /><text v-if="inboxUnread" class="inbox-badge">{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></button>
+   </view>
   </template>
   <view class="arrangements-content">
    <view class="list-pane" :style="{ display: selectedTask || selectedPlan ? 'none' : 'flex' }">
@@ -14,11 +16,14 @@
     <scroll-view v-else class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
      <TaskCalendarView v-if="source === 'company' && view === 'calendar'" ref="calendar" :active="open && view === 'calendar' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
      <template v-else>
-     <button v-if="view === 'all' && source === 'company'" class="plan-strip" @tap="view = 'plans'">
-      <text class="strip-title">周期计划</text>
-      <text v-if="plansError" class="strip-meta strip-meta--fail">未能加载</text>
-      <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已启用 {{ enabledPlansCount }}</text>
-      <text v-else class="strip-meta">读取中…</text>
+     <button v-if="view === 'all' && source === 'company'" class="plan-strip" hover-class="plan-strip--pressed" @tap="view = 'plans'">
+      <view class="strip-icon"><uni-icons type="reload" size="15" color="#176b54" /></view>
+      <view class="strip-copy">
+       <text class="strip-title">周期计划</text>
+       <text v-if="plansError" class="strip-meta strip-meta--fail">未能加载</text>
+       <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已启用 {{ enabledPlansCount }}</text>
+       <text v-else class="strip-meta">读取中…</text>
+      </view>
       <uni-icons type="right" size="13" color="#99a59d" />
      </button>
      <view class="list-summary"><text>{{ listSummary }}</text><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text></view>
@@ -516,10 +521,13 @@ button::after { border:0; }
 .list-footer { padding:16px 0 22px; text-align:center; color:#99a39d; font-size:11px; }
 .list-error { color:#a15343; }
 .detail-error { display:block; flex-shrink:0; padding:8px 18px 0; color:#a15343; font-size:11px; text-align:center; }
-.plan-strip { width:100%; min-height:40px; display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid #e5ebe6; text-align:left; }
-.plan-strip:active { opacity:.65; }
-.strip-title { color:#34483b; font-size:12px; font-weight:600; }
-.strip-meta { min-width:0; flex:1; color:#929e96; font-size:11px; text-align:right; }
+.plan-strip { width:100%; display:flex; align-items:center; gap:10px; margin:2px 0 8px; padding:10px 12px; border-radius:12px; background:#f0f5f1; text-align:left; }
+.plan-strip::after { border:0; }
+.plan-strip--pressed { background:#e3ebe5; }
+.strip-icon { width:30px; height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:10px; background:#e0eae3; }
+.strip-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
+.strip-title { color:#2c4636; font-size:13px; font-weight:600; }
+.strip-meta { color:#77887d; font-size:11px; }
 .strip-meta--fail { color:#a15343; }
 .agenda-day { display:flex; gap:10px; padding-top:8px; }
 .agenda-rail { width:32px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding-top:14px; }
@@ -534,8 +542,9 @@ button::after { border:0; }
 .row-clock--later text:first-child { font-weight:600; }
 .inbox-button { position:relative; }
 .inbox-badge { position:absolute; top:-4px; right:-2px; min-width:15px; padding:1px 4px; border-radius:9px; background:#a15343; color:#fff; font-size:9px; line-height:1.4; }
+.header-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .back-button,.refresh-button { width:32px; height:32px; margin-right:8px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:#eff3ef; }
-.refresh-button { margin:0 14px 0 0; }
+.header-actions .refresh-button { margin-right:0; }
 .refresh-button[disabled] { opacity:.5; }
 .spinning { animation:arrangements-spin 900ms linear infinite; }
 .detail-scroll { padding-top:4px; }
