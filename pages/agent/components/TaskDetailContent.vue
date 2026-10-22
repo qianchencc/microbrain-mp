@@ -63,7 +63,15 @@
     <text class="report-title">执行报告 · {{ detail.report.generatedText }}</text>
     <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 个检查点 · {{ detail.report.devicesVisible }} 台设备</text>
     <text v-if="detail.report.summary" class="report-summary">{{ detail.report.summary.checkpointsText }} · {{ detail.report.summary.devicesText }}</text>
-    <text v-if="detail.report.summary?.energy" class="report-energy" :class="'energy-' + detail.report.summary.energy.tone">{{ detail.report.summary.energy.text }}</text>
+    <template v-if="detail.report.summary?.energy">
+     <button v-if="detail.report.summary.energy.basis" class="report-energy-toggle" :aria-expanded="energyBasisOpen" @tap="energyBasisOpen = !energyBasisOpen">
+      <text class="report-energy energy-warn energy-toggle-text">{{ detail.report.summary.energy.text }}</text>
+      <text class="energy-tag">{{ detail.report.summary.energy.tag }}</text>
+      <uni-icons :type="energyBasisOpen ? 'down' : 'right'" size="11" color="#a27128" />
+     </button>
+     <text v-else class="report-energy" :class="'energy-' + detail.report.summary.energy.tone">{{ detail.report.summary.energy.text }}</text>
+     <view v-if="energyBasisOpen && detail.report.summary.energy.basis" class="energy-basis"><text v-for="line in detail.report.summary.energy.basis" :key="line" class="energy-basis-line">{{ line }}</text></view>
+    </template>
    </view>
    <view v-if="plan && latestReport" class="task-report">
     <text class="report-title">最近一次执行 · {{ latestReport.generatedText }}</text>
@@ -94,7 +102,7 @@ const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false), planSwitchRevision = ref(0)
 const detailFresh = ref(false)
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
-const expandedPhases = ref([])
+const expandedPhases = ref([]), energyBasisOpen = ref(false)
 const detail = computed(() => {
  const view = taskDetailView(task.value || taskPlanSnapshot(plan.value))
  if (plan.value && view) return { ...view, statusText: ({ enabled: plan.value.nextAt ? '已启用' : '周期结束', paused: '已停用', deleted: '已删除' })[plan.value.status] || (plan.value.nextAt ? '已启用' : '周期结束') }
@@ -318,6 +326,7 @@ watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.s
  observedTaskId = activeTaskId.value || activePlanId.value
  actionError.value = ''
  expandedPhases.value = []
+ energyBasisOpen.value = false
  if (props.active) {
   load()
   startPolling()
@@ -412,6 +421,11 @@ button::after { border:0; }
 .report-energy.energy-ok { color:#397b61; }
 .report-energy.energy-warn { color:#a27128; }
 .report-energy.energy-muted { color:#7e8982; }
+.report-energy-toggle { width:100%; margin:5px 0 0; padding:5px 0 0; display:flex; align-items:baseline; gap:6px; text-align:left; }
+.energy-toggle-text { flex:1; min-width:0; margin-top:0; }
+.energy-tag { flex-shrink:0; padding:2px 6px; border-radius:6px; background:#f7efdd; color:#936827; font-size:9px; }
+.energy-basis { margin-top:6px; padding:7px 9px; border-top:1px solid #eadfc9; display:flex; flex-direction:column; gap:4px; }
+.energy-basis-line { color:#8a7a5c; font-size:10px; line-height:1.45; }
 .report-note { display:block; margin-top:5px; color:#85958a; font-size:11px; }
 .source { display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid #e2e9e3; color:#85958a; font-size:11px; }
 .task-delete { width:100%; height:38px; margin:18px 0 0; border:1px solid #ead6d1; border-radius:8px; background:#fff; color:#a15343; font-size:12px; line-height:36px; }

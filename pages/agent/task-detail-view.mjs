@@ -83,6 +83,17 @@ export function energyImpactView(impact) {
   const value = impact.value === null || impact.value === undefined ? '差额不可比' : `${impact.value} ${impact.unit}`
   return { text: `${impact.label || '关联能耗变化'} · ${value} · ${impact.meterCount} 只电表${span}`, tone: 'ok' }
  }
+ if (impact.status === 'estimated' && impact.basis === 'assumption') {
+  const rate = Math.round((impact.assumptions?.ratePerDegree || 0) * 1000) / 10
+  const coverage = impact.coverage && impact.coverage.estimated < impact.coverage.adjusted
+   ? ` · 其中 ${impact.coverage.adjusted - impact.coverage.estimated} 台缺少调前温度未参与` : ''
+  return { text: `预计节电约 ${impact.value} ${impact.unit} · 折合电费约 ¥${impact.cost?.value ?? '—'}`, tag: '估算', tone: 'warn', basis: [
+   `比较基线 · ${impact.deviceCount} 台调前平均 ${impact.baseline?.averageSetpoint}℃ → ${impact.baseline?.target}℃（平均上调 ${impact.baseline?.averageRise}℃）${coverage}`,
+   `假设参数 · 每上调 1℃ 约节电 ${rate}% · 单台功率 ${impact.assumptions?.powerKw}kW · 电价 ¥${impact.assumptions?.pricePerKwh}/度`,
+   `估算窗口 · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}（上海时间）`,
+   `${impact.reason || '按调前设定温度与经验参数估算'}；精确计量需空调回路单独装表`,
+  ] }
+ }
  if (impact.status === 'estimated') {
   const span = impact.from && impact.to ? ` · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}` : ''
   return { text: `关联用电估算 · ${impact.value} ${impact.unit} · ${impact.meterCount} 只电表${span}；${impact.reason}`, tone: 'warn' }
