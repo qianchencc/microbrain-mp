@@ -6,7 +6,8 @@
 
 - Runtime 估算：`eea32d0`（`feat: estimate AC energy savings from recorded setpoint deltas`）。
 - Runtime 演示放宽：`9a4f873`（`feat: allow bounded AC state freshness override for demos`）。
-- 远端版本：`releases/20261022-9a4f873`，`current` 已原子切换；唯一 `127.0.0.1:3210`，Node 22，production 网关，开发身份覆盖关闭。
+- Runtime 出现条件收敛：`ad65011`（`fix: only show AC energy impact after a real adjustment`）。
+- 远端版本：`releases/20261022-ad65011`，`current` 已原子切换；唯一 `127.0.0.1:3210`，Node 22，production 网关，开发身份覆盖关闭。
 - 发布门禁：运行中会话/草案/阶段、10 分钟内到期阶段与计划均为 0；主库与 sessions 库备份、`quick_check`、外键检查通过；业务行数前后一致。
 - 健康检查：`/healthz` 返回 `status=ok`、`iotMode=production`、`devIdentityOverride=false`、`modelId=GLM-5.3-Flash`。
 - 小程序展示：本地提交 `c931839`，开发编译产物 `pages/agent/task-detail-view.js` 已包含 `basis: assumption` 分支。
@@ -18,6 +19,13 @@
 - 当前值：`31536000000`（一年），仅用于演示/联调；目的是允许使用平台最后已知状态，而不是因为 `valts` 年龄直接拒绝。
 - 仍然保留的条件：设备字段必须存在，`power=on`、`mode=cool`、设定温度低于 26℃，才会下发；不会自动开机、改模式或改风速。
 - 估算仍标记为“非实测”，使用 7%/℃、2.5kW、¥0.8/度的公开假设参数；历史报告不回填。
+
+## 出现规则
+
+- 只有至少一台设备实际 `adjusted` 时才生成节能块；全程关机、非制冷、已满足、只读巡检、调温前失败/取消时 `energyImpact` 为 `null`，详情和通知不显示该行。
+- 已调温但缺少调前温度、调温时长不足或合计低于 0.1 度时，显示“已调温，但缺少可用的调前设定温度或调温时长不足，暂不展示估算数字”，不显示数字。
+- 提前取消按 `min(区间终点, 报告生成时间)` 截断，不算到计划终点。
+- 实测电表比较优先于假设估算；假设估算始终标注“估算 / 非实测”。
 
 ## 当前限制
 
