@@ -336,12 +336,12 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
   from: '2026-10-01T00:00:00+08:00', to: '2026-10-02T00:00:00+08:00' }).tone, 'warn')
  assert.match(energyImpactView({ status: 'estimated', value: 42, unit: '度', meterCount: 3, reason: '无法拆分空调贡献' }).text, /无法拆分空调贡献/)
 
- const assumed = energyImpactView({ status: 'estimated', basis: 'assumption', estimated: true, value: 3.2, unit: '度',
-  cost: { value: 2.5, unit: '元' }, deviceCount: 5, from: '2026-10-22T04:00:00Z', to: '2026-10-22T06:00:00Z',
+ const assumed = energyImpactView({ status: 'estimated', basis: 'assumption', estimated: true, value: 2.6, unit: '度',
+  cost: { value: 2.1, unit: '元' }, deviceCount: 5, from: '2026-10-22T04:00:00Z', to: '2026-10-22T06:00:00Z',
   baseline: { averageSetpoint: 24.5, target: 26, averageRise: 1.5 },
   assumptions: { ratePerDegree: 0.07, powerKw: 2.5, pricePerKwh: 0.8 },
   coverage: { adjusted: 5, estimated: 5 }, reason: '按调前设定温度与经验参数估算，非电表实测' })
- assert.equal(assumed.text, '预计节电约 3.2 度 · 折合电费约 ¥2.5')
+ assert.equal(assumed.text, '预计节电约 2.6 度 · 折合电费约 ¥2.1')
  assert.equal(assumed.tag, '估算')
  assert.equal(assumed.tone, 'warn')
  assert.equal(assumed.basis.length, 4)
