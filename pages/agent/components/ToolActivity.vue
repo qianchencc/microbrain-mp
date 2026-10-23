@@ -41,7 +41,7 @@
 	// 台账行是紧凑过程文字：去掉行内 markdown 记号，保留原文文字本身。
 	const plain = text => String(text ?? '').replace(/\*\*([^*]+)\*\*|`([^`]+)`/g, (_m, bold, code) => bold ?? code ?? '')
 	const isActive = item => ['running', 'searching'].includes(item.status)
-	const stateWord = item => isActive(item) ? '进行中' : item.status === 'failed' ? '失败' : item.status === 'skipped' ? '已跳过' : ''
+	const stateWord = item => isActive(item) ? '进行中' : item.status === 'failed' ? '未完成' : item.status === 'skipped' ? '已跳过' : ''
 </script>
 
 <style lang="scss" scoped>

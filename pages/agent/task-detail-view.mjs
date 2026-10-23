@@ -1,8 +1,8 @@
 import { fieldLabels, fanLabels, modeLabels } from './ac-draft.js'
 import { resolveDeviceArtwork } from './device-art/catalog.js'
 
-const statusText = { scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '明确报错', failed: '明确报错', unconfirmed: '明确报错', cancelled: '已取消', missed: '明确报错', interrupted: '明确报错', verified: '已执行', satisfied: '不必执行', pending: '未执行' }
-const companyStatusText = { scheduled: '未执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '执行失败', unconfirmed: '结果待核验', cancelled: '已取消', missed: '执行错过', interrupted: '执行中断', verified: '已核验', satisfied: '无需执行', pending: '未执行' }
+const statusText = { scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '部分完成', failed: '未完成', unconfirmed: '待核验', cancelled: '已取消', missed: '未执行', interrupted: '已中断', verified: '已执行', satisfied: '不必执行', pending: '未执行' }
+const companyStatusText = { scheduled: '未执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '结果待核验', cancelled: '已取消', missed: '未执行', interrupted: '已中断', verified: '已核验', satisfied: '无需执行', pending: '未执行' }
 const statusLabel = (status, source) => (source === 'company' ? companyStatusText[status] : statusText[status]) || status
 
 export function executionResult(device, source) {
@@ -12,7 +12,7 @@ export function executionResult(device, source) {
  if (device.outcome === 'verified' || (device.outcome === 'unconfirmed' && !device.details?.requiresVerification && device.details?.receipt === 'ACCEPTED' && !device.details?.timedOut)) return '已执行'
  if (['pending', 'not_dispatched'].includes(device.outcome)) return '未执行'
  if (source === 'company' && device.outcome === 'unknown') return '结果未知'
- return '明确报错'
+ return '未完成'
 }
 
 export function repeatText(repeat) {
@@ -203,12 +203,12 @@ export function resultText(device, source) {
   if (device.outcome === 'unconfirmed' && device.details.receipt === 'ACCEPTED') return device.details.readback?.observedState === null ? '已受理 · 回读失败' : '已受理 · 目标未核验'
  }
  const status = executionResult(device, source)
- if (status !== '明确报错') return status
+ if (status !== '未完成') return status
  const rejected = (device.details?.fields || []).filter(field => field.outcome === 'REJECTED')
   .map(field => fieldLabels[field.field] || field.field)
- if (rejected.length) return `${status} · ${rejected.join('、')}被拒绝`
+ if (rejected.length) return `${status} · ${rejected.join('、')}未受理`
  if (device.details?.timedOut) return `${status} · 平台响应超时`
- const reason = { rejected: '平台拒绝', unknown: '结果未知', unreadable: '状态读取失败', missing: '设备不可用' }[device.outcome]
+ const reason = { rejected: '平台未受理', unknown: '结果未知', unreadable: '状态未读取', missing: '设备不可用' }[device.outcome]
  return reason ? `${status} · ${reason}` : status
 }
 
@@ -246,7 +246,7 @@ export function taskDetailView(task) {
     return { ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
      targetText: targetText(device.kind, device.target),
      resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device, task.agentSource),
-     resultTone: phase.status === 'cancelled' ? 'wait' : device.details?.requiresVerification && device.outcome === 'unconfirmed' ? 'warn' : outcome === '明确报错' ? 'fail' : outcome === '结果未知' ? 'warn' : outcome === '未执行' ? 'wait' : 'ok' }
+     resultTone: phase.status === 'cancelled' ? 'wait' : device.details?.requiresVerification && device.outcome === 'unconfirmed' ? 'warn' : outcome === '未完成' ? 'fail' : outcome === '结果未知' ? 'warn' : outcome === '未执行' ? 'wait' : 'ok' }
    }),
   }
  })

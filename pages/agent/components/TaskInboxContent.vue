@@ -50,12 +50,12 @@ onHide(() => { pageVisible = false; ++requestId; loading.value = false; loadingM
 onShow(() => { pageVisible = true; if (props.open) void load(true) })
 const marking = new Set(), seenFailed = new Set()
 
-const labels = { completed: '执行完成', partial: '部分完成', failed: '执行失败', unconfirmed: '结果待核验', interrupted: '执行中断', missed: '执行错过', cancelled: '已取消', verified: '已核验', satisfied: '无需执行' }
+const labels = { completed: '执行完成', partial: '部分完成', failed: '未完成', unconfirmed: '结果待核验', interrupted: '执行中断', missed: '执行错过', cancelled: '已取消', verified: '已核验', satisfied: '无需执行' }
 function outcomeLabel(value) { return labels[value] || value || '结果已保存' }
 function summaryLine(summary) {
  const devices = summary.devices || {}
  const parts = [`${summary.checkpoints || 0} 次检查`, `涉及 ${devices.total || 0} 台`, `已调 ${devices.adjusted || 0}`, `无需 ${devices.satisfied || 0}`]
- if (devices.failed) parts.push(`失败 ${devices.failed}`)
+ if (devices.failed) parts.push(`未完成 ${devices.failed}`)
  if (devices.unknown) parts.push(`未知 ${devices.unknown}`)
  if (devices.unverified) parts.push(`待核验 ${devices.unverified}`)
  return parts.join(' · ')

@@ -8,15 +8,15 @@ function summary(steps) {
   const retained = steps.find(step => step.phaseStatus !== 'cancelled')
   if (!retained) return { text: '已取消', tone: 'wait' }
   const result = retained.phaseStatus === 'executing' ? '执行中' : retained.phaseStatus === 'missed' ? '已错过'
-   : retained.phaseStatus === 'interrupted' ? '明确报错' : executionResult(retained)
+   : retained.phaseStatus === 'interrupted' ? '已中断' : executionResult(retained)
   return { text: `${result} · 后续已取消`, tone: retained.phaseStatus === 'executing' ? 'active' : 'warn' }
  }
- if (steps.every(step => step.phaseStatus === 'missed')) return { text: '明确报错', tone: 'fail' }
- if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '明确报错', tone: 'fail' }
+ if (steps.every(step => step.phaseStatus === 'missed')) return { text: '未执行', tone: 'fail' }
+ if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '已中断', tone: 'fail' }
  if (steps.some(step => step.phaseStatus === 'executing')) return { text: '执行中', tone: 'active' }
  if (steps.length === 1) return { text: executionResult(steps[0]),
   tone: settled(steps[0]) ? 'ok' : executionResult(steps[0]) === '未执行' ? 'wait' : executionResult(steps[0]) === '结果待核验' ? 'warn' : 'fail' }
- if (steps.some(step => executionResult(step) === '明确报错')) return { text: '明确报错', tone: 'fail' }
+ if (steps.some(step => executionResult(step) === '未完成')) return { text: '未完成', tone: 'fail' }
  if (steps.some(step => executionResult(step) === '未执行')) return { text: '未执行', tone: 'wait' }
  if (steps.some(step => executionResult(step) === '结果待核验')) return { text: '结果待核验', tone: 'warn' }
  if (steps.every(step => executionResult(step) === '不必执行')) return { text: '不必执行', tone: 'ok' }

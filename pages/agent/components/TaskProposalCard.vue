@@ -100,8 +100,8 @@ const stateText = computed(() => isCancellation.value
  : state.value === 'executing' && props.task.interval
   ? props.task.executionActive ? '设备执行中' : '区间进行中'
   : (props.source === 'company'
-   ? ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '执行失败', unconfirmed: '结果待核验', cancelled: '已取消', missed: '执行错过', interrupted: '执行中断', expired: '已过期' })
-   : ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '明确报错', failed: '明确报错', unconfirmed: '明确报错', cancelled: '已取消', missed: '明确报错', interrupted: '明确报错', expired: '已过期' }))[state.value] || '已结束')
+   ? ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '结果待核验', cancelled: '已取消', missed: '未执行', interrupted: '已中断', expired: '已过期' })
+   : ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '部分完成', failed: '未完成', unconfirmed: '待核验', cancelled: '已取消', missed: '未执行', interrupted: '已中断', expired: '已过期' }))[state.value] || '已结束')
 const intervalText = computed(() => {
  if (!props.task.interval) return ''
  const start = taskTime(props.task.interval.startsAt), end = taskTime(props.task.interval.endsAt)
