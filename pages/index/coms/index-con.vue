@@ -30,11 +30,17 @@
 						</view>
 						<scroll-view class="scroll-menu" scroll-x="true">
 							<view class="menu-one">
-								<view class="menu-item" @click="goPage('/pages/agent/dashboard')">
+								<view class="menu-item agent-entry" @click="goPage('/pages/agent/dashboard')">
 									<view class="agent-entry-icon">
 										<uni-icons type="chatboxes-filled" size="28" color="#176b54" />
 									</view>
-									<view class="text">物联助手</view>
+									<view class="text">公司<text class="agent-entry-label">物联助手</text></view>
+								</view>
+								<view class="menu-item agent-entry" @click="goPage('/pages/agent/index?source=office')">
+									<view class="agent-entry-icon">
+										<uni-icons type="home-filled" size="28" color="#176b54" />
+									</view>
+									<view class="text">办公室<text class="agent-entry-label">物联助手</text></view>
 								</view>
 								<view v-for="menu in workMenuList" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
 									<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
@@ -322,6 +328,16 @@
 				}
 				.text {
 					font-size: 24rpx;
+				}
+				&.agent-entry .text {
+					margin-top: 8rpx;
+					line-height: 1.4;
+					white-space: nowrap;
+				}
+				.agent-entry-label {
+					display: block;
+					font-size: inherit;
+					line-height: inherit;
 				}
 			}
 		}
