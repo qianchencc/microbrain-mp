@@ -89,7 +89,8 @@ export function stripDays(report) {
  }))
 }
 
-// 楼层/区域构成：按表名前缀归组（26楼/27楼/农旅…），与原型口径一致。
+// 楼层/区域构成：位置（上游 areaName）优先归组，表名前缀仅在无位置时兜底——
+// 名称不含楼层的表（如“农旅办公室电表”）不得因此脱离权威区域（26楼农旅办公室）。
 export function floorOf(name = '') {
  const m = name.match(/(\d+)\s*楼/)
  if (m) return `${m[1]}楼`
@@ -105,7 +106,7 @@ export function meterRows(report, date) {
    id: meter.id,
    name: meter.name,
    location: meter.location || '',
-   floor: floorOf(meter.name || meter.location || ''),
+   floor: floorOf(meter.location || meter.name || ''),
    usage: cell && typeof cell.usage === 'number' ? cell.usage : null,
    status: cell?.status || 'not_computable'
   }
@@ -127,15 +128,32 @@ export function floorComposition(rows) {
 }
 
 // comparison.*.meterUsage（meterId → 用量）→ 楼层构成条目（与 floorComposition 同序）。
-export function compositionFromUsage(meterUsage, nameOf) {
+// placeOf 须返回权威位置文本（location/areaName 优先），与 meterRows 同口径。
+export function compositionFromUsage(meterUsage, placeOf) {
  const sums = new Map()
  for (const [id, v] of Object.entries(meterUsage || {})) {
   if (typeof v !== 'number') continue
-  const floor = floorOf(nameOf(id) || '')
+  const floor = floorOf(placeOf(id) || '')
   sums.set(floor, (sums.get(floor) || 0) + v)
  }
  return [...sums.entries()].sort((a, b) => b[1] - a[1])
   .map(([label, value]) => ({ label, value: round2(value) }))
+}
+
+// 完整日对比：只取两天都有实测日用量的同一批电表（同口径），任一侧缺数的表两边都剔除。
+export function completeDayComparison(report, date, baseDate) {
+ const meterUsage = {}, baseMeterUsage = {}
+ ;(report?.meters || []).forEach(meter => {
+  const usage = meter.daily?.[date]?.usage
+  const baseUsage = meter.daily?.[baseDate]?.usage
+  if (typeof usage !== 'number' || typeof baseUsage !== 'number') return
+  meterUsage[meter.id] = usage
+  baseMeterUsage[meter.id] = baseUsage
+ })
+ const meters = Object.keys(meterUsage).length
+ if (!meters) return null
+ const sum = usage => round2(Object.values(usage).reduce((a, b) => a + b, 0))
+ return { date, baseDate, usage: sum(meterUsage), baseUsage: sum(baseMeterUsage), meterUsage, baseMeterUsage, meters }
 }
 
 export function round2(n) {

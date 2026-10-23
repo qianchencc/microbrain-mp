@@ -3,7 +3,6 @@
   <view class="float-scrim" :class="{ on: open }" @tap="collapse" />
   <view v-if="mounted" class="float-panel" :class="{ open }" :style="{ top: panelTop + 'px' }">
    <view class="panel-head">
-    <AgentAvatar class="panel-avatar" :running="running" />
     <view class="panel-id"><text class="panel-name">公司 Agent</text><text class="panel-status">{{ status }}</text></view>
     <button class="panel-menu" aria-label="会话菜单" hover-class="panel-menu--pressed" @tap="conv?.openMenu()"><uni-icons type="more-filled" size="17" color="#536b5c" /></button>
    </view>
@@ -11,11 +10,11 @@
     @status="value => status = value" @running="onRunning" @connected="value => connected = value"
     @tasks-changed="$emit('tasks-changed')" @inbox-count="value => inboxCount = value" @error="value => hasError = value" @unread="unread++" />
   </view>
-  <button class="float-orb" :class="{ docked: open, working: running && !open }" :style="orbStyle" :aria-label="open ? '收起公司 Agent' : '打开公司 Agent'" hover-class="float-orb--pressed" @tap="toggle">
+  <view class="float-orb" :class="{ docked: open, working: running && !open }" :style="orbStyle" role="button" :aria-label="open ? '收起公司 Agent' : '打开公司 Agent'" hover-class="float-orb--pressed" @tap="toggle">
    <AgentAvatar class="orb-avatar" :running="running" />
    <view v-if="unread && !open" class="orb-badge"><text>{{ unread > 9 ? '9+' : unread }}</text></view>
    <view v-if="!open && !hinted" class="orb-hint"><text class="orb-hint-text">问公司 Agent</text></view>
-  </button>
+  </view>
  </view>
 </template>
 <script setup>
@@ -91,8 +90,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
  transition:transform .42s cubic-bezier(.2,.9,.25,1), opacity .3s ease; }
 .float-panel.open { transform:none; opacity:1; pointer-events:auto; }
 
-.panel-head { display:flex; align-items:center; gap:9px; padding:10px 46px 9px 14px; flex-shrink:0; border-bottom:1px solid #e4eae4; }
-.panel-avatar { flex-shrink:0; }
+.panel-head { display:flex; align-items:center; gap:9px; padding:12px 46px 11px 14px; flex-shrink:0; border-bottom:1px solid #e4eae4; }
 .panel-id { flex:1; min-width:0; display:flex; flex-direction:column; }
 .panel-name { font-size:14px; font-weight:600; color:#293f31; line-height:1.3; }
 .panel-status { font-size:10.5px; color:#7d8d82; line-height:1.4; }
@@ -101,13 +99,14 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .panel-menu--pressed { background:#e7eee8; }
 .panel-conv { flex:1; min-height:0; display:flex; }
 
+/* orb 用 view 不用 button：微信 button 默认 overflow:hidden 会把子元素裁进
+   圆角盒内——角标/提示气泡挂在盒外会被裁掉（角标只露圆内一弯月牙、hint 完全不显示） */
 .float-orb { position:fixed; z-index:46; right:14px; bottom:calc(16px + env(safe-area-inset-bottom));
  width:56px; height:56px; margin:0; padding:5px; border-radius:50%;
  display:flex; align-items:center; justify-content:center;
  background:linear-gradient(160deg,#fefefb,#eef3ef);
  box-shadow:0 6px 20px rgba(24,60,40,.22), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(26,55,43,.12);
  transition:transform .44s cubic-bezier(.2,.9,.25,1), box-shadow .3s ease; }
-.float-orb::after { border:0; }
 .float-orb--pressed { transform:scale(.94); }
 .float-orb.docked { box-shadow:0 4px 14px rgba(24,60,40,.18), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(26,55,43,.12); }
 .orb-avatar { transform:scale(1.4); }

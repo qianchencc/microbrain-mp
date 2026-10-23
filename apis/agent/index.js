@@ -47,6 +47,7 @@ export const listAgentTasks = ({ source = 'office', from, to } = {}) => request(
 export const getTaskDetail = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}`, source), 'GET')
 export const listNotifications = ({ source = 'office', limit = 30, before } = {}) => request(`/agent/notifications?source=${encodeURIComponent(source)}&limit=${encodeURIComponent(limit)}${before ? `&before=${encodeURIComponent(before)}` : ''}`, 'GET')
 export const markNotificationSeen = (id, source = 'office') => request(withConversationSource(`/agent/notifications/${encodeURIComponent(id)}/seen`, source), 'POST')
+export const markAllNotificationsSeen = (source = 'office') => request(withConversationSource('/agent/notifications/seen-all', source), 'POST')
 export const getTaskLightingStates = taskId => request(`/agent/tasks/${encodeURIComponent(taskId)}/lighting-states`, 'GET')
 export const cancelTask = (taskId, version, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/cancel`, source), 'POST', { version })
 export const confirmTask = (taskId, version, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/confirm`, source), 'POST', { version })

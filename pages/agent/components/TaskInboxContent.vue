@@ -1,7 +1,7 @@
 <template>
   <view class="inbox-content">
    <scroll-view :style="{ display: selected ? 'none' : 'block' }" class="inbox-scroll" scroll-y enhanced :show-scrollbar="false" @scrolltolower="load(false)">
-    <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button class="inbox-refresh" :disabled="loading" @tap="load(true)">刷新</button></view>
+    <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button v-if="unreadCount" class="inbox-markall" :disabled="markingAll" @tap="markAllSeen">全部已读</button><button class="inbox-refresh" :disabled="loading" @tap="load(true)">刷新</button></view>
     <view class="list-summary"><text>任务结束消息</text><text>{{ unreadCount }} 条未读</text></view>
     <view v-if="loading && !notifications.length" class="state-message">加载中…</view>
     <view v-else-if="error && !notifications.length" class="state-message"><text>{{ error }}</text><button @tap="load(true)">重试</button></view>
@@ -31,7 +31,7 @@
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { listNotifications, markNotificationSeen } from '@/apis/agent'
+import { listNotifications, markNotificationSeen, markAllNotificationsSeen } from '@/apis/agent'
 import TaskResultContent from './TaskResultContent.vue'
 import { fmtShanghaiDateTime } from '../observation-view.mjs'
 
@@ -43,7 +43,7 @@ const filters = [{ value: 'all', label: '全部' }, { value: 'unread', label: '�
 const visibleNotifications = computed(() => notifications.value.filter(item => filter.value === 'unread' ? !item.readAt : filter.value === 'abnormal' ? ['partial', 'failed', 'missed', 'interrupted', 'unconfirmed'].includes(item.outcome) : true))
 watch(() => [selected.value, navigation.value.title, navigation.value.canBack], () => emit('navigation', { title: navigation.value.title || (selected.value ? '任务结果' : '通知中心'), canBack: Boolean(selected.value) }), { immediate: true })
 const unreadCount = ref(0), nextCursor = ref('')
-const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref('')
+const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref(''), markingAll = ref(false)
 let requestId = 0, loadedScope = '', pageVisible = true
 function resetIdentity() { notifications.value = []; selected.value = null; nextCursor.value = ''; unreadCount.value = 0; markError.value = ''; navigation.value = { title: '', canBack: false }; publishUnreadCount() }
 onHide(() => { pageVisible = false; ++requestId; loading.value = false; loadingMore.value = false })
@@ -144,6 +144,22 @@ function retryMarkSeen() {
  markError.value = ''
  void onReportLoaded(notification.taskId)
 }
+async function markAllSeen() {
+ if (markingAll.value || !unreadCount.value) return
+ const current = ++requestId
+ markingAll.value = true
+ try {
+  const scope = getAgentStorageScope(), source = props.source
+  const result = await markAllNotificationsSeen(source)
+  if (current !== requestId || !props.open || !pageVisible || source !== props.source || scope !== getAgentStorageScope()) return
+  notifications.value = notifications.value.map(item => item.readAt ? item : { ...item, readAt: result.readAt })
+  if (selected.value && !selected.value.readAt) selected.value = { ...selected.value, readAt: result.readAt }
+  unreadCount.value = 0
+  publishUnreadCount()
+ } catch (cause) {
+  if (current === requestId) uni.showToast({ title: cause.message || '全部已读失败，请重试', icon: 'none' })
+ } finally { if (current === requestId) markingAll.value = false }
+}
 
 watch(() => [props.open, props.source], ([value, source], previous) => {
  if (previous && source !== previous[1]) resetIdentity()
@@ -181,5 +197,7 @@ button::after { border:0; }
 .inbox-filters button { padding:7px 12px; border-radius:16px; font-size:11px; color:#7e9083; }
 .inbox-filters .chosen { background:#e7f0e9; color:#176b54; }
 .inbox-filters .inbox-refresh { margin-left:auto; }
+.inbox-filters .inbox-markall { margin-left:auto; color:#176b54; }
+.inbox-filters .inbox-markall + .inbox-refresh { margin-left:0; }
 .load-more { margin:12px auto; padding:10px; color:#176b54; font-size:12px; }
 </style>

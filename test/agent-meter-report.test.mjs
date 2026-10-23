@@ -755,6 +755,12 @@ test('分段双柱：A 缺测仍画 B；B 缺测不画假零线', () => {
  assert.equal(meterReportBarLegend(report).length, 0)
 })
 
+test('图表 SVG 根节点声明 preserveAspectRatio="none"，超宽图在原生渲染中贴边铺满', () => {
+ const wide = meterBarChart(Array.from({ length: 291 }, (_, i) => ({ value: i % 200 + 1, baseline: null })), { paired: true })
+ const svg = decodeURIComponent(wide.src.slice('data:image/svg+xml;utf8,'.length))
+ assert.match(svg, /<svg[^>]*preserveAspectRatio="none"/)
+ assert.ok(wide.width > 17000)
+})
 
 import { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../pages/agent/meter-panel-view.mjs'
 

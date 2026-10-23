@@ -11,5 +11,5 @@ export function timelineSvg(scene) {
   if (shape.type === 'circle') return `<circle cx="${shape.x}" cy="${shape.y}" r="${shape.r}" ${attrs}/>`
   return `<rect x="${shape.x}" y="${shape.y}" width="${shape.w}" height="${shape.h}" rx="${shape.r}" ${attrs}/>`
  }).join('')
- return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}"><defs>${defs}${clips}</defs>${body}</svg>`
+ return `<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}"><defs>${defs}${clips}</defs>${body}</svg>`
 }

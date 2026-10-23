@@ -325,10 +325,13 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
  assert.match(taskRequirementsText({ phases: [{ read: { ac: { mode: 'adjust_to_26', cadenceMinutes: 60 } } }] }), /频率 · 每 60 分钟检查一次/)
 
  const summary = taskExecutionSummaryView({ checkpoints: 2, devices: { total: 3, adjusted: 1, satisfied: 2, skipped: 0, failed: 0, unknown: 0, unverified: 0 },
-  energyImpact: { status: 'unavailable', reason: '暂无法可靠估算节电' } })
+  energyImpact: { status: 'unavailable', reason: '已调温，但缺少可用的调前设定温度或调温时长不足' } })
  assert.equal(summary.checkpointsText, '2 次检查')
  assert.equal(summary.devicesText, '涉及 3 台 · 已调 1 · 无需 2 · 跳过 0')
- assert.deepEqual(summary.energy, { text: '暂无法可靠估算节电', tone: 'muted' })
+ assert.equal(summary.energy.kind, 'unavailable')
+ assert.equal(summary.energy.hero.value, '暂无法可靠估算')
+ assert.equal(summary.energy.hero.badge, '口径缺失')
+ assert.equal(summary.energy.facts.length, 3)
  assert.equal(taskExecutionSummaryView(null), null)
 
  assert.equal(energyImpactView({ status: 'measured', label: '关联能耗变化', value: 3.5, unit: '度', meterCount: 3,
@@ -342,15 +345,21 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
   cost: { value: 2.1, unit: '元' }, deviceCount: 5, from: '2026-10-22T04:00:00Z', to: '2026-10-22T06:00:00Z',
   baseline: { averageSetpoint: 24.5, target: 26, averageRise: 1.5 },
   assumptions: { ratePerDegree: 0.07, powerKw: 2.5, pricePerKwh: 0.8 },
-  coverage: { adjusted: 5, estimated: 5 }, reason: '按调前设定温度与经验参数估算，非电表实测' })
+  coverage: { adjusted: 5, estimated: 5 }, reason: '按调前设定温度与经验参数估算，非电表实测' },
+  { total: 6, adjusted: 5, satisfied: 1, skipped: 0, failed: 0, unknown: 0, unverified: 0 },
+  [{ observations: [{ type: 'ac_inspection', mode: 'adjust_to_26', devices: [
+   { deviceId: 'd1', name: '空调一', setpoint: 24, disposition: 'adjusted' },
+   { deviceId: 'd2', name: '空调二', setpoint: 26, disposition: 'not_needed' }] }] }])
+ assert.equal(assumed.kind, 'assumption')
  assert.equal(assumed.text, '预计节电约 2.6 度 · 折合电费约 ¥2.1')
- assert.equal(assumed.tag, '估算')
- assert.equal(assumed.tone, 'warn')
- assert.equal(assumed.basis.length, 4)
- assert.match(assumed.basis[0], /调前平均 24\.5℃ → 26℃/)
- assert.match(assumed.basis[1], /每上调 1℃ 约节电 7% · 单台功率 2\.5kW · 电价 ¥0\.8\/度/)
- assert.match(assumed.basis[2], /2026-10-22 12:00 至 2026-10-22 14:00/)
- assert.match(assumed.basis[3], /非电表实测/)
+ assert.equal(assumed.hero.value, '≈ 2.6')
+ assert.deepEqual(assumed.facts.map(fact => `${fact.value}·${fact.label}`), ['5 台·实际调节', '1 台·无需调整', '26℃·统一目标'])
+ assert.equal(assumed.formula, '5 台 × 1.5℃ × 7% × 2.5kW × 2h ≈ 2.63 度')
+ assert.match(assumed.notes[0], /调前平均 24\.5℃.*不代表已实测节电/)
+ assert.match(assumed.notes[1], /2026-10-22 12:00 至 2026-10-22 14:00/)
+ assert.deepEqual(assumed.devices.rows, [
+  { deviceId: 'd1', name: '空调一', before: '24℃', after: '26℃', tone: 'ok' },
+  { deviceId: 'd2', name: '空调二', before: '26℃', after: '无需调整', tone: 'muted' }])
 
  const proposalSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskProposalCard.vue'), 'utf8')
  assert.match(proposalSource, /v-for="\(phase, index\) in phasesShown"/, '频率展开的检查点只展示一份窗口事实')

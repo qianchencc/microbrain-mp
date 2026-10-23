@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeStripDays, padStripDays, markStripFailed, compositionFromUsage, comparePct, unitOf, donutImage, shiftDate, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView } from '../pages/agent/energy-daily-view.mjs'
+import { mergeStripDays, padStripDays, markStripFailed, compositionFromUsage, completeDayComparison, comparePct, unitOf, donutImage, shiftDate, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, meterRows, floorComposition } from '../pages/agent/energy-daily-view.mjs'
 
 test('日期条窗口合并：左端拼接保持升序、同日去重', () => {
  const current = [{ date: '2026-10-01', usage: 10 }, { date: '2026-10-02', usage: 11 }]
@@ -22,11 +22,25 @@ test('能耗单位只在已确认 kWh 口径时显示“度”', () => {
  assert.equal(unitOf(null), '')
 })
 
-test('同期对比构成按表名楼层归组', () => {
- const nameOf = id => ({ m1: '26楼运营部电表', m2: '27楼茶水间电表', m3: '农旅办公室电表' })[id]
- const items = compositionFromUsage({ m1: 3, m2: 5, m3: 2, m9: 1 }, nameOf)
- assert.deepEqual(items.map(i => i.label), ['27楼', '26楼', '农旅', '其他'])
- assert.equal(items[0].value, 5)
+test('同期对比构成按权威位置归组，无位置才用表名兜底', () => {
+ const placeOf = id => ({ m1: '26楼运营部', m2: '27楼茶水间', m3: '26楼农旅办公室', m9: '农旅研究院' })[id]
+ const items = compositionFromUsage({ m1: 3, m2: 5, m3: 2, m9: 1 }, placeOf)
+ assert.deepEqual(items.map(i => i.label), ['26楼', '27楼', '农旅']) // 26楼(3+2)与27楼(5)并列，稳定排序保持插入序
+ assert.deepEqual(items.map(i => i.value), [5, 5, 1])
+})
+
+test('逐表行与楼层构成以 location（上游 areaName）优先：农旅办公室电表归入 26 楼', () => {
+ const rows = meterRows({ meters: [
+  { id: 'm1', name: '26楼农旅研究院电表', location: '26楼农旅研究院', daily: { '2026-10-09': { usage: 3 } } },
+  { id: 'm2', name: '农旅办公室电表', location: '26楼农旅办公室', daily: { '2026-10-09': { usage: 2 } } },
+  { id: 'm3', name: '27楼茶水间电表', location: '27楼茶水间', daily: { '2026-10-09': { usage: 5 } } }] }, '2026-10-09')
+ assert.deepEqual(rows.map(r => r.floor), ['26楼', '26楼', '27楼'])
+ const comp = floorComposition(rows)
+ assert.deepEqual(comp.items.map(i => i.label), ['26楼', '27楼'])
+ assert.equal(comp.items[0].value, 5)
+ // 名称兜底：location 缺失时仍按表名归组，农旅特判保留
+ const fallback = meterRows({ meters: [{ id: 'm4', name: '农旅办公室电表', location: '', daily: { '2026-10-09': { usage: 1 } } }] }, '2026-10-09')
+ assert.equal(fallback[0].floor, '农旅')
 })
 
 test('padStripDays 只补缺、升序、不覆盖已有日', () => {
@@ -55,6 +69,28 @@ test('markStripFailed 只标仍 pending 的日，真实数据不动', () => {
  assert.equal(marked[1].failed, false)
  assert.equal(marked[1].usage, 7)
  assert.equal(marked[3].pending, true) // 区间外不受影响
+})
+
+test('完整日对比只统计两天都有实测的同批电表', () => {
+ const report = { meters: [
+  { id: 'a', name: 'A表', daily: { '2026-10-09': { usage: 10 }, '2026-10-08': { usage: 8 } } },
+  { id: 'b', name: 'B表', daily: { '2026-10-09': { usage: 5 }, '2026-10-08': { usage: null } } },
+  { id: 'c', name: 'C表', daily: { '2026-10-09': { usage: 4 } } }] }
+ const comp = completeDayComparison(report, '2026-10-09', '2026-10-08')
+ assert.equal(comp.meters, 1)
+ assert.equal(comp.usage, 10)
+ assert.equal(comp.baseUsage, 8)
+ assert.deepEqual(comp.meterUsage, { a: 10 })
+ assert.deepEqual(comp.baseMeterUsage, { a: 8 })
+})
+
+test('完整日对比无同口径电表返回 null，缺测不补 0', () => {
+ const report = { meters: [
+  { id: 'a', daily: { '2026-10-09': { usage: 10 }, '2026-10-08': { usage: null } } },
+  { id: 'b', daily: { '2026-10-09': { usage: null }, '2026-10-08': { usage: 4 } } }] }
+ assert.equal(completeDayComparison(report, '2026-10-09', '2026-10-08'), null)
+ const oneSided = { meters: [{ id: 'a', daily: { '2026-10-09': { usage: null }, '2026-10-08': { usage: 4 } } }] }
+ assert.equal(completeDayComparison(oneSided, '2026-10-09', '2026-10-08'), null)
 })
 
 test('固定计量对象与时间跨度：日期仅定位，分块请求不越界且结束时刻保持排他', () => {

@@ -4,6 +4,7 @@
 // 涨跌条（contributionChart）：以零线为中心发散，+Δ 向右玉绿、−Δ 向左黄铜，highlight 行铺淡黄铜底。
 // 折线约定：点按真实 x 坐标定位，相邻间隔超过中位间隔约 2.5 倍即断段（缺测不伪装成连续曲线）；
 // 稀疏时保留顶点小点，密集时只留线与淡色面积；孤立单点段始终画点。
+// 微信 image 栅格化超宽 SVG 时按默认 meet 居中裁剪，根节点必须 preserveAspectRatio="none" 保证贴边铺满。
 
 const finite = value => typeof value === 'number' && Number.isFinite(value)
 const FONT = 'font-family="sans-serif"'
@@ -86,7 +87,7 @@ export function meterBarChart(columns, options = {}) {
   return svg
  }).join('')
 
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="jade" x2="0" y2="1"><stop stop-color="#388e6d"/><stop offset="1" stop-color="#176b54"/></linearGradient><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="7" height="7" fill="#d9e8dc"/><path d="M0 0v7" stroke="#74a58c" stroke-width="3"/></pattern></defs>${grid}${bars}</svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="jade" x2="0" y2="1"><stop stop-color="#388e6d"/><stop offset="1" stop-color="#176b54"/></linearGradient><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="7" height="7" fill="#d9e8dc"/><path d="M0 0v7" stroke="#74a58c" stroke-width="3"/></pattern></defs>${grid}${bars}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, padLeft, padRight, hasData: list.some(c => finite(c.value) || (paired && finite(c.baseline))) }
 }
 
@@ -120,7 +121,7 @@ export function meterRankingChart(rows, options = {}) {
   return svg
  }).join('')
 
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="jade" x2="0" y2="1"><stop stop-color="#388e6d"/><stop offset="1" stop-color="#176b54"/></linearGradient></defs>${body}</svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="jade" x2="0" y2="1"><stop stop-color="#388e6d"/><stop offset="1" stop-color="#176b54"/></linearGradient></defs>${body}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.some(row => finite(row.value)) }
 }
 
@@ -162,7 +163,7 @@ export function contributionChart(rows, options = {}) {
   return svg
  }).join('')
 
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" ${FONT}>${body}</svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" ${FONT}>${body}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.some(row => finite(row.delta)) }
 }
 
@@ -240,7 +241,7 @@ export function trendLineChart(points, options = {}) {
   body += `<circle cx="${xOf(selected.at).toFixed(2)}" cy="${y(selected.value).toFixed(2)}" r="5" fill="#b89443" stroke="#fbfdf8" stroke-width="1.5"/>`
  }
 
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${body}</svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${body}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, xOf, hasData: list.length > 0 }
 }
 
@@ -268,7 +269,7 @@ export function floorSplitChart(floors, options = {}) {
   else below += `<text x="${(cursor + Math.min(w / 2, 40)).toFixed(2)}" y="${top + barH + 13 + narrow.indexOf(l) * 14}" text-anchor="middle" font-size="9.5" fill="${color}">${escapeXml(l.text)}</text>`
   cursor += w
  }
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" ${FONT}>${segs}${below}</svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" ${FONT}>${segs}${below}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.length > 0 }
 }
 
@@ -336,6 +337,6 @@ export function loadShapeChart(rates, options = {}) {
    + `<line x1="${padLeft + 96}" x2="${padLeft + 112}" y1="10" y2="10" stroke="${peerColor}" stroke-width="2"${peerDash ? ` stroke-dasharray="${peerDash}"` : ''}/><text x="${padLeft + 117}" y="13" font-size="9" fill="${peerColor}">${escapeXml(options.legend[1])}</text>`
   : ''
 
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${band}${legend}${body}${xTicks}</svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" ${FONT}><defs><linearGradient id="trendFill" x2="0" y2="1"><stop stop-color="#3f8f6d" stop-opacity=".26"/><stop offset="1" stop-color="#3f8f6d" stop-opacity="0"/></linearGradient></defs>${grid}${band}${legend}${body}${xTicks}</svg>`
  return { src: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), width, height, hasData: list.some(v => v !== null) }
 }

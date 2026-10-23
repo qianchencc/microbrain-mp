@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE — throwaway, do not ship.
+  Question: 空会话时在输入框上方放一排推荐操作 badge——放什么内容、什么形态才不像装饰位？
+  - ?variant=a|b|c|d，底部原型栏或 ←/→ 切换；&ctx=office|company 切换两个 Agent 语境。
+  - 交互约定与生产一致：点 badge = prefill 进输入框（同区域工作台「新建任务」），不直接发送；
+    点发送可看会话开始后 badge 自然消失。底部栏「↺」重置回空态。
+  - 外壳按生产组件样式压缩复刻：AssistantNav + RegionChip、welcome、composer 胶囊、
+    用户气泡、公司 Agent 浮层（scrim + panel-head + docked orb）。badge 本体复用 region-chip 纸材。
+  - 变体：A 贴输入框胶囊行（3 条能力代表）/ B 引导词「可以试」+ 胶囊 /
+    C 欢迎区融合（chips 挂在副标题下）/ D 分类图标 + 4 条横滚。
+  Open: 仓库根 python3 -m http.server 8766 → http://127.0.0.1:8766/pages/agent/proto-composer-suggestions.html
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>输入框推荐 badge · Prototype</title>
+<style>
+:root {
+  --paper: #f4f7f5; --ink: #24382d; --ink-2: #253b30;
+  --muted: #738278; --muted-2: #839186;
+  --jade: #176b54; --jade-hi: #2a876c; --jade-deep: #145c46; --jade-soft: #e4eee8;
+  --hairline: #e0e7e2;
+  --ease-out: cubic-bezier(.23,1,.32,1);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  background: #e8ecea; color: var(--ink); -webkit-font-smoothing: antialiased;
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 14px;
+}
+button { font-family: inherit; border: 0; background: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.phone {
+  width: min(375px, calc(100vw - 20px)); height: min(760px, calc(100dvh - 120px));
+  border-radius: 44px; background: #0e1512; padding: 10px;
+  box-shadow: 0 30px 80px rgba(20,40,30,.28), 0 4px 16px rgba(20,40,30,.14);
+}
+.screen {
+  width: 100%; height: 100%; border-radius: 36px; overflow: hidden; position: relative;
+  display: flex; flex-direction: column; background: var(--paper);
+}
+.statusbar {
+  height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 22px; font-size: 11px; font-weight: 600; color: var(--ink-2); z-index: 12;
+}
+.statusbar .sicons { opacity: .75; font-size: 10px; letter-spacing: .5px; }
+
+/* ============ 生产样式压缩复刻 ============ */
+/* index.vue: .agent-page */
+.page { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+
+/* AssistantNav.vue */
+.anav { flex-shrink: 0; background: linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom: 1px solid rgba(44,75,58,.05); }
+.nav-line { display: flex; align-items: center; padding-left: 8px; min-height: 44px; }
+.nav-back { width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 14px; font-size: 21px; color: #315846; }
+.nav-back:active { background: #e7eee8; }
+.nav-title { flex: 1; min-width: 0; margin-left: 4px; display: flex; align-items: center; }
+.nav-action { flex-shrink: 0; display: flex; align-items: center; }
+/* RegionChip.vue（nav 态） */
+.region-chip { display: flex; align-items: center; min-width: 0; border-radius: 16px;
+  background: linear-gradient(#fefffe,#edf2ec);
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 .5px rgba(41,73,54,.14), 0 3px 8px -6px rgba(35,58,45,.4); }
+.region-chip .rn { padding: 0 9px 0 12px; height: 30px; display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #3d5947; white-space: nowrap; }
+.region-chip .rto { width: 26px; height: 30px; display: flex; align-items: center; justify-content: center; border-left: 1px solid rgba(82,107,76,.08); color: #536b5c; font-size: 9px; }
+/* AgentHeader workbench-link */
+.wb { height: 44px; display: flex; align-items: center; gap: 3px; padding: 0 8px; color: #536b5c; font-size: 12px; }
+.wb:active { opacity: .65; }
+
+/* AgentConversation.vue */
+.conv { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.conv::-webkit-scrollbar { display: none; }
+.conv-inner { padding: 24px 16px 32px; }
+.welcome { margin: 40px 0; font-size: 18px; font-weight: 600; }
+.welcome .wsub { margin-top: 10px; font-size: 13px; font-weight: 400; color: var(--muted); }
+.welcome, .sugg, .turn { transition: opacity .18s ease, transform .18s ease; }
+.gone { opacity: 0; transform: translateY(-4px); pointer-events: none; }
+.turn { margin-bottom: 42px; }
+.user-row { display: flex; justify-content: flex-end; margin-bottom: 22px; }
+/* UserMessage.vue */
+.ubub { display: inline-block; max-width: 88%; padding: 12px 15px; border-radius: 15px 15px 4px 15px;
+  background: linear-gradient(155deg,#247b62,#145b46);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 2px 5px rgba(19,73,49,.10);
+  color: #fff; font-size: 15px; line-height: 1.6; animation: msg-in .18s var(--ease-out); }
+/* AssistantMarkdown.vue（无气泡纯文本） */
+.ans { margin-top: 10px; font-size: 15px; line-height: 1.8; color: var(--ink); animation: msg-in .2s var(--ease-out); }
+.thinking { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 12px; color: var(--muted-2); }
+.thinking i { width: 7px; height: 7px; border-radius: 50%; background: var(--jade-hi); animation: pulse 1s ease-in-out infinite alternate; }
+@keyframes pulse { to { opacity: .3; transform: scale(.8); } }
+@keyframes msg-in { from { opacity: 0; transform: translateY(3px); } }
+
+/* composer-shell + AgentComposer.vue */
+.cshell { position: relative; z-index: 4; padding: 8px 18px 14px; flex-shrink: 0; }
+.composer { display: flex; align-items: flex-end; gap: 3px; padding: 5px; min-height: 46px;
+  border: 1px solid #cbd9d0; border-radius: 24px; background: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(28,57,42,.10), 0 7px 22px rgba(28,57,42,.12); }
+.mbtn, .sbtn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 50%; }
+.mbtn svg, .sbtn svg { width: 19px; height: 19px; }
+.mbtn { color: #263d30; opacity: .72; }
+.iarea { flex: 1; min-width: 0; }
+.cinput { width: 100%; min-height: 36px; border: 0; outline: none; resize: none; background: transparent;
+  padding: 7px 3px; font-family: inherit; font-size: 14px; line-height: 22px; color: #263d30; }
+.cinput::placeholder { color: #8b9991; }
+.sbtn { background: #edf2ee; box-shadow: inset 0 1px 1px rgba(38,64,46,.04); color: #718578; }
+.sbtn.ready { background: linear-gradient(155deg,#2a876c,#145c46); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.23), 0 2px 4px rgba(20,76,50,.15); }
+.sbtn.ready svg { filter: brightness(0) invert(1); opacity: 1; }
+
+/* ============ 推荐 badge：复用 region-chip 纸材 ============ */
+.sugg { display: flex; align-items: center; gap: 6px; margin: 0 2px 9px; }
+.sugg-row { display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.sugg-row::-webkit-scrollbar { display: none; }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 12px; flex-shrink: 0;
+  border-radius: 15px; background: linear-gradient(#fefffe,#edf2ec);
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 .5px rgba(41,73,54,.14), 0 3px 8px -6px rgba(35,58,45,.4);
+  font-size: 11.5px; color: #3d5947; white-space: nowrap; transition: transform .14s var(--ease-out); }
+.chip:active { transform: scale(.95); }
+.chip svg { width: 11px; height: 11px; color: var(--jade); opacity: .8; flex-shrink: 0; }
+.sugg-label { flex-shrink: 0; font-size: 11px; color: var(--muted-2); padding-left: 4px; }
+/* C：欢迎区融合 */
+.sugg.in-welcome { flex-wrap: wrap; margin: 16px 0 0; }
+.sugg.in-welcome .sugg-row { flex-wrap: wrap; overflow: visible; }
+.sugg.in-welcome .chip { height: 32px; }
+
+/* ============ 公司浮层（CompanyAgentFloat.vue open 态压缩复刻） ============ */
+.scrim { position: absolute; inset: 0; z-index: 40; background: rgba(22,38,30,.34); }
+.dashmock { flex: 1; min-height: 0; padding: 14px 16px; }
+.dm-block { background: #fff; border: 1px solid var(--hairline); border-radius: 12px; margin-bottom: 10px; }
+.fpanel { position: absolute; z-index: 45; left: 0; right: 0; bottom: 0; top: 92px;
+  display: flex; flex-direction: column; border-radius: 18px 18px 0 0;
+  background: linear-gradient(180deg,#fbfcfb,#f2f6f3); box-shadow: 0 -14px 44px rgba(26,55,43,.26); overflow: hidden; }
+.phead { display: flex; align-items: center; gap: 9px; padding: 12px 46px 11px 14px; flex-shrink: 0; border-bottom: 1px solid #e4eae4; }
+.pid { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pname { font-size: 14px; font-weight: 600; color: #293f31; line-height: 1.3; }
+.pstatus { font-size: 10.5px; color: #7d8d82; line-height: 1.4; }
+.pmenu { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 12px; flex-shrink: 0; color: #536b5c; font-size: 15px; }
+.orb { position: absolute; z-index: 46; right: 8px; top: -14px; width: 35px; height: 35px; border-radius: 50%;
+  background: linear-gradient(160deg,#fefefb,#eef3ef);
+  box-shadow: 0 4px 14px rgba(24,60,40,.18), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(26,55,43,.12);
+  display: flex; align-items: center; justify-content: center; }
+.orb i { width: 14px; height: 14px; border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(circle at 34% 30%, #3e9b7c, #17604a 72%); display: block; }
+
+/* ============ 原型栏 ============ */
+.proto-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; z-index: 99;
+  background: rgba(18,28,23,.92); color: #dce8e0; border-radius: 18px; padding: 7px 12px;
+  font-size: 11.5px; box-shadow: 0 8px 24px rgba(10,20,15,.4); }
+.proto-bar button { color: inherit; font-size: 13px; padding: 2px 7px; border-radius: 8px; }
+.proto-bar button:active { background: rgba(255,255,255,.12); }
+.proto-bar .vlab { min-width: 128px; text-align: center; font-weight: 600; letter-spacing: .3px; }
+.proto-bar .sep { width: 1px; height: 14px; background: rgba(255,255,255,.18); }
+.proto-bar .tg { font-size: 10.5px; padding: 3px 8px; border-radius: 9px; border: 1px solid rgba(255,255,255,.22); }
+.proto-bar .tg.on { background: rgba(96,180,140,.35); border-color: rgba(96,180,140,.6); }
+</style>
+</head>
+<body>
+<div class="phone"><div class="screen" id="screen"></div></div>
+
+<div class="proto-bar">
+  <button id="prev">‹</button>
+  <span class="vlab" id="vlab"></span>
+  <button id="next">›</button>
+  <span class="sep"></span>
+  <button class="tg" id="tgCtx">公司 Agent</button>
+  <button class="tg" id="tgReset">↺ 重置</button>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const Q = new URLSearchParams(location.search);
+const VARIANTS = [
+  { k:'a', n:'A · 贴输入框胶囊' },
+  { k:'b', n:'B · 引导词+胶囊' },
+  { k:'c', n:'C · 欢迎区融合' },
+  { k:'d', n:'D · 图标横滚 4 条' },
+];
+let variant = Q.get('variant') || 'a';
+let ctx = Q.get('ctx') === 'company' ? 'company' : 'office';
+
+const MIC = '<svg viewBox="0 0 24 24"><path d="M12 14.5a3.2 3.2 0 0 0 3.2-3.2V6.2a3.2 3.2 0 1 0-6.4 0v5.1a3.2 3.2 0 0 0 3.2 3.2Zm-5.3-3.2a5.3 5.3 0 0 0 10.6 0M12 16.6v3.1m-3 0h6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/></svg>';
+const SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>';
+const IC = {
+  q: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.8-3.8"/></svg>',
+  c: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>',
+  t: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+};
+
+const DATA = {
+  office: {
+    title: '办公室 Agent', wsub: '告诉我位置、设备和需要的操作。',
+    placeholder: '想查看或调整什么设备？',
+    chips: [
+      { i:'q', t:'26F 现在开着哪些设备' },
+      { i:'c', t:'把 26F 的灯都关掉' },
+      { i:'t', t:'工作日 18:30 自动关灯' },
+      { i:'t', t:'明早 8:00 开会前开空调' },
+    ],
+    reply: '收到。已按当前关注区域「26F 办公区」处理——这里是演示回复，真实会话由 Runtime 流式返回。',
+  },
+  company: {
+    title: '公司 Agent', wsub: '查询公司环境、能耗和告警，安排定时简报或智慧空调任务。',
+    placeholder: '查询设备或调整智慧空调',
+    chips: [
+      { i:'q', t:'公司现在环境怎么样' },
+      { i:'q', t:'最近 24 小时有哪些告警' },
+      { i:'q', t:'本月和上月用电对比' },
+      { i:'t', t:'每天早上 8 点发环境简报' },
+    ],
+    reply: '收到。这里是演示回复——真实会话中由公司 Agent 汇总环境、能耗或告警事实后流式返回。',
+  },
+};
+
+function chipHTML(c, withIcon) {
+  return `<button class="chip" data-t="${c.t}">${withIcon ? IC[c.i] : ''}<span>${c.t}</span></button>`;
+}
+function suggHTML(d) {
+  const n = variant === 'd' ? 4 : 3;
+  const chips = d.chips.slice(0, n).map(c => chipHTML(c, variant === 'd')).join('');
+  const label = variant === 'b' ? '<span class="sugg-label">可以试</span>' : '';
+  const cls = variant === 'c' ? 'sugg in-welcome' : 'sugg';
+  return `<div class="${cls}" id="sugg">${label}<div class="sugg-row">${chips}</div></div>`;
+}
+function composerHTML(d) {
+  return `<div class="cshell">${variant === 'c' ? '' : suggHTML(d)}
+    <div class="composer"><button class="mbtn">${MIC}</button>
+      <div class="iarea"><textarea class="cinput" rows="1" placeholder="${d.placeholder}"></textarea></div>
+      <button class="sbtn" id="sbtn">${SEND}</button></div></div>`;
+}
+function convHTML(d) {
+  return `<div class="conv"><div class="conv-inner">
+    <div class="welcome" id="welcome">${d.title}<div class="wsub">${d.wsub}</div>${variant === 'c' ? suggHTML(d) : ''}</div>
+    <div id="turns"></div></div></div>`;
+}
+function officeHTML(d) {
+  return `<div class="statusbar"><span>9:41</span><span class="sicons">5G ▮▮▮</span></div>
+  <div class="page">
+    <div class="anav"><div class="nav-line">
+      <button class="nav-back">‹</button>
+      <div class="nav-title"><div class="region-chip"><span class="rn">26F 办公区</span><span class="rto">▾</span></div></div>
+      <div class="nav-action"><button class="wb">工作台 ›</button></div>
+    </div></div>
+    ${convHTML(d)}${composerHTML(d)}
+  </div>`;
+}
+function companyHTML(d) {
+  return `<div class="statusbar"><span>9:41</span><span class="sicons">5G ▮▮▮</span></div>
+  <div class="page">
+    <div class="anav"><div class="nav-line">
+      <button class="nav-back">‹</button>
+      <div class="nav-title"><span style="font-size:15px;font-weight:600;color:#293f31">物联助手</span></div>
+      <div class="nav-action"><button class="wb" style="width:44px">⋯</button></div>
+    </div></div>
+    <div class="dashmock">
+      <div class="dm-block" style="height:64px"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"><div class="dm-block" style="height:44px"></div><div class="dm-block" style="height:44px"></div><div class="dm-block" style="height:44px"></div><div class="dm-block" style="height:44px"></div></div>
+      <div class="dm-block" style="height:120px"></div>
+    </div>
+    <div class="scrim"></div>
+    <div class="fpanel">
+      <button class="orb"><i></i></button>
+      <div class="phead"><div class="pid"><span class="pname">公司 Agent</span><span class="pstatus">服务在线</span></div>
+        <button class="pmenu">⋯</button></div>
+      ${convHTML(d)}${composerHTML(d)}
+    </div>
+  </div>`;
+}
+
+let replied = false;
+function render() {
+  const d = DATA[ctx];
+  $('#screen').innerHTML = (ctx === 'company' ? companyHTML : officeHTML)(d);
+  $('#vlab').textContent = VARIANTS.find(v => v.k === variant).n;
+  $('#tgCtx').textContent = ctx === 'office' ? '公司 Agent' : '办公室 Agent';
+  $('#tgCtx').classList.toggle('on', ctx === 'company');
+  replied = false;
+  const input = $('.cinput'), sbtn = $('#sbtn');
+  const sync = () => sbtn.classList.toggle('ready', !!input.value.trim());
+  input.addEventListener('input', sync);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input.value, d); } });
+  sbtn.addEventListener('click', () => send(input.value, d));
+  document.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', () => {
+    input.value = ch.dataset.t; input.focus(); sync();
+  }));
+}
+function send(text, d) {
+  text = (text || '').trim();
+  if (!text || replied) return;
+  replied = true;
+  $('#welcome')?.classList.add('gone');
+  const sugg = $('#sugg'); if (sugg) sugg.classList.add('gone');
+  const turns = $('#turns');
+  turns.innerHTML = `<div class="turn"><div class="user-row"><span class="ubub">${text}</span></div>
+    <div class="thinking" id="th"><i></i>正在读取…</div></div>`;
+  setTimeout(() => { const w = $('#welcome'); if (w) w.style.display = 'none'; const s = $('#sugg'); if (s) s.style.display = 'none'; }, 200);
+  setTimeout(() => { const th = $('#th'); if (th) th.outerHTML = `<div class="ans">${d.reply}</div>`; }, 1100);
+  $('.cinput').value = ''; $('#sbtn').classList.remove('ready');
+  const conv = $('.conv'); conv.scrollTop = conv.scrollHeight;
+}
+function cycle(dir) {
+  const i = VARIANTS.findIndex(v => v.k === variant);
+  variant = VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length].k;
+  syncUrl(); render();
+}
+function syncUrl() {
+  const q = new URLSearchParams(location.search);
+  q.set('variant', variant); if (ctx === 'company') q.set('ctx', 'company'); else q.delete('ctx');
+  history.replaceState(null, '', '?' + q);
+}
+$('#prev').onclick = () => cycle(-1);
+$('#next').onclick = () => cycle(1);
+$('#tgCtx').onclick = () => { ctx = ctx === 'office' ? 'company' : 'office'; syncUrl(); render(); };
+$('#tgReset').onclick = render;
+document.addEventListener('keydown', e => {
+  if (e.target.matches('textarea')) return;
+  if (e.key === 'ArrowLeft') cycle(-1); if (e.key === 'ArrowRight') cycle(1);
+});
+render();
+</script>
+</body>
+</html>

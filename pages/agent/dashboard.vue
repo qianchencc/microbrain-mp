@@ -2,8 +2,13 @@
  <view class="dashboard">
   <AssistantNav title="物联助手" back-label="服务首页" @back="back">
   <template #title>
-   <text class="nav-title-text">物联助手</text>
-   <button class="office-entry" :disabled="Boolean(openingAgent)" hover-class="office-entry--pressed" aria-label="打开办公室 Agent" @tap="openAgent('office')"><text class="office-entry-text">办公室</text><uni-icons type="forward" size="11" color="#536b5c" /></button>
+   <!-- 具名插槽多根节点在 mp-weixin 会被外包一层普通 view（块级），
+        必须收进单一行容器，否则标题与入口竖排 -->
+   <view class="title-row">
+    <text class="nav-title-text">物联助手</text>
+    <view class="nav-sep" />
+    <button class="office-entry" :disabled="Boolean(openingAgent)" hover-class="office-entry--pressed" aria-label="打开办公室 Agent" @tap="openAgent('office')"><text class="office-entry-text">办公室</text><uni-icons type="forward" size="10" color="#7d8d82" /></button>
+   </view>
   </template>
  </AssistantNav>
   <scroll-view class="dashboard-scroll" scroll-y enhanced :show-scrollbar="false">
@@ -33,9 +38,10 @@
 
     <view class="blk">
      <view class="k"><text>能耗统计</text><button class="more" @tap="openEnergy()">全部 <uni-icons type="right" size="10" color="#176b54" /></button></view>
-     <CompanyEnergyStrip v-if="energyStrip.length" ref="energyStripRef" :days="energyStrip" :selected="selectedStripDate" pull-enabled @select="openEnergy" @pull-open="openEnergy()" @reach-left="loadOlderEnergy" />
+     <CompanyEnergyStrip v-if="energyStrip.length" ref="energyStripRef" :days="energyStrip" :selected="selectedStripDate" pull-enabled @select="openEnergy" @pull-open="openEnergy()" />
+     <EnergySkeleton v-else-if="energyLoading && !energyError" />
      <text v-if="energyError" class="fineprint dim">逐日能耗暂不可用 · {{ energyError }}</text>
-     <text v-else-if="!energyStrip.length" class="fineprint">{{ energyLoading ? '正在读取逐日能耗…' : '暂无可统计的计量日' }}</text>
+     <text v-else-if="!energyStrip.length && !energyLoading" class="fineprint">暂无可统计的计量日</text>
      <MonthlyEnergyComparison :active="pageActive && !energyLoading" :refresh-key="monthlyRefresh" :cutoff="energyReport?.latestSampleTime || ''" />
     </view>
 
@@ -92,6 +98,7 @@ import SafetyHistoryList from './components/SafetyHistoryList.vue'
 import EnvironmentHistoryView from './components/EnvironmentHistoryView.vue'
 import MeterHistoryView from './components/MeterHistoryView.vue'
 import CompanyEnergyStrip from './components/CompanyEnergyStrip.vue'
+import EnergySkeleton from './components/EnergySkeleton.vue'
 import CompanyEnergySheet from './components/CompanyEnergySheet.vue'
 import MonthlyEnergyComparison from './components/MonthlyEnergyComparison.vue'
 import CompanyDeviceDrawer from './components/CompanyDeviceDrawer.vue'
@@ -156,18 +163,6 @@ const latestCompleteDay = computed(() => energyReport.value?.latestCompleteDay |
 function mergeDailyReport(next) {
  energyReport.value = next
  energyStrip.value = mergeStripDays(energyStrip.value, next.days || [])
-}
-async function loadOlderEnergy(firstDate) {
- if (!firstDate) return
- const current = requestId
- try {
-  const next = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS, end: shiftDate(firstDate, -1) })
-  if (current !== requestId) return // 已被刷新/换身份作废，不合并旧报告
-  const before = energyStrip.value.length
-  mergeDailyReport(next)
-  const added = energyStrip.value.length - before
-  if (added) energyStripRef.value?.didPrepend(added)
- } catch { /* 旧窗口读取失败不破坏当前条带 */ }
 }
 function openEnergy(date) {
  energyFocusDate.value = date || latestCompleteDay.value || ''
@@ -268,6 +263,7 @@ async function load(force = false) {
     if (section === 'energyDaily') {
      const result = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS })
      if (!active()) return
+     if (result?.status === 'preparing') { energyError.value = result.message || '电表数据仍在准备中'; return }
      energyStrip.value = []
      mergeDailyReport(result)
      selectedStripDate.value = result.latestCompleteDay || result.days?.at(-1)?.date || ''
@@ -386,13 +382,17 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .lchips button.on { background:#176b54; color:#fff; }
 .list-more { display:block; width:100%; padding:10px 0 2px; text-align:left; font-size:10.5px; color:#176b54; }
 
-/* 标题旁办公室入口：AssistantNav #title 插槽内容用本文件样式（scoped 只吃宿主侧） */
+/* 标题旁办公室入口：细分隔线 + 次要色文字链接（AssistantNav #title 插槽内容用本文件样式）。
+   具名插槽会被 uni-app 包一层 <view slot="title">（普通块级、无 data-v，
+   scoped 命中不到它）——内容必须收进单一 flex 行容器自保横排。 */
+.title-row { display:flex; align-items:center; }
 .nav-title-text { font-size:15px; font-weight:600; color:#293f31; }
-.office-entry { display:flex; align-items:center; gap:3px; margin-left:10px; padding:4px 10px; border-radius:12px; background:linear-gradient(#fefffe,#eef3ef); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16), 0 1px 2px rgba(28,57,42,.08); }
+.nav-sep { width:1px; height:13px; margin:0 11px; flex-shrink:0; background:rgba(41,63,49,.16); }
+.office-entry { display:flex; align-items:center; gap:1px; padding:8px 0; }
 .office-entry::after { border:0; }
 .office-entry[disabled] { opacity:.6; }
 .office-entry--pressed { opacity:.65; }
-.office-entry-text { font-size:11px; color:#536b5c; }
+.office-entry-text { font-size:12.5px; color:#7d8d82; }
 .pressed { opacity:.65; }
 
 .notice { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; color:#9a784a; font-size:10px; }.notice button { min-height:30px; color:#8b693c; text-decoration:underline; flex-shrink:0; }

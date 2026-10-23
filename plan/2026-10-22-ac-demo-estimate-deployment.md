@@ -11,6 +11,7 @@
 - 发布门禁：运行中会话/草案/阶段、10 分钟内到期阶段与计划均为 0；主库与 sessions 库备份、`quick_check`、外键检查通过；业务行数前后一致。
 - 健康检查：`/healthz` 返回 `status=ok`、`iotMode=production`、`devIdentityOverride=false`、`modelId=GLM-5.3-Flash`。
 - 小程序展示：本地提交 `c931839`，开发编译产物 `pages/agent/task-detail-view.js` 已包含 `basis: assumption` 分支。
+- 2026-10-22 补全：`c931839` 只接了紧凑行，与原型不符；现已按 `proto-energy-estimate.html` A 变体落为节能卡（hero 大数字＋非实测徽标＋三格事实＋公式依据＋设备调温前后行），`unavailable` 态同版式。视图模型与测试已更新，真机渲染验收待 HBuilderX 编译后确认。
 
 ## 演示用的状态时间戳放宽
 

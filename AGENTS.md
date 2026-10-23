@@ -28,9 +28,12 @@ This repository uses a single-context domain documentation layout. See `docs/age
 
 ## 开发版公网预览（2026-10-14 实测）
 
+> 2026-10-23 起 Runtime 与视频播放器直接部署在 `38.76.215.138`，发布规范见 `plan/2026-10-23-runtime-cloud-release-spec.md`；以下 2026-10-14 的本机 frpc 链路为历史记录。
+
 - develop 构建的 Agent API 使用 `https://mp-agent.qianc.ltd/api`；trial/release 仍走客户网关 `ncim.577119.com/micro-api/api/ai`。
 - 链路：Cloudflare → frps → 本机第二个 frpc（`~/frp/frpc-agent.toml`，0600，密钥仅在本地配置不落仓库）→ 本机安全代理 `~/frp/agent-public-proxy.mjs`（127.0.0.1:9416）→ 唯一 Runtime 3200。
 - 代理只放行 `/api/agent/*` 并要求真实 Bearer+tenantcode 身份；`local-development`/`local-test`/tenant `LOCAL` 一律 401，`/api/admin/*` 及其他路径 404，`/healthz` 返回代理自身固定标记不透传 Runtime 配置。
 - 公网隧道/真实鉴权/NDJSON 分块传输已实测通过；真实问候 run 以 `run.failed` 结束，Runtime 记录错误『模型未返回可展示的消息』，业务对话尚未验收成功，根因未定位。
 - 真机移动网络、未备案域名调试与视频播放另行验收；`mp-video` 隧道本地 9415 服务当前停止，不在本轮范围。
 - 已验证工具链：Node 22 `/opt/homebrew/opt/node@22/bin/node`；HBuilderX 编译：`/Applications/HBuilderX.app/Contents/MacOS/cli launch mp-weixin --project '/Users/qianchen/works/新发展/mp' --compile true`。
+- Runtime 侧已固定 `HOST=127.0.0.1` 回环（2026-10-15），公网路径不依赖 Mac 局域网 IP，也绝不把小程序 agentUrl 指向手机 localhost；局域网直连预览才需要 `0.0.0.0`。

@@ -76,8 +76,34 @@ export function readAcView(ac) {
  }
 }
 
-/** 任务报告的执行摘要与节能口径投影；数字缺失时保留原因，不补零。 */
-export function energyImpactView(impact) {
+// 报告设备行聚合与 report-summary 同口径：adjusted 优先，not_dispatched/unknown 逐级让位；
+// before 取设备首次出现的调前 setpoint，after 按最终处置表达，不据指令反推。
+const ENERGY_DEVICE_ROW_LIMIT = 6
+function acReportDeviceRows(phases, target) {
+ const seen = new Map()
+ for (const phase of phases || []) {
+  for (const block of phase.observations || []) {
+   if (block?.type !== 'ac_inspection' || block.mode !== 'adjust_to_26') continue
+   for (const device of block.devices || []) {
+    const entry = seen.get(device.deviceId)
+    if (!entry) seen.set(device.deviceId, { name: device.name, before: device.setpoint, disposition: device.disposition })
+    else if (device.disposition === 'adjusted') entry.disposition = 'adjusted'
+    else if (device.disposition === 'not_dispatched' && entry.disposition !== 'adjusted') entry.disposition = 'not_dispatched'
+    else if (device.disposition === 'unknown' && !['adjusted', 'not_dispatched'].includes(entry.disposition)) entry.disposition = 'unknown'
+   }
+  }
+ }
+ const rows = [...seen.entries()].map(([deviceId, device]) => {
+  const before = Number.isFinite(device.before) ? `${device.before}℃` : '—'
+  if (device.disposition === 'adjusted') return { deviceId, name: device.name, before, after: `${target}℃`, tone: 'ok' }
+  if (device.disposition === 'not_needed') return { deviceId, name: device.name, before, after: '无需调整', tone: 'muted' }
+  return { deviceId, name: device.name, before, after: { not_dispatched: '未下发', unknown: '结果未知' }[device.disposition] || '未调温', tone: 'muted' }
+ })
+ return { rows: rows.slice(0, ENERGY_DEVICE_ROW_LIMIT), more: Math.max(0, rows.length - ENERGY_DEVICE_ROW_LIMIT) }
+}
+
+/** 任务报告的执行摘要与节能口径投影（原型 proto-energy-estimate.html A 变体）；数字缺失时保留原因，不补零。 */
+export function energyImpactView(impact, devices, reportPhases) {
  if (!impact) return null
  if (impact.status === 'measured') {
   const span = impact.from && impact.to ? ` · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}` : ''
@@ -86,14 +112,48 @@ export function energyImpactView(impact) {
  }
  if (impact.status === 'estimated' && impact.basis === 'assumption') {
   const rate = Math.round((impact.assumptions?.ratePerDegree || 0) * 1000) / 10
-  const coverage = impact.coverage && impact.coverage.estimated < impact.coverage.adjusted
-   ? ` · 其中 ${impact.coverage.adjusted - impact.coverage.estimated} 台缺少调前温度未参与` : ''
-  return { text: `预计节电约 ${impact.value} ${impact.unit} · 折合电费约 ¥${impact.cost?.value ?? '—'}`, tag: '估算', tone: 'warn', basis: [
-   `比较基线 · ${impact.deviceCount} 台调前平均 ${impact.baseline?.averageSetpoint}℃ → ${impact.baseline?.target}℃（平均上调 ${impact.baseline?.averageRise}℃）${coverage}`,
-   `假设参数 · 每上调 1℃ 约节电 ${rate}% · 单台功率 ${impact.assumptions?.powerKw}kW · 电价 ¥${impact.assumptions?.pricePerKwh}/度`,
-   `估算窗口 · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}（上海时间）`,
-   `${impact.reason || '按调前设定温度与经验参数估算'}；精确计量需空调回路单独装表`,
-  ] }
+  const missing = Math.max(0, (impact.coverage?.adjusted || 0) - (impact.coverage?.estimated || 0))
+  const hoursMs = Date.parse(impact.to) - Date.parse(impact.from)
+  const hours = Number.isFinite(hoursMs) && hoursMs > 0 ? Math.round(hoursMs / 360000) / 10 : null
+  const product = hours ? Math.round((impact.deviceCount || 0) * (impact.baseline?.averageRise || 0)
+   * (impact.assumptions?.ratePerDegree || 0) * (impact.assumptions?.powerKw || 0) * hours * 100) / 100 : null
+  return {
+   kind: 'assumption', tone: 'warn', tag: '估算',
+   text: `预计节电约 ${impact.value} ${impact.unit} · 折合电费约 ¥${impact.cost?.value ?? '—'}`,
+   hero: {
+    value: `≈ ${impact.value}`, unit: impact.unit,
+    label: `预计减少用电 · 估算值 · 约 ¥${impact.cost?.value ?? '—'}`,
+    footnote: `基于 ${impact.coverage?.adjusted ?? impact.deviceCount ?? 0} 台实际调节设备的调前温度、经验比例和执行时长估算`,
+   },
+   facts: [
+    { value: `${devices?.adjusted ?? impact.coverage?.adjusted ?? 0} 台`, label: '实际调节' },
+    { value: `${devices?.satisfied ?? 0} 台`, label: '无需调整' },
+    { value: `${impact.baseline?.target ?? '—'}℃`, label: '统一目标' },
+   ],
+   basisTitle: '估算依据',
+   formula: `${impact.deviceCount ?? '—'} 台 × ${impact.baseline?.averageRise ?? '—'}℃ × ${rate}% × ${impact.assumptions?.powerKw ?? '—'}kW${hours ? ` × ${hours}h` : ''} ≈ ${product ?? impact.value} 度`,
+   notes: [
+    `采用调前平均 ${impact.baseline?.averageSetpoint ?? '—'}℃、每升高 1℃ 约节电 ${rate}% 的经验参数；这是估算，不代表已实测节电`,
+    `估算窗口 · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}（上海时间）${missing ? ` · 其中 ${missing} 台缺少调前温度未参与` : ''}`,
+   ],
+   devices: acReportDeviceRows(reportPhases, impact.baseline?.target ?? 26),
+  }
+ }
+ if (impact.status === 'unavailable' && devices) {
+  return {
+   kind: 'unavailable', tone: 'muted',
+   text: impact.reason || '暂无法可靠估算节能情况',
+   hero: { value: '暂无法可靠估算', unit: '', label: `本次已调节 ${devices.adjusted || 0} 台空调`, badge: '口径缺失', footnote: impact.reason || '' },
+   facts: [
+    { value: `${devices.total || 0} 台`, label: '纳入范围' },
+    { value: `${devices.adjusted || 0} 台`, label: '实际调节' },
+    { value: `${devices.satisfied || 0} 台`, label: '无需调整' },
+   ],
+   basisTitle: '已确认的执行事实',
+   formula: `${devices.total || 0} 台纳入 · ${devices.adjusted || 0} 台调节 · ${devices.satisfied || 0} 台无需调整`,
+   notes: [],
+   devices: acReportDeviceRows(reportPhases, 26),
+  }
  }
  if (impact.status === 'estimated') {
   const span = impact.from && impact.to ? ` · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}` : ''
@@ -102,7 +162,7 @@ export function energyImpactView(impact) {
  return { text: impact.reason || '暂无法可靠估算节能情况', tone: 'muted' }
 }
 
-export function taskExecutionSummaryView(summary) {
+export function taskExecutionSummaryView(summary, reportPhases) {
  if (!summary?.devices) return null
  const devices = summary.devices
  const counts = [`已调 ${devices.adjusted || 0}`, `无需 ${devices.satisfied || 0}`, `跳过 ${devices.skipped || 0}`]
@@ -112,7 +172,7 @@ export function taskExecutionSummaryView(summary) {
  return {
   checkpointsText: `${summary.checkpoints || 0} 次检查`,
   devicesText: `涉及 ${devices.total || 0} 台 · ${counts.join(' · ')}`,
-  energy: energyImpactView(summary.energyImpact),
+  energy: energyImpactView(summary.energyImpact, devices, reportPhases),
  }
 }
 
@@ -259,7 +319,7 @@ export function taskDetailView(task) {
   outcomeText: statusLabel(task.report.outcome, task.agentSource),
   checkpoints: task.report.phases.length,
   devicesVisible: new Set(task.report.phases.flatMap(phase => phase.devices.map(device => device.id))).size,
-  summary: taskExecutionSummaryView(task.report.summary),
+  summary: taskExecutionSummaryView(task.report.summary, reportPhases),
  } : null
  return { ...task, phases, whenText, report, repeatText: repeatText(task.repeat), nextText: task.nextAt ? taskTime(task.nextAt) : '', createdText: taskTime(task.createdAt),
   statusText: task.occurrence?.virtual ? '未来安排' : interval && task.status === 'executing'

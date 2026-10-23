@@ -1,15 +1,15 @@
 <template>
  <view class="epanel">
   <scroll-view class="ebody" scroll-y enhanced :show-scrollbar="false">
-   <view v-if="error" class="estate-msg"><text>{{ error }}</text><button class="eretry" @tap="init">重试</button></view>
+   <view v-if="error || preparing" class="estate-msg"><text>{{ error }}</text><button class="eretry" @tap="init">重试</button></view>
    <template v-else>
     <view class="calrow">
      <button v-if="!bounded || selected" class="calchip" @tap="calOpen = !calOpen"><uni-icons type="calendar" size="13" color="#37513f" /><text>{{ labelOf(selected) }}</text><uni-icons :type="calOpen ? 'up' : 'down'" size="11" color="#71877a" /></button>
     </view>
     <RegionCalendar v-if="calOpen && selected && (!bounded || bounds)" class="ecal" :date="selected" :today="today" :min-date="bounded ? bounds?.min : undefined" :max-date="bounded ? (bounds?.max || today) : today" compact @select="onCalendar" />
     <view class="esec"><text>每日用电</text><text v-if="basisNote">{{ basisNote }}</text></view>
-    <CompanyEnergyStrip ref="stripRef" :days="strip" :selected="selected" @select="onSelectDay" @reach-left="loadOlder" />
-    <view v-if="loading" class="estate-msg"><text>正在读取逐日能耗…</text></view>
+    <CompanyEnergyStrip ref="stripRef" :days="strip" :selected="selected" @select="onSelectDay" @visible-range="onVisibleRange" />
+    <EnergySkeleton v-if="loading && !strip.length" :pies="false" />
     <view class="ehero">
      <text class="elabel">{{ labelOf(selected) }} 用电</text>
      <template v-if="dayPending">
@@ -59,6 +59,7 @@ import { getCompanyEnergyDaily, getCompanyMeterReport } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import RegionCalendar from './RegionCalendar.vue'
 import CompanyEnergyStrip from './CompanyEnergyStrip.vue'
+import EnergySkeleton from './EnergySkeleton.vue'
 import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView } from '../energy-daily-view.mjs'
 import { fmtDateTime } from '../observation-view.mjs'
 
@@ -72,6 +73,7 @@ const selected = ref('')
 const latestCompleteDay = ref('')
 const latestSampleTime = ref('')
 const error = ref('')
+const preparing = ref(false)
 const loading = ref(false)
 const calOpen = ref(false)
 const stripRef = ref(null)
@@ -129,11 +131,17 @@ const footnote = computed(() => {
  const parts = [`数据截至 ${fmtDateTime(latestSampleTime.value)}`]
  if (report.value.truncated) parts.push('读取窗口被截断')
  else if (strip.value.some(day => day.failed)) parts.push('部分日期读取未完成')
+ if (report.value.cache?.status === 'stale') parts.push(report.value.cache.refreshing ? '正在后台更新' : report.value.cache.refreshError ? '更新失败，沿用上次完整数据' : '沿用最近一次完整数据')
  parts.push(report.value.basis?.cycle || '')
  if (report.value.aggregation?.note) parts.push(report.value.aggregation.note)
  return parts.filter(Boolean).join(' · ')
 })
 function pctText(v) { return v == null ? '—' : (v >= 0 ? '+' : '') + v + '%' }
+
+// 条带是整段日期铺开的占位（pending 柱），数据按 90 天一块补进原位——
+// 滚动没有拼接点，日历跳任何日期都有目标列；补块串行，一次一个在途。
+const SPAN_DAYS = 180, CHUNK_DAYS = 90
+let queue = [], requested = new Set(), pumping = 0
 
 let requestId = 0
 function mergeReport(next, replace = true) {
@@ -142,6 +150,7 @@ function mergeReport(next, replace = true) {
   latestCompleteDay.value = next.latestCompleteDay || ''
   latestSampleTime.value = next.latestSampleTime || ''
  } else {
+  // 旧窗口只补 days 与逐表 daily；latestCompleteDay/latestSampleTime/basis 保持最新窗口，左滑历史不冲掉对比。
   const meters = (report.value.meters || []).map(m => {
    const extra = (next.meters || []).find(x => x.id === m.id)
    return extra ? { ...m, daily: { ...(extra.daily || {}), ...(m.daily || {}) } } : m
@@ -169,25 +178,42 @@ function mergeReport(next, replace = true) {
  })
  meterDaily.value = md
 }
-async function fetchWindow(end) {
+const preparingNote = r => { preparing.value = true; error.value = r.message || '数据准备中，后台正在读取历史电表数据' }
+async function fetchWindow(days, end) {
  await waitForAgentSession()
- return getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS, ...(end ? { end } : {}) })
+ return getCompanyEnergyDaily({ days, ...(end ? { end } : {}) })
+}
+async function fetchMeterReport(request) {
+ await waitForAgentSession()
+ return getCompanyMeterReport(request)
 }
 async function init() {
  const current = ++requestId
- const requestScope = getAgentStorageScope()
- if (scope.value !== requestScope) selected.value = ''
- scope.value = requestScope
- loading.value = true; error.value = ''
+ queue = []; requested = new Set()
+ loading.value = true; error.value = ''; preparing.value = false
+ if (!props.bounded) {
+  const nextScope = getAgentStorageScope()
+  if (scope.value !== nextScope) selected.value = ''
+  scope.value = nextScope
+ }
+ const scopeNow = scope.value
  try {
   if (props.bounded) { await initBounded(current); return }
-  const next = await fetchWindow()
-  if (current !== requestId || !props.active || requestScope !== getAgentStorageScope()) return
+  // 首块沿用 30 天窗口：命中首屏已暖的报告缓存，面板基本秒开；更早的由补块队列后台填。
+  const next = await fetchWindow(STRIP_PAGE_DAYS)
+  if (next?.status === 'preparing') { preparingNote(next); return }
+  if (current !== requestId || !props.active || scopeNow !== getAgentStorageScope()) return
   strip.value = []; meterDaily.value = {}
   mergeReport(next)
-  selected.value = selected.value || props.focusDate || latestCompleteDay.value || next.days?.at(-1)?.date || today
-  await ensureDateLoaded(selected.value)
-  nextTick(() => stripRef.value?.centerOn(selected.value))
+  const edge = latestCompleteDay.value || today
+  strip.value = padStripDays(strip.value, shiftDate(edge, -(SPAN_DAYS - 1)), edge)
+  if (selected.value) jumpToDate(selected.value)
+  else if (props.focusDate) jumpToDate(props.focusDate)
+  else {
+   selected.value = edge || next.days?.at(-1)?.date || today
+   nextTick(() => stripRef.value?.centerOn(selected.value))
+  }
+  needRange(shiftDate(selected.value || edge, -45), shiftDate(selected.value || edge, 15))
  } catch (cause) {
   if (current === requestId) error.value = cause?.data?.message || cause.message || '逐日能耗暂不可用'
  } finally { if (current === requestId) loading.value = false }
@@ -210,12 +236,15 @@ async function initBounded(current) {
   strip.value = padStripDays([], job.ctx.minDate, job.ctx.maxDate)
   const span = Math.round((Date.parse(job.ctx.maxDate) - Date.parse(job.ctx.minDate)) / 864e5) + 1
   const request = fixedEnergyWindow(job.ctx, span <= 90 ? span : STRIP_PAGE_DAYS)
-  const next = meterStatisticsDailyView(await getCompanyMeterReport(request), job.ctx)
+  const raw = await fetchMeterReport(request)
+  if (raw?.status === 'preparing') { preparingNote(raw); return }
+  const next = meterStatisticsDailyView(raw, job.ctx)
   if (current !== requestId || job !== boundedJob || !props.active || !sheetVisible || job.scope !== getAgentStorageScope()) return
   mergeReport(next)
   if (span <= 90) resolveBoundedPending(job.ctx.minDate, job.ctx.maxDate)
  } else {
-  const next = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS })
+  const next = await fetchWindow(STRIP_PAGE_DAYS)
+  if (next?.status === 'preparing') { preparingNote(next); return }
   if (current !== requestId || job !== boundedJob || !props.active || !sheetVisible || job.scope !== getAgentStorageScope()) return
   bounds.value = { min: next.days?.[0]?.date || '', max: next.days?.at(-1)?.date || '' }
   mergeReport(next)
@@ -254,7 +283,9 @@ async function pumpBounded(job) {
   const request = fixedEnergyWindow(job.ctx, 90, end)
   if (!request) continue
   try {
-   const next = meterStatisticsDailyView(await getCompanyMeterReport(request), job.ctx)
+   const raw = await fetchMeterReport(request)
+   if (raw?.status === 'preparing') { preparingNote(raw); break }
+   const next = meterStatisticsDailyView(raw, job.ctx)
    if (current !== requestId || job !== boundedJob || !sheetVisible || job.scope !== getAgentStorageScope()) break
    mergeReport(next, false)
    resolveBoundedPending(boundedChunkFrom(end), end)
@@ -289,59 +320,94 @@ function resumeBounded() {
  }
  void init()
 }
+const scope = ref('')
+// 为 [from,to] 内仍 pending 且未申请的日期排队补块：新→旧扫描，
+// 遇到连续 pending 段的最新日即以它为 end 申请一整块 CHUNK_DAYS。
+function needRange(from, to) {
+ const edge = latestCompleteDay.value || today
+ if (!edge || to < from) return
+ if (to > edge) to = edge
+ const byDate = new Map(strip.value.map(d => [d.date, d]))
+ let d = to
+ while (d >= from) {
+  const day = byDate.get(d)
+  if (day?.pending && !requested.has(d)) {
+   for (let x = shiftDate(d, -(CHUNK_DAYS - 1)); x <= d; x = shiftDate(x, 1)) requested.add(x)
+   queue.push(d)
+   d = shiftDate(d, -CHUNK_DAYS)
+   continue
+  }
+  d = shiftDate(d, -1)
+ }
+ pump()
+}
+async function pump() {
+ const current = requestId
+ if (pumping === current) return
+ pumping = current
+ while (queue.length) {
+  const end = queue.shift()
+  try {
+   const next = await fetchWindow(CHUNK_DAYS, end)
+   if (next?.status === 'preparing') { preparingNote(next); break }
+   if (current !== requestId || scope.value !== getAgentStorageScope()) break
+   mergeReport(next, false)
+  } catch {
+   if (current !== requestId) break
+   // 该块标失败：柱变灰、选中该段日期时给重试；不阻塞后续块。
+   for (let x = shiftDate(end, -(CHUNK_DAYS - 1)); x <= end; x = shiftDate(x, 1)) requested.delete(x)
+   strip.value = markStripFailed(strip.value, shiftDate(end, -(CHUNK_DAYS - 1)), end)
+  }
+ }
+ if (pumping === current) pumping = 0
+}
+// 可视区间变化：左看 15 天预取；逼近条带左端 20 天时再向左铺 90 天占位（唯一的 prepend 路径）。
+function onVisibleRange(r) {
+ if (props.bounded || !r?.first || !strip.value.length) return
+ const first = strip.value[0].date
+ if (r.first < shiftDate(first, 20)) {
+  const newFrom = shiftDate(first, -CHUNK_DAYS)
+  strip.value = padStripDays(strip.value, newFrom, shiftDate(first, -1))
+  const added = strip.value.findIndex(d => d.date === first)
+  if (added > 0) stripRef.value?.didPrepend(added)
+ }
+ needRange(shiftDate(r.first, -15), r.last)
+}
 function retrySelected() {
- if (!props.bounded) {
-  const date = selected.value
-  strip.value = strip.value.map(day => day.date === date ? { ...day, failed: false, pending: true } : day)
-  ensureDateLoaded(date, true).then(() => { if (selected.value === date && props.active) stripRef.value?.centerOn(date) })
+ if (props.bounded) {
+  if (!bounds.value || !selected.value || !boundedJob) return
+  const end = boundedChunkEnd(selected.value), from = boundedChunkFrom(end)
+  strip.value = strip.value.map(d => d.failed && d.date >= from && d.date <= end ? { ...d, failed: false, pending: true } : d)
+  for (let x = from; x <= end; x = shiftDate(x, 1)) boundedJob.requested.delete(x)
+  ensureBoundedDay(selected.value)
   return
  }
- if (!props.bounded || !bounds.value || !selected.value || !boundedJob) return
- const end = boundedChunkEnd(selected.value), from = boundedChunkFrom(end)
- strip.value = strip.value.map(d => d.failed && d.date >= from && d.date <= end ? { ...d, failed: false, pending: true } : d)
- for (let x = from; x <= end; x = shiftDate(x, 1)) boundedJob.requested.delete(x)
- ensureBoundedDay(selected.value)
+ const from = shiftDate(selected.value, -15), to = shiftDate(selected.value, 15)
+ strip.value = strip.value.map(d => d.failed && d.date >= from && d.date <= to ? { ...d, failed: false, pending: true } : d)
+ for (let date = from; date <= to; date = shiftDate(date, 1)) requested.delete(date)
+ needRange(from, to)
 }
-async function loadOlder(firstDate) {
- if (props.bounded || !firstDate || loading.value) return
- const current = ++requestId
- loading.value = true
- try {
-  const next = await fetchWindow(shiftDate(firstDate, -1))
-  if (current !== requestId || scope.value !== getAgentStorageScope()) return
-  const before = strip.value.length
-  mergeReport(next, false)
-  const added = strip.value.length - before
-  if (added) stripRef.value?.didPrepend(added)
- } catch { /* 旧的窗口读取失败不破坏当前视图 */ } finally { if (current === requestId) loading.value = false }
-}
-const scope = ref('')
-async function ensureDateLoaded(date, retry = false) {
- if (props.bounded || (!retry && strip.value.some(d => d.date === date))) return
- const edge = latestCompleteDay.value || today
- const end = shiftDate(date, 15) > edge ? edge : shiftDate(date, 15)
- const current = ++requestId
- try {
-  const next = await fetchWindow(end)
-  if (current !== requestId) return
-  const firstBefore = strip.value[0]?.date
-  mergeReport(next, false)
-  // 新窗口在现有条带左侧拼接时做位移补偿，随后由调用方 centerOn 选中日。
-  if (firstBefore && strip.value[0]?.date < firstBefore) {
-   const added = strip.value.findIndex(d => d.date === firstBefore)
-   if (added > 0) stripRef.value?.didPrepend(added)
-  }
- } catch { /* 日期窗口读取失败，条上保持缺省 */ } finally { if (current === requestId) loading.value = false }
+function jumpToDate(date) {
+ if (props.bounded) { selectBounded(date); return }
+ if (date > today) return
+ const first = strip.value[0]?.date
+ if (first && date < first) {
+  strip.value = padStripDays(strip.value, shiftDate(date, -15), shiftDate(first, -1))
+  const added = strip.value.findIndex(d => d.date === first)
+  if (added > 0) stripRef.value?.didPrepend(added)
+ }
+ selected.value = date
+ needRange(shiftDate(date, -15), shiftDate(date, 15))
+ nextTick(() => stripRef.value?.centerOn(date))
 }
 function onSelectDay(date) {
  if (props.bounded) { selectBounded(date); return }
- selected.value = date; stripRef.value?.centerOn(date)
+ selected.value = date
+ needRange(shiftDate(date, -15), shiftDate(date, 15))
 }
 function onCalendar(date) {
  calOpen.value = false
- if (props.bounded) { selectBounded(date); return }
- selected.value = date
- ensureDateLoaded(date).then(() => { if (selected.value === date && props.active) stripRef.value?.centerOn(date) })
+ jumpToDate(date)
 }
 watch([() => props.active, () => props.initialQuery], ([active]) => {
  if (!props.bounded) { if (active) init(); return }
@@ -354,9 +420,7 @@ onShow(() => { if (!props.bounded) return; sheetVisible = true; resumeBounded() 
 onBeforeUnmount(() => { if (props.bounded) { requestId++; boundedJob = null } })
 watch(() => props.focusDate, date => {
  if (date && !props.bounded) selected.value = date
- if (!date || !props.active) return
- if (props.bounded) { selectBounded(date); return }
- selected.value = date; ensureDateLoaded(date).then(() => { if (selected.value === date && props.active) stripRef.value?.centerOn(date) })
+ if (date && props.active) jumpToDate(date)
 })
 </script>
 <style scoped>
@@ -395,6 +459,7 @@ button::after { border:0; }
 .mrow-v { flex-shrink:0; font-variant-numeric:tabular-nums; color:#345640; font-size:11.5px; }
 .mrow-share { font-style:normal; font-size:10px; color:#a0ab95; margin-left:6px; }
 .efoot { display:block; font-size:9.5px; color:#a0ab95; line-height:1.8; margin-top:16px; }
+/* 所选日补块中：数值/构成/明细原位骨架；失败给重试（同 EnergySkeleton 的呼吸）。 */
 .efail-row { display:flex; align-items:center; gap:10px; margin-top:8px; font-size:10.5px; color:#a27128; }
 .sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v { background:#e2eadf; border-radius:4px; animation:sk-pulse 1.4s ease-in-out infinite; }
 .sk-num { display:block; width:150px; height:38px; margin-top:4px; border-radius:8px; }
@@ -405,5 +470,5 @@ button::after { border:0; }
 .sk-loc { display:block; width:38%; height:9px; margin-top:6px; }
 .sk-v { width:64px; height:12px; flex-shrink:0; }
 @keyframes sk-pulse { 0%,100% { opacity:.45 } 50% { opacity:.9 } }
-@media(prefers-reduced-motion:reduce){.calchip:active{transform:none} .sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v{animation:none;opacity:.6}}
+@media(prefers-reduced-motion:reduce){ .calchip:active{transform:none} .sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v{animation:none;opacity:.6} }
 </style>

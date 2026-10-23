@@ -5,7 +5,8 @@
    <view class="conversation__inner" :class="{ clearing }">
     <view v-if="!isCompany && regionsError" class="region-notice"><text>{{ regionsError }}</text><button @tap="loadRegionFocus().catch(() => {})">重新读取</button></view>
     <view v-if="!conversationId && !errorMessage" class="welcome connecting"><text>{{ isCompany ? '公司 Agent' : '办公室 Agent' }}</text><view>正在恢复对话…</view></view>
-    <view v-else-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>查询公司环境、能耗和告警，安排定时简报或智慧空调任务。</view></view>
+    <view v-else-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>查询公司环境、能耗和告警，安排定时简报或智慧空调任务。</view>
+     <view class="welcome-sugg"><button v-for="s in companySuggestions" :key="s" class="sugg-chip" hover-class="sugg-chip--pressed" @tap="prefill(s)">{{ s }}</button></view></view>
     <view v-else-if="!turns.length" class="welcome"><text>办公室 Agent</text><view>告诉我位置、设备和需要的操作。</view></view>
     <view v-for="(turn, turnIndex) in turns" :key="turn.id" class="turn">
      <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turnIndex)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
@@ -84,6 +85,9 @@ function navigateRegion(url) {
 function openRegion(region) { navigateRegion('/pages/agent/region?regionId=' + encodeURIComponent(region.id)) }
 const conversationId = ref('')
 const isCompany = computed(() => props.source === 'company')
+// 空会话推荐入口：仅公司 Agent 欢迎区，点击 prefill 进输入框（同工作台「新建任务」），
+// 首个 turn 落位后随 welcome 分支一起消失，不占用会话中布局。
+const companySuggestions = ['统计一下最近能耗情况', '帮我看看最近夜间哪个场所耗电异常', '帮我设个定时任务', '帮我整理一下最近一周的告警并产出报告']
 const selectedEvent = ref(null), eventOpen = ref(false), eventMounted = ref(false)
 function openSafetyEvent(snapshot) { if (!isCompany.value) return; selectedEvent.value = snapshot; eventMounted.value = true; eventOpen.value = true }
 function openSafetyHistory() { if (!isCompany.value) return; selectedEvent.value = null; eventMounted.value = true; eventOpen.value = true }
@@ -741,6 +745,11 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .clearing-hint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#839186; font-size:24rpx; animation:clearing-hint-in .24s ease .1s backwards; }
 @keyframes clearing-hint-in { from { opacity:0 } to { opacity:1 } }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
+/* 推荐入口复用 region-chip 纸材；.welcome view 会命中容器，需提高优先级覆盖其行距/字号。 */
+.welcome .welcome-sugg { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+.sugg-chip { display:flex; align-items:center; height:32px; margin:0; padding:0 14px; border-radius:16px; background:linear-gradient(#fefffe,#edf2ec); box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px rgba(41,73,54,.14),0 3px 8px -6px rgba(35,58,45,.4); font-size:12px; line-height:1; color:#3d5947; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.sugg-chip::after { border:0; }
+.sugg-chip--pressed { transform:scale(.96); opacity:.85; }
 .region-divider { margin:12px 0 22px; text-align:center; font-size:11px; color:#839186; }
 .turn-reference { margin-bottom:8px; padding:6px 10px; border-left:2px solid #b69655; background:#f6f4ee; color:#758176; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }

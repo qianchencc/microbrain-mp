@@ -6,7 +6,7 @@
   <template #header-right>
    <view class="header-actions">
     <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
-    <button v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button inbox-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /><text v-if="inboxUnread" class="inbox-badge">{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></button>
+    <view v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="inbox-entry"><button class="refresh-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /></button><view v-if="inboxUnread" class="inbox-badge"><text>{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></view></view>
    </view>
   </template>
   <view class="arrangements-content">
@@ -26,7 +26,7 @@
       </view>
       <uni-icons type="right" size="13" color="#99a59d" />
      </button>
-     <view class="list-summary"><text>{{ listSummary }}</text><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text></view>
+     <view class="list-summary"><text>{{ listSummary }}</text><view class="summary-side"><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text><button v-if="view === 'plans' && pausablePlans.length" class="plans-pause-all" :disabled="planLoading" @tap="pauseAllPlans">全部停用</button></view></view>
      <view v-if="loading && !listLoaded" class="state-message">加载中…</view>
      <view v-else-if="error && !visibleRows.length" class="state-message"><text>{{ error }}</text><button @tap="load">重试</button></view>
      <view v-else-if="!visibleRows.length && view !== 'all'" class="state-message">{{ emptyText }}</view>
@@ -175,6 +175,7 @@ const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.
 const agenda = computed(() => agendaGroups(tasks.value, taskToday(), 10))
 const agendaHasDays = computed(() => agenda.value.days.some(day => day.rows.length))
 const enabledPlansCount = computed(() => plans.value.filter(plan => planIsEnabled(plan)).length)
+const pausablePlans = computed(() => plans.value.filter(plan => plan?.status === 'enabled' && plan.canPause))
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '全部任务' : '周期安排')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无周期计划')
 function railNum(date) { const today = taskToday(); return date.slice(5, 7) === today.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
@@ -279,6 +280,34 @@ async function togglePlanStatus(plan, enabled) {
   resetPlanSwitch()
   uni.showToast({ title: cause.message || '状态更新失败，请刷新后重试', icon: 'none' })
  } finally { if (action === planStatusRequest) planLoading.value = false }
+}
+async function pauseAllPlans() {
+ const action = ++planStatusRequest
+ const source = props.source, scope = getAgentStorageScope()
+ const pausable = pausablePlans.value
+ if (!pausable.length || planLoading.value) return
+ const skipped = plans.value.filter(plan => plan?.status === 'enabled' && plan.nextAt && !plan.canPause).length
+ const confirmed = await new Promise(resolve => uni.showModal({ title: '停用全部周期计划',
+  content: `将停用 ${pausable.length} 个已启用周期计划，只影响未来发生；已生成、执行中或已下发的安排不回滚。${skipped ? `另有 ${skipped} 项无权停用，保持不变。` : ''}`,
+  confirmText: '全部停用', confirmColor: '#a15343',
+  success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ if (!confirmed || action !== planStatusRequest || !props.open || source !== props.source || scope !== getAgentStorageScope()) return
+ planLoading.value = true
+ let paused = 0, failed = 0
+ try {
+  for (const plan of pausable) {
+   if (action !== planStatusRequest || !props.open || source !== props.source || scope !== getAgentStorageScope()) return
+   try {
+    const result = await setTaskPlanStatus(plan.planId, plan.version, 'pause', source)
+    if (result?.plan) replacePlan(result.plan)
+    paused += 1
+   } catch { failed += 1 }
+  }
+ } finally { if (action === planStatusRequest) planLoading.value = false }
+ if (action !== planStatusRequest) return
+ void loadPlans(true)
+ emit('changed')
+ uni.showToast({ title: failed ? `已停用 ${paused} 项，${failed} 项失败` : `已停用 ${paused} 项`, icon: 'none' })
 }
 function selectTaskRows(values, kind) {
  const rows = Array.isArray(values) ? values : []
@@ -498,6 +527,9 @@ button::after { border:0; }
 .view-switch { flex-shrink:0; padding:4px 18px 8px; }
 .arrangements-scroll,.detail-scroll { height:0; min-height:0; flex:1; box-sizing:border-box; padding:0 18px 14px; }
 .list-summary { display:flex; justify-content:space-between; padding:7px 2px 10px; border-bottom:1px solid #e5ebe6; color:#75877b; font-size:11px; }
+.summary-side { display:flex; align-items:center; gap:10px; }
+.plans-pause-all { margin:0; padding:0; color:#a15343; font-size:11px; }
+.plans-pause-all[disabled] { opacity:.55; }
 .plan-row,.task-row { width:100%; min-height:76px; display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid #e8ede9; text-align:left; }
 .plan-row:active,.task-row:active { background:#f5f8f5; }
 .plan-main { min-width:0; flex:1; display:flex; align-items:center; gap:11px; text-align:left; }
@@ -540,8 +572,8 @@ button::after { border:0; }
 .row-clock { width:46px; flex-shrink:0; align-self:flex-start; padding-top:2px; font-size:11px; color:#466350; line-height:1.4; }
 .row-clock--later { display:flex; flex-direction:column; gap:3px; }
 .row-clock--later text:first-child { font-weight:600; }
-.inbox-button { position:relative; }
-.inbox-badge { position:absolute; top:-4px; right:-2px; min-width:15px; padding:1px 4px; border-radius:9px; background:#a15343; color:#fff; font-size:9px; line-height:1.4; }
+.inbox-entry { position:relative; flex-shrink:0; }
+.inbox-badge { position:absolute; top:-4px; right:-3px; min-width:15px; height:15px; padding:0 4px; border-radius:8px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:#a15343; color:#fff; font-size:9px; line-height:1; pointer-events:none; }
 .header-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .back-button,.refresh-button { width:32px; height:32px; margin-right:8px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:#eff3ef; }
 .header-actions .refresh-button { margin-right:0; }

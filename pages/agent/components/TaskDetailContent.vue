@@ -65,13 +65,33 @@
     <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 个检查点 · {{ detail.report.devicesVisible }} 台设备</text>
     <text v-if="detail.report.summary" class="report-summary">{{ detail.report.summary.checkpointsText }} · {{ detail.report.summary.devicesText }}</text>
     <template v-if="detail.report.summary?.energy">
-     <button v-if="detail.report.summary.energy.basis" class="report-energy-toggle" :aria-expanded="energyBasisOpen" @tap="energyBasisOpen = !energyBasisOpen">
-      <text class="report-energy energy-warn energy-toggle-text">{{ detail.report.summary.energy.text }}</text>
-      <text class="energy-tag">{{ detail.report.summary.energy.tag }}</text>
-      <uni-icons :type="energyBasisOpen ? 'down' : 'right'" size="11" color="#a27128" />
-     </button>
+     <template v-if="detail.report.summary.energy.hero">
+      <view class="energy-hero" :class="{ 'energy-hero--unavailable': detail.report.summary.energy.kind === 'unavailable' }">
+       <view class="energy-hero-main">
+        <view class="energy-hero-number"><text>{{ detail.report.summary.energy.hero.value }}</text><text v-if="detail.report.summary.energy.hero.unit" class="energy-hero-unit">{{ detail.report.summary.energy.hero.unit }}</text></view>
+        <text class="energy-hero-label">{{ detail.report.summary.energy.hero.label }}</text>
+       </view>
+       <view class="energy-hero-side">
+        <text v-if="detail.report.summary.energy.hero.badge" class="energy-hero-badge">{{ detail.report.summary.energy.hero.badge }}</text>
+        <text class="energy-hero-foot">{{ detail.report.summary.energy.hero.footnote }}</text>
+       </view>
+      </view>
+      <view v-if="detail.report.summary.energy.facts?.length" class="energy-facts">
+       <view v-for="fact in detail.report.summary.energy.facts" :key="fact.label" class="energy-fact"><text class="energy-fact-value">{{ fact.value }}</text><text class="energy-fact-label">{{ fact.label }}</text></view>
+      </view>
+      <view class="energy-basis-card">
+       <text class="energy-basis-title">{{ detail.report.summary.energy.basisTitle }}</text>
+       <text v-if="detail.report.summary.energy.formula" class="energy-formula">{{ detail.report.summary.energy.formula }}</text>
+       <text v-for="note in detail.report.summary.energy.notes" :key="note" class="energy-basis-note">{{ note }}</text>
+      </view>
+      <view v-if="detail.report.summary.energy.devices?.rows?.length" class="energy-devices">
+       <view v-for="row in detail.report.summary.energy.devices.rows" :key="row.deviceId" class="energy-device-row">
+        <text class="energy-device-name">{{ row.name }}</text><text class="energy-device-before">{{ row.before }} →</text><text class="energy-device-after" :class="'after-' + row.tone">{{ row.after }}</text>
+       </view>
+       <text v-if="detail.report.summary.energy.devices.more" class="energy-devices-more">其余 {{ detail.report.summary.energy.devices.more }} 台见上方检查点明细</text>
+      </view>
+     </template>
      <text v-else class="report-energy" :class="'energy-' + detail.report.summary.energy.tone">{{ detail.report.summary.energy.text }}</text>
-     <view v-if="energyBasisOpen && detail.report.summary.energy.basis" class="energy-basis"><text v-for="line in detail.report.summary.energy.basis" :key="line" class="energy-basis-line">{{ line }}</text></view>
     </template>
    </view>
    <view v-if="plan && latestReport" class="task-report">
@@ -103,7 +123,7 @@ const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false), planSwitchRevision = ref(0)
 const detailFresh = ref(false)
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
-const expandedPhases = ref([]), energyBasisOpen = ref(false)
+const expandedPhases = ref([])
 const detail = computed(() => {
  const view = taskDetailView(task.value || taskPlanSnapshot(plan.value))
  if (plan.value && view) return { ...view, statusText: ({ enabled: plan.value.nextAt ? '已启用' : '周期结束', paused: '已停用', deleted: '已删除' })[plan.value.status] || (plan.value.nextAt ? '已启用' : '周期结束') }
@@ -327,7 +347,6 @@ watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.s
  observedTaskId = activeTaskId.value || activePlanId.value
  actionError.value = ''
  expandedPhases.value = []
- energyBasisOpen.value = false
  if (props.active) {
   load()
   startPolling()
@@ -422,11 +441,35 @@ button::after { border:0; }
 .report-energy.energy-ok { color:#397b61; }
 .report-energy.energy-warn { color:#a27128; }
 .report-energy.energy-muted { color:#7e8982; }
-.report-energy-toggle { width:100%; margin:5px 0 0; padding:5px 0 0; display:flex; align-items:baseline; gap:6px; text-align:left; }
-.energy-toggle-text { flex:1; min-width:0; margin-top:0; }
-.energy-tag { flex-shrink:0; padding:2px 6px; border-radius:6px; background:#f7efdd; color:#936827; font-size:9px; }
-.energy-basis { margin-top:6px; padding:7px 9px; border-top:1px solid #eadfc9; display:flex; flex-direction:column; gap:4px; }
-.energy-basis-line { color:#8a7a5c; font-size:10px; line-height:1.45; }
+.energy-hero { margin-top:9px; padding:12px; border:1px solid #d7e6db; border-radius:12px; background:linear-gradient(145deg,#f7fcf8,#eaf5ed); display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.energy-hero--unavailable { border-color:#eddfc4; background:linear-gradient(145deg,#fffaf0,#fbf3e4); }
+.energy-hero-main { min-width:0; flex:1; }
+.energy-hero-number { color:#176b54; font-size:24px; font-weight:700; line-height:1.1; letter-spacing:-.5px; }
+.energy-hero--unavailable .energy-hero-number { color:#936827; font-size:15px; line-height:1.35; letter-spacing:0; }
+.energy-hero-unit { margin-left:3px; font-size:12px; font-weight:600; letter-spacing:0; }
+.energy-hero-label { display:block; margin-top:5px; color:#5b7966; font-size:10px; }
+.energy-hero--unavailable .energy-hero-label { color:#9a7a47; }
+.energy-hero-side { flex-shrink:0; max-width:132px; display:flex; flex-direction:column; align-items:flex-end; gap:7px; }
+.energy-hero-badge { padding:3px 7px; border-radius:6px; background:rgba(255,255,255,.6); color:#547361; font-size:9px; }
+.energy-hero--unavailable .energy-hero-badge { color:#936827; }
+.energy-hero-foot { color:#68816f; font-size:9px; line-height:1.45; text-align:right; }
+.energy-hero--unavailable .energy-hero-foot { color:#997c4c; }
+.energy-facts { margin-top:8px; display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.energy-fact { padding:8px; border:1px solid #e0e9e1; border-radius:9px; background:#fff; }
+.energy-fact-value { display:block; color:#345241; font-size:13px; font-weight:600; }
+.energy-fact-label { display:block; margin-top:3px; color:#839189; font-size:9px; }
+.energy-basis-card { margin-top:8px; padding:10px; border:1px solid #e0e9e1; border-radius:10px; background:#fff; }
+.energy-basis-title { display:block; color:#4d7663; font-size:10px; font-weight:600; }
+.energy-formula { display:block; margin-top:6px; padding:6px 8px; border-radius:7px; background:#f4f8f5; color:#476856; font-size:10px; line-height:1.5; }
+.energy-basis-note { display:block; margin-top:6px; color:#839189; font-size:9px; line-height:1.45; }
+.energy-devices { margin-top:8px; border-top:1px solid #e0e9e1; }
+.energy-device-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:7px; align-items:center; padding:8px 0; border-bottom:1px solid #e8eee9; }
+.energy-device-name { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#304b39; font-size:11px; }
+.energy-device-before { color:#839189; font-size:10px; }
+.energy-device-after { font-size:10px; }
+.energy-device-after.after-ok { color:#176b54; font-weight:600; }
+.energy-device-after.after-muted { color:#8b7a5c; }
+.energy-devices-more { display:block; padding:7px 0 0; color:#839189; font-size:9px; }
 .report-note { display:block; margin-top:5px; color:#85958a; font-size:11px; }
 .source { display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid #e2e9e3; color:#85958a; font-size:11px; }
 .task-delete { width:100%; height:38px; margin:18px 0 0; border:1px solid #ead6d1; border-radius:8px; background:#fff; color:#a15343; font-size:12px; line-height:36px; }
