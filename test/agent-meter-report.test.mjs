@@ -1020,3 +1020,11 @@ test('night-window report keeps its time, ranking metric and partial-day evidenc
  assert.match(meterReportEvidence(night)[0].statusText, /部分/)
  assert.deepEqual(meterReportGrainOptions({ ...night, params: { ...night.params, span: { requested: { from: '2026-10-01T20:00:00+08:00', to: '2026-10-02T08:00:00+08:00' } } } }).map(g => g.key), ['day', 'week', 'month'])
 })
+
+test('UTC report periods display the same Shanghai boundary and month as explicit +08 offsets', () => {
+ const local = { ...report, params: { ...report.params, span: { requested: { from: '2024-06-01T00:00:00+08:00', to: '2024-07-01T00:00:00+08:00' } } } }
+ const utc = { ...local, params: { ...local.params, span: { requested: { from: '2024-05-31T16:00:00.000Z', to: '2024-06-30T16:00:00.000Z' } } } }
+ assert.equal(meterReportSpan(utc), meterReportSpan(local))
+ assert.equal(meterReportParamLine(utc), meterReportParamLine(local))
+ assert.deepEqual(meterReportPeriodLabels(utc), meterReportPeriodLabels(local))
+})

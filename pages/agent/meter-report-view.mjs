@@ -37,7 +37,7 @@ export const degreeText = value => finite(value)
  : '—'
 
 const boundaryLabel = (iso, withYear) => {
- const text = String(iso || '')
+ const text = fmtShanghaiDateTime(iso) || String(iso || '')
  const ms = Date.parse(text)
  if (!Number.isFinite(ms) || text.length < 16) return text.slice(0, 10)
  const day = withYear ? text.slice(0, 10) : text.slice(5, 10)
@@ -47,12 +47,12 @@ const boundaryLabel = (iso, withYear) => {
 const spanLabel = (requested, short) => {
  const fromMs = Date.parse(requested?.from || ''), toMs = Date.parse(requested?.to || '')
  const crossYear = Number.isFinite(fromMs) && Number.isFinite(toMs)
-  && String(requested.from || '').slice(0, 4) !== String(requested.to || '').slice(0, 4)
+  && fmtShanghaiDateTime(requested.from).slice(0, 4) !== fmtShanghaiDateTime(requested.to).slice(0, 4)
  return `${boundaryLabel(requested?.from, !short || crossYear)} → ${boundaryLabel(requested?.to, crossYear)}`
 }
 
 const periodMonth = span => {
- const text = String(span?.from || '')
+ const text = fmtShanghaiDateTime(span?.from) || String(span?.from || '')
  const year = text.slice(0, 4), month = Number(text.slice(5, 7))
  return /^\d{4}$/.test(year) && month >= 1 && month <= 12 ? { year, month } : null
 }
@@ -87,7 +87,7 @@ export function meterReportParamLine(report) {
   if (bExcluded) line += ` · B ${bExcluded}台未计入`
  } else {
   const spanReq = report?.params?.span?.requested
-  const diffYear = Boolean(base) && String(spanReq?.from || '').slice(0, 4) !== String(base?.from || '').slice(0, 4)
+  const diffYear = Boolean(base) && fmtShanghaiDateTime(spanReq?.from).slice(0, 4) !== fmtShanghaiDateTime(base?.from).slice(0, 4)
   const when = base ? `${spanLabel(spanReq, !diffYear)} vs ${spanLabel(base, !diffYear)}` : meterReportSpan(report)
   line = `${when} · ${scope.label || '全部电表'} ${scope.meterCount ?? report?.meters?.length ?? 0}台`
  }
