@@ -36,4 +36,5 @@ This repository uses a single-context domain documentation layout. See `docs/age
 - 公网隧道/真实鉴权/NDJSON 分块传输已实测通过；真实问候 run 以 `run.failed` 结束，Runtime 记录错误『模型未返回可展示的消息』，业务对话尚未验收成功，根因未定位。
 - 真机移动网络、未备案域名调试与视频播放另行验收；`mp-video` 隧道本地 9415 服务当前停止，不在本轮范围。
 - 已验证工具链：Node 22 `/opt/homebrew/opt/node@22/bin/node`；HBuilderX 编译：`/Applications/HBuilderX.app/Contents/MacOS/cli launch mp-weixin --project '/Users/qianchen/works/新发展/mp' --compile true`。
+- 微信发行编译使用HBuilderX内置uniapp-cli-vite时，从该插件目录运行bin入口并显式指定UNI_INPUT_DIR/UNI_OUTPUT_DIR；项目目录启动会丢失官方解析上下文并报vue无法解析，勿为此新增Vue依赖。
 - Runtime 侧已固定 `HOST=127.0.0.1` 回环（2026-10-15），公网路径不依赖 Mac 局域网 IP，也绝不把小程序 agentUrl 指向手机 localhost；局域网直连预览才需要 `0.0.0.0`。

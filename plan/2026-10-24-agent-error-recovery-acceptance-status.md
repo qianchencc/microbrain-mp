@@ -4,6 +4,8 @@
 
 ## 已发布与验证
 
+2026-10-25更新：用户确认小程序编译即可完成本轮交付；开发/发行产物均已更新到标准目录，微信上传/提审不再作为阻塞。最新编译及持续运行现场证据见[交接](2026-10-25-agent-recovery-build-and-continuity-handoff.md)。
+
 - Runtime生产 `20261024-67d2a09`，2026-10-24 23:14:54上海时间发布；上一版本e3b8f54。备份 `/opt/iot-agent-runtime/shared/backups/20261024-error-recovery-67d2a09`，无在途发布，业务表行数/quick_check/FK和健康通过。
 - 本地/云端runner SHA256 `71873fb7d5787ec8d6676aeb51d41a2d9853ec8be06ff76eec90e40278805213`；app `d65d13e2064b09a8cbc301615e7a670803869a7d3b0395a487b8e381eefa8fb1`。候选无故障注入开关。
 - MP业务提交 `a5dca32`（包括215a40d、8c8f345），微信开发/production编译通过，未上传发布微信版本。Runtime405/405、类型/构建；MP162/162。两轴审查发现的问题已先红复现、修复并复核。
