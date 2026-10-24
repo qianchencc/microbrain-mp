@@ -1,0 +1,368 @@
+{
+  "updatedAt": "2026-10-24",
+  "overall": "in-progress",
+  "records": [
+    {
+      "environment": "isolated-real-model-gateway",
+      "release": "826101a",
+      "mode": "query",
+      "id": "d05412dd-d043-4760-bee3-4a6ba5feb42e",
+      "at": "2026-10-24T12:24:10.097Z",
+      "case": "query-recovered",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T12:24:19.567Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "query_environment_history",
+          "status": "completed",
+          "timestamp": "2026-10-24T12:24:35.481Z"
+        },
+        {
+          "type": "run.completed",
+          "timestamp": "2026-10-24T12:24:42.930Z"
+        }
+      ]
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "release": "fa8e3cf",
+      "mode": "repair",
+      "id": "bcd4fe9b-1787-49f6-8a9e-38b7d64ac1f3",
+      "at": "2026-10-24T12:39:10.000Z",
+      "case": "repair",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T12:38:42.022Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "propose_task",
+          "status": "failed",
+          "timestamp": "2026-10-24T12:38:54.323Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "propose_task",
+          "status": "failed",
+          "timestamp": "2026-10-24T12:39:00.458Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "propose_task",
+          "status": "completed",
+          "timestamp": "2026-10-24T12:39:42.534Z"
+        },
+        {
+          "type": "task.proposed",
+          "timestamp": "2026-10-24T12:39:42.608Z",
+          "taskId": "eed69abe-e946-49fa-b71e-8ad62b694870"
+        },
+        {
+          "type": "run.awaiting_confirmation",
+          "timestamp": "2026-10-24T12:39:42.620Z",
+          "taskId": "eed69abe-e946-49fa-b71e-8ad62b694870"
+        }
+      ]
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "release": "fa8e3cf",
+      "mode": "scheduled",
+      "id": "bd5431eb-04d1-4a67-b1bc-1952c20420b0",
+      "at": "2026-10-24T12:39:37.634Z",
+      "case": "scheduled-failed-fa8e3cf",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T12:39:52.361Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "propose_task",
+          "status": "completed",
+          "timestamp": "2026-10-24T12:40:03.877Z"
+        },
+        {
+          "type": "task.proposed",
+          "timestamp": "2026-10-24T12:40:10.553Z",
+          "taskId": "cf56baad-9e07-45d9-8b63-784832f1681d"
+        },
+        {
+          "type": "run.awaiting_confirmation",
+          "timestamp": "2026-10-24T12:40:10.560Z",
+          "taskId": "cf56baad-9e07-45d9-8b63-784832f1681d"
+        }
+      ],
+      "confirm": {
+        "http": 201,
+        "taskId": "cf56baad-9e07-45d9-8b63-784832f1681d",
+        "status": "scheduled"
+      },
+      "replay": {
+        "http": 200,
+        "taskId": "cf56baad-9e07-45d9-8b63-784832f1681d",
+        "status": "scheduled"
+      },
+      "result": {
+        "status": "failed",
+        "label": "恢复验收只读报告",
+        "phases": [
+          {
+            "at": "2026-10-24T12:44:00.000Z",
+            "status": "failed",
+            "failureReason": "检查点智能分析：等待响应超时（编号 d0e7f86d-8daf-4ccf-baaf-fa6e0d36f3cc）",
+            "reports": []
+          }
+        ]
+      },
+      "notifications": {
+        "status": 200,
+        "data": [
+          {
+            "id": "cc1af73a-0150-4721-b348-609336aa9616",
+            "taskId": "cf56baad-9e07-45d9-8b63-784832f1681d",
+            "source": "company",
+            "label": "恢复验收只读报告",
+            "outcome": "failed",
+            "endedAt": "2026-10-24T12:47:06.179Z",
+            "readAt": null
+          }
+        ]
+      }
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "release": "fc95eed",
+      "mode": "scheduled",
+      "id": "f25be7e2-f2f4-4023-8a37-fe300a88869f",
+      "at": "2026-10-24T12:53:04.851Z",
+      "case": "scheduled",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T12:53:12.199Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "propose_task",
+          "status": "completed",
+          "timestamp": "2026-10-24T12:53:29.315Z"
+        },
+        {
+          "type": "task.proposed",
+          "timestamp": "2026-10-24T12:53:37.814Z",
+          "taskId": "02c5193e-00f9-47a4-aa85-24556bf5d6fd"
+        },
+        {
+          "type": "run.awaiting_confirmation",
+          "timestamp": "2026-10-24T12:53:37.819Z",
+          "taskId": "02c5193e-00f9-47a4-aa85-24556bf5d6fd"
+        }
+      ],
+      "confirm": {
+        "http": 201,
+        "taskId": "02c5193e-00f9-47a4-aa85-24556bf5d6fd",
+        "status": "scheduled"
+      },
+      "replay": {
+        "http": 200,
+        "taskId": "02c5193e-00f9-47a4-aa85-24556bf5d6fd",
+        "status": "scheduled"
+      },
+      "result": {
+        "status": "completed",
+        "label": "恢复验收只读报告",
+        "phases": [
+          {
+            "at": "2026-10-24T12:57:00.000Z",
+            "status": "completed",
+            "failureReason": null,
+            "reports": [
+              {
+                "id": "85064317-b092-4d22-8f5d-26ffd7086f41",
+                "title": "公司全部电表2024年6月用电统计报告（6月1日–7月1日）",
+                "status": "completed",
+                "generatedAt": "2026-10-24T12:57:34.326Z"
+              }
+            ]
+          }
+        ]
+      },
+      "notifications": {
+        "status": 200,
+        "data": [
+          {
+            "id": "d9e9d75a-f7e4-43ba-8060-c3bb21e47fa4",
+            "taskId": "02c5193e-00f9-47a4-aa85-24556bf5d6fd",
+            "source": "company",
+            "label": "恢复验收只读报告",
+            "outcome": "completed",
+            "endedAt": "2026-10-24T12:57:34.326Z",
+            "readAt": null
+          }
+        ]
+      }
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "release": "fc95eed",
+      "conversationId": "f25be7e2-f2f4-4023-8a37-fe300a88869f",
+      "case": "lease-model-start",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T12:56:18.747Z"
+        },
+        {
+          "type": "run.completed",
+          "timestamp": "2026-10-24T12:56:36.199Z"
+        }
+      ]
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "release": "fc95eed",
+      "mode": "persistent",
+      "id": "46156157-f790-47b3-b994-72782b41eac0",
+      "at": "2026-10-24T13:03:39.607Z",
+      "case": "persistent",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T13:03:50.983Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "query_environment_history",
+          "status": "failed",
+          "timestamp": "2026-10-24T13:04:02.409Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "query_environment_history",
+          "status": "skipped",
+          "timestamp": "2026-10-24T13:04:08.645Z"
+        },
+        {
+          "type": "run.completed",
+          "timestamp": "2026-10-24T13:04:12.542Z"
+        }
+      ]
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "release": "2051f1e",
+      "id": "28748819-a359-4d33-964a-422ac2bd732a",
+      "at": "2026-10-24T13:41:00.000Z",
+      "unchanged": true,
+      "case": "task-change-recovered",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T13:21:22.000Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "propose_task",
+          "status": "completed",
+          "timestamp": "2026-10-24T13:21:35.898Z"
+        },
+        {
+          "type": "task.proposed",
+          "timestamp": "2026-10-24T13:21:41.567Z",
+          "taskId": "180353c9-3409-4ead-80e9-2e5f20bdf483"
+        },
+        {
+          "type": "run.awaiting_confirmation",
+          "timestamp": "2026-10-24T13:21:41.571Z",
+          "taskId": "180353c9-3409-4ead-80e9-2e5f20bdf483"
+        }
+      ],
+      "confirm": {
+        "http": 201,
+        "taskId": "180353c9-3409-4ead-80e9-2e5f20bdf483",
+        "status": "scheduled"
+      },
+      "replay": {
+        "http": 200,
+        "taskId": "180353c9-3409-4ead-80e9-2e5f20bdf483",
+        "changeId": "48557b9d-a39d-46a3-8157-78fbc344a005",
+        "status": "CONFIRMED"
+      },
+      "changeConfirm": {
+        "http": 200,
+        "taskId": "180353c9-3409-4ead-80e9-2e5f20bdf483",
+        "changeId": "48557b9d-a39d-46a3-8157-78fbc344a005",
+        "status": "CONFIRMED"
+      },
+      "cancel": {
+        "http": 200,
+        "taskId": "180353c9-3409-4ead-80e9-2e5f20bdf483",
+        "status": "cancelled"
+      },
+      "modelRepair": [
+        {
+          "type": "tool.completed",
+          "tool": "propose_task_change",
+          "status": "failed",
+          "timestamp": "2026-10-24T13:22:12.254Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "propose_task_change",
+          "status": "completed",
+          "timestamp": "2026-10-24T13:22:16.935Z"
+        },
+        {
+          "type": "task.change.proposed",
+          "timestamp": "2026-10-24T13:22:18.400Z",
+          "changeId": "48557b9d-a39d-46a3-8157-78fbc344a005"
+        },
+        {
+          "type": "run.awaiting_confirmation",
+          "timestamp": "2026-10-24T13:22:18.404Z",
+          "changeId": "48557b9d-a39d-46a3-8157-78fbc344a005"
+        }
+      ],
+      "deviceWrites": 0
+    },
+    {
+      "environment": "production-wechat-developer-tool",
+      "release": "2051f1e",
+      "conversationId": "9048d8d1-c9d1-433e-8002-bdb97de801ec",
+      "taskId": "715f1807-eef7-45f4-8a0e-13d13e4fe528",
+      "case": "production-final",
+      "trace": [],
+      "result": {
+        "status": "failed",
+        "label": "恢复验收生产报告二（已核对）",
+        "phases": [
+          {
+            "at": "2026-10-24T13:33:00.000Z",
+            "status": "failed",
+            "failureReason": "核验设备授权目录：连接服务超时（编号 d3629da4-e12d-4367-ae1e-a4d4eb38fed6）",
+            "reports": []
+          }
+        ]
+      },
+      "notifications": {
+        "status": 200,
+        "data": [
+          {
+            "id": "4f748a9a-9bce-4ab7-8c02-6d45d8988226",
+            "taskId": "715f1807-eef7-45f4-8a0e-13d13e4fe528",
+            "source": "company",
+            "label": "恢复验收生产报告二（已核对）",
+            "outcome": "failed",
+            "endedAt": "2026-10-24T13:33:26.180Z",
+            "readAt": null
+          }
+        ]
+      }
+    }
+  ]
+}

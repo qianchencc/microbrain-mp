@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — 同会话恢复身份与持久化；02 — 读取重试和有限预算。
 
-**Status:** ready-for-agent
+**Status:** implemented-awaiting-integration-evidence
 
 ## 开工与范围
 
@@ -28,3 +28,7 @@
 ## 验证与交付
 
 沿公开对话/取消/恢复与 NDJSON 验证，不断言模型私有 messages 或内部 lease 标志；需要校验历史时从公开恢复和下一轮行为进入。保留请求计数与结果关联，类型/构建、回归与真实证据随票交付。
+
+## 本轮进度
+
+工程实现、定向公开接口回归已提交；提交/行为/边界见 `plan/2026-10-24-agent-error-recovery-implementation-handoff.md`。真实模型/网关、生产和 UI 证据集中 09 收口前复核，本票验收复选框尚不据单测全部勾选。

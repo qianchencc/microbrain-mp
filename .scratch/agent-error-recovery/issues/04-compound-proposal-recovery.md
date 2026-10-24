@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — 提案错误反馈与有界修正。
 
-**Status:** ready-for-agent
+**Status:** implemented-awaiting-integration-evidence
 
 ## 开工与范围
 
@@ -27,3 +27,7 @@
 ## 验证与交付
 
 沿公开 Company 对话与现有收口/分阶段测试验证；不能只改终止标记而不证明后续工具可用和最终目标完整。提交与 plan 记录跟本票完成。
+
+## 本轮进度
+
+工程实现、定向公开接口回归已提交；提交/行为/边界见 `plan/2026-10-24-agent-error-recovery-implementation-handoff.md`。真实模型/网关、生产和 UI 证据集中 09 收口前复核，本票验收复选框尚不据单测全部勾选。

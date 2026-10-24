@@ -1,5 +1,8 @@
 # 项目文档入口
 
+- 2026-10-24 Agent 错误恢复已进入生产连续验收：当前 Runtime `2051f1e`，整组修复与真实模型证据见[实施交接](../plan/2026-10-24-agent-error-recovery-implementation-handoff.md)和[脱敏验收材料](research/agent-error-recovery-acceptance/README.md)。引用改名已真实确认；新报告错层级统计要求子片 `c0b07b9` 尚待生产更新，整体未完成，不以工程通过替代真实闭环。
+
+
 - 2026-10-24 追加修复周期窗口计划（Runtime `3a1a0d8`，云端 `releases/20261024-3a1a0d8`）：确认时若当天窗口已开始，从下一个检查点执行今天剩余次数、明天起完整全天；新增 `nextCheckpointAt`，列表/详情/提案卡显示「下一次检查」而非窗口起点；只给频率缺窗口时改为澄清。Runtime 379/379、MP 157/157、微信开发模式编译通过；staging 真实轨迹今天 19:30 首检、执行前暂停、零控制。旧计划 `d1551b90` 锚点仍是明天，未迁移。见[交接](../plan/2026-10-24-scheduled-task-reliability.md)。
 
 - 2026-10-24 已完成错误恢复路径的静态审视：普通工具异常已回传模型，但同参第二次调用、两次提案失败及部分专用提案的一次失败会截断恢复；卡片确认失败主要展示错误并重读，尚无智能体承接。社区规范、代码证据、恢复边界和首条建议闭环见[审视报告](research/2026-10-24-agent-error-recovery-audit.md)与[一手来源](research/2026-10-24-agent-error-recovery-primary-sources.md)。本轮仅研究，未实施或部署恢复功能，未统计生产错误占比。

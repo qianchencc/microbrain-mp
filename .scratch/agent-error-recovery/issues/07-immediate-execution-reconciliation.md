@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — 操作关联与恢复承接；02 — 安全只读补查。
 
-**Status:** ready-for-agent
+**Status:** implemented-awaiting-integration-evidence
 
 ## 开工与范围
 
@@ -30,3 +30,7 @@
 ## 验证与交付
 
 从确认/回执/对话公开接口观察结果和真实协议出口写次数，不直接断言内部 dispatch 标志。发布前保留故障注入与真实读回的证据区别，plan 明确受理、回读及物理效果的证据等级。
+
+## 本轮进度
+
+工程实现、定向公开接口回归已提交；提交/行为/边界见 `plan/2026-10-24-agent-error-recovery-implementation-handoff.md`。真实模型/网关、生产和 UI 证据集中 09 收口前复核，本票验收复选框尚不据单测全部勾选。

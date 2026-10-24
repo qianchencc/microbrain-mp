@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** implemented-awaiting-integration-evidence
 
 ## 开工与范围
 
@@ -28,3 +28,7 @@
 ## 验证与交付
 
 沿公开对话 HTTP/NDJSON 和窄网关协议夹具观察结果、请求数、停止；不直接断言守卫 Map。保存一条真实模型恢复轨迹及持续失败轨迹；文档与语义提交跟本票完成。
+
+## 本轮进度
+
+工程实现、定向公开接口回归已提交；提交/行为/边界见 `plan/2026-10-24-agent-error-recovery-implementation-handoff.md`。真实模型/网关、生产和 UI 证据集中 09 收口前复核，本票验收复选框尚不据单测全部勾选。

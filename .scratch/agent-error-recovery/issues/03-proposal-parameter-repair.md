@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — 工具恢复与重复调用判据。
 
-**Status:** ready-for-agent
+**Status:** implemented-awaiting-integration-evidence
 
 ## 开工与范围
 
@@ -27,3 +27,7 @@
 ## 验证与交付
 
 沿公开对话测试及既有混合草案/最终答复用例验证；更新旧“两次失败必须终止”的行为预期时仍保留预算耗尽和诚实收尾反例。前端使用既有卡片，必要视觉修正随票交付。
+
+## 本轮进度
+
+工程实现、定向公开接口回归已提交；提交/行为/边界见 `plan/2026-10-24-agent-error-recovery-implementation-handoff.md`。真实模型/网关、生产和 UI 证据集中 09 收口前复核，本票验收复选框尚不据单测全部勾选。

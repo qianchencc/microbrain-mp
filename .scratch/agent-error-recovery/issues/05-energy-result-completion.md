@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — 只读重试、刷新和预算语义。
 
-**Status:** ready-for-agent
+**Status:** implemented-awaiting-integration-evidence
 
 ## 开工与范围
 
@@ -27,3 +27,7 @@
 ## 验证与交付
 
 沿公开查询/报告/对话 API 和现有能耗行为测试进入，不断言缓存内部结构。保存实际数据覆盖、请求关联及最终 UI 证据；不把 H5 或静态图当微信操作验收。
+
+## 本轮进度
+
+工程实现、定向公开接口回归已提交；提交/行为/边界见 `plan/2026-10-24-agent-error-recovery-implementation-handoff.md`。真实模型/网关、生产和 UI 证据集中 09 收口前复核，本票验收复选框尚不据单测全部勾选。
