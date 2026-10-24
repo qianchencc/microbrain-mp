@@ -14,4 +14,9 @@
 - [完整报告/上海期间](production-report-completed-shanghai.jpg)：第三项22:07实际到期，43/43、5148.84度、completed，通知打开后重开同一保存报告；UTC与上海期间显示已对齐。
 - [第四项修改确认](production-fourth-change-confirmed.jpg)：确认改名且原22:22保留，但随后到期授权目录超时，无报告。不得据这张画面宣称连续闭环通过。
 - 补充真实隔离：报告preparing后ready再遇模型失败仍交付原附件；停止后计数稳定；即时草案只读恢复/还原/自然过期重核/放弃，错误source404、零设备写；六月两期均43台有效，16天2730.93度对14天2417.91度，按日均比较。
-- e3b8f54候选正在验证无关目录持续503不阻断固定电表报告，生产仍2f016e7；全部失败与未验项保留，不能声称整体完成。
+- e3b8f54在隔离真实模型/网关中，已于22:40实际到期完成固定43台电表报告；无关消防目录持续503未被调用，报告43/43、5148.84度，零控制。22:42已发布生产，第五项连续闭环验收进行中；全部失败与未验项保留，不能声称整体完成。
+
+- [第五项改名确认](production-fifth-change-confirmed.jpg) → [第五项完整报告](production-fifth-report-completed.jpg) → [沿原任务追问](production-fifth-followup.jpg)：22:54实际到期、22:54:43完成，43/43、5148.84度，Task/43成员/spec/原时刻一致；第五项A13通过，前四项失败保留。
+- [取消状态真实答复](production-cancel-status-verified.jpg)：09e Runtime67d2a09在23:14:54发布；保留原历史的真实模型仍依据当前CANCELLED回答，生产微信同样准确，无新草案或控制。
+- [可见即时草案取消](production-draft-visible-cancelled.jpg)：取消勾选revision2、重新勾选revision3、取消后GET200/CANCELLED/resultnull。一次只读核对503后同一GET恢复200，未确认控制。
+- 最终交接：[生产闭环交接](../../../plan/2026-10-24-agent-error-recovery-production-handoff.md)。新真实设备下发缺具体授权，物理手机断流缺连接接口；协议/隔离/模拟器证据不能代替这两项，整体仍in-progress。

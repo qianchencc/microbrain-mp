@@ -92,3 +92,16 @@
 - 草案0d0f5798-4b6e-4380-8bf4-af081d72a181勾选丢回包仅GET恢复原revision4，restore200，未过期重核409；自然过期后重核200/revision6，cancel200，终态CANCELLED/resultnull，错误source404，零设备写。
 - 旧staging unit已停止/MainPID0，私密目录已精确删除，SSH13216 PID58754已终止，生产active。09d候选需要新隔离验证，勿误认为尚留旧数据库。
 - MP新增a5dca32仅修报告UTC/上海边界显示，162/162、双轴通过，微信编译与production构建补核中。原文档状态已迁至验收状态文件，避免历史发布描述当当前。
+
+## 22:47 可继续的现场
+
+- 生产e3b8f54已完成受控消防持续503隔离实际到期验证并发布。当前第五项Task ef316fd8-8a22-4707-9030-a37db5836023 / change22a9fa12-3544-4fa1-ae67-029e464562e0，真实微信查询→提案→创建→详情引用→改名确认均已做，43成员/spec/22:54时间不变。等待22:54真实到期后同一任务报告/通知/重开追问。私密完整记录 `/tmp/recovery-evidence/production-fifth.json`。
+- 后台monitor `/tmp/recovery-monitor-due.mjs production-fifth https://mp-agent.qianc.ltd` 会等到原阶段+45秒再GET；进程会自动结束，避免到期前完整目录轮询。前端浮层已收起，不要编译重载/制造新业务请求干扰。
+- 当前MP业务a5dca32，文档d4a5e2d，Runtimee3b8f54，404/404与162/162。新增真实UI脚本 `/tmp/recovery-wechat-acceptance-fifth.cjs`（正常query/propose/followup，其他确认卡动作沿实际组件）；截图用官方wechatide simulator_screenshot，SDK截图存储额度已满。SDK9422可用、断开不要close用户app。
+- 第五项终态后：从dashboard通知中心打开精确名称“恢复验收生产报告五（已核对）”→详情报告→截图核对时间/43表/5148.84→关闭报告/任务并重开Company面板→followup，仅查原对象不创建新任务。原1–4失败记录不覆盖。
+- 07还可安全补生产新待确认草案的勾选/还原/放弃与终态只读（不点确认控制）；真实新下发仍须具体方案授权。已询问可连接物理手机接口，尚无答复。即时控制具体方案已提交，待全部可自主工作完成后再询问缺少授权一次。
+- staging已停/删除、13216 SSH已终止、3216/9229闭合、生产active/NRestarts0。无临时计划待取消，旧失败/完成报告保留审计，用户既有计划不改。
+
+## 本轮生产收口更新
+
+Runtime67d2a09已发布，405/405、类型/构建及两轴通过；第五项A13真实22:54到期并完整交付报告/通知、微信打开与追问；09e取消状态回流真实复验通过。当前完整继续入口见[生产交接](2026-10-24-agent-error-recovery-production-handoff.md)和[验收状态](2026-10-24-agent-error-recovery-acceptance-status.md)，不要继续执行上文历史等待/旧staging指令。剩余具体控制授权与可连接真机接口，整体仍in-progress。

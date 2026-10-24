@@ -743,6 +743,167 @@
         }
       },
       "deviceWrites": 0
+    },
+    {
+      "case": "production-fifth-continuous",
+      "environment": "production-wechat-developer-tools",
+      "release": "e3b8f54",
+      "mpCommit": "a5dca32",
+      "conversationId": "9048d8d1-c9d1-433e-8002-bdb97de801ec",
+      "taskId": "ef316fd8-8a22-4707-9030-a37db5836023",
+      "creationTurnId": "1b06089f-7aeb-4fea-8b94-911e86657edb",
+      "changeTurnId": "73a835fc-e122-4cb2-a266-c0a697db2468",
+      "changeId": "22a9fa12-3544-4fa1-ae67-029e464562e0",
+      "version": 2,
+      "checkpointAt": "2026-10-24T14:54:00.000Z",
+      "completedAt": "2026-10-24T14:54:43.270Z",
+      "taskStatus": "completed",
+      "reportId": "4151d302-32e4-4961-8d23-8b20bc6fb2af",
+      "reportStatus": "completed",
+      "notificationIds": [
+        "8d0f3a4f-f96b-429c-aafd-0be7b37cf579"
+      ],
+      "facts": {
+        "total": 5148.84,
+        "meters": 43,
+        "dataMeters": 43,
+        "noDataCount": 0,
+        "partialCount": 0,
+        "requestedSpan": {
+          "from": "2024-05-31T16:00:00.000Z",
+          "to": "2024-06-30T16:00:00.000Z"
+        },
+        "observedSpan": {
+          "from": "2024-05-31T23:00:15.000+08:00",
+          "to": "2024-06-30T23:10:52.000+08:00"
+        }
+      },
+      "followup": {
+        "turnId": "3f17c4ea-0606-4b4b-af61-3248ce24c21f",
+        "terminal": "run.completed",
+        "toolNames": [
+          "get_task"
+        ],
+        "createdTaskOrDraft": false,
+        "message": "「恢复验收生产报告五（已核对）」已全部完成：今晚22:54执行（22:54:05–22:54:43），43台电表全部成功读取，报告「公司全部电表2024年6月用电报告（2024-06-01至2024-07-01）」已生成，状态为completed，期间与覆盖要求均已保存且通过校验，未控制任何设备。\n\n实际采样期间：请求期间为2024-06-01 00:00至2024-07-01 00:00（上海时间）；各表实际采样边界为2024-05-31 23:00:15至2024-06-30 23:10:52，由首末采样时刻决定，与请求边界略有偏移。\n\n覆盖与缺数：43台电表全部有效，无缺数据表、无部分缺数表；按周分段中前四周为完整周，末段（6月29日至7月1日，246.26度）只覆盖2天，是部分窗口，属正常边界而非缺数。\n\n已计算的本期数字：总用电5148.84度，估算电费约5921.17元（目录电价1.15元/度）；日均171.63度；高峰日6月18日218.96度；位置构成中26楼弱电井单表1639.01度居首，前3名占总量50.22%。本次为纯本期统计，无同比环比。"
+      },
+      "screenshots": [
+        "production-fifth-change-confirmed.jpg",
+        "production-fifth-report-completed.jpg",
+        "production-fifth-followup.jpg"
+      ],
+      "deviceWrites": 0,
+      "postReleaseVisibleFollowup": {
+        "release": "67d2a09",
+        "turnId": "753758ff-a2f1-4aae-9f45-7867dc7e7f29",
+        "terminal": "run.completed",
+        "createdTaskOrDraft": false,
+        "message": "「恢复验收生产报告五（已核对）」已完成，状态为completed：今晚22:54执行（22:54:05–22:54:43），43台电表全部读取成功，报告「公司全部电表2024年6月用电报告（2024-06-01至2024-07-01）」已生成并保存，期间与覆盖要求可校验，未控制任何设备。\n\n实际采样期间：请求期间为2024-06-01 00:00至2024-07-01 00:00（上海时间）；各表实际采样边界为2024-05-31 23:00:15至2024-06-30 23:10:52，由各表首末采样时刻决定，与请求边界略有偏移。\n\n覆盖与缺数：43台电表全部有效，无缺数据表、无部分缺数表。按周分段中6月1日至6月29日的四个整周为完整周（约1154–1265度/周）；末段6月29日至7月1日共246.26度，仅覆盖2天，是部分窗口，属边界限制而非缺数。\n\n本期主要数字：总用电5148.84度，估算电费约5921.17元（目录电价1.15元/度）；日均171.63度；高峰日6月18日218.96度；26楼弱电井单表1639.01度居首，前3名占总量50.22%。本次为纯本期统计，无同比环比。\n\n另说明：最新的26楼会议室空调28度设定草案已取消，未下发，空调未被改变。"
+      }
+    },
+    {
+      "case": "production-draft-selection-and-cancellation",
+      "environment": "production-wechat-developer-tools",
+      "release": "e3b8f54",
+      "turnId": "ca9fc835-e2e3-4e99-b7d5-27f4289f4ad6",
+      "draftId": "7627ea37-1a21-4cf0-8697-01001b92c7f0",
+      "deviceCount": 1,
+      "initialStatus": "PENDING_CONFIRMATION",
+      "initialRevision": 1,
+      "initialSelectedCount": 1,
+      "readbacks": {
+        "deselected": {
+          "http": 200,
+          "status": "PENDING_CONFIRMATION",
+          "revision": 2,
+          "selectedCount": 0,
+          "result": null
+        },
+        "reselected": {
+          "http": 200,
+          "status": "PENDING_CONFIRMATION",
+          "revision": 3,
+          "selectedCount": 1,
+          "result": null
+        },
+        "cancelled": {
+          "http": 200,
+          "status": "CANCELLED",
+          "revision": 3,
+          "selectedCount": 1,
+          "result": null
+        }
+      },
+      "deviceWrites": 0,
+      "uiEvidence": "SDK mutation/readback only; panel was CSS-hidden, not claimed as visible clicking evidence"
+    },
+    {
+      "case": "cancelled-draft-context-isolated",
+      "environment": "isolated",
+      "release": "67d2a09",
+      "conversationId": "9048d8d1-c9d1-433e-8002-bdb97de801ec",
+      "turnId": "0b2a7266-e35b-4f73-91a8-743a019f0471",
+      "message": "该草案「将26楼会议室空调（空调 -26 会议室，1台）设定温度改为28度，保持当前开关、模式与风速不变」当前状态为已取消，不再是待确认状态。\n\n因此它没有实际下发，26楼会议室空调未收到任何温度设定操作。如之后仍需调整，需要重新生成草案并确认。",
+      "terminal": "run.completed",
+      "proposals": 0,
+      "deviceWrites": 0,
+      "evidence": {
+        "reads": 63,
+        "writes": 0,
+        "modelCalls": 1,
+        "model": "GLM-5.3-Flash",
+        "fault": {}
+      }
+    },
+    {
+      "case": "cancelled-draft-context-production",
+      "environment": "production",
+      "release": "67d2a09",
+      "conversationId": "9048d8d1-c9d1-433e-8002-bdb97de801ec",
+      "turnId": "246414ae-fded-4988-91ca-4b402ab9199f",
+      "message": "沿原草案（draftId 7627ea37）的当前状态：该26楼会议室空调28度设定草案已取消（CANCELLED），不再是待确认状态，也没有下发到设备——空调当前未被本次操作改变。\n\n如需重新调整26楼会议室空调温度，告诉我即可，我会生成新的待确认草案，确认后才下发。",
+      "terminal": "run.completed",
+      "proposals": 0,
+      "deviceWrites": 0,
+      "screenshot": "production-cancel-status-verified.jpg"
+    },
+    {
+      "case": "production-visible-draft-selection-cancellation",
+      "environment": "production-wechat-developer-tools-visible",
+      "release": "67d2a09",
+      "turnId": "3bf2b59b-0f35-408e-8cbe-043d53702b16",
+      "draftId": "9bb0f24a-8323-456b-a1fb-2f8eca8a4b8c",
+      "initialStatus": "PENDING_CONFIRMATION",
+      "initialRevision": 1,
+      "readbacks": {
+        "deselected": {
+          "http": 200,
+          "status": "PENDING_CONFIRMATION",
+          "revision": 2,
+          "result": null,
+          "selectedCount": 0
+        },
+        "reselected": {
+          "http": 503,
+          "errorCode": "AUTHORIZED_SCOPE_UNAVAILABLE"
+        },
+        "reselectedRecovered": {
+          "http": 200,
+          "status": "PENDING_CONFIRMATION",
+          "revision": 3,
+          "result": null,
+          "selectedCount": 1
+        },
+        "cancelled": {
+          "http": 200,
+          "status": "CANCELLED",
+          "revision": 3,
+          "result": null,
+          "selectedCount": 1
+        }
+      },
+      "deviceWrites": 0,
+      "screenshot": "production-draft-visible-cancelled.jpg"
     }
   ]
 }
