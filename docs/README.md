@@ -1,5 +1,7 @@
 # 项目文档入口
 
+- 2026-10-25 失败答复补充按结果状态给操作建议：Runtime `f0ddd33`，真实模型恢复轨迹与工程验证见[本轮交接](../plan/2026-10-25-actionable-failure-responses-handoff.md)，尚未部署。创建等待反馈由并行切片继续。
+
 - 2026-10-25 Agent恢复小程序开发/发行编译交付完成，按用户澄清无需微信上传/提审；持续运行的已验证能力、67分钟现场观察与剩余长停调查见[最新交接](../plan/2026-10-25-agent-recovery-build-and-continuity-handoff.md)。
 
 - 2026-10-24 Agent错误恢复当前生产Runtime `67d2a09`、MP `a5dca32`：权威进度见[验收状态](../plan/2026-10-24-agent-error-recovery-acceptance-status.md)与[生产交接](../plan/2026-10-24-agent-error-recovery-production-handoff.md)。第五项连续业务/完整报告与取消状态回流真实验证通过；具体设备下发授权、可连接真机接口仍缺，整体in-progress。
