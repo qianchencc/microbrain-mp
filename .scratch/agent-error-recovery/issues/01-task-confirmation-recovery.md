@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** implemented-and-verified
 
 ## 开工与范围
 
@@ -34,3 +34,5 @@
 ## Comments
 
 2026-10-24 WIP `97f90f1` + review 修复 `96e79b7`：目录瞬时读取重试、已成功回放、等价计划返回、TTL 过期且原定时间/窗口仍有效时重开新版本、并发确认回放、新消息退役过期提案；Runtime 384/384、MP 157/157。已完成隔离 staging 真实模型/网关：真实提案过期后 `TASK_RECONFIRM_REQUIRED` 重开，新版本确认 201，旧版本回放 200 同一计划，随后暂停，无控制。尚未完成：A03 时间已过后未启动模型自动承接（只返回 `needs_new_time`）、A11 显式停止用例、MP 微信真实点击截图。Status 仍为 `ready-for-agent`，不可视为已完成。
+
+当前补核：既有seam/收口已获用户批准，已过时刻请求必要新时间属于合法收口，无需模型擅自改时。A11恢复停止已隔离真实执行；生产微信第三/四项创建与恢复历史已记录。01既有后端+真实TTL/重放证据及现行UI状态已并入[验收状态](../../../plan/2026-10-24-agent-error-recovery-acceptance-status.md)，原Comments是历史未补证状态，不代表仍未开始。整体09尚未完成，不据此声称A13/物理真机通过。

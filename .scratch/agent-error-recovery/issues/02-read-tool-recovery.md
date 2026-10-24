@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** implemented-awaiting-integration-evidence
+**Status:** implemented-and-verified
 
 ## 开工与范围
 
@@ -32,3 +32,5 @@
 ## 本轮进度
 
 工程实现、定向公开接口回归已提交；提交/行为/边界见 `plan/2026-10-24-agent-error-recovery-implementation-handoff.md`。真实模型/网关、生产和 UI 证据集中 09 收口前复核，本票验收复选框尚不据单测全部勾选。
+
+当前证据索引：[验收状态](../../../plan/2026-10-24-agent-error-recovery-acceptance-status.md)。本票工程/隔离场景已核对；整组A13、真机/新物理控制及清理由09统一收口，未验项不随本票状态消失。

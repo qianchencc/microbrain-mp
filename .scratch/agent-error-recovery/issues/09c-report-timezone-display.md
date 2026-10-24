@@ -4,8 +4,12 @@
 
 **Blocked by:** 09a
 
-**Status:** in-progress
+**Status:** implemented-and-verified
 
 冻结范围：只在meter-report视图的边界、月份/跨年标签使用既有fmtShanghaiDateTime，预计4–8行；不改保存期间、采样、统计、图表口径或API。公开视图入口以UTC/+08等价时刻先红后绿，完整MP测试、窄双轴、微信编译并实际重开同一报告核对。属于当前报告交付阻断，不做通用日期重构。
 
 162/162、UTC/+08公共视图回归先红后绿；双轴窄审无阻断。仅四处格式化复用，待微信编译重开报告核对。
+
+微信开发/production编译均成功。当前实际UI第四项创建/改名已确认（正常消息路径）；09c同一生产第三项completed报告实际重开，期间显示为2024-06-01→07-01，安全截图production-report-completed-shanghai.jpg。工程与真实证据分别见验收状态，不把错误变体测试当真机。
+
+当前证据索引：[验收状态](../../../plan/2026-10-24-agent-error-recovery-acceptance-status.md)。本票工程/隔离场景已核对；整组A13、真机/新物理控制及清理由09统一收口，未验项不随本票状态消失。

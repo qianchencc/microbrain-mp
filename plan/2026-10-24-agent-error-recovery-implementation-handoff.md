@@ -1,5 +1,7 @@
 # Agent 错误恢复实施与待验记录
 
+**当前权威状态见 [验收状态](2026-10-24-agent-error-recovery-acceptance-status.md)；下文是实施历史，历史“尚未部署”描述不代表当前。**
+
 本记录持续更新。用户已授权自主推进全部票据、发布和真实业务验收；不重复征询流程批准。规格、票据和 A01–A13 矩阵分别在 `.scratch/agent-error-recovery/{spec.md,issues/,acceptance.md}`。01 的既有真实 staging 证据见 `2026-10-24-task-confirmation-recovery-handoff.md`。
 
 ## 当前工程切片
@@ -57,3 +59,36 @@
 - 子片09a `c0b07b9`：公开回归先红（未知顶层统计字段被接受），一行schema约束后绿；400/400、类型/构建和两轴窄审无阻断。候选云端与本地runner哈希一致 `5d15ec321cdcdb1251cea07c9c3f43fa8a9be3bd7ad8f732eefd9bafa0fa70af`。app与2051f1e相同。
 - 候选隔离真实模型：conv `102ce8b1-5f8d-4d34-9364-45858b624458`，首次受控错层级参数被SDK拒绝，模型自行修正后Task `ee608daf-094d-49bd-bdce-bfde2b6c549d` 保存正式spec，确认201/回放200，零控制写入；21:40实际到期仍待核验。为降低上游负荷，不在未来数分钟内反复GET任务触发全目录读取；实际阶段结束后再从公开API/UI核对。
 - 安全脱敏证据与两张无个人信息的微信画面已整理至 `docs/research/agent-error-recovery-acceptance/`。真实手机及新物理控制授权仍未具备；不能以微信模拟器或已有终态回执代替。
+
+## 21:50 前补核
+
+- `c0b07b9` 已于21:42:54上海时间发布，备份 `/opt/iot-agent-runtime/shared/backups/20261024-error-recovery-c0b07b9`，原2051f1e；数据行数、quick_check/FK与健康通过。生产release内无harness。
+- 09a候选实到期 Task `ee608daf-094d-49bd-bdce-bfde2b6c549d` 于21:40:44.927完成，报告 `0b9e85ae-38d6-4ca8-a093-f33517c3d1fe` completed，统计要求由真实模型修正保存，目录受控503一次后恢复，结束通知唯一、无控制。
+- A07报告附件错误收口遗漏已先红后绿修复为 `2f016e7`：已存附件后模型重连失败仍交付成果/缺口，401/401、类型/构建通过；双轴窄审中，尚未部署。
+- A07隔离真实请求遇到阻断：conv `0d7e2aa1-442d-4d60-bf3b-d5296dbe5607` / turn `4176490b-fc75-4cb6-98d9-378b857a646b`，两次受控preparing后进入真实统计，CPU持续约88%数分钟，`curl --max-time 2 http://127.0.0.1:3216/__evidence`实测28超时。Node Inspector只对隔离PID643986取栈（13:49:17Z），落在meterWindow→bucketCellValue→boundaryBuckets→queryCompanyMeterReport；没有读取凭据/内部思考。已终止该隔离unit，确认PID0、3216/9229关闭，19229调试转发已精确停止。生产服务未停止。
+- 接下来只诊断阻断当前报告的耗时，先区分实际模型period是否过宽、数组重扫或分桶异常。临时harness只记录spec和成员数，位于私密staging目录，标记DEBUG，最终删除。不能据一帧栈就声称早晨租约停顿的原始触发已查清。
+
+## 21:57 补核
+
+- 同一A07自然语言输入重跑c0b07b9：conv `775357e7-fc9a-480c-bbb8-c534ef73c8f3` / turn `8ec48cf9-3435-4a4d-9022-8bc91a45a91f`。仅记录的spec确认原六月期间、无对比；两次preparing后21:56:26保存completed报告 `92c42f3e-106c-46ba-9ccb-010a771c0f42`，但旧版在后续两次连接失败后run.failed。这是2f016e7修复的真实红证据；零控制。
+- CPU长停本次未复现，不能归因于模型期间或算法；作为后续线索保留，不无证据扩展本业务代码。2f016e7双轴窄审均无阻断，云端候选构建中。
+
+## 22:00 当前发布与A07
+
+- 当前生产 **20261024-2f016e7**（21:59:49.613上海时间），替换c0b07b9，备份 `/opt/iot-agent-runtime/shared/backups/20261024-error-recovery-2f016e7`。发布前后6类业务表行数一致，quick_check=ok、FK空、无在途阶段/会话，next计划午夜；回环健康通过。runner两地哈希 `71873fb7d5787ec8d6676aeb51d41a2d9853ec8be06ff76eec90e40278805213`，app哈希保持 `0fc11710d187e3a0d5a90642a46ee68efa153ca7f3b5c26925d2e221cf07235c`。
+- A07真实绿证据：2f016e7隔离conv `dcd8362f-975c-4a98-8c9f-e73b0082dae9` / turn `4c681bdd-225f-43e1-afdd-cb5ba07e97a5`，2次受控preparing→13:59:18.239Z保存completed报告 `044c626a-2bbd-4e24-bc22-fbbd67ed1721`→后续2次模型建连失败→message.completed+run.completed，无run.failed，零控制；公开GET报告200且43/43、无缺表，原统计期间保存，重开200。并列保留c0真实红记录。
+- 已重新从生产微信查询历史成功；正在第三项完整报告委托，不把前两项失败覆盖掉。全部工程401/401、两轴窄审通过，真实连续闭环仍待完成。
+
+## 22:12 连续验收最新状态
+
+- MP `8c8f345` 已修复分块HTTP错误原因丢失，161/161；公开客户端+presentation回归先红后绿、两轴复核无阻断。官方uni production与HBuilderX开发编译通过，未上传微信发版。SDK截图触发微信saveFile存储上限后改用官方 `simulator_screenshot`，不清除用户缓存/资料。
+- 第三项Task `dc4f0969-24c5-4577-a393-b84c25d18193` / phase `2a1a0c80-e8cc-4768-818e-2750c659aa9c` 22:07墙钟到期→22:07:38.541 completed；报告 `b48b8049-5a9a-44e4-9790-e010e50ba5ea` completed、43/43、5148.84度、正确spec；通知 `4f56ac14-c6c8-452b-b6a9-d6d1478cf162` 唯一。第三项改名请求先因账户核验两次超时503未被接收；代理点击保留意图重试，生成change `3e8e381e-0858-40c9-9718-f059dcb661a6`，但已接近阶段认领时间，确认未生效，不称A13通过。
+- A11隔离停止：conv `9aa1c7fb-be9e-4463-b6bd-ebca6194ff5a`，create_energy_report preparing时POST取消200，最终run.aborted/已停止，停止确认后计数稳定、零设备写入、重开idle。首次脚本误把run.aborted断言为run.failed，第二次仍漏枚举；已沿同一实际事件纠正取证脚本，未改业务实现，不把脚本失败称产品回归。
+- 第四项生产委托留足10分钟管理窗口，微信真实输入拟22:22执行，仍进行中。不要在会话请求/确认在途时编译重载；第三项的编译重新加载造成UI取证中断，未改其后台墙钟执行事实。
+
+## 22:31 当前阻断与清理
+
+- 第四项22:22:24.939因授权目录分页超时失败，task f133c030-9194-4fc0-b18c-ea98ba1bbbcc已改名/version4，结束通知265eb250-5f2f-4a40-9d9c-e55ec53b3c42，无报告，A13仍不通过。确切失败类别未记录，不猜成消防故障。09d公共回归证明纯电表报告会因无关消防目录503失败，最小3行改为现读energy目录/禁fallback；撤权仍失败。404/404、类型/构建，双轴窄审中，尚未生产更新。
+- 草案0d0f5798-4b6e-4380-8bf4-af081d72a181勾选丢回包仅GET恢复原revision4，restore200，未过期重核409；自然过期后重核200/revision6，cancel200，终态CANCELLED/resultnull，错误source404，零设备写。
+- 旧staging unit已停止/MainPID0，私密目录已精确删除，SSH13216 PID58754已终止，生产active。09d候选需要新隔离验证，勿误认为尚留旧数据库。
+- MP新增a5dca32仅修报告UTC/上海边界显示，162/162、双轴通过，微信编译与production构建补核中。原文档状态已迁至验收状态文件，避免历史发布描述当当前。

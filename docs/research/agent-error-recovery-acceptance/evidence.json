@@ -363,6 +363,386 @@
           }
         ]
       }
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "id": "dcd8362f-975c-4a98-8c9f-e73b0082dae9",
+      "at": "2026-10-24T13:58:45.236Z",
+      "case": "energy-saved-report-recovered-2f016e7",
+      "release": "2f016e7",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T13:58:56.047Z",
+          "turnId": "4c681bdd-225f-43e1-afdd-cb5ba07e97a5"
+        },
+        {
+          "type": "tool.started",
+          "tool": "create_energy_report",
+          "timestamp": "2026-10-24T13:59:07.660Z"
+        },
+        {
+          "type": "tool.progress",
+          "tool": "create_energy_report",
+          "timestamp": "2026-10-24T13:59:07.684Z"
+        },
+        {
+          "type": "tool.progress",
+          "tool": "create_energy_report",
+          "timestamp": "2026-10-24T13:59:08.195Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "create_energy_report",
+          "status": "completed",
+          "timestamp": "2026-10-24T13:59:18.254Z"
+        },
+        {
+          "type": "observation.reported",
+          "timestamp": "2026-10-24T13:59:18.260Z"
+        },
+        {
+          "type": "message.completed",
+          "timestamp": "2026-10-24T13:59:18.294Z"
+        },
+        {
+          "type": "run.completed",
+          "timestamp": "2026-10-24T13:59:18.298Z"
+        }
+      ],
+      "deviceWrites": 0,
+      "reportId": "044c626a-2bbd-4e24-bc22-fbbd67ed1721",
+      "reportReadHttp": 200,
+      "restoredHttp": 200,
+      "modelConnectFailuresAfterSave": 2,
+      "preparingResponses": 2
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "id": "9aa1c7fb-be9e-4463-b6bd-ebca6194ff5a",
+      "at": "2026-10-24T14:02:37.728Z",
+      "case": "stop-during-recovery",
+      "release": "2f016e7",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T14:02:12.359Z",
+          "turnId": "342c8a9e-443f-4239-927d-8f855dcaf300"
+        },
+        {
+          "type": "tool.started",
+          "tool": "create_energy_report",
+          "timestamp": "2026-10-24T14:02:33.664Z"
+        },
+        {
+          "type": "tool.progress",
+          "tool": "create_energy_report",
+          "timestamp": "2026-10-24T14:02:33.676Z"
+        },
+        {
+          "type": "tool.progress",
+          "tool": "create_energy_report",
+          "timestamp": "2026-10-24T14:02:34.181Z"
+        },
+        {
+          "type": "tool.progress",
+          "tool": "create_energy_report",
+          "timestamp": "2026-10-24T14:02:35.190Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "create_energy_report",
+          "status": "failed",
+          "timestamp": "2026-10-24T14:02:36.483Z"
+        },
+        {
+          "type": "run.aborted",
+          "timestamp": "2026-10-24T14:02:36.526Z"
+        }
+      ],
+      "cancelHttp": 200,
+      "countersStable": true,
+      "deviceWrites": 0,
+      "restoredPhase": "idle"
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "id": "d96db3c7-573d-4649-82b7-01952c2950c5",
+      "at": "2026-10-24T14:21:26.926Z",
+      "case": "comparison-two-covered",
+      "release": "2f016e7",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T14:21:24.012Z",
+          "turnId": "549a6323-3d6b-4b56-aa5a-8d102f043d17"
+        },
+        {
+          "type": "tool.started",
+          "tool": "compare_energy",
+          "timestamp": "2026-10-24T14:21:36.961Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "compare_energy",
+          "status": "completed",
+          "timestamp": "2026-10-24T14:21:46.648Z"
+        },
+        {
+          "type": "observation.reported",
+          "timestamp": "2026-10-24T14:21:46.670Z"
+        },
+        {
+          "type": "message.completed",
+          "timestamp": "2026-10-24T14:22:00.092Z"
+        },
+        {
+          "type": "run.completed",
+          "timestamp": "2026-10-24T14:22:00.102Z"
+        }
+      ],
+      "sides": {
+        "a": {
+          "total": 2730.93,
+          "dataMeters": 43,
+          "effectiveDays": 16
+        },
+        "b": {
+          "total": 2417.91,
+          "dataMeters": 43,
+          "effectiveDays": 14
+        }
+      },
+      "deviceWrites": 0
+    },
+    {
+      "environment": "production-wechat-developer-tool",
+      "conversationId": "9048d8d1-c9d1-433e-8002-bdb97de801ec",
+      "taskId": "dc4f0969-24c5-4577-a393-b84c25d18193",
+      "case": "production-third",
+      "release": "2f016e7",
+      "trace": [],
+      "result": {
+        "status": "completed",
+        "label": "恢复验收生产报告三",
+        "version": 3,
+        "phases": [
+          {
+            "at": "2026-10-24T14:07:00.000Z",
+            "status": "completed",
+            "failureReason": null,
+            "reports": [
+              {
+                "id": "b48b8049-5a9a-44e4-9790-e010e50ba5ea",
+                "title": "公司全部电表2024年6月用电统计报告",
+                "status": "completed",
+                "generatedAt": "2026-10-24T14:07:38.541Z"
+              }
+            ]
+          }
+        ]
+      },
+      "notifications": {
+        "status": 200,
+        "data": [
+          {
+            "id": "4f56ac14-c6c8-452b-b6a9-d6d1478cf162",
+            "taskId": "dc4f0969-24c5-4577-a393-b84c25d18193",
+            "source": "company",
+            "label": "恢复验收生产报告三",
+            "outcome": "completed",
+            "endedAt": "2026-10-24T14:07:38.541Z",
+            "readAt": null
+          }
+        ]
+      }
+    },
+    {
+      "environment": "production-wechat-developer-tool",
+      "conversationId": "9048d8d1-c9d1-433e-8002-bdb97de801ec",
+      "taskId": "f133c030-9194-4fc0-b18c-ea98ba1bbbcc",
+      "at": "2026-10-24T14:15:55.021Z",
+      "case": "production-fourth",
+      "release": "2f016e7",
+      "trace": [],
+      "result": {
+        "status": "failed",
+        "label": "恢复验收生产报告四（已核对）",
+        "version": 4,
+        "phases": [
+          {
+            "at": "2026-10-24T14:22:00.000Z",
+            "status": "failed",
+            "failureReason": "核验设备授权目录：等待响应超时（编号 b49a68f0-fa90-4f0f-81bd-ef864778eb5f）",
+            "reports": []
+          }
+        ]
+      },
+      "notifications": {
+        "status": 200,
+        "data": [
+          {
+            "id": "265eb250-5f2f-4a40-9d9c-e55ec53b3c42",
+            "taskId": "f133c030-9194-4fc0-b18c-ea98ba1bbbcc",
+            "source": "company",
+            "label": "恢复验收生产报告四（已核对）",
+            "outcome": "failed",
+            "endedAt": "2026-10-24T14:22:24.939Z",
+            "readAt": null
+          }
+        ]
+      }
+    },
+    {
+      "environment": "isolated-real-model-gateway",
+      "id": "60ef0349-620d-4553-9ae6-c85818acf315",
+      "at": "2026-10-24T14:13:03.614Z",
+      "case": "draft-safe-reconciliation",
+      "release": "2f016e7",
+      "trace": [
+        {
+          "type": "run.started",
+          "timestamp": "2026-10-24T14:13:13.042Z",
+          "turnId": "d84e6b51-9edc-4044-8899-8fa698341d2d"
+        },
+        {
+          "type": "tool.started",
+          "tool": "find_device_candidates",
+          "timestamp": "2026-10-24T14:13:27.785Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "find_device_candidates",
+          "status": "completed",
+          "timestamp": "2026-10-24T14:13:27.824Z"
+        },
+        {
+          "type": "tool.started",
+          "tool": "propose_action_draft",
+          "timestamp": "2026-10-24T14:13:33.617Z"
+        },
+        {
+          "type": "tool.completed",
+          "tool": "propose_action_draft",
+          "status": "completed",
+          "timestamp": "2026-10-24T14:13:36.615Z"
+        },
+        {
+          "type": "message.completed",
+          "timestamp": "2026-10-24T14:13:36.705Z"
+        },
+        {
+          "type": "action.proposed",
+          "timestamp": "2026-10-24T14:13:36.710Z",
+          "draftId": "0d0f5798-4b6e-4380-8bf4-af081d72a181",
+          "revision": 1
+        },
+        {
+          "type": "run.awaiting_confirmation",
+          "timestamp": "2026-10-24T14:13:36.716Z",
+          "draftId": "0d0f5798-4b6e-4380-8bf4-af081d72a181"
+        }
+      ],
+      "draftId": "0d0f5798-4b6e-4380-8bf4-af081d72a181",
+      "operations": {
+        "selection": {
+          "http": 200,
+          "revision": 4,
+          "status": null
+        },
+        "restore": {
+          "http": 200,
+          "revision": 5,
+          "status": null
+        },
+        "revalidateBeforeExpiry": {
+          "http": 409,
+          "revision": null,
+          "status": null
+        },
+        "revalidate": {
+          "http": 200,
+          "revision": 6,
+          "status": "PENDING_CONFIRMATION"
+        },
+        "cancel": {
+          "http": 200,
+          "revision": null,
+          "status": "CANCELLED"
+        },
+        "terminal": {
+          "http": 200,
+          "revision": 6,
+          "status": "CANCELLED"
+        },
+        "wrongSource": {
+          "http": 404,
+          "revision": null,
+          "status": null
+        }
+      },
+      "recoveryMethods": [
+        "GET"
+      ],
+      "deviceWrites": 0
+    },
+    {
+      "case": "scope-checkpoint",
+      "environment": "isolated-real-model-gateway",
+      "release": "e3b8f54",
+      "id": "9fd59352-195d-433a-903e-4548725b4e47",
+      "taskId": "401280f9-ca42-4cbe-9ff6-96b6e08542f2",
+      "at": "2026-10-24T14:36:45.676Z",
+      "confirmHttp": 201,
+      "replayHttp": 200,
+      "phase": {
+        "at": "2026-10-24T14:40:00.000Z",
+        "status": "completed",
+        "reports": [
+          {
+            "id": "7cb8050d-497a-4dcb-b9b7-3836f7a79a0a",
+            "title": "公司全部电表2024年6月用电统计报告（2024-06-01至2024-07-01）",
+            "status": "completed",
+            "generatedAt": "2026-10-24T14:40:36.888Z"
+          }
+        ]
+      },
+      "facts": {
+        "total": 5148.84,
+        "meters": 43,
+        "dataMeters": 43,
+        "noDataCount": 0,
+        "partialCount": 0
+      },
+      "notifications": {
+        "status": 200,
+        "data": [
+          {
+            "id": "b662e36f-f717-4638-8f90-56763cf65c40",
+            "taskId": "401280f9-ca42-4cbe-9ff6-96b6e08542f2",
+            "source": "company",
+            "label": "统计要求恢复验收",
+            "outcome": "completed",
+            "endedAt": "2026-10-24T14:40:36.888Z",
+            "readAt": null
+          }
+        ]
+      },
+      "faultAtCompleted": {
+        "at": "2026-10-24T14:40:45.236Z",
+        "due": "2026-10-24T14:40:00.000Z",
+        "beforeRead": {
+          "reads": 132,
+          "writes": 0,
+          "modelCalls": 3,
+          "model": "GLM-5.3-Flash",
+          "fault": {
+            "path": "/perception/device/page",
+            "readFailures": 100
+          }
+        }
+      },
+      "deviceWrites": 0
     }
   ]
 }

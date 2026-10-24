@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — 卡片操作的同会话恢复与操作关联。
 
-**Status:** implemented-awaiting-integration-evidence
+**Status:** implemented-and-verified
 
 ## 开工与范围
 
@@ -38,3 +38,5 @@
 - 冻结修复：工具结束前复用原任务管理校验，让参数错误返回模型修正；补充只改名称省略 phases、只读阶段完整 read 的可行动反馈。不改变已确认成员、报表口径或真实控制规则。不借此重做编辑器或兼容所有省略形状。
 - 预计业务改动 30–60 行；沿已认可 HTTP/NDJSON、任务读取与确认接口回归。先运行失败回归 `/tmp/recovery-task-change-red.log`，再最小修复；补丁针对测试已通过，完整检查/审查/真实模型/生产重复闭环仍待完成。
 - 诊断已区分：工具后置校验是已证实原因；只读阶段参数形状是生产错误入口；固定未来时间回归排除到期竞争。报告 partial 的实际缺口另按 09 核对，不改写为 completed。
+
+当前证据索引：[验收状态](../../../plan/2026-10-24-agent-error-recovery-acceptance-status.md)。本票工程/隔离场景已核对；整组A13、真机/新物理控制及清理由09统一收口，未验项不随本票状态消失。

@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — 只读重试、刷新和预算语义。
 
-**Status:** implemented-awaiting-integration-evidence
+**Status:** implemented-and-verified
 
 ## 开工与范围
 
@@ -31,3 +31,13 @@
 ## 本轮进度
 
 工程实现、定向公开接口回归已提交；提交/行为/边界见 `plan/2026-10-24-agent-error-recovery-implementation-handoff.md`。真实模型/网关、生产和 UI 证据集中 09 收口前复核，本票验收复选框尚不据单测全部勾选。
+
+## 补核报告附件的解读失败分支
+
+沿原05范围与HTTP/NDJSON seam，新增窄回归 `saved report remains...`：真实报告已保存并发出附件事件，后续模型连接重试仍失败时应交付该成果、说明解读未完成，重开和读取不重算。已先运行失败回归 `/tmp/recovery-saved-report-red.log`（无run.completed）；此前只覆盖普通统计/对比的保留，附件分支遗漏。
+
+冻结修复预算：约5–12行业务代码，复用已有 savedEnergyReports/摘要/历史过滤，不改统计口径或模型重试预算。真实模型staging已注入短暂preparing和报告后连接失败，待结果；不新增通用框架或后台补发。
+
+补核结果：`2f016e7` 全量401/401、类型/构建、Standards与Spec窄审均无阻断。同一真实输入在c0b07b9重跑，正式期间为2024-06-01→07-01、无对比；21:56:17工具启动→21:56:26保存报告，随后注入模型连接失败稳定暴露旧版run.failed。此前数分钟CPU占用未复现，保留堆栈/失败记录，不在未证明原因时改动计量算法。正在以同一故障验证2f016e7候选。
+
+当前证据索引：[验收状态](../../../plan/2026-10-24-agent-error-recovery-acceptance-status.md)。本票工程/隔离场景已核对；整组A13、真机/新物理控制及清理由09统一收口，未验项不随本票状态消失。

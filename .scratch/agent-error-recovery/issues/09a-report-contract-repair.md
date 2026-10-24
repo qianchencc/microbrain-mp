@@ -2,9 +2,9 @@
 
 **What to build:** 用户明确日期和比较要求创建只读统计任务时，模型把 `period/comparisons` 错放在 `read.agent` 顶层，工具应拒绝并让模型按已公布的 `read.agent.spec` 修正，避免创建“有文字承诺但无可校验统计要求”的任务。修正后确认、到期报告仍沿原任务业务。
 
-**Blocked by:** 06 的修改恢复补丁 `2051f1e` 已完成工程/真实模型验证及生产发布；09 连续生产验收发现的阻断子片。
+**Blocked by:** 05, 06 — 报告与修改恢复已实施；本子片来源于09连续生产验收，不依赖09先完成。
 
-**Status:** implemented-awaiting-integration-evidence
+**Status:** implemented-and-verified
 
 ## 来源与冻结范围
 
@@ -20,3 +20,5 @@
 - [ ] 相关测试/类型/构建和必要窄审通过，随后生产更新并补齐09证据；未通过前不得关闭整体。
 
 实现 `c0b07b9`：仅 `read.agent` schema 拒绝未知属性，包含结构化字段说明；旧历史读取/报告不变。失败回归 `/tmp/recovery-report-contract-red.log`，修复后通过；报告文件21/21、Runtime400/400、类型/构建通过，双轴窄审无阻断。真实模型候选验收中，尚未发布。
+
+当前证据索引：[验收状态](../../../plan/2026-10-24-agent-error-recovery-acceptance-status.md)。本票工程/隔离场景已核对；整组A13、真机/新物理控制及清理由09统一收口，未验项不随本票状态消失。
