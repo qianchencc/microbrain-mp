@@ -34,7 +34,7 @@ export function requestJson(url, method, data, header, timeout) {
      reject(httpError(response.statusCode, response.data))
     }
    },
-   fail: error => reject(new Error(error.errMsg || '网络请求失败：未取得服务端响应，网络层未提供具体原因'))
+   fail: error => { const failure = new Error(error.errMsg || '网络请求失败：未取得服务端响应，网络层未提供具体原因'); failure.transport = true; reject(failure) }
   })
  })
 }

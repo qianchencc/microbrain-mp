@@ -14,13 +14,19 @@ const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 
 export const companyOverviewCache = createCompanyReadCache(getAgentStorageScope)
 const request = async (url, method, data, timeout) => {
+ const scope = getAgentStorageScope(), headers = getAgentHeaders()
  const changesDevices = method !== 'GET' && /\/(action-drafts|tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel)(?:\?|$)/.test(url)
  if (changesDevices) companyOverviewCache.clear()
  try {
-  const result = await requestJson(globalConfig.agentUrl + url, method, data, getAgentHeaders(), timeout)
+  const result = await requestJson(globalConfig.agentUrl + url, method, data, headers, timeout)
   return result
  } catch (error) {
   if ([401, 403].includes(error.status) || error.code === 'AGENT_SESSION_EXPIRED') companyOverviewCache.clear()
+  // 仅重放服务端已有幂等保护的确认/管理操作，参数与身份保持原请求。
+  const replayable = method === 'POST' && /\/(tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel|status)(?:\?|$)/.test(url)
+  if (replayable && (error.transport || error.status >= 500) && scope === getAgentStorageScope()) {
+   return requestJson(globalConfig.agentUrl + url, method, data, headers, timeout)
+  }
   throw error
  } finally {
   if (changesDevices) companyOverviewCache.clear()

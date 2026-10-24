@@ -177,6 +177,7 @@ async function togglePlanStatus(value, enabled) {
   uni.showToast({ title: operation === 'resume' ? '已重新启用' : '已停用未来发生', icon: 'none' })
  } catch (cause) {
   if (!planStatusContextCurrent(planId, source, scope, version, action)) return
+  if (cause.data?.recovery?.plan) plan.value = cause.data.recovery.plan
   planSwitchRevision.value += 1
   actionError.value = cause.message || '状态更新失败，请刷新后重试'
  } finally { if (action === planStatusRequest) cancelling.value = false }
