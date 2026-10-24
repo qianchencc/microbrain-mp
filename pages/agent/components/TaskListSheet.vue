@@ -72,7 +72,7 @@
          <view class="row-heading"><text class="row-title">{{ plan.label || '未命名周期安排' }}</text><text v-if="!planCanToggle(plan) && ['enabled', 'paused'].includes(plan.status)" class="plan-access-tag">仅可查看</text><text v-else class="plan-status" :class="planIsEnabled(plan) ? 'tone-active' : 'tone-muted'">{{ planStatus(plan) }}</text></view>
          <text class="row-subtitle">{{ repeatText(plan.repeat) || '重复规则未提供' }}</text>
          <text v-if="source === 'company' && taskRequirementsText(plan)" class="row-subtitle">{{ taskRequirementsText(plan) }}</text>
-         <view class="row-meta"><text>{{ plan.nextAt ? `下一次执行 · ${taskTime(plan.nextAt)}` : '暂无下一次执行' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
+         <view class="row-meta"><text>{{ planNextTime(plan) ? `${planNextLabel(plan)} · ${taskTime(planNextTime(plan))}` : '暂无下一次执行' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
         </view>
         <uni-icons type="right" size="13" color="#99a59d" />
        </button>
@@ -107,7 +107,7 @@
       <text class="summary-status" :class="planIsEnabled(selectedPlan) ? 'tone-active' : 'tone-muted'">{{ planStatus(selectedPlan) }}</text>
       <view class="summary-line"><text>重复规则</text><text>{{ repeatText(selectedPlan.repeat) || '未提供' }}</text></view>
       <view v-if="source === 'company' && taskRequirementsText(selectedPlan)" class="summary-line"><text>执行要求</text><text>{{ taskRequirementsText(selectedPlan) }}</text></view>
-      <view class="summary-line"><text>下一次执行</text><text>{{ selectedPlan.nextAt ? taskTime(selectedPlan.nextAt) : '暂无' }}</text></view>
+      <view class="summary-line"><text>{{ planNextLabel(selectedPlan) }}</text><text>{{ planNextTime(selectedPlan) ? taskTime(planNextTime(selectedPlan)) : '暂无' }}</text></view>
       <view class="summary-line"><text>创建人</text><text>{{ selectedPlan.creator?.displayName || '成员' }}</text></view>
       <text class="summary-note">{{ planAccessSummary(selectedPlan) }}</text>
       <text v-if="selectedPlan.pauseReason" class="pause-reason">{{ selectedPlan.pauseReason }}</text>
@@ -216,6 +216,9 @@ function taskTone(status) {
  return 'active'
 }
 function planIsEnabled(plan) { return !['paused', 'disabled', 'ended'].includes(plan?.status) && Boolean(plan?.nextAt) }
+function planHasCheckpoints(plan) { return Boolean((plan?.template?.phases || plan?.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes)) }
+function planNextTime(plan) { return plan?.nextCheckpointAt || plan?.nextAt }
+function planNextLabel(plan) { return planHasCheckpoints(plan) ? '下一次检查' : '下一次执行' }
 function planStatus(plan) {
  if (plan?.status === 'paused' || plan?.status === 'disabled') return '已停用'
  if (plan?.status === 'ended' || (!plan?.nextAt && plan?.status !== 'paused')) return '周期结束'

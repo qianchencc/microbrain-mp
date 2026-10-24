@@ -3,7 +3,7 @@
   <view class="task-head"><text class="task-kicker">{{ isCancellation ? '取消任务' : task.repeat ? '周期计划' : '定时任务' }}</text><text class="task-state" :class="state">{{ stateText }}</text></view>
   <text class="task-name">{{ task.label }}</text>
   <text v-if="task.repeat" class="task-repeat">{{ repeatText(task.repeat) }}</text>
-  <text v-if="task.repeat && isCreated && task.nextAt" class="task-interval">下一次 · {{ taskTime(task.nextAt) }}</text>
+  <text v-if="task.repeat && isCreated && (task.nextCheckpointAt || task.nextAt)" class="task-interval">{{ nextLabel }} · {{ taskTime(task.nextCheckpointAt || task.nextAt) }}</text>
   <text v-if="task.interval" class="task-interval">{{ intervalText }}</text>
   <view class="task-phases">
   <view v-for="(phase, index) in phasesShown" :key="phase.at" class="task-phase">
@@ -92,6 +92,7 @@ const acWindow = computed(() => {
 const phasesShown = computed(() => acWindow.value ? [props.task.phases[0]] : props.task.phases || [])
 const isCancellation = computed(() => props.task.kind === 'cancellation')
 const state = computed(() => String(props.task.status || '').toLowerCase())
+const nextLabel = computed(() => (props.task.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes) ? '下一次检查' : '下一次执行')
 const isCreated = computed(() => isCancellation.value ? state.value === 'confirmed'
  : Boolean(props.task.created) || ['scheduled', 'executing', 'completed', 'partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(state.value))
 const stateText = computed(() => isCancellation.value

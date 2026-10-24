@@ -548,7 +548,7 @@ async function confirmTaskProposal(task) {
  try {
   const result = changeId ? await confirmTaskChange(changeId, props.source) : cancellationId ? await confirmTaskCancellation(cancellationId, props.source) : await confirmScheduledTask(taskId, task.version, props.source)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.changeId || item.cancellationId || item.taskId) === key)
-  if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId && !changeId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt } } }
+  if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId && !changeId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt; live.nextCheckpointAt = result.nextCheckpointAt } } }
   tasksChanged()
   if (changeId) resync = true
   if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status

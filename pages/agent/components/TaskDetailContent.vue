@@ -8,7 +8,7 @@
    <text v-if="loading" class="task-when">正在更新…</text>
    <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
    <text v-if="detail.occurrence" class="task-when">{{ detail.occurrence.virtual ? '未来安排 · 尚未开始' : '本次发生' }} · {{ detail.occurrence.date }}</text>
-   <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">下一次执行 · {{ detail.nextText }}</text>
+   <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">{{ detail.nextLabel || '下一次执行' }} · {{ detail.nextText }}</text>
    <text class="task-when">{{ detail.whenText }}</text>
    <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ plan ? '周期计划' : `${detail.creator?.displayName || '成员'} 创建 · ${detail.createdText}` }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
    <view v-if="plan && !sampleTask" class="plan-toggle-row">

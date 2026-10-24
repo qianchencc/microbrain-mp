@@ -35,7 +35,7 @@ function occurrenceDates(task) {
   if (ends && ends > starts) dates.push(ends)
  }
  for (const phase of task.phases || []) dates.push(taskDate(phase.at))
- dates.push(taskDate(task.at), taskDate(task.nextAt))
+ dates.push(taskDate(task.at), taskDate(task.nextCheckpointAt || task.nextAt))
  return dates.filter(Boolean)
 }
 

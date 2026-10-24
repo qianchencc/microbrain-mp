@@ -180,6 +180,7 @@ export function mergeTaskPlan(task, plan) {
  task.planStatus = plan.status
  task.planId = plan.planId
  task.nextAt = plan.nextAt
+ task.nextCheckpointAt = plan.nextCheckpointAt
  task.nextOccurrenceId = plan.nextOccurrenceId
  task.latestTask = plan.latestTask
  task.status = ['paused', 'deleted'].includes(plan.status) ? plan.status : plan.nextAt ? 'scheduled' : plan.latestTask?.status || 'completed'
@@ -321,7 +322,9 @@ export function taskDetailView(task) {
   devicesVisible: new Set(task.report.phases.flatMap(phase => phase.devices.map(device => device.id))).size,
   summary: taskExecutionSummaryView(task.report.summary, reportPhases),
  } : null
- return { ...task, phases, whenText, report, repeatText: repeatText(task.repeat), nextText: task.nextAt ? taskTime(task.nextAt) : '', createdText: taskTime(task.createdAt),
+ const nextAt = task.nextCheckpointAt || task.nextAt
+ const nextLabel = (task.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes) ? '下一次检查' : '下一次执行'
+ return { ...task, phases, whenText, report, repeatText: repeatText(task.repeat), nextText: nextAt ? taskTime(nextAt) : '', nextLabel, createdText: taskTime(task.createdAt),
   statusText: task.occurrence?.virtual ? '未来安排' : interval && task.status === 'executing'
    ? task.executionActive ? '设备执行中' : '区间进行中'
    : statusLabel(task.status, task.agentSource),
