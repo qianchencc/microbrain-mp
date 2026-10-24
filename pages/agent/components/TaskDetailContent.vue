@@ -199,7 +199,11 @@ async function cancelPeriod(scope) {
     || planId !== (plan.value?.planId || task.value?.occurrence?.planId)) return
   await cancelTaskPlan(planId, result.plan.version, scope, date, source)
   emit('cancelled'); emit('dismiss')
- } catch (cause) { actionError.value = cause.message || '取消失败，请刷新后重试' }
+ } catch (cause) {
+  if (!props.active || source !== props.source || identity !== getAgentStorageScope() || planId !== (plan.value?.planId || task.value?.occurrence?.planId)) return
+  if (cause.data?.recovery?.plan && plan.value) plan.value = cause.data.recovery.plan
+  actionError.value = cause.message || '取消失败，请刷新后重试'
+ }
  finally { cancelling.value = false }
 }
 const latestReport = computed(() => taskDetailView(plan.value?.latestTask)?.report || null)

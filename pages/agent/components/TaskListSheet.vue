@@ -491,7 +491,11 @@ async function cancelWholePlan(scopeType) {
  try {
   await cancelTaskPlan(plan.planId, plan.version, scopeType, scopeType === 'occurrence' ? plan.nextDate : undefined, source)
   backToList(); emit('changed'); void load()
- } catch (cause) { error.value = cause.message || '取消失败，请刷新后重试'; uni.showToast({ title: error.value, icon: 'none' }) }
+ } catch (cause) {
+  if (!props.open || source !== props.source || scope !== getAgentStorageScope() || selectedPlan.value?.planId !== plan.planId) return
+  if (cause.data?.recovery?.plan) replacePlan(cause.data.recovery.plan)
+  error.value = cause.message || '取消失败，请刷新后重试'; uni.showToast({ title: error.value, icon: 'none' })
+ }
  finally { planLoading.value = false }
 }
 function referencePlan() {
