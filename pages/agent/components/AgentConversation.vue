@@ -21,6 +21,7 @@
       @confirm-task="confirmTaskProposal($event)" @discard-task="discardTaskProposal($event)" @open-task="openTaskRegion($event)" @open-report="openReport" />
     </view>
     <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turns.length)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
+    <view v-if="recoveryMessage" class="region-notice"><text>{{ recoveryMessage }}</text></view>
     <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
     <view id="agent-bottom" class="anchor" />
    </view>
@@ -142,6 +143,7 @@ watch(input, value => {
 const composer = ref(null)
 const turns = ref([])
 const errorMessage = ref('')
+const recoveryMessage = ref('')
 const isRunning = ref(false)
 const phase = ref('')
 const mutating = ref(false), clearing = ref(false)
@@ -553,8 +555,19 @@ async function confirmTaskProposal(task) {
   if (changeId) resync = true
   if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
  } catch (error) {
-  errorMessage.value = error.data?.message || error.message
-  resync = true
+  const code = error.data?.code
+  if (code === 'TASK_RECONFIRM_REQUIRED') {
+   recoveryMessage.value = '核实完成：提案已更新，请重新确认'
+   errorMessage.value = ''
+   resync = true
+  } else if (code === 'TASK_EXPIRED' || code === 'TASK_TIME_PASSED') {
+   recoveryMessage.value = error.data?.message || '原定时间已过，请指定新的执行时间'
+   errorMessage.value = ''
+   resync = true
+  } else {
+   errorMessage.value = error.data?.message || error.message
+   resync = true
+  }
  } finally { confirming.delete(key); mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
