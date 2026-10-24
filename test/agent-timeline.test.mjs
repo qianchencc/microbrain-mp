@@ -371,3 +371,16 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
  assert.match(inboxSource, /notification\.summary/)
  assert.match(inboxSource, /次检查/)
 })
+
+test('空调窗口计划显示下一次检查而不是窗口起点', () => {
+ const plan = { planId: 'plan-ac', status: 'enabled', nextAt: '2026-10-24T16:00:00.000Z',
+  nextCheckpointAt: '2026-10-24T16:30:00.000Z', nextDate: '2026-10-25',
+  repeat: { frequency: 'daily' }, createdAt: '2026-10-24T10:00:00.000Z',
+  phases: [{ at: '2026-10-24T16:30:00.000Z', status: 'pending', devices: [], read: { ac: { cadenceMinutes: 30 } } }],
+  creator: { displayName: '高裕' }, source: { type: 'recurring_plan' } }
+ const snapshot = taskPlanSnapshot(plan)
+ assert.equal(snapshot.nextCheckpointAt, '2026-10-24T16:30:00.000Z')
+ const view = taskDetailView(snapshot)
+ assert.equal(view.nextText, '2026-10-25 00:30')
+ assert.equal(view.nextLabel, '下一次检查')
+})
