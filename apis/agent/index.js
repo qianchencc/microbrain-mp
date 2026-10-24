@@ -111,7 +111,7 @@ export const streamMessage = (conversationId, content, onEvent, focusRegionId, s
 	const terminal = createTerminalTracker()
 	const decoder = createNdjsonStreamDecoder(event => {
 		terminal.track(event)
-		if (event?.type !== 'heartbeat') onEvent(event)
+		if (typeof event?.type === 'string' && event.type !== 'heartbeat') onEvent(event)
 	})
 	const promise = new Promise((resolve, reject) => {
 		const options = {
@@ -132,7 +132,7 @@ export const streamMessage = (conversationId, content, onEvent, focusRegionId, s
 						if (terminal.seen) resolve()
 						else reject(transportError())
 					} else {
-						const body = parseErrorBody(response.data)
+						const body = parseErrorBody(response.data) || terminal.errorBody
 						const error = httpError(response.statusCode, body, '回答请求失败')
 						if (body) error.data = body
 						reject(error)

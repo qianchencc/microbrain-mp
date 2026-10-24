@@ -17,8 +17,13 @@ const TERMINAL_EVENT_TYPES = new Set(['run.completed', 'run.failed', 'run.aborte
 
 export const createTerminalTracker = () => {
 	let seen = false
+	let errorBody = null
 	return {
-		track(event) { if (TERMINAL_EVENT_TYPES.has(event?.type)) seen = true },
+		track(event) {
+			if (TERMINAL_EVENT_TYPES.has(event?.type)) seen = true
+			if (!event?.type && typeof event?.code === 'string' && typeof event?.message === 'string') errorBody = event
+		},
 		get seen() { return seen },
+		get errorBody() { return errorBody },
 	}
 }
