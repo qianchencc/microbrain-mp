@@ -20,3 +20,5 @@
 - [取消状态真实答复](production-cancel-status-verified.jpg)：09e Runtime67d2a09在23:14:54发布；保留原历史的真实模型仍依据当前CANCELLED回答，生产微信同样准确，无新草案或控制。
 - [可见即时草案取消](production-draft-visible-cancelled.jpg)：取消勾选revision2、重新勾选revision3、取消后GET200/CANCELLED/resultnull。一次只读核对503后同一GET恢复200，未确认控制。
 - 最终交接：[生产闭环交接](../../../plan/2026-10-24-agent-error-recovery-production-handoff.md)。新真实设备下发缺具体授权，物理手机断流缺连接接口；协议/隔离/模拟器证据不能代替这两项，整体仍in-progress。
+
+- [任务创建等待](task-create-loading.jpg)：11/12微信生产只读验收，当前卡原生loading、重复点击禁止、收起重开仍等待；最终新任务约4.22秒创建、3.62秒打开详情。纯电表报告改为当前energy范围核验，无关智慧目录超时不再阻断；仍验证撤权不可见、当前energy不可用503。五份自建Task全部取消，零设备控制。完整限制与发布版本见[交接](../../../plan/2026-10-25-task-create-wait-and-read-handoff.md)。

@@ -13,7 +13,7 @@
      <view v-if="!isCompany && !regionChanges.some(change => change.before === turnIndex) && turn.focusRegion && turn.focusRegion.id !== turns[turnIndex - 1]?.focusRegion?.id" class="region-divider">关注区域切换为 {{ turn.focusRegion.name }}</view>
      <view v-if="turn.reference" class="turn-reference"><text>{{ referenceTitle(turn.reference) }} · {{ turn.reference.label || turn.reference.content || '原记录' }}</text></view>
      <view class="user-row"><UserMessage class="um-host" :content="turn.content" :recoverable="canRecoverTurn(turn, turnIndex === turns.length - 1)" :disabled="busy" :editing="editingTurn === turn" @retry="retryTurn(turn)" @begin-edit="beginEdit(turn)" /></view>
-     <AgentReplySurface :turn="turn" :busy="busy" :source="source" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'"
+     <AgentReplySurface :turn="turn" :busy="busy" :confirming-task-id="confirmingTaskId" :source="source" :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'"
       @select-alert="openSafetyEvent" @browse-alerts="openSafetyHistory" @toggle-trace="turn.traceOpen = !turn.traceOpen" @select="selectDraft(turn, $event)"
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
@@ -214,6 +214,7 @@ let disposed = false, visible = false, restoring = false, sequence = 0
 // 期间 restore 整表回读会让路（服务端 EXECUTING 提交前的快照仍是待确认，
 // 回读会把界面冻结成"幻觉待确认"）；纪元用于丢弃跨越确认起点的在途 restore 快照。
 const confirming = new Set()
+const confirmingTaskId = ref('')
 let confirmEpoch = 0
 // 清除纪元：确认清除即递增，跨越清除起点取到的恢复快照属于旧会话，整表丢弃。
 let clearEpoch = 0
@@ -545,7 +546,8 @@ async function confirmTaskProposal(task) {
  if (busy.value || task?.status !== 'PENDING_CONFIRMATION') return
  const taskId = task.taskId, cancellationId = task.cancellationId, changeId = task.changeId
  const key = changeId || cancellationId || taskId
- mutating.value = true; confirming.add(key); confirmEpoch++
+ errorMessage.value = ''; recoveryMessage.value = ''
+ mutating.value = true; confirmingTaskId.value = key; confirming.add(key); confirmEpoch++
  let resync = false
  try {
   const result = changeId ? await confirmTaskChange(changeId, props.source) : cancellationId ? await confirmTaskCancellation(cancellationId, props.source) : await confirmScheduledTask(taskId, task.version, props.source)
@@ -568,7 +570,7 @@ async function confirmTaskProposal(task) {
    errorMessage.value = error.data?.message || error.message
    resync = true
   }
- } finally { confirming.delete(key); mutating.value = false; schedule(); follow() }
+ } finally { confirming.delete(key); confirmingTaskId.value = ''; mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
 async function discardTaskProposal(task) {

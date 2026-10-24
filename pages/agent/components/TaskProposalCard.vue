@@ -45,13 +45,14 @@
   <text v-if="isCancellation" class="task-note">已执行的设备动作不会回滚</text>
   <view v-if="state === 'pending_confirmation'" class="task-actions">
    <button class="task-secondary" hover-class="task-quiet--pressed" :disabled="busy" @tap="$emit('discard')">放弃</button>
-   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy" @tap="$emit('confirm')">{{ isCancellation ? '确认取消' : task.repeat ? '创建周期计划' : '创建任务' }}</button>
+   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy" :loading="confirming" @tap="$emit('confirm')">{{ confirming ? '正在创建' : isCancellation ? '确认取消' : task.repeat ? '创建周期计划' : '创建任务' }}</button>
   </view>
   <view v-else-if="isCreated" class="task-created">
    <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看周期计划' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
    <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="#176b54" /></button>
   </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>
+  <text v-if="confirming && state === 'pending_confirmation'" class="task-wait" role="status" aria-live="polite">正在核验设备范围并保存安排，请稍候。</text>
  </view>
 </template>
 <script setup>
@@ -79,7 +80,7 @@ function phaseRest(phase, index) {
  return Math.max(0, total - ROW_LIMIT)
 }
 
-const props = defineProps({ task: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean })
+const props = defineProps({ task: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean, confirming: Boolean })
 defineEmits(['confirm', 'discard', 'open'])
 const readAgentOf = phase => readAgentView(phase.read?.agent)
 const readAcOf = phase => readAcView(phase.read?.ac)
@@ -125,6 +126,7 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-head { display:flex; justify-content:space-between; align-items:center; padding:3px 3px 0; }
 .task-kicker { color:#63756b; font-size:12px; font-weight:600; }
 .task-state { color:#176b54; font-size:11px; font-weight:600; }
+.task-wait { display:block; margin:8px 3px 0; color:#63756b; font-size:12px; line-height:1.5; }
 .task-state.partial,.task-state.unconfirmed,.task-state.expired,.task-state.cancelled,.task-state.failed { color:#9c7040; }
 .task-name { display:block; margin:5px 3px 0; font-size:16px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
 .task-repeat { display:block; margin:7px 3px 0; color:#536e5c; font-size:12px; line-height:1.5; }

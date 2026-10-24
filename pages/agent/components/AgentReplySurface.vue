@@ -30,7 +30,7 @@
     <template v-else-if="item.kind === 'task' && !readOnly">
      <TaskChangeCard v-if="item.task.kind === 'change'" :change="item.task" :busy="busy"
       @confirm="$emit('confirm-task', item.task)" @discard="$emit('discard-task', item.task)" />
-     <TaskProposalCard v-else :task="item.task" :source="source" :busy="busy"
+     <TaskProposalCard v-else :task="item.task" :source="source" :busy="busy" :confirming="!item.task.cancellationId && confirmingTaskId === item.task.taskId"
       @confirm="$emit('confirm-task', item.task)" @discard="$emit('discard-task', item.task)" @open="$emit('open-task', $event || item.task)" />
     </template>
    </template>
@@ -55,7 +55,7 @@ import ToolActivity from './ToolActivity.vue'
 import TaskProposalCard from './TaskProposalCard.vue'
 import TaskChangeCard from './TaskChangeCard.vue'
 
-defineProps({ turn: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean, readOnly: Boolean, agentName: { type: String, default: '物联 Agent' } })
+defineProps({ turn: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean, confirmingTaskId: { type: String, default: '' }, readOnly: Boolean, agentName: { type: String, default: '物联 Agent' } })
 defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task', 'select-alert', 'browse-alerts', 'open-report'])
 </script>
 

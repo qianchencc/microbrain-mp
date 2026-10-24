@@ -1,5 +1,7 @@
 # 项目文档入口
 
+- 2026-10-25：创建等待反馈与纯电表任务确认/详情已发布Runtime84c7d71，真实微信闭环及开发/production编译通过；控制详情503和持续运行仍有独立未验项。见[当前补充交接](../plan/2026-10-25-task-create-wait-and-read-handoff.md)。
+
 - 2026-10-25 失败答复补充按结果状态给操作建议：Runtime `f0ddd33`，真实模型恢复轨迹与工程验证见[本轮交接](../plan/2026-10-25-actionable-failure-responses-handoff.md)，尚未部署。创建等待反馈由并行切片继续。
 
 - 2026-10-25 Agent恢复小程序开发/发行编译交付完成，按用户澄清无需微信上传/提审；持续运行的已验证能力、67分钟现场观察与剩余长停调查见[最新交接](../plan/2026-10-25-agent-recovery-build-and-continuity-handoff.md)。

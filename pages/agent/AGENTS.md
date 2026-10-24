@@ -108,3 +108,5 @@
 - 电表后台快照（2026-10-21）：Runtime 冷读可能返回 `status:'preparing'`，CompanyEnergySheet 必须显示“数据准备中”并允许重试，不能把该响应写入 `company-read-cache.mjs`。命中 Runtime 完整报告时继续沿用本地 Company 读缓存；报告带 `cache.status:'stale'` 时保留数据显示，并在依据行标记后台更新或沿用上次完整数据。环境传感器不进入这层快照。
 
 - 报告图表 SVG 必须同时声明与 viewBox 一致的数值 width/height；仅 viewBox 搭配 preserveAspectRatio="none" 会使图片固有尺寸退回 300×150，widthFix 下文字和条形被压扁。修复记录见 `../../plan/2026-10-20-report-chart-aspect-ratio-fix.md`。
+
+- 任务创建反馈按 `confirmingTaskId` 只落在当前卡，全局 `busy` 继续禁用其他操作；等待不代表已创建。待确认/已创建/已结束保持互斥，新一轮确认清旧错误，失败清等待。真实微信验收与目录超时边界见 `plan/2026-10-25-task-create-wait-and-read-handoff.md`。
