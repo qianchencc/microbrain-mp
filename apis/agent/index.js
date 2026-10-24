@@ -3,7 +3,7 @@ import { getAgentHeaders, getAgentStorageScope } from '@/utils/agent-session'
 import { createIdleWatchdog } from './idle-watchdog.mjs'
 import { createNdjsonStreamDecoder, parseBufferedJson } from './ndjson.mjs'
 import { transportError, createTerminalTracker } from './stream-errors.mjs'
-import { requestJson, httpError } from './request.mjs'
+import { requestJson, httpError, recoverDraftRequest } from './request.mjs'
 import { downloadReportFile } from './report-download.mjs'
 import { conversationSourceBody, withConversationSource } from './conversation-source.mjs'
 import { createCompanyReadCache } from './company-read-cache.mjs'
@@ -22,6 +22,10 @@ const request = async (url, method, data, timeout) => {
   return result
  } catch (error) {
   if ([401, 403].includes(error.status) || error.code === 'AGENT_SESSION_EXPIRED') companyOverviewCache.clear()
+  if (method !== 'GET' && /\/action-drafts\/[^/?]+\/(confirm|selection|parameters|restore|revalidate|cancel)(?:\?|$)/.test(url)
+   && (error.transport || error.status >= 500) && scope === getAgentStorageScope()) {
+   return recoverDraftRequest(globalConfig.agentUrl + url, method, data, headers, timeout, () => scope === getAgentStorageScope())
+  }
   // 仅重放服务端已有幂等保护的确认/管理操作，参数与身份保持原请求。
   const replayable = method === 'POST' && /\/(tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel|status)(?:\?|$)/.test(url)
   if (replayable && (error.transport || error.status >= 500) && scope === getAgentStorageScope()) {

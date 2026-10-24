@@ -1,7 +1,45 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { requestJson, downloadHttpError } from '../apis/agent/request.mjs'
+import { requestJson, downloadHttpError, recoverDraftRequest } from '../apis/agent/request.mjs'
 import { friendlyError } from '../pages/agent/conversation.mjs'
+
+test('lost door confirmation reads the original receipt without another control request', async () => {
+ const original = globalThis.uni, calls = []
+ try {
+  globalThis.uni = { request: options => {
+   calls.push(options.method)
+   options.success({ statusCode: 200, data: { draftId: 'door', status: 'INTERRUPTED', revision: 1, result: { status: 'INTERRUPTED', receipts: [{ outcome: 'DISPATCHED_UNKNOWN' }] } } })
+  } }
+  const result = await recoverDraftRequest('/api/agent/action-drafts/door/confirm?source=company', 'POST', { revision: 1 }, {}, 1000, () => true)
+  assert.equal(result.status, 'INTERRUPTED')
+  assert.deepEqual(calls, ['GET'])
+ } finally { globalThis.uni = original }
+})
+
+test('lost selection response adopts the persisted revision; conflicts do not overwrite a newer draft', async () => {
+ const original = globalThis.uni, calls = []
+ try {
+  let snapshot = { draftId: 'd', status: 'PENDING_CONFIRMATION', revision: 2, selectedActionIds: ['a'], revisionOperation: 'ACTION_DRAFT_SELECTION_CHANGED' }
+  globalThis.uni = { request: options => { calls.push(options.method); options.success({ statusCode: 200, data: snapshot }) } }
+  const result = await recoverDraftRequest('/api/agent/action-drafts/d/selection', 'PATCH', { revision: 1, selectedActionIds: ['a'] }, {}, undefined, () => true)
+  assert.equal(result.revision, 2)
+  snapshot = { ...snapshot, selectedActionIds: ['b'] }
+  await assert.rejects(recoverDraftRequest('/api/agent/action-drafts/d/selection', 'PATCH', { revision: 1, selectedActionIds: ['a'] }, {}, undefined, () => true), error => error.status === 409)
+  assert.deepEqual(calls, ['GET', 'GET'])
+ } finally { globalThis.uni = original }
+})
+
+test('zero-dispatch confirmation retries only the unchanged pending revision and never crosses identity', async () => {
+ const original = globalThis.uni, calls = []
+ try {
+  let active = true
+  globalThis.uni = { request: options => { calls.push(options.method); options.success({ statusCode: 200, data: options.method === 'GET' ? { status: 'PENDING_CONFIRMATION', revision: 1 } : { status: 'ACCEPTED' } }) } }
+  assert.equal((await recoverDraftRequest('/api/agent/action-drafts/d/confirm', 'POST', { revision: 1 }, {}, undefined, () => active)).status, 'ACCEPTED')
+  active = false
+  await assert.rejects(recoverDraftRequest('/api/agent/action-drafts/d/confirm', 'POST', { revision: 1 }, {}, undefined, () => active))
+  assert.deepEqual(calls, ['GET', 'POST'])
+ } finally { globalThis.uni = original }
+})
 
 test('Agent requests retain server reasons and identify HTTP failures with no response body', async () => {
  const original = globalThis.uni

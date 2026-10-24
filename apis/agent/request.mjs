@@ -38,3 +38,29 @@ export function requestJson(url, method, data, header, timeout) {
   })
  })
 }
+
+// 先核实原对象。仅确定仍未执行、版本未变时重试；未知下发绝不重放。
+export async function recoverDraftRequest(url, method, data, header, timeout, isActive) {
+ if (!isActive()) throw new Error('会话身份已变化')
+ const match = url.match(/^(.*\/action-drafts\/[^/?]+)\/(confirm|selection|parameters|restore|revalidate|cancel)(\?.*)?$/)
+ const snapshot = await requestJson(match[1] + (match[3] || ''), 'GET', undefined, header, timeout)
+ if (!isActive()) throw new Error('会话身份已变化')
+ const operation = match[2]
+ if (operation === 'confirm') {
+  if (snapshot.result) return snapshot.result
+  if (snapshot.status === 'EXECUTING') return { draftId: snapshot.draftId, status: 'EXECUTING' }
+ }
+ if (operation === 'cancel' && snapshot.status === 'CANCELLED') return snapshot
+ if (snapshot.revision === data?.revision + 1) {
+  const expected = { selection: 'ACTION_DRAFT_SELECTION_CHANGED', parameters: 'ACTION_DRAFT_PARAMETERS_CHANGED', restore: 'ACTION_DRAFT_RESTORED', revalidate: 'ACTION_DRAFT_REVALIDATED' }[operation]
+  let matches = snapshot.revisionOperation === expected && Boolean(expected)
+  if (operation === 'selection') matches &&= snapshot.selectedActionIds.length === data.selectedActionIds.length && data.selectedActionIds.every(id => snapshot.selectedActionIds.includes(id))
+  if (operation === 'parameters') matches &&= data.changes.every(change => Object.entries(change.patch).every(([key, value]) => snapshot.actions.find(action => action.id === change.actionId)?.command[key] === value))
+  if (matches) return snapshot
+ }
+ const unchanged = snapshot.revision === data?.revision
+ if (snapshot.status === 'PENDING_CONFIRMATION' && (unchanged || operation === 'cancel') || operation === 'revalidate' && unchanged && snapshot.status === 'EXPIRED') {
+  return requestJson(url, method, data, header, timeout)
+ }
+ throw httpError(409, { message: '草案已变化，已保留当前状态；请核对后重新确认', recovery: { draft: snapshot } })
+}
