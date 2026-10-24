@@ -47,20 +47,23 @@ test('chunked HTTP rejection reaches the message client with its reason and no p
   const { createPresentation } = await import('../pages/agent/presentation.mjs')
   const presented = [], presentation = createPresentation(event => presented.push(event))
   const reason = '当前账户身份暂不可用：等待响应超时（编号 account-1）'
-  let calls = 0
+  let calls = 0, responseMode = 'chunked'
   globalThis.wx = { request(options) {
    calls++
    let chunk
    queueMicrotask(() => {
     const bytes = new TextEncoder().encode(JSON.stringify({ code: 'ACCOUNT_IDENTITY_UNAVAILABLE', message: reason }))
-    chunk({ data: bytes.slice(0, 55).buffer }); chunk({ data: bytes.slice(55).buffer })
-    options.success({ statusCode: 503 })
+    if (responseMode === 'chunked') { chunk({ data: bytes.slice(0, 55).buffer }); chunk({ data: bytes.slice(55).buffer }) }
+    options.success({ statusCode: 503, ...(responseMode === 'buffered' ? { data: bytes.buffer } : responseMode === 'string' ? {data: new TextDecoder().decode(bytes)} : {}) })
    })
    return { onChunkReceived(callback) { chunk = callback }, abort() {} }
   } }
-  await assert.rejects(streamMessage('conv', '原委托', event => presentation.push(event), undefined, 'company').promise,
+  for (const mode of ['chunked', 'buffered', 'string']) {
+   responseMode = mode
+   await assert.rejects(streamMessage('conv', '原委托', event => presentation.push(event), undefined, 'company').promise,
    error => error.message === reason && error.data.code === 'ACCOUNT_IDENTITY_UNAVAILABLE')
+  }
   assert.deepEqual(presented, [])
-  assert.equal(calls, 1)
+  assert.equal(calls, 3)
  } finally { globalThis.wx = originalWx; hooks.deregister() }
 })

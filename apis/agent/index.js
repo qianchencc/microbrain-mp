@@ -109,10 +109,11 @@ export const cancelRun = (conversationId, source = 'office') => request(withConv
 export const streamMessage = (conversationId, content, onEvent, focusRegionId, source = 'office', reference) => {
 	let task, watchdog, receivedChunk = false
 	const terminal = createTerminalTracker()
-	const decoder = createNdjsonStreamDecoder(event => {
+	const publish = event => {
 		terminal.track(event)
 		if (typeof event?.type === 'string' && event.type !== 'heartbeat') onEvent(event)
-	})
+	}
+	const decoder = createNdjsonStreamDecoder(publish)
 	const promise = new Promise((resolve, reject) => {
 		const options = {
 			url: `${globalConfig.agentUrl}${withConversationSource(`/agent/conversations/${conversationId}/messages`, source)}`,
@@ -126,7 +127,7 @@ export const streamMessage = (conversationId, content, onEvent, focusRegionId, s
 			success: response => {
 				watchdog?.stop()
 				try {
-					if (!receivedChunk) consumeFinalResponse(response.data, decoder, event => { terminal.track(event); onEvent(event) })
+					if (!receivedChunk) consumeFinalResponse(response.data, decoder, publish)
 					else decoder.end()
 					if (response.statusCode >= 200 && response.statusCode < 300) {
 						if (terminal.seen) resolve()

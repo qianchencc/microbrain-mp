@@ -11,3 +11,5 @@
 验收：中文JSON分块且success.data为空时显示真实原因/错误码；成功NDJSON终态不受影响；裸代理503仍准确说明无具体原因。公开行为测试先红后绿，双轴窄审，微信编译/实际错误恢复正常路径核对。
 
 实现：tracker保留根JSON错误，stream拒绝时取分块错误体，非事件不送presentation。首次辅助测试被双轴审查指出不能证明真实客户端且presentation会TypeError；已改为真实export streamMessage + wx.request分块 + createPresentation，先红复现startsWith，再绿。161/161、两轴复核无阻断。生产后端预算耗尽不是前端任意重发理由；保持只保留原因。微信dev编译正在补最后一行事件过滤。
+
+补充最终字符串响应走同一publish过滤：分块/ArrayBuffer/字符串503均经真实客户端+presentation，保留原因且每种仅一请求。字符串分支先红后绿，161/161与双轴复核通过。此为同票错误契约的收口。
