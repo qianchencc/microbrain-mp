@@ -1,0 +1,96 @@
+{
+  "runtimeSource": "f5fe8d1",
+  "mpBaseline": "3741d76",
+  "environment": "isolated public HTTP, in-process gateway; controlled runner/provider; no live customer network, no confirmation/control",
+  "purpose": "design counterexamples, expected red assertions; not product regression-suite pass",
+  "cases": [
+    {
+      "probe": "card-handoff.mts",
+      "arguments": [
+        "--expect-agent-handoff"
+      ],
+      "exitCode": 1,
+      "observation": {
+        "case": "card-confirmation-failure-handoff",
+        "source": "local-public-http-controlled-gateway",
+        "confirmationHttp": 503,
+        "clientReplayHttp": 503,
+        "code": "AUTHORIZED_SCOPE_UNAVAILABLE",
+        "recovery": {
+          "kind": "retryable_read"
+        },
+        "failedReads": 4,
+        "modelCalls": 1,
+        "phase": "awaiting_confirmation",
+        "turnsBefore": 1,
+        "turnsAfter": 1,
+        "newPublicEvents": []
+      }
+    },
+    {
+      "probe": "progress-exit.mts",
+      "arguments": [
+        "--four"
+      ],
+      "exitCode": 0,
+      "observation": {
+        "case": "distinct-successful-searches",
+        "environment": "controlled-model-public-http",
+        "count": 4,
+        "foundCounts": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "toolsAvailableAfterDiscovery": 20,
+        "proposed": true,
+        "terminal": {
+          "type": "run.awaiting_confirmation",
+          "sequence": 14,
+          "timestamp": "2026-10-09T09:00:00.000Z"
+        },
+        "confirmed": false
+      }
+    },
+    {
+      "probe": "progress-exit.mts",
+      "arguments": [],
+      "exitCode": 1,
+      "observation": {
+        "case": "distinct-successful-searches",
+        "environment": "controlled-model-public-http",
+        "count": 5,
+        "foundCounts": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "toolsAvailableAfterDiscovery": 0,
+        "proposed": false,
+        "terminal": {
+          "type": "run.completed",
+          "outcome": "message",
+          "sequence": 14,
+          "timestamp": "2026-10-09T09:00:00.000Z"
+        },
+        "confirmed": false
+      }
+    },
+    {
+      "probe": "entry-handoff.mts",
+      "arguments": [],
+      "exitCode": 1,
+      "observation": {
+        "case": "pre-model-catalog-failure",
+        "environment": "controlled-public-http-model-input",
+        "failedTerminal": "run.failed",
+        "originalGoalVisibleOnRestore": true,
+        "callsAfterExplicitContinue": 1,
+        "originalGoalInModelInput": false
+      }
+    }
+  ]
+}

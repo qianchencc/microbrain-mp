@@ -4,7 +4,9 @@
 
 **Blocked by:** 01 — 操作关联与恢复承接；02 — 安全只读补查。
 
-**Status:** implemented-awaiting-integration-evidence
+**Status:** deferred
+
+2026-10-25 用户调整重点：本票物理控制证据移出当前设计审视的阻塞条件。既有实现和未验事实保留，不能视为真实下发恢复已通过。当前主线见[连续委托设计审视](../../../docs/research/2026-10-25-agent-continuation-design-audit.md)。
 
 ## 开工与范围
 

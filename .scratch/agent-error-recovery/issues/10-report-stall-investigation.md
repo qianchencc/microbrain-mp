@@ -4,7 +4,9 @@
 
 **Blocked by:** 稳定复现或新的安全采样证据。
 
-**Status:** backlog
+**Status:** deferred
+
+2026-10-25 用户明确当前先审视智能体承接与继续/退出设计。本票保留为独立运行问题，不是当前设计修复的完成门槛，也没有被解决。见[连续委托设计审视](../../../docs/research/2026-10-25-agent-continuation-design-audit.md)。
 
 **Priority:** high — 用户明确优先持续运行可靠性。
 

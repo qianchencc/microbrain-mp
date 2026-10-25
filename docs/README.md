@@ -1,5 +1,7 @@
 # 项目文档入口
 
+- 2026-10-25 用户要求从社区智能体构建经验重新审视继续/等待/退出设计；当前三个公开接口反例说明卡片承接、进展判据和失败上下文仍有缺口。见[设计审视](research/2026-10-25-agent-continuation-design-audit.md)与[交接](../plan/2026-10-25-agent-continuation-design-handoff.md)。本轮未修改产品代码，旧物理控制/性能等未验项移出当前阻塞且保留记录。
+
 - 2026-10-25：创建等待反馈与纯电表任务确认/详情已发布Runtime84c7d71，真实微信闭环及开发/production编译通过；控制详情503和持续运行仍有独立未验项。见[当前补充交接](../plan/2026-10-25-task-create-wait-and-read-handoff.md)。
 
 - 2026-10-25 失败答复补充按结果状态给操作建议：Runtime `f0ddd33`，真实模型恢复轨迹与工程验证见[本轮交接](../plan/2026-10-25-actionable-failure-responses-handoff.md)，尚未部署。创建等待反馈由并行切片继续。

@@ -1,6 +1,8 @@
 # 失败后给出贴合当前结果的操作建议
 
-Status: done
+Status: implemented-awaiting-release
+
+2026-10-25 状态澄清：本地实施和验证完成，尚未发布；当前优先[连续委托设计审视](../../../docs/research/2026-10-25-agent-continuation-design-audit.md)。改善失败建议不等同于自动续接，不能据本票宣称设计问题解决。
 
 来源：2026-10-25 用户要求改进 prompt，失败任务不使用生硬统一的失败语言，应提供操作建议。
 
