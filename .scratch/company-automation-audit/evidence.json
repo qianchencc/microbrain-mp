@@ -1,0 +1,35 @@
+{
+  "observedAtShanghai": "2026-10-26 19:01",
+  "productionRelease": "20261026-48efa8b",
+  "productionMutationsByAudit": 0,
+  "databaseQuickCheck": "ok",
+  "ac49BeforeBudgetFix": {
+    "failedCheckpoints": 79,
+    "inspectionReadTimeouts": 77,
+    "catalogTimeouts": 2
+  },
+  "ac49AfterBudgetFix": {
+    "checkpointsShanghai": ["16:30", "17:00", "17:30", "18:00", "18:30", "19:00"],
+    "completed": 6,
+    "firstCheckpoint": {"satisfied": 48, "verified": 1},
+    "remainingCheckpointsEach": {"satisfied": 49}
+  },
+  "close1700": {"satisfied": 44, "acceptedUnconfirmed": 5, "unconfirmedReadbackState": null},
+  "close1730": {"satisfied": 49},
+  "existingTests": {"suitesSelected": 8, "passed": 46, "failed": 0},
+  "diagnosticProbes": [
+    {"scenario": "clock_skew", "allPanelPowerOff": true, "satisfied": 30, "unconfirmed": 30, "writesAfterRescan": 30},
+    {"scenario": "batch_elapsed", "allPanelPowerOff": true, "satisfied": 30, "unconfirmed": 27, "verified": 3, "writesAfterRescan": 30}
+  ],
+  "journalWindowShanghai": {
+    "from": "2026-10-26 16:10",
+    "to": "2026-10-26 19:00",
+    "eventLoopStalls": 305,
+    "maxBlockMs": 30585,
+    "connectionTimeouts": 1,
+    "responseTimeouts": 0,
+    "lostWriterLeaseLogs": 0,
+    "databaseLockedLogs": 0,
+    "includesNormalReleaseRestarts": true
+  }
+}
