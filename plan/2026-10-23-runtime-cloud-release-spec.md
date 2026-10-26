@@ -114,8 +114,9 @@ tar -xzf /tmp/runtime-<sha>.tgz -C "$REL"
 cd "$REL"
 
 npm ci --no-audit --no-fund
-npm run build -w @iot/config-contract
-npm run build -w @iot/runtime
+npm run build
+# 根 build 依次构建 @iot/config-contract、@iot/runtime、@iot/admin；
+# 控制台静态页必须存在 apps/admin/dist/index.html，否则 /admin/ 返回 404。
 
 sha256sum apps/runtime/dist/server.js packages/config-contract/dist/index.js
 ln -sfn "$REL" /opt/iot-agent-runtime/current.next
@@ -281,8 +282,36 @@ ssh root@38.76.215.138 '
 - 旧机 frpc 进程仍持有迁移前的三条隧道内存状态；本地端口已关闭，不影响公网。下次 frpc 重启后按新配置不再注册这三条。
 - 发布后不要在 Cloudflare 保留多个 origin；多 origin 会让部分请求落到旧链路并出现 404。
 
-## 10. 变更记录
+## 10. 后端控制台
 
+入口：`https://mp-agent.qianc.ltd/admin/`。页面与 `/api/admin/*` 由 Runtime 同源提供，Caddy 不额外限制路径；未部署 `apps/admin/dist` 或未配置管理员凭据时返回 404。
+
+`/opt/iot-agent-runtime/shared/runtime.env` 需要（0600）：
+
+```sh
+ADMIN_PASSWORD_FILE=/opt/iot-agent-runtime/shared/var/admin-password
+ADMIN_ORIGIN=https://mp-agent.qianc.ltd
+ADMIN_RESTART=1
+```
+
+- `ADMIN_PASSWORD_FILE` 指向 0600 密码文件；页面可改密，改密写回该文件并撤销全部管理员会话。密码不写入源码、提交或本文件。
+- `ADMIN_ORIGIN` 必须等于浏览器实际 origin；其他域的 POST 返回 403。请统一使用 `mp-agent` 入口，`iot-agent` 只用于只读页面。
+- 登录限速 5 次/5 分钟/IP；管理员身份与客户 token 完全隔离。
+
+保存与立即生效：
+
+- 保存只写加密修订版本，不重启、不执行任务；页面显示“已保存的配置等待生效”。
+- 设置 `ADMIN_RESTART=1` 后页面出现“立即生效”按钮；`POST /api/admin/apply` 仅在 saved ≠ active 时可用。
+- 存在进行中的对话运行、执行总结、`EXECUTING` 草案或 `executing` 任务阶段时返回 409，不打断业务。
+- 空闲时接口先返回 200，再让进程收到 SIGTERM；进程先收口 `onClose`（在途电表同步可能耗时数十秒，最长受 systemd `TimeoutStopSec` 约束），再由 systemd `Restart=always` 拉起并加载新修订。管理员会话随进程清除，必须重新登录；发布前先确认没有执行中的草案或任务阶段。
+- 未启用 `ADMIN_RESTART` 的部署按钮显示“需手动重启后端”，行为不变。
+
+缓存策略：任务/计划列表、详情、时间轴、日历的全量目录授权核验共用 `catalogTtlMs`（生产 60000ms）缓存；确认、取消、已读和扫描器仍强制 fresh。撤权对只读视图最多延迟 60 秒生效。
+
+## 11. 变更记录
+
+- 2026-10-26：首次尝试发布 `aaa5b81`（旧工作分支）失败并回滚到 `7bac661`：该分支缺少同日 turn → `turn_events` 的迁移，生产库已删 `conversation_turns.events_json`，进程启动即报 `no such column: events_json`。未写入业务数据。
+- 2026-10-26：发布 `48efa8b`（生产主线 `c9001ca` 上的控制台重启等待修正，含此前 `9bc25e1`/`bc6158d`/`e927dca`）。公网 `/admin/` 与静态资源 200，登录/保存/真实 UI“立即生效”与重启通过；配置收敛到 v8，`heartbeatMs=15000`、`catalogTtlMs=60000`、`pendingRestart=false`。重启在途同步收口实测可达 40s，面板轮询已放宽到 120s。`quick_check=ok`，无执行中草案或阶段；任务/通知在窗口内因真实业务新增为 45/39，无删除或重置。
 - 2026-10-23：Runtime/视频从旧机 `10.5.12.112:3210`（经 frp + 东京代理）迁移到 `38.76.215.138` 直连；公网 healthz 0.26–0.29s，dashboard 4.6–7.2s 且无错误；旧后端停止，frpc 三条隧道移除，数据库与密钥备份保留。
 - 2026-10-23：发布 `2c66370`，电表历史分页单独使用 30s 超时；4–5 月全量报告预热后返回 `dataMeters=43`、`truncated=false`、`cache.status=ready`，修复此前 `等待响应超时` 导致的“电表数据准备中”循环。
 - 2026-10-23：发布 `d590319`，租户级 `meter_history_samples`/`meter_sync_state` 全量回填完成：476 页、236,377 行读取，233,387 条唯一采样，覆盖 2024-05-23 至 2026-10-23；耗时 14.4 分钟，无截断，同步期间身份 503 为 0。历史每天 03:00 后首个请求刷新全部页，最新每小时增量；报告只读本地样本，不再返回 202。无稳定同步身份、无前台同步调用；细节见 `plan/2026-10-23-energy-cache-prewarm-plan.md`。

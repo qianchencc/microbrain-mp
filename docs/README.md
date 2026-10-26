@@ -2,7 +2,7 @@
 
 # 项目文档入口
 
-- 2026-10-26 生产后端控制台已开放：`https://mp-agent.qianc.ltd/admin/`（Runtime `e927dca`，基于生产 `7bac661`）。保存配置后页面提供“立即生效”，仅在无在途对话、执行总结、执行中草案或任务阶段时由 systemd 重启加载；`ADMIN_RESTART` 未启用的部署仍手动重启。任务/计划详情的全量目录授权核验统一使用 `catalogTtlMs=60000`，确认/写入仍 fresh。首次误用旧分支 `aaa5b81` 发布导致启动崩溃（缺 `turn_events` 迁移），已回滚并改用生产基线。见[生产访问与立即生效](../../iot-agent-runtime/plan/2026-10-26-admin-production-access-and-apply.md)与[发布规范](../plan/2026-10-23-runtime-cloud-release-spec.md)。
+- 2026-10-26 生产后端控制台已开放：`https://mp-agent.qianc.ltd/admin/`（Runtime `48efa8b`，基于生产 `c9001ca`，含 `9bc25e1`/`bc6158d`/`e927dca`）。保存配置后页面提供“立即生效”，仅在无在途对话、执行总结、执行中草案或任务阶段时由 systemd 重启加载；重启需等待在途同步收口（实测可达 40s，面板轮询 120s），`ADMIN_RESTART` 未启用的部署仍手动重启。任务/计划详情的全量目录授权核验统一使用 `catalogTtlMs=60000`，确认/写入仍 fresh。首次误用旧分支 `aaa5b81` 发布导致启动崩溃（缺 `turn_events` 迁移），已回滚并改用生产基线。见[生产访问与立即生效](../../iot-agent-runtime/plan/2026-10-26-admin-production-access-and-apply.md)与[发布规范](../plan/2026-10-23-runtime-cloud-release-spec.md)。
 
 - 2026-10-26 轮次轨迹改为逐事件追加并已发布（Runtime `7bac661`，云端 `releases/20261026-7bac661`，基于读预算修复 `a1881a9`）：原来每个事件都整轮重写 `events_json`（O(n²) 写放大、MB 级同步写、长期占写锁），现在是 `turn_events` 一事件一行；旧库启动时单事务拆行并删列，生产迁移 6840 事件/458 轮无丢失。见[交接](../plan/2026-10-26-turn-event-storage-handoff.md)。
 
