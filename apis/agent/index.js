@@ -70,9 +70,9 @@ export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${
 // 视频取流：返回短时效播放地址（wss），不缓存；页面与组件不接触凭据。
 // Company 监控走智慧页面取流出口，Office 视频走既有 view 动作——必须带 source 区分目录。
 export const getVideoStream = (deviceId, source = 'office') => request(withConversationSource(`/agent/devices/${encodeURIComponent(deviceId)}/video-stream`, source), 'GET')
-export const listSafetyHistory = (query = {}) => {
- const params = Object.entries(query).filter(([, value]) => value != null && value !== '').map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&')
- return request(`/agent/safety-events?source=company&${params}`, 'GET')
+export const listSafetyHistory = (query = {}, options) => {
+ const params = queryString(Object.fromEntries(Object.entries(query).filter(([, value]) => value != null && value !== '')))
+ return companyRead(`/agent/safety-events?source=company&${params}`, undefined, options)
 }
 
 export const getEnvironmentHistory = (query) => request('/agent/environment-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')

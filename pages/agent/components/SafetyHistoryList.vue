@@ -42,7 +42,7 @@ async function load(first = true) {
   const identity = getAgentStorageScope()
   if (identity !== scope) { records.value = []; cursor.value = null; window = null; scope = identity }
   const refreshCount = first ? Math.max(20, records.value.length) : 20
-  const query = { type: type.value, limit: Math.min(100, refreshCount),
+  const query = { type: type.value, limit: 20,
    from: first || !window ? fromDate.value ? `${fromDate.value}T00:00:00+08:00` : undefined : window.from,
    to: first || !window ? `${endDate.value}T23:59:59.999+08:00` : window.to,
    cursor: first ? undefined : cursor.value }
@@ -50,7 +50,7 @@ async function load(first = true) {
   const refreshed = [...(result.items || [])]
   while (first && refreshed.length < refreshCount && result.nextCursor) {
    if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope()) return
-   result = await listSafetyHistory({ type: type.value, limit: Math.min(100, refreshCount - refreshed.length), ...result.window, cursor: result.nextCursor })
+   result = await listSafetyHistory({ type: type.value, limit: 20, ...result.window, cursor: result.nextCursor })
    refreshed.push(...(result.items || []))
   }
   if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope()) return

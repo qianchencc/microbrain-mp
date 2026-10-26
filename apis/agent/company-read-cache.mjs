@@ -1,4 +1,4 @@
-// 只用于 Company 概览/统计；不接入控制、回执、会话或视频地址。
+// 只用于 Company 概览/统计/安全台账列表；不接入控制、回执、会话或视频地址。
 const FRESH_MS = 60_000, PLACEHOLDER_MS = 5 * 60_000, MAX_ENTRIES = 40
 const copy = value => JSON.parse(JSON.stringify(value))
 export function createCompanyReadCache(getScope, now = Date.now) {
