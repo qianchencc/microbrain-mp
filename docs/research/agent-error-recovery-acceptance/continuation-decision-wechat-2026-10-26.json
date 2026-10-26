@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-26T07:27:21.624Z",
+  "kind": "WeChat DevTools real clicks with isolated protocol fixture; no model or production writes",
+  "cases": [
+    {
+      "name": "automatic model handoff displays the necessary question in original turn and old confirmation waits",
+      "decision": "等待补充"
+    }
+  ],
+  "counters": {
+    "state": "needs_decision",
+    "started": 0,
+    "stopped": false,
+    "restores": 5,
+    "confirms": 1,
+    "cancels": 0,
+    "blockedWrites": 0,
+    "scenario": "decision"
+  }
+}
