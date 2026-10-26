@@ -1,6 +1,6 @@
 <template>
  <view class="rpc-host">
-  <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+  <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
   <view class="rpc-evidence" :style="{ display: evidence && !issue ? 'flex' : 'none' }">
    <scroll-view class="rpc-scroll" scroll-y enhanced :show-scrollbar="false">
     <view v-if="evidence" class="rpc-body">

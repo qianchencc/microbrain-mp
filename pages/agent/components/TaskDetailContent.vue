@@ -1,6 +1,6 @@
 <template>
  <view class="task-detail-host">
- <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+ <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
  <scroll-view :style="{ display: issue ? 'none' : 'block' }" class="task-scroll" scroll-y enhanced :show-scrollbar="false">
   <view v-if="loading && !detailFresh" class="task-detail task-skeleton" aria-label="正在加载任务">
    <view class="sk-bar sk-title" />
@@ -24,14 +24,15 @@
   <view v-else-if="error" class="message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load()">重新加载</button><button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button></view>
   <view v-else-if="detail" class="task-detail">
    <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button>
-   <view class="task-heading"><text class="task-name">{{ detail.label }}</text><button v-if="taskNeedsDetails(detail.status)" class="state-tag result-link" @tap="showTaskIssue">{{ detail.statusText }} ›</button><text v-else class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
+   <view class="task-heading"><text class="task-name">{{ detail.label }}</text><button v-if="taskNeedsDetails(detail.presentationStatus)" class="state-tag result-link" @tap="showTaskIssue">{{ detail.statusText }} ›</button><text v-else class="state-tag" :class="detail.presentationStatus">{{ detail.statusText }}</text></view>
+   <text v-if="detail.occurrenceText" class="task-when">{{ detail.occurrenceText }}</text>
    <text class="task-when">{{ detail.whenText }}</text>
    <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
    <text v-if="loading" class="task-when">正在更新…</text>
    <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">{{ detail.nextLabel }}：{{ detail.nextText }}</text>
    <text v-if="detail.phases.length > 1" class="task-progress">{{ detail.progressText }}</text>
    <text v-if="detail.report?.summary" class="task-when">{{ detail.report.summary.devicesText }}</text>
-   <view v-if="taskRules" class="task-rules"><text>{{ taskRules }}</text></view>
+   <view v-if="detail.rulesText" class="task-rules"><text>{{ detail.rulesText }}</text></view>
    <view v-if="plan && !sampleTask" class="plan-toggle-row">
     <view class="plan-toggle-copy"><text class="plan-toggle-title">重复安排</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
     <view v-if="!planCanToggle(plan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(plan)">
@@ -47,7 +48,7 @@
    <view v-for="(phase, index) in visiblePhases" :key="phase.id" class="phase">
     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
-     <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><button v-if="taskNeedsDetails(phase.status) || phase.failureReason" class="phase-status result-link" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+     <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
      <ObservationCard v-if="phase.observations?.length && expandedPhases.includes(phase.id)" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" />
      <button v-if="phase.report" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
       <uni-icons type="compose" size="13" color="#176b54" />
@@ -124,7 +125,6 @@ import { taskDetailView, taskPlanSnapshot, taskTime } from '../task-detail-view.
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { createStateRefresh } from '../state-refresh.mjs'
-import { creatorVariant } from '../region-device-view.mjs'
 import ObservationCard from './ObservationCard.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
@@ -139,18 +139,14 @@ const detailFresh = ref(false)
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
 const expandedPhases = ref([]), allPhases = ref(false), moreInfo = ref(false), energyBasis = ref(false), issue = ref(null)
 const visiblePhases = computed(() => allPhases.value ? detail.value?.phases : detail.value?.previewPhases)
-const taskRules = computed(() => {
- const phase = detail.value?.phases.find(p => p.readAc || p.readAgent)
- return phase?.readAc ? [phase.readAc.criteriaText || phase.readAc.summary, phase.readAc.cadenceText || phase.readAc.scheduleText, phase.readAc.limitText].filter(Boolean).join('；')
-  : phase?.readAgent ? [phase.readAgent.objectiveText, phase.readAgent.periodText, phase.readAgent.comparisonText].filter(Boolean).join('；') : ''
-})
+
 function showIssue(value) { issue.value = value }
 function showPhaseIssue(phase) {
  showIssue({ title: `${phase.clock} · ${phase.statusText}`, reason: [phase.failureReason,
   ...phase.devices.filter(d => !['verified', 'satisfied', 'observed', 'pending'].includes(d.outcome)).map(d => `${d.name}：${d.resultReason}`)].filter(Boolean).join('\n\n') || '这次结果暂无更多说明。' })
 }
 function showTaskIssue() {
- showIssue({ title: detail.value.statusText, reason: detail.value.phases.filter(p => taskNeedsDetails(p.status) || p.failureReason)
+ showIssue({ title: detail.value.statusText, reason: detail.value.phases.filter(p => taskNeedsDetails(p.presentationStatus) || p.failureReason)
   .map(p => `${p.time} · ${p.statusText}\n${p.failureReason || p.devices.filter(d => d.resultTone !== 'ok').map(d => `${d.name}：${d.resultReason}`).join('\n') || '暂无更多说明'}`).join('\n\n') })
 }
 watch(issue, value => emit('navigation', { title: value ? '查看原因' : '', canBack: Boolean(value) }))
@@ -237,10 +233,8 @@ async function cancelPeriod(scope) {
  finally { cancelling.value = false }
 }
 const latestReport = computed(() => taskDetailView(plan.value?.latestTask)?.report || null)
-// 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于创建者标记显示“我”。
+// 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于保留原取消权限。
 const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
-const creatorMark = computed(() => detailMine.value ? '我' : (detail.value?.creator?.displayName || '').slice(0, 1))
-const ownerVariant = computed(() => creatorVariant(detail.value?.creator?.displayName, detailMine.value))
 const lightIds = computed(() => props.source === 'office' ? [...new Set((detail.value?.phases || []).flatMap(phase => phase.devices.filter(device => device.kind === 'lighting').map(device => device.id)))] : [])
 const currentSummary = computed(() => {
  const known = lightIds.value.filter(id => typeof currentStates.value[id]?.state === 'boolean')

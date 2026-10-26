@@ -9,7 +9,7 @@
     <view v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="inbox-entry"><button class="refresh-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /></button><view v-if="inboxUnread" class="inbox-badge"><text>{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></view></view>
    </view>
   </template>
-  <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+  <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
   <view class="arrangements-content" :style="{ display: issue ? 'none' : 'flex' }">
    <TaskErrorNotice v-if="operationError" :message="operationError" summary="部分操作未完成" @details="showIssue" />
    <view class="list-pane" :style="{ display: selectedTask || selectedPlan ? 'none' : 'flex' }">
@@ -150,7 +150,7 @@ import SlidingSegments from './SlidingSegments.vue'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskCalendarView from './TaskCalendarView.vue'
 import TaskInboxContent from './TaskInboxContent.vue'
-import { agendaGroups, taskDayTime, taskToday, taskLabel as taskStatus } from '../task-calendar.mjs'
+import { agendaGroups, taskDayTime, taskToday, taskSettled, taskLabel as taskStatus } from '../task-calendar.mjs'
 import { shiftDate } from '../region-calendar.mjs'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' }, initialView: String, date: String, initialTask: Object, refreshKey: Number })
@@ -318,8 +318,7 @@ async function pauseAllPlans() {
 }
 function selectTaskRows(values, kind) {
  const rows = Array.isArray(values) ? values : []
- const allowed = kind === 'all' ? null : kind === 'upcoming' ? ['scheduled', 'executing', 'pending'] : ['completed', 'partial', 'failed', 'unconfirmed', 'cancelled', 'missed', 'interrupted', 'verified', 'satisfied']
- return rows.filter(task => !allowed || allowed.includes(task.status) || (kind === 'results' && Boolean(task.hasReport)))
+ return rows.filter(task => kind === 'all' || (kind === 'upcoming' ? ['scheduled', 'executing', 'pending'].includes(task.status) : taskSettled(task) || Boolean(task.hasReport)))
   .sort((a, b) => {
    const difference = Date.parse(taskTimeValue(a, kind) || '') - Date.parse(taskTimeValue(b, kind) || '')
    return kind === 'results' ? -difference : difference

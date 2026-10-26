@@ -1,4 +1,5 @@
 import { shiftDate } from './region-calendar.mjs'
+import { taskNeedsDetails } from './task-presentation.mjs'
 
 export const taskDate = value => {
  const ms = Date.parse(value)
@@ -7,7 +8,7 @@ export const taskDate = value => {
 export const taskToday = () => taskDate(new Date().toISOString())
 export const taskStart = task => task.interval?.startsAt || task.phases?.[0]?.at || task.at || ''
 export { taskStatusText as taskLabel } from './task-presentation.mjs'
-export const taskAbnormal = task => ['failed', 'partial', 'missed', 'interrupted', 'unconfirmed'].includes(task.status)
+export const taskAbnormal = task => taskNeedsDetails(task.status)
 export function tasksOnDate(tasks, date, priority = false) {
  const from = Date.parse(`${date}T00:00:00+08:00`), to = from + 86400000
  const rank = task => task.status === 'executing' ? 0 : task.status === 'scheduled' ? 1 : 2
@@ -25,7 +26,7 @@ export function taskCalendarMarks(tasks, from, to) {
  return marks
 }
 
-export const taskSettled = task => ['completed', 'verified', 'cancelled', 'satisfied', 'partial', 'failed', 'missed', 'interrupted', 'unconfirmed'].includes(task.status)
+export const taskSettled = task => ['completed', 'verified', 'observed', 'cancelled', 'satisfied', 'expired'].includes(task.status) || taskNeedsDetails(task.status)
 
 function occurrenceDates(task) {
  const dates = []

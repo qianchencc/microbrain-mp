@@ -1,6 +1,6 @@
 <template>
  <view class="issue-page">
-  <button class="issue-back" aria-label="返回上一页" @tap="$emit('close')"><uni-icons type="back" size="15" color="#63776a" /><text>返回</text></button>
+  <button v-if="!backInHeader" class="issue-back" aria-label="返回上一页" @tap="$emit('close')"><uni-icons type="back" size="15" color="#63776a" /><text>返回</text></button>
   <scroll-view class="issue-scroll" scroll-y enhanced :show-scrollbar="false">
    <text class="issue-title">{{ issue.title || '查看原因' }}</text>
    <text class="issue-reason" selectable>{{ issue.reason || '暂时没有更多说明' }}</text>
@@ -9,7 +9,7 @@
  </view>
 </template>
 <script setup>
-const props = defineProps({ issue: { type: Object, required: true } })
+const props = defineProps({ backInHeader: Boolean, issue: { type: Object, required: true } })
 defineEmits(['close'])
 function copy() {
  uni.setClipboardData({ data: `${props.issue.title || '查看原因'}\n\n${props.issue.reason || '暂时没有更多说明'}`, fail: () => uni.showToast({ title: '暂时没能复制，请重试', icon: 'none' }) })

@@ -53,11 +53,13 @@
   </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>
   <text v-if="isConfirming && state === 'pending_confirmation'" class="task-wait" role="status" aria-live="polite">{{ task.confirmation?.message || '正在核验设备范围并保存安排，请稍候。' }}</text>
-  <text v-else-if="['blocked', 'needs_decision'].includes(task.confirmation?.status) && ['pending_confirmation', 'expired'].includes(state)" class="task-wait" role="status">{{ task.confirmation.message }}</text>
+  <TaskErrorNotice v-else-if="task.confirmation?.status === 'blocked' && ['pending_confirmation', 'expired'].includes(state)" :message="task.confirmation.message" summary="这次暂未创建" @details="$emit('issue', $event)" />
+  <text v-else-if="task.confirmation?.status === 'needs_decision' && ['pending_confirmation', 'expired'].includes(state)" class="task-wait" role="status">{{ task.confirmation.message }}</text>
  </view>
 </template>
 <script setup>
 import { computed, ref } from 'vue'
+import TaskErrorNotice from './TaskErrorNotice.vue'
 import { readAcView, readAgentView, readTargetText, repeatText, taskTime, targetText } from '../task-detail-view.mjs'
 import { taskStatusText } from '../task-presentation.mjs'
 import { resolveDeviceArtwork } from '../device-art/catalog.js'
@@ -83,7 +85,7 @@ function phaseRest(phase, index) {
 }
 
 const props = defineProps({ task: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean, confirming: Boolean })
-defineEmits(['confirm', 'discard', 'open'])
+defineEmits(['confirm', 'discard', 'open', 'issue'])
 const readAgentOf = phase => readAgentView(phase.read?.agent)
 const readAcOf = phase => readAcView(phase.read?.ac)
 // 频率展开后的检查点共享同一窗口与设备；提案只展示一份窗口事实，避免把 18–48 次检查铺成重复卡片。

@@ -74,7 +74,7 @@ test('独立区间任务使用保存边界，未到终点不淡化', () => {
  assert.equal(regionCard.at, interval.startsAt, '区域时间轴以区间起点定位')
  assert.equal(regionCard.endAt, interval.endsAt, '区域时间轴以区间终点收尾')
  assert.equal(regionCard.faded, false, '区间进行中不淡化')
- assert.equal(regionTimelineItems([{ ...running, status: 'completed' }])[0].faded, true, '区间终态后淡化')
+ assert.equal(regionTimelineItems([{ ...running, status: 'completed' }])[0].faded, false, '流程结束但设备结果没确认时不淡化')
 
  const event = (phaseId, at, phaseStatus, outcome, taskStatus = 'executing') => ({ taskId: 'task-1', taskLabel: '下午巡检',
   sourceType: 'scheduled', creatorName: '钱晨', phaseId, at, phaseStatus, taskStatus, interval, outcome,
@@ -99,7 +99,7 @@ test('独立区间任务使用保存边界，未到终点不淡化', () => {
  const report = { generatedAt: '2026-10-05T08:00:12.000Z', outcome: 'completed',
   phases: [phase('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed'), phase('p2', '2026-10-05T07:30:00.000Z', 'completed', 'verified')] }
  const terminal = taskDetailView({ ...running, status: 'completed', phases: report.phases, report })
- assert.equal(terminal.report.outcomeText, '已完成')
+ assert.equal(terminal.report.outcomeText, '结果待确认')
  assert.equal(terminal.report.checkpoints, 2)
  assert.equal(terminal.report.devicesVisible, 1, '报告台数按授权可见的唯一设备统计，同一设备跨检查点不重复')
  const otherPhase = { ...phase('p2b', '2026-10-05T07:30:00.000Z', 'completed', 'verified'),
@@ -122,7 +122,7 @@ test('周期安排区分未来发生与实际报告，并导航到同一发生',
  assert.equal(taskDetailView(future).statusText, '未开始')
  const actual = { ...future, id: 'actual-1', status: 'completed', occurrence: { ...future.occurrence, virtual: false },
   nextAt: '2026-10-13T10:00:00Z', report: { generatedAt: '2026-10-12T10:00:12Z', outcome: 'completed', phases: [{ devices: [] }] }, regionIds: ['office-1'] }
- assert.equal(taskDetailView(actual).report.outcomeText, '已完成')
+ assert.equal(taskDetailView(actual).report.outcomeText, '已结束')
  assert.equal(taskDetailView(actual).repeatText, repeatText(card.repeat))
  assert.deepEqual(taskNavigation(actual), { taskId: 'actual-1', date: '2026-10-12', regionId: 'office-1' })
 })

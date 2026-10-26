@@ -1,0 +1,9 @@
+{
+  "kind": "WeChat DevTools; protocol fixtures; no customer controls",
+  "cases": [
+    "notifications hide raw reason; status opens complete readable reason; header back restores list",
+    "47 records show 3 by default, original error hidden, full long reason readable/copied, return retains task, expand shows 47",
+    "completed receipt stays unconfirmed; unavailable is uncertain; all phase rules, future label and running count remain visible"
+  ],
+  "writes": 0
+}

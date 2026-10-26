@@ -1,5 +1,5 @@
 import { resolveDeviceArtwork } from './device-art/catalog.js'
-import { taskNeedsDetails } from './task-presentation.mjs'
+import { taskNeedsDetails, taskResultStatus } from './task-presentation.mjs'
 import { creatorVariant } from './region-device-view.mjs'
 
 export function regionTimelineItems(tasks) {
@@ -9,8 +9,8 @@ export function regionTimelineItems(tasks) {
   return {
    ...task, at: task.interval?.startsAt ?? task.phases[0].at,
    endAt: task.interval?.endsAt ?? (task.phases.length > 1 ? task.phases.at(-1).at : undefined),
-   faded: task.status === 'completed' || task.status === 'cancelled',
-   warning: taskNeedsDetails(task.status), failure: false,
+   faded: taskResultStatus(task) === 'verified' || task.status === 'cancelled',
+   warning: taskNeedsDetails(taskResultStatus(task)), failure: false,
    avatars: task.devices.slice(0, 3).map(device => ({ id: device.id, src: resolveDeviceArtwork({ ...device, deviceName: device.name }).src })),
    more: Math.max(0, task.devices.length - 3), creatorName: task.creator.displayName,
    creatorMark: mine ? '我' : task.creator.displayName.slice(0, 1), creatorVariant: creatorVariant(task.creator.displayName, mine),

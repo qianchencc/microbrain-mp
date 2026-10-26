@@ -31,7 +31,7 @@
      <TaskChangeCard v-if="item.task.kind === 'change'" :change="item.task" :busy="busy"
       @confirm="$emit('confirm-task', item.task)" @discard="$emit('discard-task', item.task)" />
      <TaskProposalCard v-else :task="item.task" :source="source" :busy="busy" :confirming="!item.task.cancellationId && confirmingTaskId === item.task.taskId"
-      @confirm="$emit('confirm-task', item.task)" @discard="$emit('discard-task', item.task)" @open="$emit('open-task', $event || item.task)" />
+      @confirm="$emit('confirm-task', item.task)" @discard="$emit('discard-task', item.task)" @open="$emit('open-task', $event || item.task)" @issue="$emit('issue', $event)" />
     </template>
    </template>
    <view v-if="readOnly && (turn.draft || turn.tasks?.length || turn.task || turn.result)" class="read-only-boundary">此来源当前仅开放只读查询，操作能力尚未接入。</view>
@@ -40,7 +40,7 @@
     <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>
     <view v-else-if="turn.result.summary.status === 'failed'"><text class="reply-error">{{ turn.result.summary.reason || '执行总结未完成：未取得具体原因' }}</text><button class="execution-retry" :disabled="busy" hover-class="execution-retry--pressed" @tap="$emit('retry-answer')"><uni-icons type="refreshempty" size="14" color="#738177" /><text>重试回答</text></button></view>
    </view>
-   <text v-if="turn.error" class="reply-error">{{ turn.error }}</text>
+   <TaskErrorNotice v-if="turn.error && turn.items.some(item => item.kind === 'task')" :message="turn.error" summary="这次暂未完成" @details="$emit('issue', $event)" /><text v-else-if="turn.error" class="reply-error">{{ turn.error }}</text>
   </view>
  </view>
 </template>
@@ -54,9 +54,10 @@ import ThinkingOrb from './ThinkingOrb.vue'
 import ToolActivity from './ToolActivity.vue'
 import TaskProposalCard from './TaskProposalCard.vue'
 import TaskChangeCard from './TaskChangeCard.vue'
+import TaskErrorNotice from './TaskErrorNotice.vue'
 
 defineProps({ turn: { type: Object, required: true }, source: { type: String, default: 'office' }, busy: Boolean, confirmingTaskId: { type: String, default: '' }, readOnly: Boolean, agentName: { type: String, default: '物联 Agent' } })
-defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task', 'select-alert', 'browse-alerts', 'open-report'])
+defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task', 'select-alert', 'browse-alerts', 'open-report', 'issue'])
 </script>
 
 <style scoped>

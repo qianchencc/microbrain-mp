@@ -16,7 +16,7 @@
     </view>
    </view>
   </template>
-  <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+  <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
   <view class="drawer-content" :style="{ display: issue ? 'none' : 'flex' }">
    <view class="nav-pane" :class="{ 'pane-before': depth > 0 }" :style="{ zIndex: 0 }">
     <text v-if="stateError && devices.length" class="state-warning">{{ stateError }}</text>

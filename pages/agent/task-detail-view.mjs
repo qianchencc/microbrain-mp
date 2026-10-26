@@ -1,7 +1,7 @@
 import { fanLabels, modeLabels } from './ac-draft.js'
 import { resolveDeviceArtwork } from './device-art/catalog.js'
 
-import { taskStatusText, taskStatusTone, deviceResultView, deviceResultReason } from './task-presentation.mjs'
+import { taskStatusText, taskStatusTone, taskResultStatus, deviceResultView, deviceResultReason } from './task-presentation.mjs'
 
 export const executionResult = device => deviceResultView(device).text
 
@@ -264,12 +264,13 @@ export function taskDetailView(task) {
   const reportPhase = reportPhases.find(item => (phase.id && item.id === phase.id) || item.at === phase.at)
   const merged = reportPhase?.observations || phase.observations || []
   const link = merged.find(block => block?.type === 'report_artifact')?.report
+  const presentationStatus = taskResultStatus(phase)
   return {
    ...phase, readAgent: readAgentView(phase.read?.agent), readAc: readAcView(phase.read?.ac), observations: merged.filter(block => block?.type !== 'report_artifact'),
    report: link ? { reportId: link.id, title: link.title, status: link.status, phaseId: phase.id, phaseAt: phase.at } : null,
    title: phase.read?.ac || phase.read?.agent || phase.devices?.some(d => d.target?.observe) ? `第${index + 1}次检查` : task.phases.length === 1 ? '操作记录' : `第${index + 1}次操作`,
-   time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: taskStatusText(phase.status),
-   tone: phaseTone(phase.status), link: linkProgress(phase, task.phases[index + 1]),
+   time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), presentationStatus, statusText: taskStatusText(presentationStatus),
+   tone: phaseTone(presentationStatus), link: linkProgress(phase, task.phases[index + 1]),
    devices: (phase.devices || []).map(device => {
     const result = deviceResultView(device)
     return { ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
@@ -286,20 +287,25 @@ export function taskDetailView(task) {
   ? `${start} 至 ${end.slice(-5)}` : [start, end].filter(Boolean).join(' 至 ')
  const report = task.report ? {
   generatedText: taskTime(task.report.generatedAt),
-  outcomeText: taskStatusText(task.report.outcome),
+  outcomeText: taskStatusText(taskResultStatus({ status: task.report.outcome, phases: reportPhases })),
   checkpoints: task.report.phases.length,
   devicesVisible: new Set(task.report.phases.flatMap(phase => phase.devices.map(device => device.id))).size,
   summary: taskExecutionSummaryView(task.report.summary, reportPhases),
  } : null
  const pending = phases.filter(phase => ['pending', 'scheduled'].includes(phase.status))
- const finished = phases.filter(phase => ['verified', 'satisfied', 'completed', 'partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(phase.status))
+ const finished = phases.filter(phase => !['pending', 'scheduled', 'executing'].includes(phase.status))
+ const executing = phases.filter(phase => phase.status === 'executing')
+ const rulesText = [...new Set(phases.flatMap(phase => phase.readAc
+  ? [phase.readAc.criteriaText || phase.readAc.summary, phase.readAc.cadenceText || phase.readAc.scheduleText, phase.readAc.limitText]
+  : phase.readAgent ? [phase.readAgent.objectiveText, phase.readAgent.periodText, phase.readAgent.comparisonText] : []).filter(Boolean))].join('；')
+ const presentationStatus = taskResultStatus(task)
  const focus = phases.findIndex(phase => phase.status === 'executing' || ['pending', 'scheduled'].includes(phase.status))
  const previewStart = Math.max(0, focus < 0 ? phases.length - 3 : focus - 1)
  const previewPhases = phases.length > 3 ? phases.slice(previewStart, previewStart + 3) : phases
  const nextAt = pending[0]?.at || task.nextCheckpointAt || task.nextAt
  const nextLabel = (task.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes) ? '下一次检查' : '下一次执行'
- return { ...task, phases, previewPhases, progressText: `已结束${finished.length}次 · 还有${pending.length}次安排`, whenText, report, repeatText: repeatText(task.repeat), nextText: nextAt ? taskTime(nextAt) : '', nextLabel, createdText: taskTime(task.createdAt),
-  statusText: taskStatusText(task.status),
+ return { ...task, phases, previewPhases, rulesText, presentationStatus, occurrenceText: task.occurrence ? task.occurrence.virtual ? '以后的安排' : '本次任务' : '', progressText: `已结束${finished.length}次${executing.length ? ` · 正在做${executing.length}次` : ''} · 还有${pending.length}次安排`, whenText, report, repeatText: repeatText(task.repeat), nextText: nextAt ? taskTime(nextAt) : '', nextLabel, createdText: taskTime(task.createdAt),
+  statusText: taskStatusText(presentationStatus),
   sourceText: task.agentSource === 'company' ? task.source?.type === 'recurring_plan' ? '公司重复安排' : '公司定时任务'
    : task.source?.type === 'recurring_plan' ? '重复安排' : task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? '即时操作' : '定时任务' }
 }

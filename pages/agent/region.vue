@@ -42,6 +42,7 @@ import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectF
 import { localDate } from './timeline-geometry.mjs'
 import { calendarWindow, shiftDate, validCalendarDate } from './region-calendar.mjs'
 import { regionTimelineItems } from './region-timeline.mjs'
+import { taskNeedsDetails } from './task-presentation.mjs'
 import { regionSampleTasks, regionSampleTaskDetail } from './region-sample-tasks.mjs'
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent, previousPageLabel, returnToOfficeConversation } from './navigation.mjs'
@@ -69,7 +70,7 @@ const items = computed(() => regionTimelineItems(sampleMode.value ? (windowDates
 const sampleCalendarMarks = computed(() => {
  const { from, to } = calendarWindow(calendarMonth.value || date.value.slice(0, 7))
  return sampleTasks.value.length && sampleDate.value >= from && sampleDate.value <= to
-  ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => ['partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(task.status)) }] : []
+  ? [{ date: sampleDate.value, abnormal: sampleTasks.value.some(task => taskNeedsDetails(task.status)) }] : []
 })
 let viewScope = ''
 let initialRegion = '', initialDate = '', initialTaskId = '', requestId = 0, calendarRequest = 0, loadId = 0, visible = false, loadingDirectory = false, refreshTimer

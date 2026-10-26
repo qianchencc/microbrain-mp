@@ -1,6 +1,6 @@
 <template>
   <view class="inbox-content">
-   <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+   <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
    <scroll-view :style="{ display: selected || issue ? 'none' : 'block' }" class="inbox-scroll" scroll-y enhanced :show-scrollbar="false" @scrolltolower="load(false)">
     <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button v-if="unreadCount" class="inbox-markall" :disabled="markingAll" @tap="markAllSeen">全部已读</button><button class="inbox-refresh" :disabled="loading" @tap="load(true)">刷新</button></view>
     <view class="list-summary"><text>任务结束消息</text><text>{{ unreadCount }} 条未读</text></view>
@@ -45,7 +45,7 @@ const notifications = ref([]), selected = ref(null), content = ref(null), naviga
 const filter = ref('all'), issue = ref(null)
 function showIssue(value) { issue.value = value }
 const filters = [{ value: 'all', label: '全部' }, { value: 'unread', label: '未读' }, { value: 'abnormal', label: '待查看' }]
-const visibleNotifications = computed(() => notifications.value.filter(item => filter.value === 'unread' ? !item.readAt : filter.value === 'abnormal' ? ['partial', 'failed', 'missed', 'interrupted', 'unconfirmed'].includes(item.outcome) : true))
+const visibleNotifications = computed(() => notifications.value.filter(item => filter.value === 'unread' ? !item.readAt : filter.value === 'abnormal' ? taskNeedsDetails(item.outcome) : true))
 watch(() => [selected.value, issue.value, navigation.value.title, navigation.value.canBack], () => emit('navigation', { title: issue.value ? '查看原因' : navigation.value.title || (selected.value ? '任务详情' : '通知中心'), canBack: Boolean(selected.value || issue.value) }), { immediate: true })
 const unreadCount = ref(0), nextCursor = ref('')
 const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref(''), markingAll = ref(false)

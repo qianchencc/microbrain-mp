@@ -18,7 +18,7 @@
       @confirm="confirmDraft(turn)" @cancel="cancelDraft(turn)" @revalidate="revalidateDraft(turn)"
       @updated="Object.assign(turn.draft, $event)" @editing="mutating = $event" @retry-answer="retryAnswer(turn)"
       @configure="openSheetEditor(turn, $event)" @browse="openSheetBrowser(turn)"
-      @confirm-task="confirmTaskProposal($event)" @discard-task="discardTaskProposal($event)" @open-task="openTaskRegion($event)" @open-report="openReport" />
+      @confirm-task="confirmTaskProposal($event)" @discard-task="discardTaskProposal($event)" @open-task="openTaskRegion($event)" @open-report="openReport" @issue="issue = $event" />
     </view>
     <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turns.length)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
     <view v-if="recoveryMessage" class="region-notice"><text>{{ recoveryMessage }}</text></view>
