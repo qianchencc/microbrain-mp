@@ -106,13 +106,12 @@ test('换身份重新读取，旧身份迟到响应不能返回或覆盖新身�
  assert.equal(calls.length, 2)
 })
 
-test('刷新公司数据后台账失效；详情与摄像头始终实时读取', async t => {
+test('台账列表复用时，详情与摄像头仍始终实时读取', async t => {
  const { client, calls, query } = await setup(t)
  await client.listSafetyHistory(query)
- client.companyOverviewCache.clear()
  await client.listSafetyHistory(query)
  const reference = { eventId: 'event-1', ledger: 'gas', deviceId: 'gas' }
  for (let i = 0; i < 2; i++) { await client.getSafetyEvent(reference); await client.getSafetyEventCameras(reference) }
- assert.equal(calls.filter(call => new URL(call.url).pathname.endsWith('/safety-events')).length, 2)
- assert.equal(calls.length, 6)
+ assert.equal(calls.filter(call => new URL(call.url).pathname.endsWith('/safety-events')).length, 1)
+ assert.equal(calls.length, 5)
 })
