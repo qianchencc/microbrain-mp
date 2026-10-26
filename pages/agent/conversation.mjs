@@ -54,7 +54,6 @@ export function applyEvent(turn, event, turns = [turn]) {
 		// 同一委托的系统承接追加新答复，前段终稿保留自己的文本。
 		for (const item of turn.items) {
 			if (item.kind === 'text') item.text ??= turn.text
-			else if (item.kind === 'draftText' && item.settled) item.text = turn.text
 		}
 		turn.text = ''; turn.error = ''; turn.running = true; turn.streaming = false
 	}
@@ -104,7 +103,7 @@ export function applyEvent(turn, event, turns = [turn]) {
 			else pushItem(turn, 'draftText', { text: event.content || '' })
 		} else {
 			turn.text += event.content || ''
-			if (turn.items.at(-1)?.kind !== 'text') pushItem(turn, 'text')
+			if (turn.items.at(-1)?.kind !== 'text' || turn.items.at(-1).text !== undefined) pushItem(turn, 'text')
 			turn.traceOpen = false
 		}
 	}
@@ -113,8 +112,11 @@ export function applyEvent(turn, event, turns = [turn]) {
 		turn.streaming = false
 		// 同一段文字原地沉淀为终稿权重：settled 只改颜色不改元素身份，不移动、不重打。
 		const last = turn.items.at(-1)
-		if (last?.kind === 'draftText') last.settled = true
-		else if (turn.text && last?.kind !== 'text') pushItem(turn, 'text')
+		if (last?.kind === 'draftText' && !last.settled) { last.text = turn.text; last.settled = true }
+		else if (turn.text) {
+			if (last?.kind !== 'text' || last.text !== undefined) pushItem(turn, 'text', { text: turn.text })
+			else last.text = turn.text
+		}
 	}
 	if (event.type === 'message.reclassified') {
 		const last = turn.items.at(-1)

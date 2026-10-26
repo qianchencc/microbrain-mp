@@ -210,3 +210,29 @@ test('原轮系统承接保留前段答复，必要问题独立展示', () => {
  assert.deepEqual(texts, ['任务已准备，请确认。', '原定时间已过。希望改为什么时间？'])
  assert.equal(restored.tasks.length, 1)
 })
+
+test('系统承接中的权威终稿覆盖草稿增量，后续空轮不能擦除旧答复', () => {
+ const turn = createTurn('original', '创建任务')
+ applyEvent(turn, { type: 'run.started' })
+ applyEvent(turn, { type: 'message.delta', phase: 'draft', content: '草稿增量' })
+ applyEvent(turn, { type: 'message.completed', content: '原任务的权威终稿' })
+ assert.equal(turn.items[0].text, '原任务的权威终稿')
+ applyEvent(turn, { type: 'run.completed' })
+ applyEvent(turn, { type: 'run.started' })
+ applyEvent(turn, { type: 'run.failed', message: '读取中断' })
+ applyEvent(turn, { type: 'run.started' })
+ applyEvent(turn, { type: 'message.delta', phase: 'draft', content: '新问题草稿' })
+ applyEvent(turn, { type: 'message.completed', content: '需要新的执行时间' })
+ assert.deepEqual(turn.items.filter(item => ['text','draftText'].includes(item.kind)).map(item => item.text ?? turn.text), ['原任务的权威终稿', '需要新的执行时间'])
+})
+
+test('原轮两次系统承接分别保留原答复、中断正文与新问题', () => {
+ const [turn] = restoreTurns([{ id: 'original', content: '创建任务', events: [
+  { type: 'run.started' }, { type: 'message.delta', phase: 'draft', content: '原答复草稿' },
+  { type: 'message.completed', content: '原任务已准备，请确认' }, { type: 'run.awaiting_confirmation' },
+  { type: 'run.started' }, { type: 'message.delta', phase: 'draft', content: '正在核实原定时间' }, { type: 'run.aborted' },
+  { type: 'run.started' }, { type: 'message.delta', phase: 'draft', content: '问题草稿' },
+  { type: 'message.completed', content: '需要新的执行时间' }, { type: 'run.completed' },
+ ] }])
+ assert.deepEqual(turn.items.filter(item => ['text','draftText'].includes(item.kind)).map(item => item.text ?? turn.text), ['原任务已准备，请确认', '正在核实原定时间', '需要新的执行时间'])
+})
