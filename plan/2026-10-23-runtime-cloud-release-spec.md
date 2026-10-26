@@ -19,7 +19,7 @@ Cloudflare (proxied, TLS 由源站 Caddy 用 DNS-01 签发)
 |---|---|
 | 云服务器 | `root@38.76.215.138`，Ubuntu 24.04.1 LTS，x86_64，香港 |
 | Node | `/opt/node22/bin/node`，v22.23.2（禁止改用系统 node） |
-| Runtime 版本 | `releases/20261023-60659f9`，源码提交 `60659f9`；验收见[发布交接](2026-10-23-all-changes-release-handoff.md) |
+| Runtime 版本 | `releases/20261026-48efa8b`，源码提交 `48efa8b`（基于生产主线 `c9001ca`，含控制台与 60s 目录核验缓存）；本次验收见第 10、11 节 |
 | Runtime 监听 | `127.0.0.1:3210` |
 | 视频监听 | `127.0.0.1:9415` |
 | 反向代理 | Caddy，配置 `/etc/caddy/Caddyfile` |
