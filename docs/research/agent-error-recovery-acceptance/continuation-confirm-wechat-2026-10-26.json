@@ -1,0 +1,24 @@
+{
+  "at": "2026-10-26T06:45:38.570Z",
+  "kind": "WeChat DevTools real clicks with isolated protocol fixture; no model or production writes",
+  "cases": [
+    {
+      "name": "confirmation in flight polls recovery then displays created",
+      "progress": "正在核实",
+      "completed": "未执行"
+    },
+    {
+      "name": "stop recovery prevents late success and restored card remains cancelled",
+      "stopped": "已取消"
+    }
+  ],
+  "counters": {
+    "state": "stopped",
+    "started": 1792997159328,
+    "stopped": true,
+    "restores": 14,
+    "confirms": 2,
+    "cancels": 1,
+    "blockedWrites": 0
+  }
+}

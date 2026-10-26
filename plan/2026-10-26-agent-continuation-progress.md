@@ -1,0 +1,17 @@
+# 连续委托推进记录
+
+用户2026-10-26认可Pi策略并授权完成推进。票据已正式发布（MP5bfaa6e），不再请求粒度批准。按单业务切片推进，当前01仍in-progress，其他票尚未实施。
+
+当前权威入口：[执行地图](../.scratch/agent-continuation/execution.md)、[01实施记录](../.scratch/agent-continuation/issues/01-create-confirmation-continuation.md)、[真实模型证据](../docs/research/agent-error-recovery-acceptance/continuation-confirm-live-2026-10-26.json)。首切片Runtime7b83fe4、MPdba5877；未部署。生产已只读重核为20261025-84c7d71、服务active。
+
+首切片在原确认上有限恢复目录读取，持久化恢复/完成/阻塞/停止事实，重复确认核实原对象；停止能阻断晚到结果。后续模型上下文带原目标、计划时间与原确认事实。前端显示核实状态和停止，不重放已明确耗尽恢复的503。
+
+两项相关公共红灯转绿，停止边界实施后补验，不把全程描述为严格test-first。工程检查Runtime412/412、MP162/162、类型/构建/开发编译通过。隔离真实模型和真实只读网关验证原任务恢复和追问通过，零客户写入，临时库已删除；真实到期、生产恢复、物理控制未验。
+
+按code-review同时审查Standards/Spec。配置的gpt-5.6-luna被工具报告不可用，因此两位审查代理使用可用继承模型、xhigh/fork none。后续先修实际发现，再做真实微信和必要决定分支，不以此首切片代替01整票或十票验收。工具脚本与临时UI mock必须在finally恢复，不能改客户身份或清理他人资源。
+
+建议技能：implement/TDD、必要code-review、真实模型依langfuse原则记录安全轨迹。handoff按项目要求保存在plan/。后续真实控制仍需要具体授权；只读验收可自主推进。
+
+审查修复：停止同时处理中遗留确认与新模型run；取消补齐任务解析事件/相位；健康确认成功覆盖旧blocked；持久事实包含安全原因与阶段；确认POST在途时允许恢复轮询，确认结束后的迟到快照按epoch丢弃。相关红灯转绿4项，全量Runtime414/414、MP162/162、类型/构建/开发编译通过。
+
+微信开发工具真实点击+隔离协议：创建中→核实中→查看任务安排；另一次核实中停止→迟到响应→重开仍已取消。14次快照读取、2次确认、1次停止，零生产操作；mock在finally恢复。见 continuation-confirm-wechat-2026-10-26.json。此证据不是连通真实模型/后端的微信端到端证明。

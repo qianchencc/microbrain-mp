@@ -28,7 +28,7 @@
   </scroll-view>
   <view v-if="clearing" class="clearing-hint"><text>正在清除会话…</text></view>
   </view>
-  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning || Boolean(confirmingTaskId) || hasTaskConfirmation" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
+  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning || taskConfirmationRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
   <DraftSheetLayer v-if="sheetMounted" :source="source" :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline" :error="sheetError"
    :settle-selection="settleSelection"
    @reconnect="reconnectSheet" @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
@@ -142,11 +142,14 @@ watch(input, value => {
 }, { flush: 'sync' })
 const composer = ref(null)
 const turns = ref([])
+const tasksOf = turn => turn.tasks?.length ? turn.tasks : turn.task ? [turn.task] : []
 const errorMessage = ref('')
 const recoveryMessage = ref('')
 const isRunning = ref(false)
 const confirmingTaskId = ref('')
-const hasTaskConfirmation = computed(() => turns.value.some(turn => (turn.tasks || (turn.task ? [turn.task] : [])).some(task => task.confirmation?.status === 'recovering')))
+const hasTaskConfirmation = computed(() => turns.value.some(turn => tasksOf(turn).some(task => task.confirmation?.status === 'recovering')))
+const creatingTask = computed(() => Boolean(confirmingTaskId.value && turns.value.some(turn => tasksOf(turn).some(task => task.taskId === confirmingTaskId.value && !task.changeId && !task.cancellationId))))
+const taskConfirmationRunning = computed(() => creatingTask.value || hasTaskConfirmation.value)
 const phase = ref('')
 const mutating = ref(false), clearing = ref(false)
 const scrollIntoView = ref(''), restoredScrollTop = ref(0)
@@ -157,7 +160,7 @@ const busy = computed(() => isRunning.value || mutating.value || hasExecution.va
 const statusText = computed(() => !conversationId.value ? '正在连接' : clearing.value ? '正在清除' : busy.value ? '正在处理' : '服务在线')
 // 宿主状态播报：页面导航头/浮层面板头、浮标运行态都由这组事件驱动
 watch(statusText, value => emit('status', value), { immediate: true })
-watch(() => isRunning.value || Boolean(confirmingTaskId.value) || hasTaskConfirmation.value, value => emit('running', value), { immediate: true })
+watch(() => isRunning.value || taskConfirmationRunning.value, value => emit('running', value), { immediate: true })
 watch(conversationId, value => emit('connected', Boolean(value)), { immediate: true })
 watch(inboxUnreadCount, value => emit('inbox-count', value), { immediate: true })
 watch(errorMessage, value => emit('error', Boolean(value)), { immediate: true })
@@ -234,10 +237,9 @@ function handleScroll(event) {
  if (top < currentScrollTop - 5 || event.detail.deltaY > 5) nearBottom.value = false
  currentScrollTop = top
 }
-const tasksOf = turn => turn.tasks?.length ? turn.tasks : turn.task ? [turn.task] : []
 function schedule() {
  clearTimeout(pollTimer)
- if (visible && !disposed && (hasExecution.value || hasTaskConfirmation.value || confirmingTaskId.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
+ if (visible && !disposed && (hasExecution.value || taskConfirmationRunning.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
  clearTimeout(taskPollTimer)
  if (visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
  clearTimeout(expiryTimer)
@@ -281,7 +283,7 @@ function prefill(prompt) {
  else applyHistoryPrompt(prompt)
 }
 async function restore() {
- if (restoring || activeRequest || confirming.size || disposed || clearing.value) return
+ if (restoring || activeRequest || confirming.size && !creatingTask.value || disposed || clearing.value) return
  restoring = true
  const epoch = confirmEpoch, clearMark = clearEpoch
  try {
@@ -575,7 +577,7 @@ async function confirmTaskProposal(task) {
    errorMessage.value = error.data?.message || error.message
    resync = true
   }
- } finally { confirming.delete(key); confirmingTaskId.value = ''; mutating.value = false; schedule(); follow() }
+ } finally { confirmEpoch++; confirming.delete(key); confirmingTaskId.value = ''; mutating.value = false; schedule(); follow() }
  if (resync && !disposed) await restore()
 }
 async function discardTaskProposal(task) {
@@ -651,7 +653,7 @@ async function stopRun() {
   activeRequest.abort()
  }
  turn.running = false
- turn.error = confirmingTaskId.value || hasTaskConfirmation.value ? '' : '本次回答已停止'
+ turn.error = taskConfirmationRunning.value ? '' : '本次回答已停止'
  for (const item of turn.activities) if (['running', 'searching'].includes(item.status)) item.status = 'skipped'
  isRunning.value = false
  // 停止=显式取消：本地断流之外必须终止服务端在途运行（含断开重连轮询盯着的孤儿运行）。
