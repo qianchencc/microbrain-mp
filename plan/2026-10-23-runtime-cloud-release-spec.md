@@ -19,7 +19,7 @@ Cloudflare (proxied, TLS 由源站 Caddy 用 DNS-01 签发)
 |---|---|
 | 云服务器 | `root@38.76.215.138`，Ubuntu 24.04.1 LTS，x86_64，香港 |
 | Node | `/opt/node22/bin/node`，v22.23.2（禁止改用系统 node） |
-| Runtime 版本 | `releases/20261026-d1f39fc`，源码提交 `d1f39fc`（基于`48efa8b`，含普通Company空调权威面板核验；此前控制台与60s目录核验缓存均保留）；本次验收见第11节及同级Runtime的 `plan/2026-10-26-company-ac-readback-handoff.md` |
+| Runtime 版本 | `releases/20261026-efa1fb9`，源码提交 `efa1fb9`（基于`d1f39fc`，Company直播/回放只加载监控授权目录；此前空调核验、控制台与60s目录缓存均保留）；验收见[回放交接](2026-10-27-safety-playback-improvement-handoff.md) |
 | Runtime 监听 | `127.0.0.1:3210` |
 | 视频监听 | `127.0.0.1:9415` |
 | 反向代理 | Caddy，配置 `/etc/caddy/Caddyfile` |
@@ -38,7 +38,7 @@ Cloudflare 开代理时，公网解析结果仍是 Cloudflare IP；改的是 ori
 
 ```text
 /opt/iot-agent-runtime/
-├── current -> releases/20261023-60659f9
+├── current -> releases/20261026-efa1fb9
 ├── releases/<YYYYMMDD>-<shortsha>/
 ├── shared/
 │   ├── runtime.env                  # 0600，唯一进程环境文件
@@ -48,7 +48,7 @@ Cloudflare 开代理时，公网解析结果仍是 Cloudflare IP；改的是 ori
 │   │   ├── config-secret-key        # 0600
 │   │   └── task-credential-key      # 0600
 │   └── backups/<YYYYMMDD>-<reason>/
-└── video/                           # index.html / player.js / serve.mjs
+└── video/                           # index.html / player.js / serve.mjs / sdk -> sdk-20261027
 ```
 
 `runtime.env` 当前内容（密钥已省略）：
@@ -215,6 +215,7 @@ https://mp-video.qianc.ltd {
 	tls {
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 	}
+	encode gzip
 	reverse_proxy 127.0.0.1:9415
 }
 ```
@@ -309,6 +310,8 @@ ADMIN_RESTART=1
 缓存策略：任务/计划列表、详情、时间轴、日历的全量目录授权核验共用 `catalogTtlMs`（生产 60000ms）缓存；确认、取消、已读和扫描器仍强制 fresh。撤权对只读视图最多延迟 60 秒生效。
 
 ## 11. 变更记录
+
+- 2026-10-26 23:48至10-27：发布`efa1fb9`（基于生产`d1f39fc`），Company视频目录冷加载从61次目录请求缩至11次，不改15秒取流/20秒首帧预算。Runtime426/426、类型/构建及双轴审查通过；备份`20261026-2347-video-efa1fb9`，无schema变化，切换前后业务行数一致。随后部署视频SDK本地镜像与Caddy gzip，解码资源不再每次跨客户站加载，MP172/172及修正测试清理后的窄回归通过。真实原窗口首帧1920×1080、烧录10:59:00、重试及停止释放通过；真机微信未验。版本、哈希、备份与分项回滚见[总交接](2026-10-27-safety-playback-improvement-handoff.md)。
 
 - 2026-10-26 22:46：发布`d1f39fc`（生产`48efa8b`上仅接Company空调核验修复），普通即时/定时回读按新读取的权威面板目标匹配，snapshot不读写普通状态缓存；Office/照明/门禁不变，控制等待仍默认6秒。422/422、类型/完整根构建、双轴审查通过；真实只读3台旧规则null/新规则有效，原Task状态与报告哈希不变，零新增控制。发布前后任务46/计划10/阶段148/设备事实5487/报告9/通知40/会话202/事件6960，quick_check=ok、FK0。备份`20261026-224602-company-ac-readback-d1f39fc`，无schema变更，回滚只切回48efa8b。固定22:46:05–22:56:05观察：响应/连接超时、lease丢失、DB锁均0，active/NRestarts=0；仍有24条event-loop-stall、最大3158ms，性能问题保留后续处理。
 

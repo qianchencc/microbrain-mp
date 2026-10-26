@@ -38,6 +38,15 @@ createServer(async (request, response) => {
   let target, headers = {}
   if (url.pathname.startsWith(sdkPrefix) && /^\/owner\/static\/h5player\/[a-zA-Z0-9_./-]+$/.test(url.pathname)) {
    stage = 'sdk'
+   try {
+    const content = await readFile(new URL('sdk/' + url.pathname.slice(sdkPrefix.length), import.meta.url))
+    const contentType = url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8'
+     : url.pathname.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream'
+    response.writeHead(200, { 'content-type': contentType, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' })
+    return response.end(request.method === 'HEAD' ? undefined : content)
+   } catch (error) {
+    if (error.code !== 'ENOENT') throw error
+   }
    target = new URL(url.pathname, sdkOrigin)
   } else if (/^\/api\/agent\/devices\/[^/]+\/video-stream$/.test(url.pathname)) {
    stage = 'stream'
