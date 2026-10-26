@@ -1,5 +1,7 @@
 # Agent Page Notes
 
+- 能耗接口的 `comparison.currentDay` 指最新采样日；只有其 `date` 等于上海当日时才能展示“今日至今”或今日对比。旧采样保持原日期，不用旧日数值冒充今天。诊断与未验边界见 `plan/2026-10-26-energy-stale-sample-handoff.md`。
+
 - 检查点产物仅在所属阶段增加 `phase.report` 行，现有任务收件箱仍先打开任务。任务详情宿主统一用 `TaskResultContent`，在同一 Sheet 内按依据→报告→原任务返回；任务节点保持挂载并暂停轮询。预览、引用、PDF 只读保存事实，引用保留草稿且不自动发送；Office 设备时间轴保持原来源，不因共用宿主新增 Company 导航。维护与验收见 `plan/2026-10-15-company-checkpoint-production-handoff.md`。
 
 - 告警监控候选提供直播/回放；回放展开后清空`scroll-into-view`、await nextTick再定位表单，保证同一目标重复点击仍滚动。安全录像卡保留用户两种选择，`safetyContext.occurredAt`经WebView传`eventTime`供标记，直播仍保留原录像窗口；见`plan/2026-10-14-safety-video-controls-handoff.md`。
