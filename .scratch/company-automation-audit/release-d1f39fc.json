@@ -1,0 +1,221 @@
+{
+  "release": "20261026-d1f39fc",
+  "sourceCommit": "d1f39fc2a90c65b3caed371abb59ddb14324ee96",
+  "base": "48efa8b",
+  "deployedAtShanghai": "2026-10-26 22:46",
+  "controlWritesBySession": 0,
+  "checks": {
+    "targeted": {
+      "pass": 29,
+      "fail": 0
+    },
+    "full": {
+      "pass": 422,
+      "fail": 0
+    },
+    "typecheck": "pass",
+    "rootBuild": "pass",
+    "standardsFindings": 0,
+    "specFindings": 0
+  },
+  "realPanels": {
+    "at": "2026-10-26T14:47:25.038Z",
+    "devices": 3,
+    "catalogComplete": true,
+    "states": [
+      {
+        "sample": 1,
+        "before": null,
+        "after": {
+          "power": "off",
+          "temperature": 24,
+          "mode": "cool",
+          "fanSpeed": "high"
+        }
+      },
+      {
+        "sample": 2,
+        "before": null,
+        "after": {
+          "power": "off",
+          "temperature": 26,
+          "mode": "cool"
+        }
+      },
+      {
+        "sample": 3,
+        "before": null,
+        "after": {
+          "power": "off",
+          "temperature": 23,
+          "mode": "cool",
+          "fanSpeed": "high"
+        }
+      }
+    ],
+    "upstreamGetCalls": 67,
+    "detailReads": 6,
+    "controlWrites": 0,
+    "evidence": "current platform panels only; no new control and no historical result changes"
+  },
+  "originalTasksBefore": [
+    {
+      "task": "d9fef704",
+      "http": 200,
+      "ms": 5361,
+      "status": "unconfirmed",
+      "reportHash": "fa9e4bb886d0a6e453ff995019a4c01379696506f95be28e8309147c89812dab",
+      "phases": [
+        {
+          "status": "unconfirmed",
+          "outcomes": {
+            "satisfied": 44,
+            "unconfirmed": 5
+          }
+        }
+      ]
+    },
+    {
+      "task": "bfc379d6",
+      "http": 200,
+      "ms": 1572,
+      "status": "completed",
+      "reportHash": "e25efcf015a5ee78b8ea559e5450127604aec47f82eefddd13b3ec820c2b79c7",
+      "phases": [
+        {
+          "status": "completed",
+          "outcomes": {
+            "satisfied": 1
+          }
+        },
+        {
+          "status": "completed",
+          "outcomes": {
+            "satisfied": 1
+          }
+        },
+        {
+          "status": "completed",
+          "outcomes": {
+            "satisfied": 1
+          }
+        },
+        {
+          "status": "completed",
+          "outcomes": {
+            "satisfied": 1
+          }
+        }
+      ]
+    }
+  ],
+  "originalTasksAfter": [
+    {
+      "task": "d9fef704",
+      "http": 200,
+      "ms": 954,
+      "status": "unconfirmed",
+      "reportHash": "fa9e4bb886d0a6e453ff995019a4c01379696506f95be28e8309147c89812dab",
+      "phases": [
+        {
+          "status": "unconfirmed",
+          "outcomes": {
+            "satisfied": 44,
+            "unconfirmed": 5
+          }
+        }
+      ]
+    },
+    {
+      "task": "bfc379d6",
+      "http": 200,
+      "ms": 332,
+      "status": "completed",
+      "reportHash": "e25efcf015a5ee78b8ea559e5450127604aec47f82eefddd13b3ec820c2b79c7",
+      "phases": [
+        {
+          "status": "completed",
+          "outcomes": {
+            "satisfied": 1
+          }
+        },
+        {
+          "status": "completed",
+          "outcomes": {
+            "satisfied": 1
+          }
+        },
+        {
+          "status": "completed",
+          "outcomes": {
+            "satisfied": 1
+          }
+        },
+        {
+          "status": "completed",
+          "outcomes": {
+            "satisfied": 1
+          }
+        }
+      ]
+    }
+  ],
+  "catalogBaselineForNextSlice": {
+    "at": "2026-10-26T14:50:37.443Z",
+    "catalogMs": 5018,
+    "complete": true,
+    "acCount": 49,
+    "failures": 0,
+    "families": {
+      "provider": {
+        "requests": 5,
+        "elapsedMs": 4845,
+        "requestMs": 5579
+      },
+      "other": {
+        "requests": 1,
+        "elapsedMs": 654,
+        "requestMs": 654
+      },
+      "energy": {
+        "requests": 1,
+        "elapsedMs": 659,
+        "requestMs": 659
+      },
+      "ac": {
+        "requests": 8,
+        "elapsedMs": 3682,
+        "requestMs": 7694
+      },
+      "lighting": {
+        "requests": 20,
+        "elapsedMs": 4941,
+        "requestMs": 21903
+      },
+      "access": {
+        "requests": 15,
+        "elapsedMs": 4866,
+        "requestMs": 14839
+      },
+      "monitor": {
+        "requests": 11,
+        "elapsedMs": 4629,
+        "requestMs": 9771
+      }
+    },
+    "controlWrites": 0
+  },
+  "productionObservation": {
+    "fromShanghai": "2026-10-26 22:46:05",
+    "untilShanghai": "2026-10-26 22:56:05",
+    "responseTimeout": 0,
+    "connectTimeout": 0,
+    "lostLease": 0,
+    "dbLocked": 0,
+    "eventLoopStalls": 24,
+    "maxBlockMs": 3158,
+    "activeState": "active",
+    "nRestarts": 0,
+    "currentRelease": "20261026-d1f39fc"
+  }
+}

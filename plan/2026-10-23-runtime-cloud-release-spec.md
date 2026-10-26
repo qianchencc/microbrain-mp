@@ -19,7 +19,7 @@ Cloudflare (proxied, TLS 由源站 Caddy 用 DNS-01 签发)
 |---|---|
 | 云服务器 | `root@38.76.215.138`，Ubuntu 24.04.1 LTS，x86_64，香港 |
 | Node | `/opt/node22/bin/node`，v22.23.2（禁止改用系统 node） |
-| Runtime 版本 | `releases/20261026-48efa8b`，源码提交 `48efa8b`（基于生产主线 `c9001ca`，含控制台与 60s 目录核验缓存）；本次验收见第 10、11 节 |
+| Runtime 版本 | `releases/20261026-d1f39fc`，源码提交 `d1f39fc`（基于`48efa8b`，含普通Company空调权威面板核验；此前控制台与60s目录核验缓存均保留）；本次验收见第11节及同级Runtime的 `plan/2026-10-26-company-ac-readback-handoff.md` |
 | Runtime 监听 | `127.0.0.1:3210` |
 | 视频监听 | `127.0.0.1:9415` |
 | 反向代理 | Caddy，配置 `/etc/caddy/Caddyfile` |
@@ -309,6 +309,8 @@ ADMIN_RESTART=1
 缓存策略：任务/计划列表、详情、时间轴、日历的全量目录授权核验共用 `catalogTtlMs`（生产 60000ms）缓存；确认、取消、已读和扫描器仍强制 fresh。撤权对只读视图最多延迟 60 秒生效。
 
 ## 11. 变更记录
+
+- 2026-10-26 22:46：发布`d1f39fc`（生产`48efa8b`上仅接Company空调核验修复），普通即时/定时回读按新读取的权威面板目标匹配，snapshot不读写普通状态缓存；Office/照明/门禁不变，控制等待仍默认6秒。422/422、类型/完整根构建、双轴审查通过；真实只读3台旧规则null/新规则有效，原Task状态与报告哈希不变，零新增控制。发布前后任务46/计划10/阶段148/设备事实5487/报告9/通知40/会话202/事件6960，quick_check=ok、FK0。备份`20261026-224602-company-ac-readback-d1f39fc`，无schema变更，回滚只切回48efa8b。固定22:46:05–22:56:05观察：响应/连接超时、lease丢失、DB锁均0，active/NRestarts=0；仍有24条event-loop-stall、最大3158ms，性能问题保留后续处理。
 
 - 2026-10-26：首次尝试发布 `aaa5b81`（旧工作分支）失败并回滚到 `7bac661`：该分支缺少同日 turn → `turn_events` 的迁移，生产库已删 `conversation_turns.events_json`，进程启动即报 `no such column: events_json`。未写入业务数据。
 - 2026-10-26：发布 `48efa8b`（生产主线 `c9001ca` 上的控制台重启等待修正，含此前 `9bc25e1`/`bc6158d`/`e927dca`）。公网 `/admin/` 与静态资源 200，登录/保存/真实 UI“立即生效”与重启通过；配置收敛到 v8，`heartbeatMs=15000`、`catalogTtlMs=60000`、`pendingRestart=false`。重启在途同步收口实测可达 40s，面板轮询已放宽到 120s。`quick_check=ok`，无执行中草案或阶段；任务/通知在窗口内因真实业务新增为 45/39，无删除或重置。
