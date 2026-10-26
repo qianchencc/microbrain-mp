@@ -1,0 +1,36 @@
+{
+  "at": "2026-10-26T07:02:37.814Z",
+  "environment": "isolated DB; controlled clock advance only; real GLM model and gateway GETs; no scanner",
+  "model": "GLM-5.3-Flash",
+  "agentRuns": 3,
+  "originalTaskId": "cf4d3687-6c9a-4a4a-a4a3-6de108cd370d",
+  "confirmationHttp": 409,
+  "originalTurnCount": 1,
+  "confirmation": {
+    "status": "needs_decision",
+    "code": "TASK_TIME_PASSED",
+    "message": "原定时间已过，正在沿原任务核实必要的新时间"
+  },
+  "automaticQuestion": "原定执行时间 2026-10-26 17:01:42 已过，该任务卡尚未创建。任务内容（只读统计全部 43 台电表 2024-06-01 00:00 至 2024-07-01 00:00 用电，名称「连续确认验收20261026」，无同比环比、不控设备）已保留，只需您确认一个新的执行时间——现在 18:01 之后任意时刻即可，还是您希望另定时间？",
+  "replacementTaskId": "77cc8c4e-bbd1-49cc-bdca-b4ece435ac6b",
+  "replacementPhases": [
+    {
+      "at": "2026-10-26T11:01:41.000Z",
+      "deviceCount": 43,
+      "agent": {
+        "objective": "统计公司授权范围内全部电表2024-06-01T00:00至2024-07-01T00:00（上海时间）的用电量并汇总，不做同比环比，不控制任何设备",
+        "output": "result",
+        "spec": {
+          "comparisons": [],
+          "period": {
+            "from": "2024-06-01T00:00:00+08:00",
+            "kind": "absolute",
+            "to": "2024-07-01T00:00:00+08:00"
+          }
+        }
+      }
+    }
+  ],
+  "finalHttp": 201,
+  "writes": 0
+}

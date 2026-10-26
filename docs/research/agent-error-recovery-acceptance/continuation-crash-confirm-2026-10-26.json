@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-26T07:04:27.775Z",
+  "kind": "separate OS processes; SIGKILL during original confirmation read; deterministic gateway; no scanner",
+  "taskId": "621a69f5-a5e2-4404-b44a-8a43f68e239e",
+  "states": [
+    "recovering",
+    "blocked",
+    "completed"
+  ],
+  "confirmationHttp": 201,
+  "replayHttp": 200,
+  "turns": 1
+}

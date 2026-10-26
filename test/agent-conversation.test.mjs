@@ -193,3 +193,20 @@ test('任务身份引用和两次修改收据分别恢复，后来的引用不�
  assert.equal(restored[0].reference.taskId, 'actual-task')
  assert.equal(restored[1].reference.planId, 'plan-a')
 })
+
+test('原轮系统承接保留前段答复，必要问题独立展示', () => {
+ const restored = restoreTurns([{ id: 'original-turn', content: '创建只读任务', events: [
+  { type: 'run.started', turnId: 'original-turn' },
+  { type: 'message.completed', content: '任务已准备，请确认。' },
+  { type: 'task.proposed', taskId: 'task-a', task: { taskId: 'task-a', status: 'PENDING_CONFIRMATION' } },
+  { type: 'run.awaiting_confirmation' },
+  { type: 'run.started', turnId: 'original-turn' },
+  { type: 'message.delta', content: '原定时间已过。' },
+  { type: 'message.completed', content: '原定时间已过。希望改为什么时间？' },
+  { type: 'run.completed' },
+ ] }])[0]
+ assert.equal(restored.content, '创建只读任务')
+ const texts = restored.items.filter(item => item.kind === 'text').map(item => item.text ?? restored.text)
+ assert.deepEqual(texts, ['任务已准备，请确认。', '原定时间已过。希望改为什么时间？'])
+ assert.equal(restored.tasks.length, 1)
+})

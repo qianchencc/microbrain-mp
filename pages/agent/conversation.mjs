@@ -50,6 +50,14 @@ export function applyEvent(turn, event, turns = [turn]) {
 	// tool/run 事件经 presentation 队列延迟应用，可能与即时应用的后续增量交错；
 	// sequence 是事件真实到达序，折叠只作用于早于本事件的条目。
 	if (typeof event.sequence === 'number') turn.lastSeq = event.sequence
+	if (event.type === 'run.started') {
+		// 同一委托的系统承接追加新答复，前段终稿保留自己的文本。
+		for (const item of turn.items) {
+			if (item.kind === 'text') item.text ??= turn.text
+			else if (item.kind === 'draftText' && item.settled) item.text = turn.text
+		}
+		turn.text = ''; turn.error = ''; turn.running = true; turn.streaming = false
+	}
 	if (event.type === 'run.started' && event.reference) turn.reference = event.reference
 	if (event.type === 'run.started' && event.focusRegion) turn.focusRegion = event.focusRegion
 	if (event.type === 'run.started' && event.turnId) turn.serverId = event.turnId

@@ -18,8 +18,8 @@
    </view>
 
    <template v-for="item in turn.items" :key="item.id">
-    <AssistantMarkdown v-if="item.kind === 'text'" :content="turn.text" />
-    <view v-else-if="item.kind === 'draftText'" class="reply-draft" :class="{ 'reply-draft--settled': item.settled }"><AssistantMarkdown :content="item.settled ? turn.text : item.text" /></view>
+    <AssistantMarkdown v-if="item.kind === 'text'" :content="item.text ?? turn.text" />
+    <view v-else-if="item.kind === 'draftText'" class="reply-draft" :class="{ 'reply-draft--settled': item.settled }"><AssistantMarkdown :content="item.settled ? item.text ?? turn.text : item.text" /></view>
     <ObservationCard v-else-if="item.kind === 'obs'" :observation="item.obs" :running="turn.running" :source="source" @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" @open-report="$emit('open-report', $event)" :read-only="readOnly || source === 'company'" />
     <template v-else-if="item.kind === 'panel' && !readOnly">
      <ActionPanel :source="source" v-if="turn.draft" :draft="turn.draft" :roster="turn.roster" :result="turn.result" :busy="busy"
