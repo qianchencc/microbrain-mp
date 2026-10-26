@@ -1,6 +1,24 @@
 <template>
  <scroll-view class="task-scroll" scroll-y enhanced :show-scrollbar="false">
-  <view v-if="loading && !detail" class="message">加载中…</view>
+  <view v-if="loading && !detailFresh" class="task-detail task-skeleton" aria-label="正在加载任务">
+   <view class="sk-bar sk-title" />
+   <view class="sk-bar sk-meta w-40" />
+   <view class="sk-bar sk-meta w-64" />
+   <view class="sk-owner">
+    <view class="sk-avatar" />
+    <view class="sk-bar sk-owner-name w-30" />
+    <view class="sk-bar sk-tag" />
+   </view>
+   <view class="sk-bar sk-section w-16" />
+   <view v-for="row in 3" :key="row" class="phase sk-phase">
+    <view class="sk-node" />
+    <view class="sk-phase-main">
+     <view class="sk-bar w-36" />
+     <view class="sk-bar w-74" />
+     <view class="sk-bar w-52" />
+    </view>
+   </view>
+  </view>
   <view v-else-if="error" class="message"><text>{{ error }}</text><button @tap="load()">重新加载</button><button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button></view>
   <view v-else-if="detail" class="task-detail">
    <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button>
@@ -369,6 +387,22 @@ button::after { border:0; }
 .task-scroll { flex:1; min-height:0; height:0; }
 .message { padding:56px 24px; text-align:center; color:#839189; font-size:13px; }
 .message text { display:block; }
+.task-skeleton { padding-top:16px; }
+.sk-bar { height:10px; border-radius:6px; background:#e8eee9; animation:sk-pulse 1.25s ease-in-out infinite; }
+.sk-title { height:20px; width:62%; background:#e2eae4; }
+.sk-meta { margin-top:9px; height:9px; }
+.sk-owner { margin-top:16px; display:flex; align-items:center; gap:8px; }
+.sk-avatar { width:25px; height:25px; flex-shrink:0; border-radius:50%; background:#e4ece6; animation:sk-pulse 1.25s ease-in-out infinite; }
+.sk-owner-name { flex:0 0 auto; }
+.sk-tag { width:44px; height:20px; border-radius:8px; background:#eaf3ed; }
+.sk-section { margin-top:20px; height:9px; }
+.sk-phase { margin-top:14px; }
+.sk-node { width:14px; height:14px; margin-top:3px; flex-shrink:0; border-radius:50%; background:#e4ece6; animation:sk-pulse 1.25s ease-in-out infinite; }
+.sk-phase-main { flex:1; display:flex; flex-direction:column; gap:7px; }
+.w-16 { width:16%; } .w-30 { width:30%; } .w-36 { width:36%; } .w-40 { width:40%; }
+.w-52 { width:52%; } .w-64 { width:64%; } .w-74 { width:74%; }
+@keyframes sk-pulse { 0%, 100% { opacity:.55; } 50% { opacity:1; } }
+@media(prefers-reduced-motion:reduce){ .sk-bar, .sk-avatar, .sk-node { animation:none; opacity:.8; } }
 .task-detail { padding:10px 20px 34px; }
 .task-name { display:block; color:#263c2e; font-size:18px; font-weight:700; line-height:1.35; }
 .plan-back { display:flex; align-items:center; gap:4px; min-height:30px; margin:0 0 8px; color:#63776a; font-size:11px; }

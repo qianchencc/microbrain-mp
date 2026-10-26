@@ -23,7 +23,18 @@
   </view>
   <scroll-view class="rpc-scroll" scroll-y enhanced :show-scrollbar="false" :style="{ display: evidence ? 'none' : 'flex' }">
    <view v-if="error" class="rpc-msg"><text>{{ error }}</text><button class="rpc-btn rpc-retry" @tap="load">重新读取</button></view>
-   <view v-else-if="!report" class="rpc-msg">正在读取报告…</view>
+   <view v-else-if="!report" class="rpc-body rpc-skeleton" aria-label="正在读取报告">
+    <view class="sk-bar sk-kicker" />
+    <view class="sk-bar sk-title" />
+    <view class="sk-bar sk-meta w-40" />
+    <view class="sk-bar sk-meta w-56" />
+    <view class="sk-bar sk-summary" />
+    <view class="sk-bar sk-summary w-88" />
+    <view class="sk-bar sk-section" />
+    <view class="sk-bar sk-row" />
+    <view class="sk-bar sk-row w-64" />
+    <view class="sk-bar sk-row w-40" />
+   </view>
    <view v-else class="rpc-body">
     <view class="rpc-kicker"><text class="rpc-kicker-text">{{ report.checkpointAt ? '检查点报告' : '用电报告' }}</text><text class="rpc-pill" :class="{ 'rpc-pill-partial': report.status === 'partial' }">{{ report.status === 'partial' ? '部分完成' : '已完成' }}</text></view>
     <text class="rpc-title">{{ report.title }}</text>
@@ -193,4 +204,16 @@ button::after { border: 0; }
 .rpc-btn[disabled] { opacity: .55; }
 .rpc-retry { flex: 0; padding: 0 18px; margin-top: 12px; }
 .rpc-error { display: block; margin-top: 8px; color: #a15343; font-size: 11px; }
+
+.rpc-skeleton { padding-top:18px; }
+.sk-bar { height:10px; border-radius:6px; background:#e8eee9; animation:sk-pulse 1.25s ease-in-out infinite; }
+.sk-kicker { width:34%; height:9px; }
+.sk-title { margin-top:12px; width:70%; height:18px; background:#e2eae4; }
+.sk-meta { margin-top:9px; height:9px; }
+.sk-summary { margin-top:14px; height:9px; }
+.sk-section { margin-top:22px; width:24%; height:9px; }
+.sk-row { margin-top:12px; height:9px; }
+.w-40 { width:40%; } .w-56 { width:56%; } .w-64 { width:64%; } .w-88 { width:88%; }
+@keyframes sk-pulse { 0%, 100% { opacity:.55; } 50% { opacity:1; } }
+@media(prefers-reduced-motion:reduce){ .sk-bar { animation:none; opacity:.8; } }
 </style>
