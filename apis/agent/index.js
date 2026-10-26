@@ -28,7 +28,7 @@ const request = async (url, method, data, timeout) => {
   }
   // 仅重放服务端已有幂等保护的确认/管理操作，参数与身份保持原请求。
   const replayable = method === 'POST' && /\/(tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel|status)(?:\?|$)/.test(url)
-  if (replayable && (error.transport || error.status >= 500) && scope === getAgentStorageScope()) {
+  if (replayable && error.data?.recovery?.kind !== 'confirmation_blocked' && (error.transport || error.status >= 500) && scope === getAgentStorageScope()) {
    return requestJson(globalConfig.agentUrl + url, method, data, headers, timeout)
   }
   throw error

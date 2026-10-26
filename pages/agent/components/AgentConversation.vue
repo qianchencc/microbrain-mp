@@ -28,7 +28,7 @@
   </scroll-view>
   <view v-if="clearing" class="clearing-hint"><text>正在清除会话…</text></view>
   </view>
-  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
+  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning || Boolean(confirmingTaskId) || hasTaskConfirmation" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
   <DraftSheetLayer v-if="sheetMounted" :source="source" :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline" :error="sheetError"
    :settle-selection="settleSelection"
    @reconnect="reconnectSheet" @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
@@ -145,17 +145,19 @@ const turns = ref([])
 const errorMessage = ref('')
 const recoveryMessage = ref('')
 const isRunning = ref(false)
+const confirmingTaskId = ref('')
+const hasTaskConfirmation = computed(() => turns.value.some(turn => (turn.tasks || (turn.task ? [turn.task] : [])).some(task => task.confirmation?.status === 'recovering')))
 const phase = ref('')
 const mutating = ref(false), clearing = ref(false)
 const scrollIntoView = ref(''), restoredScrollTop = ref(0)
 let currentScrollTop = 0, readingHydrated = false
 const nearBottom = ref(true)
 const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
-const busy = computed(() => isRunning.value || mutating.value || hasExecution.value)
+const busy = computed(() => isRunning.value || mutating.value || hasExecution.value || hasTaskConfirmation.value)
 const statusText = computed(() => !conversationId.value ? '正在连接' : clearing.value ? '正在清除' : busy.value ? '正在处理' : '服务在线')
 // 宿主状态播报：页面导航头/浮层面板头、浮标运行态都由这组事件驱动
 watch(statusText, value => emit('status', value), { immediate: true })
-watch(isRunning, value => emit('running', value), { immediate: true })
+watch(() => isRunning.value || Boolean(confirmingTaskId.value) || hasTaskConfirmation.value, value => emit('running', value), { immediate: true })
 watch(conversationId, value => emit('connected', Boolean(value)), { immediate: true })
 watch(inboxUnreadCount, value => emit('inbox-count', value), { immediate: true })
 watch(errorMessage, value => emit('error', Boolean(value)), { immediate: true })
@@ -214,7 +216,6 @@ let disposed = false, visible = false, restoring = false, sequence = 0
 // 期间 restore 整表回读会让路（服务端 EXECUTING 提交前的快照仍是待确认，
 // 回读会把界面冻结成"幻觉待确认"）；纪元用于丢弃跨越确认起点的在途 restore 快照。
 const confirming = new Set()
-const confirmingTaskId = ref('')
 let confirmEpoch = 0
 // 清除纪元：确认清除即递增，跨越清除起点取到的恢复快照属于旧会话，整表丢弃。
 let clearEpoch = 0
@@ -236,7 +237,7 @@ function handleScroll(event) {
 const tasksOf = turn => turn.tasks?.length ? turn.tasks : turn.task ? [turn.task] : []
 function schedule() {
  clearTimeout(pollTimer)
- if (visible && !disposed && (hasExecution.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
+ if (visible && !disposed && (hasExecution.value || hasTaskConfirmation.value || confirmingTaskId.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
  clearTimeout(taskPollTimer)
  if (visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
  clearTimeout(expiryTimer)
@@ -547,18 +548,22 @@ async function confirmTaskProposal(task) {
  const taskId = task.taskId, cancellationId = task.cancellationId, changeId = task.changeId
  const key = changeId || cancellationId || taskId
  errorMessage.value = ''; recoveryMessage.value = ''
- mutating.value = true; confirmingTaskId.value = key; confirming.add(key); confirmEpoch++
+ mutating.value = true; confirmingTaskId.value = key; confirming.add(key); confirmEpoch++; schedule()
  let resync = false
  try {
   const result = changeId ? await confirmTaskChange(changeId, props.source) : cancellationId ? await confirmTaskCancellation(cancellationId, props.source) : await confirmScheduledTask(taskId, task.version, props.source)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.changeId || item.cancellationId || item.taskId) === key)
-  if (live) { live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId && !changeId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt; live.nextCheckpointAt = result.nextCheckpointAt } } }
+  if (live) { live.confirmation = null; live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId && !changeId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt; live.nextCheckpointAt = result.nextCheckpointAt } } }
   tasksChanged()
   if (changeId) resync = true
   if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
  } catch (error) {
   const code = error.data?.code
-  if (code === 'TASK_RECONFIRM_REQUIRED') {
+  if (code === 'TASK_CONFIRMATION_STOPPED') {
+   recoveryMessage.value = '已停止本次任务确认'
+   errorMessage.value = ''
+   resync = true
+  } else if (code === 'TASK_RECONFIRM_REQUIRED') {
    recoveryMessage.value = '核实完成：提案已更新，请重新确认'
    errorMessage.value = ''
    resync = true
@@ -646,7 +651,7 @@ async function stopRun() {
   activeRequest.abort()
  }
  turn.running = false
- turn.error = '本次回答已停止'
+ turn.error = confirmingTaskId.value || hasTaskConfirmation.value ? '' : '本次回答已停止'
  for (const item of turn.activities) if (['running', 'searching'].includes(item.status)) item.status = 'skipped'
  isRunning.value = false
  // 停止=显式取消：本地断流之外必须终止服务端在途运行（含断开重连轮询盯着的孤儿运行）。

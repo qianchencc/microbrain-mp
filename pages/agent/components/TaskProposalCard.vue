@@ -45,14 +45,15 @@
   <text v-if="isCancellation" class="task-note">已执行的设备动作不会回滚</text>
   <view v-if="state === 'pending_confirmation'" class="task-actions">
    <button class="task-secondary" hover-class="task-quiet--pressed" :disabled="busy" @tap="$emit('discard')">放弃</button>
-   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy" :loading="confirming" @tap="$emit('confirm')">{{ confirming ? '正在创建' : isCancellation ? '确认取消' : task.repeat ? '创建周期计划' : '创建任务' }}</button>
+   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy || isConfirming" :loading="isConfirming" @tap="$emit('confirm')">{{ task.confirmation?.status === 'recovering' ? '正在核实' : isConfirming ? '正在创建' : isCancellation ? '确认取消' : task.repeat ? '创建周期计划' : '创建任务' }}</button>
   </view>
   <view v-else-if="isCreated" class="task-created">
    <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看周期计划' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
    <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="#176b54" /></button>
   </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>
-  <text v-if="confirming && state === 'pending_confirmation'" class="task-wait" role="status" aria-live="polite">正在核验设备范围并保存安排，请稍候。</text>
+  <text v-if="isConfirming && state === 'pending_confirmation'" class="task-wait" role="status" aria-live="polite">{{ task.confirmation?.message || '正在核验设备范围并保存安排，请稍候。' }}</text>
+  <text v-else-if="task.confirmation?.status === 'blocked' && !isCreated" class="task-wait" role="status">{{ task.confirmation.message }}</text>
  </view>
 </template>
 <script setup>
@@ -92,6 +93,7 @@ const acWindow = computed(() => {
 })
 const phasesShown = computed(() => acWindow.value ? [props.task.phases[0]] : props.task.phases || [])
 const isCancellation = computed(() => props.task.kind === 'cancellation')
+const isConfirming = computed(() => props.confirming || props.task.confirmation?.status === 'recovering')
 const state = computed(() => String(props.task.status || '').toLowerCase())
 const nextLabel = computed(() => (props.task.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes) ? '下一次检查' : '下一次执行')
 const isCreated = computed(() => isCancellation.value ? state.value === 'confirmed'
