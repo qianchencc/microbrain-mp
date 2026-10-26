@@ -205,7 +205,7 @@ function taskRange(kind) {
 }
 function taskKey(task) { return task.taskId || task.id || task.occurrence?.id || task.label }
 function taskTimeValue(task, kind) {
- if (kind === 'results') return task.report?.generatedAt || task.interval?.endsAt || task.phases?.at(-1)?.endedAt || task.phases?.at(-1)?.at || task.createdAt
+ if (kind === 'results') return task.reportAt || task.interval?.endsAt || task.phases?.at(-1)?.endedAt || task.phases?.at(-1)?.at || task.createdAt
  return task.interval?.startsAt || task.phases?.[0]?.at || task.createdAt
 }
 function taskTone(status) {
@@ -316,7 +316,7 @@ async function pauseAllPlans() {
 function selectTaskRows(values, kind) {
  const rows = Array.isArray(values) ? values : []
  const allowed = kind === 'all' ? null : kind === 'upcoming' ? ['scheduled', 'executing', 'pending'] : ['completed', 'partial', 'failed', 'unconfirmed', 'cancelled', 'missed', 'interrupted', 'verified', 'satisfied']
- return rows.filter(task => !allowed || allowed.includes(task.status) || (kind === 'results' && Boolean(task.report)))
+ return rows.filter(task => !allowed || allowed.includes(task.status) || (kind === 'results' && Boolean(task.hasReport)))
   .sort((a, b) => {
    const difference = Date.parse(taskTimeValue(a, kind) || '') - Date.parse(taskTimeValue(b, kind) || '')
    return kind === 'results' ? -difference : difference
