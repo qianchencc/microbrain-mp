@@ -25,7 +25,7 @@ import RegionCalendar from './RegionCalendar.vue'
 import { calendarWindow, shiftDate, validCalendarDate } from '../region-calendar.mjs'
 import { taskToday, taskDayTime, taskCalendarMarks, tasksOnDate, taskLabel, taskAbnormal } from '../task-calendar.mjs'
 const props = defineProps({ active: Boolean, compact: Boolean, date: String, refreshKey: Number, source: { type: String, default: 'company' } })
-const emit = defineEmits(['date-change', 'select-task', 'open-date', 'refreshed'])
+const emit = defineEmits(['date-change', 'select-task', 'open-date', 'refreshed', 'issue'])
 const today = ref(taskToday()), selected = ref(validCalendarDate(props.date) ? props.date : today.value)
 const month = ref(selected.value.slice(0, 7)), tasks = ref([]), loading = ref(false), loaded = ref(false), error = ref('')
 const maxDate = computed(() => shiftDate(today.value, 365))
@@ -38,7 +38,7 @@ let inFlight = null, loadedAt = 0, loadedKey = ''
 function clock(task) { return taskDayTime(task, selected.value) }
 function selectDate(date) { selected.value = date; emit('date-change', date) }
 function changeMonth(value) { if (month.value !== value) month.value = value }
-function showError() { uni.showModal({ title: '任务加载失败', content: error.value, showCancel: false, confirmText: '知道了' }) }
+function showError() { emit('issue', { title: '任务暂未加载', reason: error.value }) }
 function stop() { ++generation; clearTimeout(timer); loading.value = false }
 async function load(force = false) {
  if (!props.active || !visible) return

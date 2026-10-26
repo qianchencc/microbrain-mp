@@ -1,6 +1,6 @@
 <template>
  <view class="task-card">
-  <view class="task-head"><text class="task-kicker">{{ isCancellation ? '取消任务' : task.repeat ? '周期计划' : '定时任务' }}</text><text class="task-state" :class="state">{{ stateText }}</text></view>
+  <view class="task-head"><text class="task-kicker">{{ isCancellation ? '取消任务' : task.repeat ? '重复安排' : '定时任务' }}</text><text class="task-state" :class="state">{{ stateText }}</text></view>
   <text class="task-name">{{ task.label }}</text>
   <text v-if="task.repeat" class="task-repeat">{{ repeatText(task.repeat) }}</text>
   <text v-if="task.repeat && isCreated && (task.nextCheckpointAt || task.nextAt)" class="task-interval">{{ nextLabel }} · {{ taskTime(task.nextCheckpointAt || task.nextAt) }}</text>
@@ -11,18 +11,18 @@
     <template v-if="phase.preflight">
      <text class="device-location preflight-line">范围 · {{ phase.preflight.includedScopes.join('、') }}</text>
      <text v-if="phase.preflight.excludedScopes.length" class="device-location preflight-line">保留 · {{ phase.preflight.excludedScopes.join('、') }} · {{ phase.preflight.excludedCount }} 台</text>
-     <view class="device-target preflight-line preflight-counts"><text>目标 {{ phase.preflight.targetCount }} 台</text><text>当前已满足 {{ phase.preflight.alreadySatisfiedCount }}</text><text>待下发 {{ phase.preflight.needsDispatchCount }}</text><text>状态未知 {{ phase.preflight.unreadableCount }}</text></view>
-     <text class="device-location preflight-line">预检 {{ taskTime(phase.preflight.observedAt) }} · 到时重新读取状态</text>
+     <view class="device-target preflight-line preflight-counts"><text>目标 {{ phase.preflight.targetCount }} 台</text><text>无需调整 {{ phase.preflight.alreadySatisfiedCount }}</text><text>需要调整 {{ phase.preflight.needsDispatchCount }}</text><text>暂未读到状态 {{ phase.preflight.unreadableCount }}</text></view>
+     <text class="device-location preflight-line">检查时间 {{ taskTime(phase.preflight.observedAt) }} · 到时重新读取状态</text>
     </template>
     <view v-for="action in actionsOf(phase, index)" :key="action.deviceId" class="task-device">
      <view class="device-cell"><image v-if="artworkOf(action)" class="device-art" :src="artworkOf(action)" mode="aspectFit" /><text class="device-name">{{ action.deviceName }}</text></view><text class="device-target">{{ targetText(action.kind, action.command) }}</text>
     </view>
     <template v-if="source === 'company' && phase.read?.ac">
      <text class="read-window">{{ readAcOf(phase).summary }}</text>
-     <text class="read-window">{{ readAcOf(phase).criteriaText }}</text>
-     <text v-if="readAcOf(phase).cadenceText" class="read-window">{{ readAcOf(phase).cadenceText }}{{ acWindow ? ` · 共 ${acWindow.count} 个检查点` : '' }}</text>
+     <text v-if="readAcOf(phase).criteriaText" class="read-window">{{ readAcOf(phase).criteriaText }}</text>
+     <text v-if="readAcOf(phase).cadenceText" class="read-window">{{ readAcOf(phase).cadenceText }}{{ acWindow ? ` · 共 ${acWindow.count} 次检查` : '' }}</text>
      <text v-else class="read-window">{{ readAcOf(phase).scheduleText }}</text>
-     <text class="read-window">{{ readAcOf(phase).actionText }}</text>
+     <text class="read-window">{{ readAcOf(phase).limitText }}</text>
     </template>
     <template v-else-if="source === 'company' && phase.read?.agent">
      <text class="read-window">{{ readAgentOf(phase).objectiveText }}</text>
@@ -42,13 +42,13 @@
     </button>
    </view>
   </view>
-  <text v-if="isCancellation" class="task-note">已执行的设备动作不会回滚</text>
+  <text v-if="isCancellation" class="task-note">已做的操作保持原样</text>
   <view v-if="state === 'pending_confirmation'" class="task-actions">
    <button class="task-secondary" hover-class="task-quiet--pressed" :disabled="busy" @tap="$emit('discard')">放弃</button>
-   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy || isConfirming || needsDecision" :loading="isConfirming" @tap="$emit('confirm')">{{ needsDecision ? '等待补充' : task.confirmation?.status === 'recovering' ? '正在核实' : isConfirming ? '正在创建' : isCancellation ? '确认取消' : task.repeat ? '创建周期计划' : '创建任务' }}</button>
+   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy || isConfirming || needsDecision" :loading="isConfirming" @tap="$emit('confirm')">{{ needsDecision ? '等待补充' : task.confirmation?.status === 'recovering' ? '正在核实' : isConfirming ? '正在创建' : isCancellation ? '确认取消' : task.repeat ? '创建重复安排' : '创建任务' }}</button>
   </view>
   <view v-else-if="isCreated" class="task-created">
-   <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看周期计划' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
+   <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看重复安排' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
    <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="#176b54" /></button>
   </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>
@@ -59,6 +59,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { readAcView, readAgentView, readTargetText, repeatText, taskTime, targetText } from '../task-detail-view.mjs'
+import { taskStatusText } from '../task-presentation.mjs'
 import { resolveDeviceArtwork } from '../device-art/catalog.js'
 
 // 单 phase 动作与待读设备共用 4 行预算；公司级任务的长清单默认收成尾巴可展开。
@@ -85,7 +86,7 @@ const props = defineProps({ task: { type: Object, required: true }, source: { ty
 defineEmits(['confirm', 'discard', 'open'])
 const readAgentOf = phase => readAgentView(phase.read?.agent)
 const readAcOf = phase => readAcView(phase.read?.ac)
-// 频率展开后的检查点共享同一窗口与设备；提案只展示一份窗口事实，避免把 18–48 个检查点铺成重复卡片。
+// 频率展开后的检查点共享同一窗口与设备；提案只展示一份窗口事实，避免把 18–48 次检查铺成重复卡片。
 const acWindow = computed(() => {
  const phases = props.task.phases || []
  if (phases.length < 2 || !phases.every(phase => phase.read?.ac)) return null
@@ -101,25 +102,22 @@ const isCreated = computed(() => isCancellation.value ? state.value === 'confirm
  : Boolean(props.task.created) || ['scheduled', 'executing', 'completed', 'partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(state.value))
 const stateText = computed(() => isCancellation.value
  ? ({ pending_confirmation: '待确认', confirmed: '已取消', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束'
- : props.task.repeat && isCreated.value ? props.task.planStatus === 'paused' ? '已停用' : props.task.planStatus === 'deleted' ? '已删除' : props.task.nextAt === undefined ? '已创建' : props.task.nextAt ? '已启用' : props.task.latestTask?.status === 'executing' ? '本次进行中' : props.task.latestTask?.status === 'scheduled' ? '本次待执行' : '周期结束'
- : state.value === 'executing' && props.task.interval
-  ? props.task.executionActive ? '设备执行中' : '区间进行中'
-  : (props.source === 'company'
-   ? ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '结果待核验', cancelled: '已取消', missed: '未执行', interrupted: '已中断', expired: '已过期' })
-   : ({ pending_confirmation: '待确认', scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '部分完成', failed: '未完成', unconfirmed: '待核验', cancelled: '已取消', missed: '未执行', interrupted: '已中断', expired: '已过期' }))[state.value] || '已结束')
+ : props.task.repeat && isCreated.value ? props.task.planStatus === 'paused' ? '已暂停' : props.task.planStatus === 'deleted' ? '已删除' : props.task.nextAt === undefined ? '已创建' : props.task.nextAt ? '已开启' : props.task.latestTask?.status === 'executing' ? '本次进行中' : props.task.latestTask?.status === 'scheduled' ? '本次未开始' : '已结束'
+ : taskStatusText(state.value))
+
 const intervalText = computed(() => {
  if (!props.task.interval) return ''
  const start = taskTime(props.task.interval.startsAt), end = taskTime(props.task.interval.endsAt)
  const span = start.slice(0, 10) === end.slice(0, 10) ? `${start} 至 ${end.slice(-5)}` : `${start} 至 ${end}`
- return `${span} · ${props.task.phases?.length || 0} 个检查点`
+ return `${span} · ${props.task.phases?.length || 0} 次检查`
 })
 const artworkOf = device => resolveDeviceArtwork({ kind: device.kind, deviceName: device.deviceName || device.name }).src
 function phaseTitle(index) {
  if (isCancellation.value) return state.value === 'confirmed' ? '已取消' : '将取消'
  const actualTitle = props.task.phases[index]?.title
  if (actualTitle) return actualTitle
- if (props.task.interval) return `检查点${index + 1}`
- if (props.task.phases[index]?.preflight) return `阶段${index + 1}`
+ if (props.task.interval) return `第${index + 1}次检查`
+ if (props.task.phases[index]?.preflight) return `第${index + 1}次操作`
  return props.task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束'
 }
 </script>

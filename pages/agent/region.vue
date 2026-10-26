@@ -7,7 +7,7 @@
    <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample' : 'real')" calendar :bottom-pad="78" :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :start="windowStart || date" :days="windowDays" :now="displayNow" @date-change="date = $event" @visible-date="onVisibleDate" @reach-start="extendTop" @reach-end="extendBottom" @calendar-month="onCalendarMonth" @select="openTask">
     <template #card="{ item }">
      <view class="task-row" :class="{ cancelled: item.status === 'cancelled' }">
-     <text class="task-label"><text v-if="item.warning" class="warning-dot" /><text v-if="item.failure" class="failure-mark">×</text>{{ item.label }}</text>
+     <text class="task-label"><text v-if="item.warning || item.failure" class="warning-dot" />{{ item.label }}</text>
      <text v-if="item.status === 'cancelled'" class="cancelled-status">已取消</text>
      <view class="avatars"><view v-for="avatar in item.avatars" :key="avatar.id" class="device-avatar"><image v-if="avatar.src" :src="avatar.src" mode="aspectFit" /><uni-icons v-else type="gear" size="13" color="#7c8d82" /></view><text v-if="item.more" class="more">+{{ item.more }}</text></view>
      <view class="task-separator" />
@@ -15,9 +15,10 @@
      </view>
     </template>
    </RegionTimeline>
-   <view v-if="loading || error" class="notice-layer"><view class="notice"><view v-if="loading" class="loading-status"><view class="loading-spinner" /><text>正在加载任务…</text></view><text v-else>{{ error }}</text><button v-if="error" @tap="load">重新加载</button></view></view>
+   <view v-if="loading || error" class="notice-layer"><view class="notice"><view v-if="loading" class="loading-status"><view class="loading-spinner" /><text>正在加载任务…</text></view><TaskErrorNotice v-else :message="error" @details="issue = $event" /><button v-if="error" @tap="load">重新加载</button></view></view>
   </view>
-  <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
+  <DeviceSheet :open="Boolean(issue)" title="查看原因" tall compact-header @close="issue = null"><TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" /></DeviceSheet>
+ <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
   <RegionDeviceDrawer v-if="deviceDrawerMounted" @reference="referenceTask" :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : emptySampleTasks" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="reloadWindow(); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
   <TaskDetailSheet v-if="taskDetailMounted" @reference="referenceTask" :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="reloadWindow(); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
@@ -30,6 +31,10 @@ import { isDev } from '@/config/settings'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionChip from './components/RegionChip.vue'
 import RegionTimeline from './components/RegionTimeline.vue'
+import DeviceSheet from './components/DeviceSheet.vue'
+import TaskErrorNotice from './components/TaskErrorNotice.vue'
+import TaskIssueDetails from './components/TaskIssueDetails.vue'
+const issue = ref(null)
 import RegionDeviceDrawer from './components/RegionDeviceDrawer.vue'
 import { preserveComposerReference } from './composer-drafts.mjs'
 import TaskDetailSheet from './components/TaskDetailSheet.vue'

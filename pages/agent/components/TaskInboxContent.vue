@@ -1,29 +1,29 @@
 <template>
   <view class="inbox-content">
-   <scroll-view :style="{ display: selected ? 'none' : 'block' }" class="inbox-scroll" scroll-y enhanced :show-scrollbar="false" @scrolltolower="load(false)">
+   <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+   <scroll-view :style="{ display: selected || issue ? 'none' : 'block' }" class="inbox-scroll" scroll-y enhanced :show-scrollbar="false" @scrolltolower="load(false)">
     <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button v-if="unreadCount" class="inbox-markall" :disabled="markingAll" @tap="markAllSeen">全部已读</button><button class="inbox-refresh" :disabled="loading" @tap="load(true)">刷新</button></view>
     <view class="list-summary"><text>任务结束消息</text><text>{{ unreadCount }} 条未读</text></view>
     <view v-if="loading && !notifications.length" class="state-message">加载中…</view>
-    <view v-else-if="error && !notifications.length" class="state-message"><text>{{ error }}</text><button @tap="load(true)">重试</button></view>
-    <view v-else-if="!visibleNotifications.length" class="state-message">{{ filter === 'unread' ? nextCursor ? '已加载的消息中没有未读消息' : '没有未读消息' : filter === 'abnormal' ? nextCursor ? '已加载的消息中没有异常结果' : '没有异常结果消息' : '任务结束后，结果消息会出现在这里' }}</view>
-    <button v-for="notification in visibleNotifications" :key="notification.id" class="notification-row" @tap="openReport(notification)">
+    <view v-else-if="error && !notifications.length" class="state-message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load(true)">重试</button></view>
+    <view v-else-if="!visibleNotifications.length" class="state-message">{{ filter === 'unread' ? nextCursor ? '已加载的消息中没有未读消息' : '没有未读消息' : filter === 'abnormal' ? nextCursor ? '已加载的消息中没有待查看结果' : '没有待查看结果消息' : '任务结束后，结果消息会出现在这里' }}</view>
+    <view v-for="notification in visibleNotifications" :key="notification.id" class="notification-row" @tap="openReport(notification)">
      <view class="unread-mark" :class="{ 'unread-mark--active': !notification.readAt }" />
      <view class="notification-copy">
       <text class="notification-title">{{ notification.label || '任务执行结果' }}</text>
-      <text class="notification-outcome" :class="'tone-' + outcomeTone(notification.outcome)">{{ outcomeLabel(notification.outcome) }}</text>
+      <button v-if="taskNeedsDetails(notification.outcome)" class="notification-outcome outcome-link" @tap.stop="notification.reason ? showIssue({ title: notification.label, reason: notification.reason }) : openReport(notification)">{{ outcomeLabel(notification.outcome) }} ›</button><text v-else class="notification-outcome" :class="'tone-' + outcomeTone(notification.outcome)">{{ outcomeLabel(notification.outcome) }}</text>
       <text v-if="notification.summary" class="notification-facts">{{ summaryLine(notification.summary) }}</text>
-      <text v-if="notification.reason" class="notification-reason">{{ notification.reason }}</text>
       <text class="notification-time">{{ dateTime(notification.endedAt) }}</text>
      </view>
      <uni-icons type="right" size="13" color="#99a59d" />
-    </button>
+    </view>
     <button v-if="nextCursor && !loadingMore" class="load-more" @tap="load(false)">加载更多消息</button>
-    <view v-if="notifications.length && error" class="list-footer list-error"><text>{{ error }}</text><button @tap="load(false)">重试</button></view>
+    <view v-if="notifications.length && error" class="list-footer list-error"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load(false)">重试</button></view>
     <view v-else-if="loadingMore" class="list-footer">加载更多…</view>
     <view v-else-if="notifications.length && !nextCursor" class="list-footer">已显示全部消息</view>
    </scroll-view>
    <view v-if="selected && markError" class="mark-error"><text>报告已打开，但未读状态未更新</text><button @tap="retryMarkSeen">重试</button></view>
-   <TaskResultContent v-if="selected" ref="content" class="task-content-host" :active="open" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @changed="$emit('changed')" @dismiss="backToList" @reference="$emit('reference', $event)" @navigation="navigation = $event" />
+   <TaskResultContent v-if="selected" :style="{ display: issue ? 'none' : 'flex' }" ref="content" class="task-content-host" :active="open && !issue" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @changed="$emit('changed')" @dismiss="backToList" @reference="$emit('reference', $event)" @navigation="navigation = $event" />
   </view>
 </template>
 
@@ -33,42 +33,34 @@ import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { listNotifications, markNotificationSeen, markAllNotificationsSeen } from '@/apis/agent'
 import TaskResultContent from './TaskResultContent.vue'
+import TaskIssueDetails from './TaskIssueDetails.vue'
+import TaskErrorNotice from './TaskErrorNotice.vue'
+import { taskStatusText, taskStatusTone, taskNeedsDetails } from '../task-presentation.mjs'
+import { taskExecutionSummaryView } from '../task-detail-view.mjs'
 import { fmtShanghaiDateTime } from '../observation-view.mjs'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
 const emit = defineEmits(['unread-count', 'reference', 'navigation', 'changed'])
 const notifications = ref([]), selected = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
-const filter = ref('all')
-const filters = [{ value: 'all', label: '全部' }, { value: 'unread', label: '未读' }, { value: 'abnormal', label: '异常结果' }]
+const filter = ref('all'), issue = ref(null)
+function showIssue(value) { issue.value = value }
+const filters = [{ value: 'all', label: '全部' }, { value: 'unread', label: '未读' }, { value: 'abnormal', label: '待查看' }]
 const visibleNotifications = computed(() => notifications.value.filter(item => filter.value === 'unread' ? !item.readAt : filter.value === 'abnormal' ? ['partial', 'failed', 'missed', 'interrupted', 'unconfirmed'].includes(item.outcome) : true))
-watch(() => [selected.value, navigation.value.title, navigation.value.canBack], () => emit('navigation', { title: navigation.value.title || (selected.value ? '任务结果' : '通知中心'), canBack: Boolean(selected.value) }), { immediate: true })
+watch(() => [selected.value, issue.value, navigation.value.title, navigation.value.canBack], () => emit('navigation', { title: issue.value ? '查看原因' : navigation.value.title || (selected.value ? '任务详情' : '通知中心'), canBack: Boolean(selected.value || issue.value) }), { immediate: true })
 const unreadCount = ref(0), nextCursor = ref('')
 const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref(''), markingAll = ref(false)
 let requestId = 0, loadedScope = '', pageVisible = true
-function resetIdentity() { notifications.value = []; selected.value = null; nextCursor.value = ''; unreadCount.value = 0; markError.value = ''; navigation.value = { title: '', canBack: false }; publishUnreadCount() }
+function resetIdentity() { issue.value = null; notifications.value = []; selected.value = null; nextCursor.value = ''; unreadCount.value = 0; markError.value = ''; navigation.value = { title: '', canBack: false }; publishUnreadCount() }
 onHide(() => { pageVisible = false; ++requestId; loading.value = false; loadingMore.value = false })
 onShow(() => { pageVisible = true; if (props.open) void load(true) })
 const marking = new Set(), seenFailed = new Set()
 
-const labels = { completed: '执行完成', partial: '部分完成', failed: '未完成', unconfirmed: '结果待核验', interrupted: '执行中断', missed: '执行错过', cancelled: '已取消', verified: '已核验', satisfied: '无需执行' }
-function outcomeLabel(value) { return labels[value] || value || '结果已保存' }
-function summaryLine(summary) {
- const devices = summary.devices || {}
- const parts = [`${summary.checkpoints || 0} 次检查`, `涉及 ${devices.total || 0} 台`, `已调 ${devices.adjusted || 0}`, `无需 ${devices.satisfied || 0}`]
- if (devices.failed) parts.push(`未完成 ${devices.failed}`)
- if (devices.unknown) parts.push(`未知 ${devices.unknown}`)
- if (devices.unverified) parts.push(`待核验 ${devices.unverified}`)
- return parts.join(' · ')
-}
-function outcomeTone(value) {
- if (['failed', 'missed', 'interrupted'].includes(value)) return 'fail'
- if (['partial', 'unconfirmed'].includes(value)) return 'warn'
- if (value === 'cancelled') return 'muted'
- return 'ok'
-}
+const outcomeLabel = taskStatusText
+const outcomeTone = taskStatusTone
+function summaryLine(summary) { return taskExecutionSummaryView(summary)?.devicesText || '' }
 function dateTime(value) {
  const text = fmtShanghaiDateTime(value)
- return text ? `${text.replace(/-/g, '/')}（上海时间）` : ''
+ return text ? `${text.replace(/-/g, '/')}` : ''
 }
 function publishUnreadCount() { emit('unread-count', unreadCount.value) }
 
@@ -113,7 +105,7 @@ function openReport(notification) {
  seenFailed.delete(notification.id)
 }
 function backToList() { selected.value = null; markError.value = ''; navigation.value = { title: '', canBack: false } }
-function back() { if (content.value?.back()) return true; if (selected.value) { backToList(); return true } return false }
+function back() { if (issue.value) { issue.value = null; return true } if (content.value?.back()) return true; if (selected.value) { backToList(); return true } return false }
 defineExpose({ back, refresh: () => load(true) })
 
 async function onReportLoaded(taskId) {
@@ -157,18 +149,20 @@ async function markAllSeen() {
   unreadCount.value = 0
   publishUnreadCount()
  } catch (cause) {
-  if (current === requestId) uni.showToast({ title: cause.message || '全部已读失败，请重试', icon: 'none' })
+  if (current === requestId) error.value = cause.message || '暂时没能标记已读，请重试'
  } finally { if (current === requestId) markingAll.value = false }
 }
 
 watch(() => [props.open, props.source], ([value, source], previous) => {
  if (previous && source !== previous[1]) resetIdentity()
  if (value) void load(true)
- else { ++requestId; loading.value = false; loadingMore.value = false; backToList() }
+ else { issue.value = null; ++requestId; loading.value = false; loadingMore.value = false; backToList() }
 }, { immediate: true })
 </script>
 
 <style scoped>
+.outcome-link { min-height:44px; margin:0; padding:0; display:flex; align-items:center; color:#806f50; background:transparent; }
+.outcome-link::after { border:0; }
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.2; }
 button::after { border:0; }

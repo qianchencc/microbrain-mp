@@ -1,19 +1,9 @@
-import { fieldLabels, fanLabels, modeLabels } from './ac-draft.js'
+import { fanLabels, modeLabels } from './ac-draft.js'
 import { resolveDeviceArtwork } from './device-art/catalog.js'
 
-const statusText = { scheduled: '未执行', executing: '执行中', completed: '已执行', partial: '部分完成', failed: '未完成', unconfirmed: '待核验', cancelled: '已取消', missed: '未执行', interrupted: '已中断', verified: '已执行', satisfied: '不必执行', pending: '未执行' }
-const companyStatusText = { scheduled: '未执行', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '结果待核验', cancelled: '已取消', missed: '未执行', interrupted: '已中断', verified: '已核验', satisfied: '无需执行', pending: '未执行' }
-const statusLabel = (status, source) => (source === 'company' ? companyStatusText[status] : statusText[status]) || status
+import { taskStatusText, taskStatusTone, deviceResultView, deviceResultReason } from './task-presentation.mjs'
 
-export function executionResult(device, source) {
- if (device.outcome === 'observed') return '已读取'
- if (device.outcome === 'satisfied') return '不必执行'
- if (device.outcome === 'unconfirmed' && device.details?.requiresVerification) return '结果待核验'
- if (device.outcome === 'verified' || (device.outcome === 'unconfirmed' && !device.details?.requiresVerification && device.details?.receipt === 'ACCEPTED' && !device.details?.timedOut)) return '已执行'
- if (['pending', 'not_dispatched'].includes(device.outcome)) return '未执行'
- if (source === 'company' && device.outcome === 'unknown') return '结果未知'
- return '未完成'
-}
+export const executionResult = device => deviceResultView(device).text
 
 export function repeatText(repeat) {
  if (!repeat) return ''
@@ -54,25 +44,25 @@ export function readAgentView(agent) {
  const spec = readAgentSpecView(agent.spec)
  return {
   ...agent,
-  objectiveText: `检查点指令 · ${agent.objective}`,
+  objectiveText: `任务要求 · ${agent.objective}`,
   periodText: spec?.periodText || '',
   comparisonText: spec?.comparisonText || '',
   comparisons: spec?.comparisons || [],
  }
 }
 
-const acModeLabels = { inspect: '空调只读巡检', adjust_to_26: '有限条件调温' }
+const acModeLabels = { inspect: '空调检查', adjust_to_26: '空调温度调整' }
 
 export function readAcView(ac) {
  if (!ac?.mode) return null
  return {
   title: acModeLabels[ac.mode] || '空调检查',
-  summary: ac.mode === 'adjust_to_26' ? '仅满足条件时设为26℃ · 不开机、不改模式或风速' : '空调只读巡检 · 不下发设备控制',
-  criteriaText: '条件 · 已开机 + 制冷 + 设定温度低于26℃',
-  cadenceText: ac.cadenceMinutes ? `频率 · 每 ${ac.cadenceMinutes} 分钟检查一次` : '',
-  scheduleText: ac.cadenceMinutes ? '' : '排程 · 指定时刻检查一次',
-  actionText: ac.mode === 'adjust_to_26' ? '动作 · 满足条件时把设定温度调整为26℃' : '动作 · 只读取状态，不调整设备',
-  limitText: '限制 · 不自动开机、不切换模式、不调整风速',
+  summary: ac.mode === 'adjust_to_26' ? '符合条件的空调调到26℃' : '只检查状态，不调整空调',
+  criteriaText: ac.mode === 'adjust_to_26' ? '只调整开着、正在制冷且设定温度低于26℃的空调' : '',
+  cadenceText: ac.cadenceMinutes ? `每 ${ac.cadenceMinutes} 分钟检查一次` : '',
+  scheduleText: ac.cadenceMinutes ? '' : '按指定时间检查一次',
+  actionText: ac.mode === 'adjust_to_26' ? '符合条件时调到26℃' : '只检查，不调整设备',
+  limitText: '不开机、不改模式和风速',
  }
 }
 
@@ -97,7 +87,7 @@ function acReportDeviceRows(phases, target) {
   const before = Number.isFinite(device.before) ? `${device.before}℃` : '—'
   if (device.disposition === 'adjusted') return { deviceId, name: device.name, before, after: `${target}℃`, tone: 'ok' }
   if (device.disposition === 'not_needed') return { deviceId, name: device.name, before, after: '无需调整', tone: 'muted' }
-  return { deviceId, name: device.name, before, after: { not_dispatched: '未下发', unknown: '结果未知' }[device.disposition] || '未调温', tone: 'muted' }
+  return { deviceId, name: device.name, before, after: { not_dispatched: '这次未调整', unknown: '结果待确认' }[device.disposition] || '未调温', tone: 'muted' }
  })
  return { rows: rows.slice(0, ENERGY_DEVICE_ROW_LIMIT), more: Math.max(0, rows.length - ENERGY_DEVICE_ROW_LIMIT) }
 }
@@ -143,7 +133,7 @@ export function energyImpactView(impact, devices, reportPhases) {
   return {
    kind: 'unavailable', tone: 'muted',
    text: impact.reason || '暂无法可靠估算节能情况',
-   hero: { value: '暂无法可靠估算', unit: '', label: `本次已调节 ${devices.adjusted || 0} 台空调`, badge: '口径缺失', footnote: impact.reason || '' },
+   hero: { value: '暂无法可靠估算', unit: '', label: `本次已调节 ${devices.adjusted || 0} 台空调`, badge: '暂时算不出节电量', footnote: impact.reason || '' },
    facts: [
     { value: `${devices.total || 0} 台`, label: '纳入范围' },
     { value: `${devices.adjusted || 0} 台`, label: '实际调节' },
@@ -165,13 +155,9 @@ export function energyImpactView(impact, devices, reportPhases) {
 export function taskExecutionSummaryView(summary, reportPhases) {
  if (!summary?.devices) return null
  const devices = summary.devices
- const counts = [`已调 ${devices.adjusted || 0}`, `无需 ${devices.satisfied || 0}`, `跳过 ${devices.skipped || 0}`]
- if (devices.failed) counts.push(`失败 ${devices.failed}`)
- if (devices.unknown) counts.push(`未知 ${devices.unknown}`)
- if (devices.unverified) counts.push(`待核验 ${devices.unverified}`)
  return {
-  checkpointsText: `${summary.checkpoints || 0} 次检查`,
-  devicesText: `涉及 ${devices.total || 0} 台 · ${counts.join(' · ')}`,
+  checkpointsText: Number.isFinite(summary.checkpoints) ? `${summary.checkpoints}次检查有结果` : '',
+  devicesText: [Number.isFinite(devices.total) ? `涉及${devices.total}台设备` : '设备数量未提供', devices.adjusted > 0 ? `其中${devices.adjusted}台曾调整温度` : ''].filter(Boolean).join(' · '),
   energy: energyImpactView(summary.energyImpact, devices, reportPhases),
  }
 }
@@ -258,26 +244,8 @@ export function taskRequirementsText(task) {
  return [...requirements].join('；')
 }
 
-export function resultText(device, source) {
- if (device.details?.requiresVerification) {
-  if (device.outcome === 'verified') return '已核验'
-  if (device.outcome === 'unconfirmed' && device.details.receipt === 'ACCEPTED') return device.details.readback?.observedState === null ? '已受理 · 回读失败' : '已受理 · 目标未核验'
- }
- const status = executionResult(device, source)
- if (status !== '未完成') return status
- const rejected = (device.details?.fields || []).filter(field => field.outcome === 'REJECTED')
-  .map(field => fieldLabels[field.field] || field.field)
- if (rejected.length) return `${status} · ${rejected.join('、')}未受理`
- if (device.details?.timedOut) return `${status} · 平台响应超时`
- const reason = { rejected: '平台未受理', unknown: '结果未知', unreadable: '状态未读取', missing: '设备不可用' }[device.outcome]
- return reason ? `${status} · ${reason}` : status
-}
-
-const phaseTone = status =>
- ['verified', 'satisfied', 'completed'].includes(status) ? 'ok'
- : status === 'partial' ? 'warn'
- : ['failed', 'missed', 'interrupted'].includes(status) ? 'fail'
- : status === 'executing' ? 'active' : status === 'cancelled' ? 'off' : 'wait'
+export const resultText = device => deviceResultView(device).text
+const phaseTone = taskStatusTone
 
 // 两阶段之间的连线按上一阶段推进程度填充：已跑完（含失败/中断）满格；执行中按时间进度；未到/错过/取消不填充。
 function linkProgress(phase, next) {
@@ -299,15 +267,16 @@ export function taskDetailView(task) {
   return {
    ...phase, readAgent: readAgentView(phase.read?.agent), readAc: readAcView(phase.read?.ac), observations: merged.filter(block => block?.type !== 'report_artifact'),
    report: link ? { reportId: link.id, title: link.title, status: link.status, phaseId: phase.id, phaseAt: phase.at } : null,
-   title: readAcView(phase.read?.ac)?.title || (interval ? `检查点${index + 1}` : task.phases.length === 1 ? '执行' : index === 0 ? '开始' : '结束'),
-   time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: statusLabel(phase.status, task.agentSource),
+   title: phase.read?.ac || phase.read?.agent || phase.devices?.some(d => d.target?.observe) ? `第${index + 1}次检查` : task.phases.length === 1 ? '操作记录' : `第${index + 1}次操作`,
+   time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), statusText: taskStatusText(phase.status),
    tone: phaseTone(phase.status), link: linkProgress(phase, task.phases[index + 1]),
    devices: (phase.devices || []).map(device => {
-    const outcome = executionResult(device, task.agentSource)
+    const result = deviceResultView(device)
     return { ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
      targetText: targetText(device.kind, device.target),
-     resultText: phase.status === 'cancelled' ? '已取消，未下发' : resultText(device, task.agentSource),
-     resultTone: phase.status === 'cancelled' ? 'wait' : device.details?.requiresVerification && device.outcome === 'unconfirmed' ? 'warn' : outcome === '未完成' ? 'fail' : outcome === '结果未知' ? 'warn' : outcome === '未执行' ? 'wait' : 'ok' }
+     resultText: phase.status === 'cancelled' ? '已取消' : result.text,
+     resultReason: deviceResultReason(device),
+     resultTone: phase.status === 'cancelled' ? 'wait' : result.tone }
    }),
   }
  })
@@ -317,17 +286,20 @@ export function taskDetailView(task) {
   ? `${start} 至 ${end.slice(-5)}` : [start, end].filter(Boolean).join(' 至 ')
  const report = task.report ? {
   generatedText: taskTime(task.report.generatedAt),
-  outcomeText: statusLabel(task.report.outcome, task.agentSource),
+  outcomeText: taskStatusText(task.report.outcome),
   checkpoints: task.report.phases.length,
   devicesVisible: new Set(task.report.phases.flatMap(phase => phase.devices.map(device => device.id))).size,
   summary: taskExecutionSummaryView(task.report.summary, reportPhases),
  } : null
- const nextAt = task.nextCheckpointAt || task.nextAt
+ const pending = phases.filter(phase => ['pending', 'scheduled'].includes(phase.status))
+ const finished = phases.filter(phase => ['verified', 'satisfied', 'completed', 'partial', 'failed', 'unconfirmed', 'missed', 'interrupted'].includes(phase.status))
+ const focus = phases.findIndex(phase => phase.status === 'executing' || ['pending', 'scheduled'].includes(phase.status))
+ const previewStart = Math.max(0, focus < 0 ? phases.length - 3 : focus - 1)
+ const previewPhases = phases.length > 3 ? phases.slice(previewStart, previewStart + 3) : phases
+ const nextAt = pending[0]?.at || task.nextCheckpointAt || task.nextAt
  const nextLabel = (task.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes) ? '下一次检查' : '下一次执行'
- return { ...task, phases, whenText, report, repeatText: repeatText(task.repeat), nextText: nextAt ? taskTime(nextAt) : '', nextLabel, createdText: taskTime(task.createdAt),
-  statusText: task.occurrence?.virtual ? '未来安排' : interval && task.status === 'executing'
-   ? task.executionActive ? '设备执行中' : '区间进行中'
-   : statusLabel(task.status, task.agentSource),
-  sourceText: task.agentSource === 'company' ? task.source?.type === 'recurring_plan' ? '公司周期计划' : '公司定时任务'
-   : task.source?.type === 'recurring_plan' ? 'Agent 周期计划' : task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? 'Agent 即时操作' : 'Agent 定时任务' }
+ return { ...task, phases, previewPhases, progressText: `已结束${finished.length}次 · 还有${pending.length}次安排`, whenText, report, repeatText: repeatText(task.repeat), nextText: nextAt ? taskTime(nextAt) : '', nextLabel, createdText: taskTime(task.createdAt),
+  statusText: taskStatusText(task.status),
+  sourceText: task.agentSource === 'company' ? task.source?.type === 'recurring_plan' ? '公司重复安排' : '公司定时任务'
+   : task.source?.type === 'recurring_plan' ? '重复安排' : task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? '即时操作' : '定时任务' }
 }

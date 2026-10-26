@@ -1,5 +1,7 @@
 <template>
- <scroll-view class="task-scroll" scroll-y enhanced :show-scrollbar="false">
+ <view class="task-detail-host">
+ <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+ <scroll-view :style="{ display: issue ? 'none' : 'block' }" class="task-scroll" scroll-y enhanced :show-scrollbar="false">
   <view v-if="loading && !detailFresh" class="task-detail task-skeleton" aria-label="正在加载任务">
    <view class="sk-bar sk-title" />
    <view class="sk-bar sk-meta w-40" />
@@ -19,59 +21,47 @@
     </view>
    </view>
   </view>
-  <view v-else-if="error" class="message"><text>{{ error }}</text><button @tap="load()">重新加载</button><button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button></view>
+  <view v-else-if="error" class="message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load()">重新加载</button><button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button></view>
   <view v-else-if="detail" class="task-detail">
    <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button>
-   <text class="task-name">{{ detail.label }}</text>
-   <text v-if="loading" class="task-when">正在更新…</text>
-   <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
-   <text v-if="detail.occurrence" class="task-when">{{ detail.occurrence.virtual ? '未来安排 · 尚未开始' : '本次发生' }} · {{ detail.occurrence.date }}</text>
-   <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">{{ detail.nextLabel || '下一次执行' }} · {{ detail.nextText }}</text>
+   <view class="task-heading"><text class="task-name">{{ detail.label }}</text><button v-if="taskNeedsDetails(detail.status)" class="state-tag result-link" @tap="showTaskIssue">{{ detail.statusText }} ›</button><text v-else class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
    <text class="task-when">{{ detail.whenText }}</text>
-   <view class="owner-line"><view class="owner-mark" :class="'cv-' + ownerVariant">{{ creatorMark }}</view><text class="owner-name">{{ plan ? '周期计划' : `${detail.creator?.displayName || '成员'} 创建 · ${detail.createdText}` }}</text><text class="state-tag" :class="detail.status">{{ detail.statusText }}</text></view>
+   <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
+   <text v-if="loading" class="task-when">正在更新…</text>
+   <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">{{ detail.nextLabel }}：{{ detail.nextText }}</text>
+   <text v-if="detail.phases.length > 1" class="task-progress">{{ detail.progressText }}</text>
+   <text v-if="detail.report?.summary" class="task-when">{{ detail.report.summary.devicesText }}</text>
+   <view v-if="taskRules" class="task-rules"><text>{{ taskRules }}</text></view>
    <view v-if="plan && !sampleTask" class="plan-toggle-row">
-    <view class="plan-toggle-copy"><text class="plan-toggle-title">周期计划</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '停用后只影响未来发生' : '重新启用前会核验当前范围和绑定' }}</text></view>
+    <view class="plan-toggle-copy"><text class="plan-toggle-title">重复安排</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
     <view v-if="!planCanToggle(plan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(plan)">
      <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" disabled />
     </view>
     <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :disabled="cancelling" @change="togglePlanStatus(plan, $event.detail.value)" />
    </view>
-   <text v-if="plan?.pauseReason" class="plan-pause-reason">{{ plan.pauseReason }}</text>
-   <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>设备现态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
-   <text v-if="currentError" class="current-error">{{ currentError }}</text>
-   <text v-if="actionError" class="action-error">{{ actionError }}</text>
-   <text class="section-title">{{ detail.interval ? '检查点' : '阶段' }} · {{ detail.phases.length }}</text>
-   <view v-for="(phase, index) in detail.phases" :key="phase.id" class="phase">
+   <TaskErrorNotice v-if="plan?.pauseReason" :message="plan.pauseReason" summary="安排已暂停" @details="showIssue" />
+   <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>现在状态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
+   <TaskErrorNotice v-if="currentError" :message="currentError" summary="暂时没读到现在状态" @details="showIssue" />
+   <TaskErrorNotice v-if="actionError" :message="actionError" summary="这次操作未完成" @details="showIssue" />
+   <view class="records-heading"><text class="section-title">{{ detail.interval || detail.phases.some(p => p.readAc) ? '检查记录' : '操作记录' }}</text><button v-if="detail.phases.length > 3" class="records-toggle" @tap="allPhases = !allPhases">{{ allPhases ? '收起记录' : `查看全部${detail.phases.length}次` }} ›</button></view>
+   <view v-for="(phase, index) in visiblePhases" :key="phase.id" class="phase">
     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
-     <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><text class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
-     <template v-if="source === 'company' && phase.readAgent">
-      <text class="task-when">{{ phase.readAgent.objectiveText }}</text>
-      <text v-if="phase.readAgent.periodText" class="task-when">{{ phase.readAgent.periodText }}</text>
-      <text v-if="phase.readAgent.comparisonText" class="task-when">{{ phase.readAgent.comparisonText }}</text>
-     </template>
-     <template v-else-if="source === 'company' && phase.readAc">
-      <text class="task-when">{{ phase.readAc.summary }}</text>
-      <text class="task-when">{{ phase.readAc.criteriaText }}</text>
-      <text v-if="phase.readAc.cadenceText" class="task-when">{{ phase.readAc.cadenceText }}</text>
-      <text v-else class="task-when">{{ phase.readAc.scheduleText }}</text>
-      <text class="task-when">{{ phase.readAc.actionText }}</text>
-     </template>
-     <ObservationCard v-if="phase.observations?.length" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" />
-     <text v-if="phase.failureReason" class="phase-reason">{{ phase.failureReason }}</text>
-     <button v-if="phase.report" class="phase-report" :aria-label="`打开检查点报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
+     <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><button v-if="taskNeedsDetails(phase.status) || phase.failureReason" class="phase-status result-link" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+     <ObservationCard v-if="phase.observations?.length && expandedPhases.includes(phase.id)" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" />
+     <button v-if="phase.report" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
       <uni-icons type="compose" size="13" color="#176b54" />
-      <text class="phase-report-title">{{ phase.report.title || '检查点报告' }}</text>
+      <text class="phase-report-title">{{ phase.report.title || '检查报告' }}</text>
       <text v-if="phase.report.status === 'partial'" class="phase-report-tag">部分完成</text>
       <uni-icons type="right" size="12" color="#99a59d" />
      </button>
-     <button v-if="phase.devices.length > 1" class="phase-devices" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
+     <button v-if="phase.devices.length > 1 || phase.observations?.length" class="phase-devices" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
       <view class="phase-avatars"><view v-for="device in phase.devices.slice(0, 5)" :key="device.id" class="phase-avatar"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="12" color="#7c8d82" /></view></view>
       <text class="phase-device-count">{{ phase.devices.length }} 台设备</text><uni-icons :type="expandedPhases.includes(phase.id) ? 'down' : 'right'" size="13" color="#839189" />
      </button>
-     <view v-if="phase.devices.length <= 1 || expandedPhases.includes(phase.id)" class="device-list">
+     <view v-if="(phase.devices.length <= 1 || expandedPhases.includes(phase.id)) && !phase.observations?.some(block => block.type === 'ac_inspection')" class="device-list">
       <view v-for="device in phase.devices" :key="device.id" class="device-row">
-       <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><text class="result" :class="device.resultTone">{{ device.resultText }}</text>
+       <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><button v-if="device.resultTone !== 'ok' && device.outcome !== 'pending' && phase.status !== 'cancelled'" class="result result-link" @tap="showIssue({ title: `${device.name} · ${device.resultText}`, reason: device.resultReason })">{{ device.resultText }} ›</button><text v-else class="result" :class="device.resultTone">{{ device.resultText }}</text>
        <text v-if="device.kind === 'lighting' && currentStates[device.id]" class="current-device">现态：{{ currentStates[device.id].state === true ? '开启' : currentStates[device.id].state === false ? '关闭' : '未知' }}</text>
       </view>
       <text v-if="!phase.devices.length" class="no-devices">当前没有可查看的设备</text>
@@ -80,7 +70,7 @@
    </view>
    <view v-if="detail.report" class="task-report">
     <text class="report-title">执行报告 · {{ detail.report.generatedText }}</text>
-    <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 个检查点 · {{ detail.report.devicesVisible }} 台设备</text>
+    <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 次记录 · {{ detail.report.devicesVisible }} 台设备</text>
     <text v-if="detail.report.summary" class="report-summary">{{ detail.report.summary.checkpointsText }} · {{ detail.report.summary.devicesText }}</text>
     <template v-if="detail.report.summary?.energy">
      <template v-if="detail.report.summary.energy.hero">
@@ -97,7 +87,8 @@
       <view v-if="detail.report.summary.energy.facts?.length" class="energy-facts">
        <view v-for="fact in detail.report.summary.energy.facts" :key="fact.label" class="energy-fact"><text class="energy-fact-value">{{ fact.value }}</text><text class="energy-fact-label">{{ fact.label }}</text></view>
       </view>
-      <view class="energy-basis-card">
+      <button class="records-toggle" @tap="energyBasis = !energyBasis">{{ energyBasis ? '收起计算说明' : '查看计算说明' }} ›</button>
+      <view v-if="energyBasis" class="energy-basis-card">
        <text class="energy-basis-title">{{ detail.report.summary.energy.basisTitle }}</text>
        <text v-if="detail.report.summary.energy.formula" class="energy-formula">{{ detail.report.summary.energy.formula }}</text>
        <text v-for="note in detail.report.summary.energy.notes" :key="note" class="energy-basis-note">{{ note }}</text>
@@ -106,7 +97,7 @@
        <view v-for="row in detail.report.summary.energy.devices.rows" :key="row.deviceId" class="energy-device-row">
         <text class="energy-device-name">{{ row.name }}</text><text class="energy-device-before">{{ row.before }} →</text><text class="energy-device-after" :class="'after-' + row.tone">{{ row.after }}</text>
        </view>
-       <text v-if="detail.report.summary.energy.devices.more" class="energy-devices-more">其余 {{ detail.report.summary.energy.devices.more }} 台见上方检查点明细</text>
+       <text v-if="detail.report.summary.energy.devices.more" class="energy-devices-more">其余 {{ detail.report.summary.energy.devices.more }} 台见上方检查记录</text>
       </view>
      </template>
      <text v-else class="report-energy" :class="'energy-' + detail.report.summary.energy.tone">{{ detail.report.summary.energy.text }}</text>
@@ -114,15 +105,17 @@
    </view>
    <view v-if="plan && latestReport" class="task-report">
     <text class="report-title">最近一次执行 · {{ latestReport.generatedText }}</text>
-    <text class="report-summary">{{ latestReport.outcomeText }} · {{ latestReport.checkpoints }} 个检查点 · {{ latestReport.devicesVisible }} 台设备</text>
+    <text class="report-summary">{{ latestReport.outcomeText }} · {{ latestReport.checkpoints }} 次记录 · {{ latestReport.devicesVisible }} 台设备</text>
     <button class="latest-report-link" @tap="openLatestReport">查看最近一次报告</button>
    </view>
-   <view class="source"><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId">对话 {{ detail.source.conversationId.slice(0, 8) }}</text></view>
+   <button class="more-info" @tap="moreInfo = !moreInfo">更多信息 {{ moreInfo ? '⌃' : '›' }}</button>
+   <view v-if="moreInfo" class="source"><text>{{ detail.creator?.displayName || '成员' }} 创建 · {{ detail.createdText }}</text><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId" selectable>对话编号 {{ detail.source.conversationId }}</text></view>
    <view v-if="!sampleTask" class="reference-actions"><button class="task-reference" @tap="referenceCurrent">{{ plan ? '询问这个计划' : '引用任务并询问' }}</button></view>
    <button v-if="!sampleTask && !loading && (detail.canCancel || (task?.occurrence?.virtual && detailMine && task.status !== 'cancelled'))" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="task?.occurrence?.virtual ? cancelPeriod('occurrence') : deleteTask()">{{ task?.occurrence ? '取消本次' : '取消任务' }}</button>
    <button v-if="!sampleTask && (plan?.canManage || (task?.occurrence && detailMine))" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="cancelPeriod('all')">取消全部</button>
   </view>
  </scroll-view>
+ </view>
 </template>
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
@@ -133,18 +126,37 @@ import { getAgentStorageScope } from '@/utils/agent-session'
 import { createStateRefresh } from '../state-refresh.mjs'
 import { creatorVariant } from '../region-device-view.mjs'
 import ObservationCard from './ObservationCard.vue'
+import TaskIssueDetails from './TaskIssueDetails.vue'
+import TaskErrorNotice from './TaskErrorNotice.vue'
+import { taskNeedsDetails } from '../task-presentation.mjs'
 
 const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, initialTask: Object, snapshotScope: String, source: { type: String, default: 'office' } })
-const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss', 'select-alert', 'browse-alerts'])
+const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss', 'select-alert', 'browse-alerts', 'navigation'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false), planSwitchRevision = ref(0)
 const detailFresh = ref(false)
 const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
-const expandedPhases = ref([])
+const expandedPhases = ref([]), allPhases = ref(false), moreInfo = ref(false), energyBasis = ref(false), issue = ref(null)
+const visiblePhases = computed(() => allPhases.value ? detail.value?.phases : detail.value?.previewPhases)
+const taskRules = computed(() => {
+ const phase = detail.value?.phases.find(p => p.readAc || p.readAgent)
+ return phase?.readAc ? [phase.readAc.criteriaText || phase.readAc.summary, phase.readAc.cadenceText || phase.readAc.scheduleText, phase.readAc.limitText].filter(Boolean).join('；')
+  : phase?.readAgent ? [phase.readAgent.objectiveText, phase.readAgent.periodText, phase.readAgent.comparisonText].filter(Boolean).join('；') : ''
+})
+function showIssue(value) { issue.value = value }
+function showPhaseIssue(phase) {
+ showIssue({ title: `${phase.clock} · ${phase.statusText}`, reason: [phase.failureReason,
+  ...phase.devices.filter(d => !['verified', 'satisfied', 'observed', 'pending'].includes(d.outcome)).map(d => `${d.name}：${d.resultReason}`)].filter(Boolean).join('\n\n') || '这次结果暂无更多说明。' })
+}
+function showTaskIssue() {
+ showIssue({ title: detail.value.statusText, reason: detail.value.phases.filter(p => taskNeedsDetails(p.status) || p.failureReason)
+  .map(p => `${p.time} · ${p.statusText}\n${p.failureReason || p.devices.filter(d => d.resultTone !== 'ok').map(d => `${d.name}：${d.resultReason}`).join('\n') || '暂无更多说明'}`).join('\n\n') })
+}
+watch(issue, value => emit('navigation', { title: value ? '查看原因' : '', canBack: Boolean(value) }))
 const detail = computed(() => {
  const view = taskDetailView(task.value || taskPlanSnapshot(plan.value))
- if (plan.value && view) return { ...view, statusText: ({ enabled: plan.value.nextAt ? '已启用' : '周期结束', paused: '已停用', deleted: '已删除' })[plan.value.status] || (plan.value.nextAt ? '已启用' : '周期结束') }
+ if (plan.value && view) return { ...view, statusText: ({ enabled: plan.value.nextAt ? '已开启' : '已结束', paused: '已暂停', deleted: '已删除' })[plan.value.status] || (plan.value.nextAt ? '已开启' : '已结束') }
  return view
 })
 function referenceCurrent() {
@@ -169,16 +181,16 @@ function planStatusContextCurrent(planId, source, scope, version, action) {
 }
 function resumeContent(value) {
  const next = value?.resumeNextAt ? taskTime(value.resumeNextAt) : ''
- return `下一次执行：${next || '暂无未来发生'}。将重新核验当前完整范围和控制绑定，从下一次未来发生继续，不补过去安排。`
+ return `下一次执行：${next || '暂无以后的安排'}。将重新核验当前设备权限和操作范围，从下一次安排继续，不补做过去的安排。`
 }
 async function togglePlanStatus(value, enabled) {
  if (!value?.planId || !planCanToggle(value) || cancelling.value) return
  const action = ++planStatusRequest, operation = enabled ? 'resume' : 'pause', planId = value.planId, version = value.version
  const source = props.source, scope = getAgentStorageScope()
- const title = operation === 'resume' ? '重新启用' : '停用周期计划'
+ const title = operation === 'resume' ? '继续执行' : '暂停重复安排'
  const content = operation === 'resume'
   ? resumeContent(value)
-  : '只停用未来发生；已经生成、执行中或已下发的本次不回滚。'
+  : '只暂停以后的安排；已经安排的本次任务会继续，已做的操作保持原样。'
  const confirmed = await new Promise(resolve => uni.showModal({ title, content, confirmText: title, confirmColor: operation === 'resume' ? '#176b54' : '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed) {
   if (planStatusContextCurrent(planId, source, scope, version, action)) planSwitchRevision.value += 1
@@ -192,7 +204,7 @@ async function togglePlanStatus(value, enabled) {
   if (result?.plan) plan.value = result.plan
   planSwitchRevision.value += 1
   emit('changed')
-  uni.showToast({ title: operation === 'resume' ? '已重新启用' : '已停用未来发生', icon: 'none' })
+  uni.showToast({ title: operation === 'resume' ? '已继续执行' : '已暂停以后的安排', icon: 'none' })
  } catch (cause) {
   if (!planStatusContextCurrent(planId, source, scope, version, action)) return
   if (cause.data?.recovery?.plan) plan.value = cause.data.recovery.plan
@@ -211,7 +223,7 @@ async function cancelPeriod(scope) {
   if (!result.plan?.canManage) throw new Error('当前无权取消这个周期')
   const title = scope === 'all' ? '取消全部' : '取消本次'
   const confirmed = await new Promise(resolve => uni.showModal({ title, content: scope === 'all'
-   ? '取消这个周期全部尚未执行的安排；已执行或已下发的动作不会回滚。'
+   ? '取消这个周期全部尚未执行的安排；已执行或已发送的动作保持原样。'
    : '只取消这一次，后续周期照常执行。', confirmText: title, confirmColor: '#a15343', success: value => resolve(value.confirm), fail: () => resolve(false) }))
   if (!confirmed || !props.active || source !== props.source || identity !== getAgentStorageScope()
     || planId !== (plan.value?.planId || task.value?.occurrence?.planId)) return
@@ -248,7 +260,7 @@ onShow(() => {
  pageVisible = true
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 失效身份不保留上一人的报告 */ }
- if (scope !== detailScope) { ++planStatusRequest; task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; cancelling.value = false; planSwitchRevision.value += 1 }
+ if (scope !== detailScope) { ++planStatusRequest; task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; allPhases.value = false; moreInfo.value = false; energyBasis.value = false; issue.value = null; cancelling.value = false; planSwitchRevision.value += 1 }
  if (wasHidden && props.active) { load(true); startPolling() }
  wasHidden = false
 })
@@ -260,7 +272,7 @@ async function load(silent = false) {
  let loaded = false
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 接口仍负责展示身份错误 */ }
- if (scope !== detailScope) { task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = [] }
+ if (scope !== detailScope) { task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; allPhases.value = false; moreInfo.value = false; energyBasis.value = false; issue.value = null }
  detailScope = scope
  if (!pageVisible || !props.active || (!taskId && !planId)) return
  if (!silent) {
@@ -274,7 +286,7 @@ async function load(silent = false) {
   if (planId) {
    const result = await getTaskPlan(planId, props.source)
    if (current === requestId && pageVisible && props.active && activePlanId.value === planId && scope === getAgentStorageScope()) {
-    if (!result?.plan) { plan.value = null; error.value = '周期计划不存在或没有查看权限'; return }
+    if (!result?.plan) { plan.value = null; error.value = '重复安排不存在或没有查看权限'; return }
     error.value = ''
     plan.value = result.plan
    }
@@ -297,7 +309,7 @@ async function load(silent = false) {
   let currentScope = ''
   try { currentScope = getAgentStorageScope() } catch { /* 失效身份不得保留旧报告 */ }
   if (cause.data || !scope || scope !== currentScope) { task.value = null; plan.value = null; currentStates.value = {} }
-  error.value = cause.message || (planId ? '周期计划读取失败：未取得具体原因' : '任务读取失败：未取得具体原因')
+  error.value = cause.message || (planId ? '重复安排读取失败：未取得具体原因' : '任务读取失败：未取得具体原因')
  } }
  finally { if (!silent && current === requestId) loading.value = false }
  if (loaded) {
@@ -344,8 +356,8 @@ async function deleteTask() {
  const settledInterval = detail.value?.interval && !detail.value.phases.some(phase => phase.status === 'pending')
  const title = task.value.occurrence ? '取消本次' : '取消任务'
  const confirmed = await new Promise(resolve => uni.showModal({ title,
-  content: settledInterval ? '结束剩余区间；已发生动作不会回滚。'
-   : `${detail.value?.interval ? '未执行的检查点' : '未执行的阶段'}将取消；已经执行的设备动作不会回滚。${task.value.occurrence ? '后续周期照常执行。' : ''}`, confirmText: title, confirmColor: '#a15343',
+  content: settledInterval ? '取消剩下的安排；已做的操作保持原样。'
+   : `${detail.value?.interval ? '后面的检查' : '后面的操作'}将取消；已经执行的设备动作保持原样。${task.value.occurrence ? '后续周期照常执行。' : ''}`, confirmText: title, confirmColor: '#a15343',
   success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || !props.active || activeTaskId.value !== taskId) return
  cancelling.value = true; actionError.value = ''
@@ -369,7 +381,7 @@ watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.s
  if (props.source !== 'office') currentStates.value = {}
  observedTaskId = activeTaskId.value || activePlanId.value
  actionError.value = ''
- expandedPhases.value = []
+ expandedPhases.value = []; allPhases.value = false; moreInfo.value = false; energyBasis.value = false; issue.value = null
  if (props.active) {
   load()
   startPolling()
@@ -377,9 +389,24 @@ watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.s
  else { ++requestId; loading.value = false; cancelling.value = false } // 保留关闭动画的结果快照；下次打开由 load 重新读取。
 }, { immediate: true })
 onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId; ++requestId; ++planStatusRequest })
-defineExpose({ returnToPlan })
+function back() { if (!issue.value) return false; issue.value = null; return true }
+defineExpose({ returnToPlan, back })
 </script>
 <style scoped>
+.task-detail-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
+.task-heading { display:flex; align-items:flex-start; gap:12px; }
+.task-heading .task-name { min-width:0; flex:1; }
+.task-heading .state-tag { margin:0; }
+.task-progress { display:block; margin-top:16px; color:#536e5c; font-size:12px; }
+.task-rules { margin-top:14px; color:#75877b; font-size:12px; line-height:1.6; }
+.records-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; }
+.records-heading .section-title { margin:0; }
+.records-toggle,.more-info { min-height:44px; margin:0; color:#63776a; font-size:12px; }
+.result-link { min-height:44px; margin:0; padding:0 4px; display:flex; align-items:center; color:#806f50; }
+.phase-head .result-link { margin-inline-start:auto; }
+.task-heading .result-link { flex-shrink:0; background:#f1eee7; }
+.more-info { margin-top:16px; }
+
 .reference-actions { margin-top:16px; display:flex; flex-direction:column; gap:8px; }.task-reference { min-height:42px; width:100%; display:flex; align-items:center; justify-content:center; border:1px solid #cadcd1; border-radius:9px; background:linear-gradient(#fafffb,#edf5ef); color:#176b54; font-size:12px; }.task-reference.secondary { background:transparent; color:#6a7f70; }
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:12px auto 0; padding:0; background:transparent; color:#176b54; font-size:12px; }
@@ -415,7 +442,7 @@ button::after { border:0; }
 .owner-name { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#718176; font-size:11px; }
 .state-tag { flex-shrink:0; padding:4px 8px; border-radius:8px; color:#4d7663; background:#eaf3ed; font-size:11px; }
 .state-tag.partial,.state-tag.unconfirmed { color:#936827; background:#f9f0df; }
-.state-tag.failed,.state-tag.interrupted,.state-tag.missed { color:#a15343; background:#f2e3e0; }
+.state-tag.failed,.state-tag.interrupted,.state-tag.missed { color:#806f50; background:#f1eee7; }
 .state-tag.cancelled { color:#7a7f76; background:#eef1ef; }
 .plan-toggle-row { margin-top:14px; padding-top:12px; border-top:1px solid #e8ede9; display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .plan-switch-wrap { min-width:52px; min-height:32px; display:flex; align-items:center; justify-content:flex-end; }

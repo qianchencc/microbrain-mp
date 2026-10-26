@@ -1,5 +1,7 @@
 # Agent Page Notes
 
+- 任务展示（2026-10-27，替代下文任务相关旧文案）：统一经`task-presentation.mjs`生成状态，完成/颜色不能比较中文字符串；平台受理只写“指令已发送”，没有证据不能写完成。错误默认简短中性，`TaskIssueDetails`在同一Sheet内显示可滚动/复制的原始原因；宿主`back()`优先退原因页，保留任务节点与位置。长任务先显示最近3次，全部记录可展开；规则只显示一次，创建资料进更多信息。汇总分类可能重叠，不相加做进度。详见`plan/2026-10-26-task-presentation-audit.md`。
+
 - 修改同轮系统续接或恢复正文时，终稿写入所属条目，后续run保留旧正文；创建POST在途允许原卡恢复轮询，完成后的迟到快照按epoch丢弃。公共回归与已验边界见 `plan/2026-10-26-agent-continuation-01-handoff.md`。
 
 - 能耗接口的 `comparison.currentDay` 指最新采样日；只有其 `date` 等于上海当日时才能展示“今日至今”或今日对比。旧采样保持原日期，不用旧日数值冒充今天。诊断与未验边界见 `plan/2026-10-26-energy-stale-sample-handoff.md`。
@@ -51,7 +53,7 @@
 - 设备时间轴见 `plan/2026-09-27-device-timeline-handoff.md`：`DeviceTimelineView` 必须包在 `DeviceSheet` 的 flex 子容器中，并保持 `timeline-area` 的 `height:0; flex:1; min-height:0`，否则微信 `scroll-view` 高度会等于全部内容，定位记录失效。设备选择只保存 ID，详情始终从最新读数派生；真实与本地演示记录严格分开。紧凑日历是浮在时间轴左上角的 `datefloat` 日期 chip + `cal-float` 浮层 pill（绝对定位、不占布局、点遮罩或选日收起）；区域常驻日历保持 inline 周条，点头展开月视图（箭头只在展开时出现）。两阶段任务只取消后续阶段时，设备记录须同时保留已发生阶段的结果和后续取消事实，不能统称“已取消”。见 `plan/2026-09-28-device-calendar-disclosure.md` 与 `plan/2026-09-28-device-cancelled-stage-receipt.md`。
 - 定时 Task 提案在对话中使用 `TaskProposalCard`：流事件 `task.proposed/task.resolved` 和恢复快照 `turn.task` 共用 taskId；只有点击“创建任务”才调用确认接口。`scheduled/executing` 状态持续按 Task 详情轮询，终态停止；“放弃”只退役提案，不能误显示成已创建任务。工作台深链必须在授权时间轴返回目标 Task 后打开详情，见 `plan/2026-09-28-task-workbench-deeplink.md`。跨日任务仍在每天的区域时间轴显示，绘图只裁切当前日视口，不改变原始阶段时间或同日 B6 几何。微信端验收由用户完成。
 - 到点执行后区域时间轴在页面可见时静默刷新，任务抽屉仅对 `scheduled/executing` 轮询详情；刷新不可清空旧卡片造成闪烁。阶段结果显示 `satisfied/verified/partial/failed/unconfirmed/missed/interrupted`，401 失败原因显示“创建者登录已失效”；设备记录以每个阶段实际结果为准，不把平台受理改写成物理完成。
-- Office 定时 Task 可选 `interval` 独立起止与 ≥1 自由检查点（无两点业务上限）；确认后由正常扫描完整执行各点、不自主补终点控制。详情与卡片区分 `executing`+`executionActive:false`（区间进行中）与 `executionActive:true`（设备调用中）；`report` 只在终态后由已持久化事实生成，设备按当前授权裁剪、台数按可见唯一设备统计。任务轮询经 `mergeTaskDetail` 合并：提案阶段可能只有 `at`/`actions`，先按 `at` 对齐再写 `id` 与 status，不得用详情的 devices 形状覆盖 actions；取消提案 `phases` 可为空，区域导航锚点取 `interval.startsAt` 或首阶段时间。沿用宿主 flex/`TaskDetailSheet`/B6 几何，报告渲染不调用模型。
+- Office 定时 Task 可选 `interval` 独立起止与 ≥1 自由检查点（无两点业务上限）；确认后由正常扫描完整执行各点、不自主补终点控制。内部区分 `executing`+`executionActive:false`（等待下次操作）与 `executionActive:true`（设备调用中），两者前台均显示“进行中”；`report` 只在终态后由已持久化事实生成，设备按当前授权裁剪、台数按可见唯一设备统计。任务轮询经 `mergeTaskDetail` 合并：提案阶段可能只有 `at`/`actions`，先按 `at` 对齐再写 `id` 与 status，不得用详情的 devices 形状覆盖 actions；取消提案 `phases` 可为空，区域导航锚点取 `interval.startsAt` 或首阶段时间。沿用宿主 flex/`TaskDetailSheet`/B6 几何，报告渲染不调用模型。
 - 工作台删除任务使用任务详情 `canCancel` 与 `version`，二次确认后调用取消接口；403/409 保留抽屉并刷新详情。区域时间轴隐藏已取消任务及轨道，记录数量也排除它们；历史和设备实际操作记录保留，未下发设备不得显示为故障。小程序交互验收由用户完成。
 - Agent `list_tasks` 只读查询授权区域的某一天；取消必须先列出准确任务，再生成独立 `task.cancellation.proposed` 卡。卡片 `cancellationId` 与目标 `taskId` 不同；会话恢复按前者去重，保留原创建收据。确认调用取消提案接口，放弃/新消息/过期只退役提案；任务状态由真实 Task 详情驱动。
 - 区域列表的 `attention` 只表示当前身份尚未查看的部分完成/失败/未核验任务，不能拿运行中状态或装饰圆点充当提示。进入/切换真实区域调用 `acknowledgeRegion`，只有服务端确认后清除本地提示；样例模式不得更新真实水位。工作台可见时常态 30 秒、任务执行中 5 秒刷新，隐藏后停止；小程序交互验收由用户完成。
@@ -59,7 +61,7 @@
 - 现态手动与执行后的延迟刷新共用 `state-refresh.mjs`，只读设备状态；常驻界面不展示查询时间或“上报时间未知”。本轮边界与验证见 `plan/2026-09-28-device-state-receipt-separation.md`。
 - 工作台只在真实时间轴成功返回且完成视图更新后调用 `acknowledgeRegion`；加载失败、样例模式、隐藏页面或被新请求替代的结果不得清除异常提示。
 - `TaskDetailContent` 根节点是 `height:0;flex:1` 的 scroll-view，必须经宿主类（`content-host`/`task-content-host`，`flex:1;min-height:0;display:flex`）挂进 flex 容器；直接放进普通容器会塌成 0 高、详情空白（2026-09-28 抽屉栈重构踩过）。抽屉内 列表→设备→任务 三级导航栈见 `plan/2026-09-28-region-chrome-nav-motion.md`。
-- 任务报告的节能行沿 `report.summary.energyImpact` 投影：只有至少一台设备实际调温后，服务端才生成节能块；全程关机、非制冷、已满足、只读巡检、调温前失败/取消时 `energyImpact` 为 `null`，详情和通知不显示该行。`basis:"assumption"` 的估算由服务端按各设备首次调温检查点记录的调前 `setpoint` 与公开假设参数（节电率/单台功率/电价）确定性计算，窗口截至 `min(任务区间终点, 报告生成时间)`；`energyImpactView` 按原型 `proto-energy-estimate.html` A 变体投影为节能卡：`hero`（≈度数大数字、说明脚注）+ 三格事实 + `formula` 公式与依据说明 + 设备调温前后行（`ac_inspection` 块聚合，adjusted 优先，before 取首次出现的调前 `setpoint`，超过 6 台折叠为「见检查点明细」）；`unavailable` 态走同款卡片版式（口径缺失徽标、纳入/调节/无需三格、已确认事实行）。依据常驻展示不折叠；`measured`/`statistics` 仍为单行口径文字。已调温但基线缺失或时长不足时显示明确的不可估算原因，不得由前端或模型补数字。
+- 任务报告的节能行沿 `report.summary.energyImpact` 投影：只有至少一台设备实际调温后，服务端才生成节能块；全程关机、非制冷、已满足、只读巡检、调温前失败/取消时 `energyImpact` 为 `null`，详情和通知不显示该行。`basis:"assumption"` 的估算由服务端按各设备首次调温检查点记录的调前 `setpoint` 与公开假设参数（节电率/单台功率/电价）确定性计算，窗口截至 `min(任务区间终点, 报告生成时间)`；`energyImpactView` 按原型 `proto-energy-estimate.html` A 变体投影为节能卡：`hero`（≈度数大数字、说明脚注）+ 三格事实 + `formula` 公式与依据说明 + 设备调温前后行（`ac_inspection` 块聚合，adjusted 优先，before 取首次出现的调前 `setpoint`，超过 6 台折叠为「见检查点明细」）；`unavailable` 态走同款卡片版式（口径缺失徽标、纳入/调节/无需三格、已确认事实行）。估算标记与非实测说明常驻，详细公式由“计算说明”展开；`measured`/`statistics` 仍为单行口径文字。已调温但基线缺失或时长不足时显示明确的不可估算原因，不得由前端或模型补数字。
 
 - Company 正式入口位于 A 仪表盘底部；从仪表盘进入两端对话后返回总览，两端同级入口统一位于总览，会话菜单只负责会话操作。路由 source 仅在页面创建时固定，API 显式传递，本端恢复拒绝错来源。Company 不消费 Office 区域/任务/播放入口。见 `plan/2026-10-03-company-readonly-handoff.md`（仓库根）。
 - 微信页面卸载会销毁页面包的模块级内存；跨来源导航草稿须放 app globalData，并按 getAgentStorageScope() + source 分区，身份变化清空，不保存长期凭据。Company 返回后重进必须做真实输入/点击验收，纯 helper 断言不能证明此行为。

@@ -22,7 +22,7 @@
     </view>
     <view v-for="change in (!isCompany && regionChanges.filter(change => change.before === turns.length)) || []" :key="change.id" class="region-divider">关注区域切换为 {{ change.name }}</view>
     <view v-if="recoveryMessage" class="region-notice"><text>{{ recoveryMessage }}</text></view>
-    <view v-if="errorMessage" class="error"><text>{{ errorMessage }}</text><button class="trace-toggle" @click="restore">重新连接</button></view>
+    <view v-if="errorMessage" class="error"><TaskErrorNotice :message="errorMessage" summary="这次暂未完成" @details="issue = $event" /><button class="trace-toggle" @click="restore">重新连接</button></view>
     <view id="agent-bottom" class="anchor" />
    </view>
   </scroll-view>
@@ -39,6 +39,7 @@
    <SafetyHistoryList class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="eventOpen && !selectedEvent" @select="openSafetyEvent" />
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="eventOpen" @reference="referenceEvent" />
   </DeviceSheet>
+  <DeviceSheet :open="Boolean(issue)" title="查看原因" tall compact-header @close="issue = null"><TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" /></DeviceSheet>
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" :source="source" :refresh-key="taskRevision" @close="tasksOpen = false" @reference="referenceTask" @changed="tasksChanged" @create="tasksOpen = false; prefill('帮我安排一个任务')" />
   <TaskInboxSheet v-if="inboxMounted" @reference="referenceTask" :open="inboxOpen" :source="source" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
   <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="source" @close="closeCompanyTask" @changed="tasksChanged" />
@@ -68,6 +69,8 @@ import AgentReplySurface from './AgentReplySurface.vue'
 import DraftSheetLayer from './DraftSheetLayer.vue'
 import UserMessage from './UserMessage.vue'
 import TaskListSheet from './TaskListSheet.vue'
+import TaskErrorNotice from './TaskErrorNotice.vue'
+import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskInboxSheet from './TaskInboxSheet.vue'
 import TaskDetailSheet from './TaskDetailSheet.vue'
 import ReportPreviewContent from './ReportPreviewContent.vue'
@@ -143,7 +146,7 @@ watch(input, value => {
 const composer = ref(null)
 const turns = ref([])
 const tasksOf = turn => turn.tasks?.length ? turn.tasks : turn.task ? [turn.task] : []
-const errorMessage = ref('')
+const errorMessage = ref(''), issue = ref(null)
 const recoveryMessage = ref('')
 const isRunning = ref(false)
 const confirmingTaskId = ref('')
@@ -546,10 +549,11 @@ async function confirmDraft(turn) {
  if (resync && !disposed) await restore()
 }
 async function confirmTaskProposal(task) {
+ issue.value = null
  if (busy.value || task?.status !== 'PENDING_CONFIRMATION') return
  const taskId = task.taskId, cancellationId = task.cancellationId, changeId = task.changeId
  const key = changeId || cancellationId || taskId
- errorMessage.value = ''; recoveryMessage.value = ''
+ issue.value = null; errorMessage.value = ''; recoveryMessage.value = ''
  mutating.value = true; confirmingTaskId.value = key; confirming.add(key); confirmEpoch++; schedule()
  let resync = false
  try {
@@ -736,7 +740,7 @@ function deactivate() {
  clearTimeout(pollTimer); clearTimeout(taskPollTimer)
 }
 watch(() => props.active, on => { if (on) activate(); else deactivate() }, { immediate: true })
-watch(() => props.source, () => closeReport())
+watch(() => props.source, () => { issue.value = null; closeReport() })
 onBeforeUnmount(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
 // 面板头「⋯」按钮走同一套会话菜单（公司面板无工作台项）。
 function openMenu() {

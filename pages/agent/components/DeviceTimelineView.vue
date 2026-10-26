@@ -11,7 +11,7 @@
    <RegionTimeline ref="timeline" :key="selectedDate" calendar compact-calendar focus-items :date="selectedDate" :now="displayNow" :max-date="maxDate" :calendar-marks="marks" :calendar-error="calendarError" :items="items" @date-change="selectedDate = $event" @calendar-month="onMonth" @select="openTask">
     <template #card="{ item }"><view class="record-card"><text class="source" :class="item.sourceText === '即时' ? 'immediate' : 'scheduled'">{{ item.sourceText }}</text><text class="record-target">{{ item.label }}<text class="record-task">{{ item.taskLabel }}</text></text><text class="record-result" :class="item.resultTone">{{ item.resultText }}</text><text class="creator" :class="'cv-' + item.creatorVariant">{{ item.creatorName.slice(0, 1) }}</text></view></template>
     <template #empty>
-     <view v-if="loading || error" class="empty"><text>{{ loading ? '正在读取设备记录' : error }}</text><button v-if="error" @tap="loadTimeline">重新加载</button></view>
+     <view v-if="loading || error" class="empty"><text v-if="loading">正在读取设备记录</text><TaskErrorNotice v-else :message="error" @details="$emit('issue', $event)" /><button v-if="error" @tap="loadTimeline">重新加载</button></view>
      <view v-else class="empty"><text>这一天没有任务操作记录</text></view>
     </template>
    </RegionTimeline>
@@ -27,9 +27,10 @@ import { deviceTimelineItems } from '../device-timeline-view.mjs'
 import { targetText, taskTime } from '../task-detail-view.mjs'
 import { deviceSampleEvents, regionSampleTaskDetail } from '../region-sample-tasks.mjs'
 import RegionTimeline from './RegionTimeline.vue'
+import TaskErrorNotice from './TaskErrorNotice.vue'
 
 const props = defineProps({ device: Object, date: String, now: String, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
-const emit = defineEmits(['task'])
+const emit = defineEmits(['task', 'issue'])
 const timeline = ref(null)
 defineExpose({ dismissCalendar: () => timeline.value?.dismissCalendar() || false })
 const selectedDate = ref(props.date), month = ref(props.date.slice(0, 7))

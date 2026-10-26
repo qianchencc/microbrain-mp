@@ -1,6 +1,7 @@
 <template>
  <view class="rpc-host">
-  <view class="rpc-evidence" :style="{ display: evidence ? 'flex' : 'none' }">
+  <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+  <view class="rpc-evidence" :style="{ display: evidence && !issue ? 'flex' : 'none' }">
    <scroll-view class="rpc-scroll" scroll-y enhanced :show-scrollbar="false">
     <view v-if="evidence" class="rpc-body">
      <view class="rpc-kicker"><text class="rpc-kicker-text">计量依据</text><text class="rpc-pill">生成时保存</text></view>
@@ -21,8 +22,8 @@
     </view>
    </scroll-view>
   </view>
-  <scroll-view class="rpc-scroll" scroll-y enhanced :show-scrollbar="false" :style="{ display: evidence ? 'none' : 'flex' }">
-   <view v-if="error" class="rpc-msg"><text>{{ error }}</text><button class="rpc-btn rpc-retry" @tap="load">重新读取</button></view>
+  <scroll-view class="rpc-scroll" scroll-y enhanced :show-scrollbar="false" :style="{ display: evidence || issue ? 'none' : 'flex' }">
+   <view v-if="error" class="rpc-msg"><TaskErrorNotice :message="error" @details="showIssue" /><button class="rpc-btn rpc-retry" @tap="load">重新读取</button></view>
    <view v-else-if="!report" class="rpc-body rpc-skeleton" aria-label="正在读取报告">
     <view class="sk-bar sk-kicker" />
     <view class="sk-bar sk-title" />
@@ -36,9 +37,9 @@
     <view class="sk-bar sk-row w-40" />
    </view>
    <view v-else class="rpc-body">
-    <view class="rpc-kicker"><text class="rpc-kicker-text">{{ report.checkpointAt ? '检查点报告' : '用电报告' }}</text><text class="rpc-pill" :class="{ 'rpc-pill-partial': report.status === 'partial' }">{{ report.status === 'partial' ? '部分完成' : '已完成' }}</text></view>
+    <view class="rpc-kicker"><text class="rpc-kicker-text">{{ report.checkpointAt ? '检查报告' : '用电报告' }}</text><text class="rpc-pill" :class="{ 'rpc-pill-partial': report.status === 'partial' }">{{ report.status === 'partial' ? '部分完成' : '已完成' }}</text></view>
     <text class="rpc-title">{{ report.title }}</text>
-    <text v-if="report.checkpointAt" class="rpc-meta">检查点 {{ timeText(report.checkpointAt) }}</text>
+    <text v-if="report.checkpointAt" class="rpc-meta">检查时间 {{ timeText(report.checkpointAt) }}</text>
     <text class="rpc-meta">生成 {{ timeText(report.generatedAt) }}</text>
     <text class="rpc-summary">{{ report.summary }}</text>
     <view v-for="(block, index) in report.blocks" :key="index" class="rpc-sec">
@@ -49,11 +50,11 @@
      <ReportFactSection v-else-if="block.type === 'meter_report'" :report="block.report" @evidence="openEvidence" />
     </view>
     <view class="rpc-actions">
-     <button class="rpc-btn" :disabled="quoting || downloading" @tap="quote">{{ quoting ? '核验中…' : '引用本报告' }}</button>
+     <button class="rpc-btn" :disabled="quoting || downloading" @tap="quote">{{ quoting ? '正在读取…' : '引用本报告' }}</button>
      <button class="rpc-btn" :disabled="downloading || quoting" @tap="download('pdf')">{{ downloading === 'pdf' ? '下载中…' : '下载 PDF' }}</button>
      <button class="rpc-btn" :disabled="downloading || quoting" @tap="download('xlsx')">{{ downloading === 'xlsx' ? '下载中…' : '导出表格' }}</button>
     </view>
-    <text v-if="actionError" class="rpc-error">{{ actionError }}</text>
+    <TaskErrorNotice v-if="actionError" :message="actionError" summary="这次操作未完成" @details="showIssue" />
    </view>
   </scroll-view>
  </view>
@@ -66,17 +67,20 @@ import { getAgentStorageScope } from '@/utils/agent-session'
 import { fmtShanghaiDateTime } from '../observation-view.mjs'
 import { meterReportEvidenceSections, meterReportSpanText } from '../meter-report-view.mjs'
 import ReportFactSection from './ReportFactSection.vue'
+import TaskIssueDetails from './TaskIssueDetails.vue'
+import TaskErrorNotice from './TaskErrorNotice.vue'
 
 const props = defineProps({ reportId: String, active: Boolean, source: { type: String, default: 'company' } })
 const emit = defineEmits(['loaded', 'reference', 'navigation'])
 const report = ref(null), error = ref(''), actionError = ref('')
 const downloading = ref(''), quoting = ref(false)
-const evidence = ref(null)
+const evidence = ref(null), issue = ref(null)
+function showIssue(value) { issue.value = value }
 let requestId = 0, pageVisible = true
 
 const evidenceSections = computed(() => evidence.value ? meterReportEvidenceSections(evidence.value) : [])
 const evidenceSpan = computed(() => evidence.value ? meterReportSpanText(evidence.value) : '')
-const navigation = computed(() => ({ title: evidence.value ? '计量依据' : '', canBack: Boolean(evidence.value) }))
+const navigation = computed(() => ({ title: issue.value ? '查看原因' : evidence.value ? '计量依据' : '', canBack: Boolean(issue.value || evidence.value) }))
 watch(navigation, value => emit('navigation', value), { immediate: true })
 
 function timeText(instant) { return fmtShanghaiDateTime(instant) || '' }
@@ -96,6 +100,7 @@ function clearContent() {
  evidence.value = null
 }
 function resetTransient() {
+ issue.value = null
  clearContent()
  error.value = ''
  actionError.value = ''
@@ -117,15 +122,14 @@ async function load() {
   if (!requestAlive(current, id, source, scope)) return
   clearContent()
   const status = statusOf(cause)
-  error.value = status === 401 || status === 403 || status === 404 ? '报告不存在或授权已变化'
-   : status === 503 ? '报告读取授权核验暂不可用，请稍后重试'
-   : cause?.message || '报告暂不可用，请重试'
+  error.value = cause?.message || '报告暂不可用，请重试'
  }
 }
 function openEvidence(report_) {
  evidence.value = report_
 }
 function back() {
+ if (issue.value) { issue.value = null; return true }
  if (!evidence.value) return false
  evidence.value = null
  return true
@@ -143,8 +147,8 @@ async function quote() {
  } catch (cause) {
   if (!requestAlive(current, id, source, scope)) return
   const status = statusOf(cause)
-  if (status === 401 || status === 403 || status === 404) { clearContent(); error.value = '报告不存在或授权已变化' }
-  else if (status === 503) { clearContent(); error.value = '报告读取授权核验暂不可用，请稍后重试' }
+  if (status === 401 || status === 403 || status === 404) { clearContent(); error.value = cause?.message || '报告不存在或没有查看权限' }
+  else if (status === 503) { clearContent(); error.value = cause?.message || '暂时没能读取报告' }
   else actionError.value = cause?.message || '引用失败，请重试'
  } finally { if (requestAlive(current, id, source, scope)) quoting.value = false }
 }
@@ -158,8 +162,8 @@ async function download(format = 'pdf') {
  } catch (cause) {
   if (!requestAlive(current, id, source, scope) || report.value?.id !== id) return
   const status = statusOf(cause)
-  if (status === 401 || status === 403 || status === 404 || cause?.data?.code === 'SCOPE_CHANGED') { clearContent(); error.value = '报告不存在或授权已变化' }
-  else if (status === 503) { clearContent(); error.value = '报告读取授权核验暂不可用，请稍后重试' }
+  if (status === 401 || status === 403 || status === 404 || cause?.data?.code === 'SCOPE_CHANGED') { clearContent(); error.value = cause?.message || '报告不存在或没有查看权限' }
+  else if (status === 503) { clearContent(); error.value = cause?.message || '暂时没能读取报告' }
   else if (cause?.data?.code !== 'REPORT_VIEW_INACTIVE') actionError.value = cause?.message || '下载失败，请重试'
  } finally { if (requestAlive(current, id, source, scope)) downloading.value = '' }
 }

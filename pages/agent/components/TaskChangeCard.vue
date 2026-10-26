@@ -25,7 +25,7 @@
 
   <text v-if="operationEffect" class="change-effect">{{ operationEffect }}</text>
   <text v-if="changesFutureOnly" class="change-note">仅影响未来周期安排；已生成任务与历史记录不变。</text>
-  <text v-else-if="change.operation === 'delete' && scopeText === '本任务'" class="change-note">已完成的阶段和历史结果不会回滚。</text>
+  <text v-else-if="change.operation === 'delete' && scopeText === '本任务'" class="change-note">已完成的阶段和历史结果保持原样。</text>
   <view v-if="pending" class="change-actions">
    <button class="change-discard" hover-class="change-discard--pressed" :disabled="busy" @tap="$emit('discard')">放弃</button>
    <button class="change-confirm" :class="{ destructive: change.operation === 'delete' }" hover-class="change-confirm--pressed" :disabled="busy" @tap="$emit('confirm')">{{ confirmText }}</button>
@@ -49,17 +49,17 @@ const scopeText = computed(() => {
  return '本任务'
 })
 const operationText = computed(() => {
- if (props.change.operation === 'delete') return props.change.target?.type === 'task_plan' ? '删除周期计划' : '删除任务'
- return ({ edit: '调整安排', pause: '暂停周期计划', resume: '恢复周期计划', skip: '跳过本次安排' })[props.change.operation] || '任务变更'
+ if (props.change.operation === 'delete') return props.change.target?.type === 'task_plan' ? '删除重复安排' : '删除任务'
+ return ({ edit: '调整安排', pause: '暂停重复安排', resume: '恢复重复安排', skip: '跳过本次安排' })[props.change.operation] || '任务变更'
 })
 const confirmText = computed(() => ({ edit: '确认修改', pause: '确认暂停', resume: '确认恢复', delete: '确认删除', skip: '确认跳过' })[props.change.operation] || '确认变更')
 const statusText = computed(() => ({ pending_confirmation: '待确认', confirmed: '已确认', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束')
 const receiptText = computed(() => ({ confirmed: '变更已确认', cancelled: '本次提案已放弃', expired: '本次提案已过期' })[state.value] || '本次提案已结束')
 const changesFutureOnly = computed(() => props.change.operation === 'edit' && scopeText.value === '整个周期')
 const operationEffect = computed(() => ({
- pause: '确认后停用周期，未来不再发生；已经生成的任务继续。',
- resume: '确认后启用周期，从下一次未来安排继续；不补执行过去的发生。',
- delete: '确认后删除周期计划，未来不再发生；已经生成的任务与历史报告保留。',
+ pause: '确认后暂停重复，以后不再执行；已经生成的任务继续。',
+ resume: '确认后从下一次安排继续；不补做过去的安排。',
+ delete: '确认后删除重复安排，以后不再执行；已经生成的任务与历史报告保留。',
  skip: '确认后仅跳过这一次安排，其他日期与周期规则保持不变。',
 })[props.change.operation] || '')
 const versions = computed(() => [
@@ -70,7 +70,7 @@ const versions = computed(() => [
 function scheduleText(template) {
  if (!template) return '时间未提供'
  if (template.interval?.startsAt && template.interval?.endsAt) {
-  return `区间 · ${taskTime(template.interval.startsAt)} 至 ${taskTime(template.interval.endsAt)}`
+  return `时间 · ${taskTime(template.interval.startsAt)} 至 ${taskTime(template.interval.endsAt)}`
  }
  const times = (template.phases || []).map(phase => taskTime(phase.at)).filter(Boolean)
  return times.length ? `时间 · ${times.join('、')}` : '时间未提供'

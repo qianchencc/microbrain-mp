@@ -16,7 +16,8 @@
     </view>
    </view>
   </template>
-  <view class="drawer-content">
+  <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+  <view class="drawer-content" :style="{ display: issue ? 'none' : 'flex' }">
    <view class="nav-pane" :class="{ 'pane-before': depth > 0 }" :style="{ zIndex: 0 }">
     <text v-if="stateError && devices.length" class="state-warning">{{ stateError }}</text>
     <scroll-view class="device-scroll" scroll-y enhanced :show-scrollbar="false">
@@ -44,7 +45,7 @@
      <view class="list-tail" />
     </scroll-view>
    </view>
-   <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceObservationView v-if="isObservationKind(devicePane.kind)" class="device-timeline-host" :device="devicePane" :reading="readings[devicePane.id]" /><DeviceTimelineView v-else ref="deviceTimeline" class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
+   <view v-if="devicePane" class="nav-pane" :class="{ 'pane-before': depth > 1, 'pane-after': depth < 1 }" :style="{ zIndex: 1 }"><DeviceObservationView v-if="isObservationKind(devicePane.kind)" class="device-timeline-host" :device="devicePane" :reading="readings[devicePane.id]" /><DeviceTimelineView @issue="issue = $event" v-else ref="deviceTimeline" class="device-timeline-host" :device="devicePane" :date="date" :now="now" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleTasks" @task="pushTask" /></view>
    <view v-if="taskPane" class="nav-pane" :class="{ 'pane-after': depth < 2 }" :style="{ zIndex: 2 }"><TaskResultContent ref="taskContent" class="task-content-host" :active="open && Boolean(activeTask)" :task-id="taskPane.taskId" :sample-task="taskPane.sampleTask" @cancelled="$emit('cancelled')" @dismiss="pop" @reference="$emit('reference', $event)" @navigation="taskNavigation = $event" /></view>
   </view>
  </DeviceSheet>
@@ -59,9 +60,11 @@ import DeviceSheet from './DeviceSheet.vue'
 import DeviceTimelineView from './DeviceTimelineView.vue'
 import DeviceObservationView from './DeviceObservationView.vue'
 import TaskResultContent from './TaskResultContent.vue'
+import TaskIssueDetails from './TaskIssueDetails.vue'
 import { isObservationKind, regionDeviceGroups } from '../region-device-view.mjs'
 import { createStateRefresh } from '../state-refresh.mjs'
 
+const issue = ref(null)
 const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, refreshSignal: Number, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })
 const emit = defineEmits(['close', 'count', 'cancelled', 'reference'])
 const modes = [{ key: 'kind', label: '类型' }, { key: 'location', label: '位置' }, { key: 'status', label: '状态' }]
@@ -113,6 +116,7 @@ function pop() {
  else if (activeDeviceId.value) { deviceClosing.value = activeDevice.value; activeDeviceId.value = ''; releasePane('device', deviceClosing) }
 }
 function backWithinDrawer() {
+ if (issue.value) { issue.value = null; return }
  if (depth.value === 2 && taskContent.value?.back()) return
  if (depth.value === 1 && deviceTimeline.value?.dismissCalendar()) return
  if (depth.value) pop()
@@ -120,6 +124,7 @@ function backWithinDrawer() {
  else emit('close')
 }
 function resetStack() {
+ issue.value = null
  activeDeviceId.value = ''; activeTask.value = null
  deviceClosing.value = null; taskClosing.value = null
  clearPaneTimer('device'); clearPaneTimer('task')

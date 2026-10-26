@@ -1,26 +1,20 @@
-import { executionResult, targetText } from './task-detail-view.mjs'
+import { targetText } from './task-detail-view.mjs'
 import { creatorVariant } from './region-device-view.mjs'
 
-const settled = step => ['已执行', '不必执行'].includes(executionResult(step))
+import { deviceResultView, taskStatusText, taskStatusTone } from './task-presentation.mjs'
+
+const settled = step => deviceResultView(step).settled
 
 function summary(steps) {
- if (steps.some(step => step.phaseStatus === 'cancelled')) {
-  const retained = steps.find(step => step.phaseStatus !== 'cancelled')
-  if (!retained) return { text: '已取消', tone: 'wait' }
-  const result = retained.phaseStatus === 'executing' ? '执行中' : retained.phaseStatus === 'missed' ? '已错过'
-   : retained.phaseStatus === 'interrupted' ? '已中断' : executionResult(retained)
-  return { text: `${result} · 后续已取消`, tone: retained.phaseStatus === 'executing' ? 'active' : 'warn' }
- }
- if (steps.every(step => step.phaseStatus === 'missed')) return { text: '未执行', tone: 'fail' }
- if (steps.some(step => step.phaseStatus === 'interrupted')) return { text: '已中断', tone: 'fail' }
- if (steps.some(step => step.phaseStatus === 'executing')) return { text: '执行中', tone: 'active' }
- if (steps.length === 1) return { text: executionResult(steps[0]),
-  tone: settled(steps[0]) ? 'ok' : executionResult(steps[0]) === '未执行' ? 'wait' : executionResult(steps[0]) === '结果待核验' ? 'warn' : 'fail' }
- if (steps.some(step => executionResult(step) === '未完成')) return { text: '未完成', tone: 'fail' }
- if (steps.some(step => executionResult(step) === '未执行')) return { text: '未执行', tone: 'wait' }
- if (steps.some(step => executionResult(step) === '结果待核验')) return { text: '结果待核验', tone: 'warn' }
- if (steps.every(step => executionResult(step) === '不必执行')) return { text: '不必执行', tone: 'ok' }
- return { text: '已执行', tone: 'ok' }
+ const remaining = steps.filter(step => step.phaseStatus !== 'cancelled')
+ if (!remaining.length) return { text: '已取消', tone: 'wait' }
+ const suffix = remaining.length < steps.length ? ' · 后续已取消' : ''
+ const active = remaining.find(step => ['executing', 'missed', 'interrupted'].includes(step.phaseStatus))
+ if (active) return { text: taskStatusText(active.phaseStatus) + suffix, tone: taskStatusTone(active.phaseStatus) }
+ const failed = remaining.find(step => ['failed', 'rejected', 'unreadable', 'missing', 'read_failed'].includes(step.outcome))
+ const uncertain = remaining.find(step => !settled(step))
+ const result = deviceResultView(failed || uncertain || remaining.find(step => step.outcome === 'verified') || remaining[0])
+ return { text: result.text + suffix, tone: result.tone }
 }
 
 export function deviceTimelineItems(events) {

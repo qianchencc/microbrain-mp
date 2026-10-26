@@ -1,7 +1,7 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="(view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" @close="closeSheet">
   <template #header-left>
-   <button v-if="selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
+   <button v-if="issue || selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
   </template>
   <template #header-right>
    <view class="header-actions">
@@ -9,26 +9,28 @@
     <view v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="inbox-entry"><button class="refresh-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /></button><view v-if="inboxUnread" class="inbox-badge"><text>{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></view></view>
    </view>
   </template>
-  <view class="arrangements-content">
+  <TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
+  <view class="arrangements-content" :style="{ display: issue ? 'none' : 'flex' }">
+   <TaskErrorNotice v-if="operationError" :message="operationError" summary="部分操作未完成" @details="showIssue" />
    <view class="list-pane" :style="{ display: selectedTask || selectedPlan ? 'none' : 'flex' }">
     <view v-if="!inboxNavigation.canBack && !stackedView" class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
     <TaskInboxContent v-if="source === 'company' && view === 'inbox'" ref="inbox" class="task-content-host" :open="open && view === 'inbox' && !selectedTask && !selectedPlan" :source="source" @navigation="inboxNavigation = $event" @reference="emit('reference', $event)" @unread-count="inboxUnread = $event; emit('unread-count', $event)" @changed="emit('changed')" />
     <scroll-view v-else class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
-     <TaskCalendarView v-if="source === 'company' && view === 'calendar'" ref="calendar" :active="open && view === 'calendar' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
+     <TaskCalendarView v-if="source === 'company' && view === 'calendar'" ref="calendar" @issue="showIssue" :active="open && view === 'calendar' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
      <template v-else>
      <button v-if="view === 'all' && source === 'company'" class="plan-strip" hover-class="plan-strip--pressed" @tap="view = 'plans'">
       <view class="strip-icon"><uni-icons type="reload" size="15" color="#176b54" /></view>
       <view class="strip-copy">
-       <text class="strip-title">周期计划</text>
+       <text class="strip-title">重复安排</text>
        <text v-if="plansError" class="strip-meta strip-meta--fail">未能加载</text>
-       <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已启用 {{ enabledPlansCount }}</text>
+       <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已开启 {{ enabledPlansCount }}</text>
        <text v-else class="strip-meta">读取中…</text>
       </view>
       <uni-icons type="right" size="13" color="#99a59d" />
      </button>
-     <view class="list-summary"><text>{{ listSummary }}</text><view class="summary-side"><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text><button v-if="view === 'plans' && pausablePlans.length" class="plans-pause-all" :disabled="planLoading" @tap="pauseAllPlans">全部停用</button></view></view>
+     <view class="list-summary"><text>{{ listSummary }}</text><view class="summary-side"><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text><button v-if="view === 'plans' && pausablePlans.length" class="plans-pause-all" :disabled="planLoading" @tap="pauseAllPlans">全部暂停</button></view></view>
      <view v-if="loading && !listLoaded" class="state-message">加载中…</view>
-     <view v-else-if="error && !visibleRows.length" class="state-message"><text>{{ error }}</text><button @tap="load">重试</button></view>
+     <view v-else-if="error && !visibleRows.length" class="state-message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load">重试</button></view>
      <view v-else-if="!visibleRows.length && view !== 'all'" class="state-message">{{ emptyText }}</view>
 
      <template v-else-if="view === 'all'">
@@ -42,7 +44,7 @@
          <text class="row-clock">{{ taskDayTime(task, day.date) }}</text>
          <view class="row-copy">
           <view class="row-heading"><text class="row-title">{{ task.label || '任务安排' }}</text><text class="task-status" :class="'tone-' + taskTone(task.status)">{{ taskStatus(task.status) }}</text></view>
-          <text v-if="task.repeat || task.occurrence" class="row-subtitle">周期 · {{ repeatText(task.repeat) || '按周期执行' }}</text>
+          <text v-if="task.repeat || task.occurrence" class="row-subtitle">{{ repeatText(task.repeat) || '按周期执行' }}</text>
          </view>
         </button>
         <text v-if="!day.rows.length" class="day-empty">暂无任务</text>
@@ -55,12 +57,12 @@
          <view class="row-clock row-clock--later"><text>{{ item.date.slice(5) }}</text><text>{{ taskDayTime(item.task, item.date) }}</text></view>
          <view class="row-copy">
           <view class="row-heading"><text class="row-title">{{ item.task.label || '任务安排' }}</text><text class="task-status" :class="'tone-' + taskTone(item.task.status)">{{ taskStatus(item.task.status) }}</text></view>
-          <text v-if="item.task.repeat || item.task.occurrence" class="row-subtitle">周期 · {{ repeatText(item.task.repeat) || '按周期执行' }}</text>
+          <text v-if="item.task.repeat || item.task.occurrence" class="row-subtitle">{{ repeatText(item.task.repeat) || '按周期执行' }}</text>
          </view>
         </button>
        </view>
       </view>
-      <view v-if="moreLoading || moreError || hasMore" class="list-footer"><button v-if="moreError" @tap="loadMore">更晚任务加载失败 · 重试</button><button v-else-if="!moreLoading" @tap="loadMore">加载更晚任务</button><text v-else>加载中…</text></view>
+      <view v-if="moreLoading || moreError || hasMore" class="list-footer"><TaskErrorNotice v-if="moreError" :message="moreError" summary="更晚的任务暂未加载" @details="showIssue" /><button v-if="moreError" @tap="loadMore">重试</button><button v-else-if="!moreLoading" @tap="loadMore">加载更晚任务</button><text v-else>加载中…</text></view>
       </template>
      </template>
 
@@ -94,13 +96,13 @@
       </button>
      </template>
 
-     <view v-if="error && visibleRows.length" class="list-footer list-error"><text>{{ error }}</text><button @tap="load">重试</button></view>
+     <view v-if="error && visibleRows.length" class="list-footer list-error"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load">重试</button></view>
      </template>
     </scroll-view>
     <button v-if="source === 'company' && !inboxNavigation.canBack && !stackedView" class="create-task" @tap="emit('create')">让 Agent 安排任务 <uni-icons type="chatbubble" size="14" color="#176b54" /></button>
    </view>
 
-   <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text><text v-if="planDetailError" class="detail-error">{{ planDetailError }}</text>
+   <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text><TaskErrorNotice v-if="planDetailError" :message="planDetailError" @details="showIssue" />
     <scroll-view class="detail-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="plan-summary">
       <view class="summary-heading"><view class="status-mark" :class="planIsEnabled(selectedPlan) ? 'status-mark--active' : 'status-mark--paused'" /><text class="plan-label">{{ selectedPlan.label || '未命名周期安排' }}</text></view>
@@ -110,9 +112,9 @@
       <view class="summary-line"><text>{{ planNextLabel(selectedPlan) }}</text><text>{{ planNextTime(selectedPlan) ? taskTime(planNextTime(selectedPlan)) : '暂无' }}</text></view>
       <view class="summary-line"><text>创建人</text><text>{{ selectedPlan.creator?.displayName || '成员' }}</text></view>
       <text class="summary-note">{{ planAccessSummary(selectedPlan) }}</text>
-      <text v-if="selectedPlan.pauseReason" class="pause-reason">{{ selectedPlan.pauseReason }}</text>
+      <TaskErrorNotice v-if="selectedPlan.pauseReason" :message="selectedPlan.pauseReason" summary="安排已暂停" @details="showIssue" />
       <view class="plan-toggle-row">
-       <view class="plan-toggle-copy"><text class="plan-toggle-title">周期计划</text><text class="plan-toggle-note">{{ planIsEnabled(selectedPlan) ? '停用后只影响未来发生' : '重新启用前会核验当前范围和绑定' }}</text></view>
+       <view class="plan-toggle-copy"><text class="plan-toggle-title">重复安排</text><text class="plan-toggle-note">{{ planIsEnabled(selectedPlan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
        <view v-if="!planCanToggle(selectedPlan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(selectedPlan)">
         <switch :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" disabled />
        </view>
@@ -139,8 +141,11 @@ import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { getTaskPlan, cancelTaskPlan, listAgentTasks, listNotifications, listTaskPlans, setTaskPlanStatus } from '@/apis/agent'
+import { taskStatusTone } from '../task-presentation.mjs'
 import { repeatText, taskRequirementsText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
+import TaskIssueDetails from './TaskIssueDetails.vue'
+import TaskErrorNotice from './TaskErrorNotice.vue'
 import SlidingSegments from './SlidingSegments.vue'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskCalendarView from './TaskCalendarView.vue'
@@ -153,13 +158,14 @@ const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-cou
 const calendar = ref(null), inbox = ref(null), inboxNavigation = ref({ title: '', canBack: false }), selectedDate = ref(props.date || taskToday())
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 const ALL_CHUNK_DAYS = 62, ALL_MAX_DAYS = 371
-const views = computed(() => props.source === 'company' ? [{ value: 'all', label: '全部任务' }, { value: 'calendar', label: '日历' }] : [
+const views = computed(() => props.source === 'company' ? [{ value: 'all', label: '任务安排' }, { value: 'calendar', label: '日历' }] : [
  { value: 'upcoming', label: '待执行' },
  { value: 'results', label: '执行结果' },
- { value: 'plans', label: '周期计划' },
+ { value: 'plans', label: '重复安排' },
 ])
 const view = ref(props.source === 'company' ? 'all' : 'upcoming')
-const tasks = ref([]), plans = ref([])
+const tasks = ref([]), plans = ref([]), issue = ref(null), operationError = ref('')
+function showIssue(value) { issue.value = value }
 const loading = ref(false), error = ref(''), planLoading = ref(false), planSwitchRevision = ref(0)
 const plansError = ref(''), plansLoading = ref(false), inboxUnread = ref(0)
 const allLoadedTo = ref(0), moreLoading = ref(false), moreError = ref('')
@@ -170,19 +176,19 @@ const plansLoaded = ref(false)
 const selectedTask = ref(null), selectedPlan = ref(null), planDetailError = ref(''), returnPlan = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
 const stackedView = computed(() => props.source === 'company' && (view.value === 'inbox' || view.value === 'plans'))
-const sheetTitle = computed(() => selectedTask.value ? '任务报告' : selectedPlan.value || (props.source === 'company' && view.value === 'plans') ? '周期计划' : props.source === 'company' ? '任务管理' : '我的安排')
+const sheetTitle = computed(() => selectedTask.value ? '任务详情' : selectedPlan.value || (props.source === 'company' && view.value === 'plans') ? '重复安排' : props.source === 'company' ? '任务管理' : '我的安排')
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
 const agenda = computed(() => agendaGroups(tasks.value, taskToday(), 10))
 const agendaHasDays = computed(() => agenda.value.days.some(day => day.rows.length))
 const enabledPlansCount = computed(() => plans.value.filter(plan => planIsEnabled(plan)).length)
 const pausablePlans = computed(() => plans.value.filter(plan => plan?.status === 'enabled' && plan.canPause))
-const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '全部任务' : '周期安排')
-const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无周期计划')
+const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '任务安排' : '周期安排')
+const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无重复安排')
 function railNum(date) { const today = taskToday(); return date.slice(5, 7) === today.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
 function railText(date) { const today = taskToday(); return date === today ? '今天' : date === shiftDate(today, 1) ? '明天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
 let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, moreRequest = 0, loadedScope = '', pageVisible = true
 function resetPlanSwitch() { planSwitchRevision.value += 1 }
-function resetIdentity() { ++planStatusRequest; ++plansRequest; ++moreRequest; tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded.value = false; allLoadedTo.value = 0; moreLoading.value = false; moreError.value = ''; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false }; planLoading.value = false; plansLoading.value = false; plansError.value = ''; inboxUnread.value = 0; resetPlanSwitch() }
+function resetIdentity() { issue.value = null; operationError.value = ''; ++planStatusRequest; ++plansRequest; ++moreRequest; tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded.value = false; allLoadedTo.value = 0; moreLoading.value = false; moreError.value = ''; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false }; planLoading.value = false; plansLoading.value = false; plansError.value = ''; inboxUnread.value = 0; resetPlanSwitch() }
 onHide(() => { pageVisible = false; ++requestId; ++planRequest; ++planStatusRequest; ++plansRequest; ++moreRequest; loading.value = false; planLoading.value = false; plansLoading.value = false; moreLoading.value = false; resetPlanSwitch() })
 onShow(() => { pageVisible = true; if (props.open) void load() })
 
@@ -208,21 +214,15 @@ function taskTimeValue(task, kind) {
  if (kind === 'results') return task.reportAt || task.interval?.endsAt || task.phases?.at(-1)?.endedAt || task.phases?.at(-1)?.at || task.createdAt
  return task.interval?.startsAt || task.phases?.[0]?.at || task.createdAt
 }
-function taskTone(status) {
- if (['failed', 'missed', 'interrupted'].includes(status)) return 'fail'
- if (['partial', 'unconfirmed'].includes(status)) return 'warn'
- if (['completed', 'verified', 'satisfied'].includes(status)) return 'ok'
- if (status === 'cancelled') return 'muted'
- return 'active'
-}
+const taskTone = taskStatusTone
 function planIsEnabled(plan) { return !['paused', 'disabled', 'ended'].includes(plan?.status) && Boolean(plan?.nextAt) }
 function planHasCheckpoints(plan) { return Boolean((plan?.template?.phases || plan?.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes)) }
 function planNextTime(plan) { return plan?.nextCheckpointAt || plan?.nextAt }
 function planNextLabel(plan) { return planHasCheckpoints(plan) ? '下一次检查' : '下一次执行' }
 function planStatus(plan) {
- if (plan?.status === 'paused' || plan?.status === 'disabled') return '已停用'
- if (plan?.status === 'ended' || (!plan?.nextAt && plan?.status !== 'paused')) return '周期结束'
- return planIsEnabled(plan) ? '已启用' : '状态待确认'
+ if (plan?.status === 'paused' || plan?.status === 'disabled') return '已暂停'
+ if (plan?.status === 'ended' || (!plan?.nextAt && plan?.status !== 'paused')) return '已结束'
+ return planIsEnabled(plan) ? '已开启' : '状态待确认'
 }
 function planCanToggle(plan) {
  if (plan?.status === 'enabled') return Boolean(plan.canPause)
@@ -230,8 +230,8 @@ function planCanToggle(plan) {
  return false
 }
 function planAccessSummary(plan) {
- if (plan?.status === 'enabled' && plan.canPause) return '可停用未来发生；当前已生成的发生继续保留'
- if (plan?.status === 'paused' && plan.canResume) return '重新启用会重新核验当前完整范围和控制绑定'
+ if (plan?.status === 'enabled' && plan.canPause) return '可暂停以后的安排；本次已安排的任务会继续'
+ if (plan?.status === 'paused' && plan.canResume) return '继续前会重新检查设备权限'
  if (plan?.canManage) return '可取消本次或全部'
  return '当前账号仅可查看'
 }
@@ -254,16 +254,16 @@ function planContextCurrent(planId, source, scope, version) {
 }
 function resumeContent(plan) {
  const next = plan?.resumeNextAt ? taskTime(plan.resumeNextAt) : ''
- return `下一次执行：${next || '暂无未来发生'}。将重新核验当前完整范围和控制绑定，从下一次未来发生继续，不补过去安排。`
+ return `下一次执行：${next || '暂无以后的安排'}。将重新核验当前设备权限和操作范围，从下一次安排继续，不补做过去的安排。`
 }
 async function togglePlanStatus(plan, enabled) {
  if (!plan?.planId || !planCanToggle(plan) || planLoading.value) return
  const action = ++planStatusRequest, operation = enabled ? 'resume' : 'pause'
  const source = props.source, scope = getAgentStorageScope(), planId = plan.planId, version = plan.version
- const title = operation === 'resume' ? '重新启用' : '停用周期计划'
+ const title = operation === 'resume' ? '继续执行' : '暂停重复安排'
  const content = operation === 'resume'
   ? resumeContent(plan)
-  : '只停用未来发生；已经生成、执行中或已下发的本次不回滚。'
+  : '只暂停以后的安排；已经安排的本次任务会继续，已做的操作保持原样。'
  const confirmed = await new Promise(resolve => uni.showModal({ title, content, confirmText: title, confirmColor: operation === 'resume' ? '#176b54' : '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed) {
   if (action === planStatusRequest && planContextCurrent(planId, source, scope, version)) resetPlanSwitch()
@@ -277,12 +277,12 @@ async function togglePlanStatus(plan, enabled) {
   replacePlan(result?.plan)
   resetPlanSwitch()
   emit('changed')
-  uni.showToast({ title: operation === 'resume' ? '已重新启用' : '已停用未来发生', icon: 'none' })
+  uni.showToast({ title: operation === 'resume' ? '已继续执行' : '已暂停以后的安排', icon: 'none' })
  } catch (cause) {
   if (action !== planStatusRequest || !planContextCurrent(planId, source, scope, version)) return
   if (cause.data?.recovery?.plan) replacePlan(cause.data.recovery.plan)
   resetPlanSwitch()
-  uni.showToast({ title: cause.message || '状态更新失败，请刷新后重试', icon: 'none' })
+  operationError.value = cause.message || '暂时没能更新安排，请重试'
  } finally { if (action === planStatusRequest) planLoading.value = false }
 }
 async function pauseAllPlans() {
@@ -291,13 +291,15 @@ async function pauseAllPlans() {
  const pausable = pausablePlans.value
  if (!pausable.length || planLoading.value) return
  const skipped = plans.value.filter(plan => plan?.status === 'enabled' && plan.nextAt && !plan.canPause).length
- const confirmed = await new Promise(resolve => uni.showModal({ title: '停用全部周期计划',
-  content: `将停用 ${pausable.length} 个已启用周期计划，只影响未来发生；已生成、执行中或已下发的安排不回滚。${skipped ? `另有 ${skipped} 项无权停用，保持不变。` : ''}`,
-  confirmText: '全部停用', confirmColor: '#a15343',
+ const confirmed = await new Promise(resolve => uni.showModal({ title: '暂停全部重复安排',
+  content: `将暂停 ${pausable.length} 个已开启重复安排，只影响以后的安排；已经安排的本次任务会继续，已做的操作保持原样。${skipped ? `另有 ${skipped} 项不能暂停，保持不变。` : ''}`,
+  confirmText: '全部暂停', confirmColor: '#a15343',
   success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || action !== planStatusRequest || !props.open || source !== props.source || scope !== getAgentStorageScope()) return
  planLoading.value = true
  let paused = 0, failed = 0
+ const failures = []
+ operationError.value = ''
  try {
   for (const plan of pausable) {
    if (action !== planStatusRequest || !props.open || source !== props.source || scope !== getAgentStorageScope()) return
@@ -305,13 +307,14 @@ async function pauseAllPlans() {
     const result = await setTaskPlanStatus(plan.planId, plan.version, 'pause', source)
     if (result?.plan) replacePlan(result.plan)
     paused += 1
-   } catch { failed += 1 }
+   } catch (cause) { failed += 1; failures.push(`${plan.label || '未命名安排'}：${cause.message || '未提供原因'}`) }
   }
  } finally { if (action === planStatusRequest) planLoading.value = false }
  if (action !== planStatusRequest) return
  void loadPlans(true)
  emit('changed')
- uni.showToast({ title: failed ? `已停用 ${paused} 项，${failed} 项失败` : `已停用 ${paused} 项`, icon: 'none' })
+ if (failed) operationError.value = `已暂停${paused}项，${failed}项未暂停。\n\n${failures.join('\n\n')}`
+ else uni.showToast({ title: `已暂停${paused}项`, icon: 'none' })
 }
 function selectTaskRows(values, kind) {
  const rows = Array.isArray(values) ? values : []
@@ -339,7 +342,7 @@ async function loadPlans(force = true) {
    plansLoaded.value = true; plansError.value = ''
   }
  } catch (cause) {
-  if (current === plansRequest && props.open) plansError.value = cause.message || '周期计划暂不可用'
+  if (current === plansRequest && props.open) plansError.value = cause.message || '重复安排暂不可用'
  } finally { if (current === plansRequest) plansLoading.value = false }
 }
 
@@ -429,7 +432,7 @@ async function openPlan(plan) {
   }
  } catch (cause) {
   if (current === planRequest && props.open) {
-   planDetailError.value = cause.message || '周期计划读取失败，请刷新后重试'
+   planDetailError.value = cause.message || '重复安排读取失败，请刷新后重试'
    uni.showToast({ title: planDetailError.value, icon: 'none' })
   }
  }
@@ -454,12 +457,14 @@ function backToList() {
  selectedPlan.value = null
 }
 function goBack() {
+ if (issue.value) { issue.value = null; return }
  if (view.value === 'inbox' && inbox.value?.back()) return
  if (content.value?.back()) return
  if (selectedTask.value || selectedPlan.value || !stackedView.value) { backToList(); return }
  view.value = 'all'
 }
 function nativeBack() {
+ if (issue.value) { issue.value = null; return }
  if (view.value === 'inbox' && inbox.value?.back()) return
  if (content.value?.back()) return
  if (selectedTask.value || selectedPlan.value) { backToList(); return }
@@ -467,6 +472,7 @@ function nativeBack() {
  closeSheet()
 }
 function closeSheet() {
+ issue.value = null; operationError.value = ''
  ++planRequest; ++planStatusRequest; planLoading.value = false; resetPlanSwitch()
  selectedTask.value = null
  selectedPlan.value = null
@@ -485,7 +491,7 @@ async function cancelWholePlan(scopeType) {
  if (!selectedPlan.value?.canManage || planLoading.value) return
  const plan = selectedPlan.value, source = props.source, scope = getAgentStorageScope()
  const title = scopeType === 'all' ? '取消全部' : '取消本次'
- const confirmed = await new Promise(resolve => uni.showModal({ title, content: scopeType === 'all' ? '取消这个周期全部尚未执行的安排；已执行或已下发的动作不会回滚。' : '只取消下一次执行，后续周期照常执行。', confirmText: title, confirmColor: '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ const confirmed = await new Promise(resolve => uni.showModal({ title, content: scopeType === 'all' ? '取消这个周期全部尚未执行的安排；已执行或已发送的动作保持原样。' : '只取消下一次执行，后续周期照常执行。', confirmText: title, confirmColor: '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || !props.open || selectedPlan.value?.planId !== plan.planId || source !== props.source || scope !== getAgentStorageScope()) return
  planLoading.value = true
  try {
@@ -494,7 +500,7 @@ async function cancelWholePlan(scopeType) {
  } catch (cause) {
   if (!props.open || source !== props.source || scope !== getAgentStorageScope() || selectedPlan.value?.planId !== plan.planId) return
   if (cause.data?.recovery?.plan) replacePlan(cause.data.recovery.plan)
-  error.value = cause.message || '取消失败，请刷新后重试'; uni.showToast({ title: error.value, icon: 'none' })
+  operationError.value = cause.message || '暂时没能取消，请刷新后重试'
  }
  finally { planLoading.value = false }
 }
@@ -505,6 +511,10 @@ function referencePlan() {
 
 watch(() => props.open, (open, previous) => {
  if (open && !previous) {
+  try {
+   const scope = getAgentStorageScope()
+   if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
+  } catch { resetIdentity() }
   ++planRequest; planLoading.value = false
   selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null
   navigation.value = { title: '', canBack: false }

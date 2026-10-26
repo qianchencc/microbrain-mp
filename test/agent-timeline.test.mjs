@@ -30,12 +30,12 @@ test('设备阶段卡区分已执行、进行中和未完成', () => {
   phaseId, at, outcome, device: { id: 'ac-1', kind: 'ac', name: '空调' }, target: { power: 'on' } })
  const morning = event('start', 'verified', '2026-09-27T01:00:00Z')
  const later = outcome => event('end', outcome, '2026-09-27T06:00:00Z')
- assert.equal(deviceTimelineItems([{ ...event('only', 'unconfirmed', morning.at), details: { receipt: 'ACCEPTED' } }])[0].resultText, '已执行')
- assert.equal(deviceTimelineItems([morning, later('pending')])[0].resultText, '未执行')
+ assert.equal(deviceTimelineItems([{ ...event('only', 'unconfirmed', morning.at), details: { receipt: 'ACCEPTED' } }])[0].resultText, '指令已发送')
+ assert.equal(deviceTimelineItems([morning, later('pending')])[0].resultText, '未开始')
  assert.equal(deviceTimelineItems([morning, later('rejected')])[0].resultText, '未完成')
- assert.equal(deviceTimelineItems([{ ...morning, phaseStatus: 'executing', outcome: 'pending' }])[0].resultText, '执行中')
+ assert.equal(deviceTimelineItems([{ ...morning, phaseStatus: 'executing', outcome: 'pending' }])[0].resultText, '进行中')
  assert.equal(deviceTimelineItems([{ ...morning, taskStatus: 'cancelled' },
-  { ...later('not_dispatched'), taskStatus: 'cancelled', phaseStatus: 'cancelled' }])[0].resultText, '已执行 · 后续已取消')
+  { ...later('not_dispatched'), taskStatus: 'cancelled', phaseStatus: 'cancelled' }])[0].resultText, '已完成 · 后续已取消')
 })
 
 test('本地演示的区域任务与设备记录指向同一任务及目标', () => {
@@ -58,8 +58,8 @@ test('本地演示的区域任务与设备记录指向同一任务及目标', ()
  const unresolved = { ...tasks[0], status: 'unconfirmed', phases: tasks[0].phases.map(phase => ({
   ...phase, status: 'unconfirmed', devices: phase.devices.map(device => ({ ...device, outcome: 'unconfirmed' })),
  })) }
- assert.equal(taskDetailView(unresolved).statusText, '待核验')
- assert.equal(regionTimelineItems([unresolved])[0].warning, false)
+ assert.equal(taskDetailView(unresolved).statusText, '结果待确认')
+ assert.equal(regionTimelineItems([unresolved])[0].warning, true)
 })
 
 test('独立区间任务使用保存边界，未到终点不淡化', () => {
@@ -84,22 +84,22 @@ test('独立区间任务使用保存边界，未到终点不淡化', () => {
  assert.equal(items[0].at, interval.startsAt, '设备记录投影完整任务区间')
  assert.equal(items[0].endAt, interval.endsAt)
  assert.equal(items[0].faded, false, '该设备检查点已收口但区间未终态不淡化')
- assert.equal(deviceTimelineItems([event('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed', 'completed')])[0].faded, true,
-  '任务终态后设备记录才淡化')
+ assert.equal(deviceTimelineItems([event('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed', 'completed')])[0].faded, false,
+  '任务已结束也不能把仅受理的设备记录淡化成已确认完成')
 
  const detail = taskDetailView(running)
  assert.equal(detail.whenText, '2026-10-05 14:00 至 16:00', '区间任务时间按保存边界显示')
- assert.deepEqual(detail.phases.map(item => item.title), ['检查点1', '检查点2'], '检查点不沿用开始/结束命名')
- assert.equal(detail.statusText, '区间进行中')
- assert.equal(taskDetailView({ ...running, executionActive: true }).statusText, '设备执行中')
- assert.equal(detail.phases[0].devices[0].resultText, '已执行')
+ assert.deepEqual(detail.phases.map(item => item.title), ['第1次操作', '第2次操作'], '检查点不沿用开始/结束命名')
+ assert.equal(detail.statusText, '进行中')
+ assert.equal(taskDetailView({ ...running, executionActive: true }).statusText, '进行中')
+ assert.equal(detail.phases[0].devices[0].resultText, '指令已发送')
  assert.equal(detail.phases[0].devices[0].outcome, 'unconfirmed', '受理结果不被改写成物理核验')
  const verified = phase('p3', '2026-10-05T06:45:00.000Z', 'completed', 'verified')
  assert.equal(taskDetailView({ ...running, phases: [verified] }).phases[0].devices[0].outcome, 'verified')
  const report = { generatedAt: '2026-10-05T08:00:12.000Z', outcome: 'completed',
   phases: [phase('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed'), phase('p2', '2026-10-05T07:30:00.000Z', 'completed', 'verified')] }
  const terminal = taskDetailView({ ...running, status: 'completed', phases: report.phases, report })
- assert.equal(terminal.report.outcomeText, '已执行')
+ assert.equal(terminal.report.outcomeText, '已完成')
  assert.equal(terminal.report.checkpoints, 2)
  assert.equal(terminal.report.devicesVisible, 1, '报告台数按授权可见的唯一设备统计，同一设备跨检查点不重复')
  const otherPhase = { ...phase('p2b', '2026-10-05T07:30:00.000Z', 'completed', 'verified'),
@@ -119,10 +119,10 @@ test('周期安排区分未来发生与实际报告，并导航到同一发生',
  assert.equal(card.phases[0].at, '2026-10-09T10:00:00Z', '计划刷新不改写原提案快照')
  const future = { id: 'occurrence:plan-1:2026-10-12', label: '关灯', status: 'scheduled', repeat: card.repeat,
   occurrence: { planId: 'plan-1', date: '2026-10-12', virtual: true }, phases: [{ at: '2026-10-12T10:00:00Z', devices: [] }] }
- assert.equal(taskDetailView(future).statusText, '未来安排')
+ assert.equal(taskDetailView(future).statusText, '未开始')
  const actual = { ...future, id: 'actual-1', status: 'completed', occurrence: { ...future.occurrence, virtual: false },
   nextAt: '2026-10-13T10:00:00Z', report: { generatedAt: '2026-10-12T10:00:12Z', outcome: 'completed', phases: [{ devices: [] }] }, regionIds: ['office-1'] }
- assert.equal(taskDetailView(actual).report.outcomeText, '已执行')
+ assert.equal(taskDetailView(actual).report.outcomeText, '已完成')
  assert.equal(taskDetailView(actual).repeatText, repeatText(card.repeat))
  assert.deepEqual(taskNavigation(actual), { taskId: 'actual-1', date: '2026-10-12', regionId: 'office-1' })
 })
@@ -135,7 +135,7 @@ test('Company 只读检查显示读取目标、已读取结果和持久化观察
   phases: [phase], report: { generatedAt: phase.endedAt, outcome: 'completed', phases: [{ id: phase.id, at: phase.at, status: phase.status, observations: blocks, devices: phase.devices }] } })
  assert.equal(targetText('environment', { observe: true }), '读取环境数据')
  assert.equal(readTargetText('safety'), '读取告警台账')
- assert.equal(detail.phases[0].devices[0].resultText, '已读取')
+ assert.equal(detail.phases[0].devices[0].resultText, '已检查')
  assert.deepEqual(detail.phases[0].observations, blocks)
  assert.equal(detail.report.outcomeText, '已完成')
  const byTime = taskDetailView({ ...detail, phases: [{ ...phase, id: 'different-id' }], report: { ...detail.report, phases: [{ id: 'old-id', at: phase.at, observations: blocks, devices: phase.devices }] } })
@@ -153,7 +153,7 @@ test('Company 检查点 Agent 阶段沿用只读观察块与状态文案', () =>
   createdAt: '2026-10-12T00:00:00.000Z', phases: [phase],
   report: { generatedAt: phase.endedAt, outcome: 'partial', phases: [{ id: phase.id, at: phase.at, status: phase.status, observations: [observation], devices: phase.devices }] } })
  assert.equal(detail.phases[0].statusText, '部分完成')
- assert.equal(detail.phases[0].devices[0].resultText, '已读取')
+ assert.equal(detail.phases[0].devices[0].resultText, '已检查')
  assert.deepEqual(detail.phases[0].observations, [observation])
  assert.equal(detail.report.outcomeText, '部分完成')
  const midInterval = taskDetailView({ ...detail, phases: [{ ...phase, observations: [observation] }], report: null })
@@ -185,7 +185,7 @@ test('Company 检查点报告元数据投影为独立报告行且不混入观察
  const plain = taskDetailView({ ...detail, report: null, phases: [{ ...phases[0], observations: [meterBlock] }, phases[1]] })
  assert.equal(plain.phases[0].report, null, 'result 输出不产生报告行')
  assert.deepEqual(plain.phases[0].observations, [meterBlock])
- assert.equal(detail.phases[0].devices[0].resultText, '已读取')
+ assert.equal(detail.phases[0].devices[0].resultText, '已检查')
 })
 
 test('Company 周期详情保留下一次安排的只读检查快照', () => {
@@ -214,7 +214,7 @@ test('Company 日报计划在提案与任务详情视图中保留统计期间和
   createdAt: '2026-10-11T00:00:00.000Z', phases: [phase] })
  assert.equal(detail.phases[0].time, '2026-10-12 09:00', '调度时间保持原阶段时间')
  assert.deepEqual(detail.phases[0].readAgent.spec, spec, '详情视图保留原始 read.agent.spec')
- assert.equal(detail.phases[0].readAgent.objectiveText, '检查点指令 · 生成昨日用电报告')
+ assert.equal(detail.phases[0].readAgent.objectiveText, '任务要求 · 生成昨日用电报告')
  assert.equal(detail.phases[0].readAgent.periodText, '统计期间 · 每次执行统计前一日（上海时间）')
  assert.equal(detail.phases[0].readAgent.comparisonText, '比较项 · 环比、同比')
 
@@ -244,28 +244,28 @@ test('需核验任务的设备结果区分受理未核验与已核验，不以�
   { id: 'ac', kind: 'ac', name: '26楼空调', target: { power: 'off' }, outcome: 'verified', details: { receipt: 'ACCEPTED', requiresVerification: true } },
  ]
  const view = taskDetailView({ agentSource: 'company', status: 'partial', source: { type: 'scheduled' }, phases: [{ at: '2026-10-19T12:00:00Z', status: 'partial', devices }] })
- assert.deepEqual(view.phases[0].devices.map(device => device.resultText), ['已受理 · 目标未核验', '已受理 · 回读失败', '已核验'])
+ assert.deepEqual(view.phases[0].devices.map(device => device.resultText), ['结果待确认', '结果待确认', '已完成'])
  assert.deepEqual(view.phases[0].devices.map(device => device.resultTone), ['warn', 'warn', 'ok'])
  const event = device => ({ taskId: 'closure', phaseId: device.id, at: '2026-10-19T12:00:00Z', taskStatus: 'partial', phaseStatus: 'partial', device, target: device.target, outcome: device.outcome, details: device.details })
  const timeline = deviceTimelineItems([event(devices[0])])[0]
- assert.equal(timeline.resultText, '结果待核验')
+ assert.equal(timeline.resultText, '结果待确认')
  assert.equal(timeline.resultTone, 'warn')
  assert.equal(timeline.faded, false)
 })
 
-test('Company 结果未知降为提醒，Office 仍标为未完成', () => {
+test('Company 与Office结果未知都只提醒未确认，不推断为失败', () => {
  const phase = outcome => ({ at: '2026-10-20T01:00:00Z', status: 'partial', failureReason: null,
   devices: [{ id: 'ac-1', kind: 'ac', name: '展示厅空调', target: { power: 'off' }, outcome, details: {} }] })
  const view = (agentSource, outcome) => taskDetailView({ agentSource, status: 'partial', source: { type: 'scheduled' }, phases: [phase(outcome)] }).phases[0].devices[0]
  const companyUnknown = view('company', 'unknown')
- assert.equal(companyUnknown.resultText, '结果未知')
+ assert.equal(companyUnknown.resultText, '结果待确认')
  assert.equal(companyUnknown.resultTone, 'warn')
  const officeUnknown = view('office', 'unknown')
- assert.equal(officeUnknown.resultText, '未完成 · 结果未知')
- assert.equal(officeUnknown.resultTone, 'fail')
+ assert.equal(officeUnknown.resultText, '结果待确认')
+ assert.equal(officeUnknown.resultTone, 'warn')
  const companyRejected = view('company', 'rejected')
- assert.equal(companyRejected.resultText, '未完成 · 平台未受理')
- assert.equal(companyRejected.resultTone, 'fail')
+ assert.equal(companyRejected.resultText, '未完成')
+ assert.equal(companyRejected.resultTone, 'warn')
 })
 
 test('周期计划执行要求只汇总接口返回的阶段事实，不从模板还原', () => {
@@ -278,7 +278,7 @@ test('周期计划执行要求只汇总接口返回的阶段事实，不从模�
  const plan = { planId: 'plan-1', agentSource: 'company', label: '每日任务', phases: [
   { id: 'report', at: '2026-10-20T00:30:00Z', status: 'pending', read: { agent }, devices: [] }, alarmPhase, acPhase] }
  assert.equal(taskRequirementsText(plan),
-  '统计期间 · 每次执行统计前一日（上海时间）；比较项 · 环比、同比；汇总前一自然日告警（上海时间）；有限条件调温；条件 · 已开机 + 制冷 + 设定温度低于26℃；动作 · 满足条件时把设定温度调整为26℃')
+  '统计期间 · 每次执行统计前一日（上海时间）；比较项 · 环比、同比；汇总前一自然日告警（上海时间）；空调温度调整；只调整开着、正在制冷且设定温度低于26℃的空调；符合条件时调到26℃')
 
  const stripped = { planId: 'plan-1', agentSource: 'company', label: '每日任务',
   template: { phases: [{ read: { agent } }, { read: { ac: { mode: 'adjust_to_26' } } }] },
@@ -316,21 +316,21 @@ test('周期计划无管理权限时给出只读原因，详情读取失败保�
 
 test('空调检查展示频率、条件与动作，报告摘要区分检查点和节能口径', () => {
  const ac = readAcView({ mode: 'adjust_to_26', cadenceMinutes: 30 })
- assert.equal(ac.cadenceText, '频率 · 每 30 分钟检查一次')
- assert.equal(ac.actionText, '动作 · 满足条件时把设定温度调整为26℃')
- assert.equal(ac.limitText, '限制 · 不自动开机、不切换模式、不调整风速')
+ assert.equal(ac.cadenceText, '每 30 分钟检查一次')
+ assert.equal(ac.actionText, '符合条件时调到26℃')
+ assert.equal(ac.limitText, '不开机、不改模式和风速')
  assert.equal(readAcView({ mode: 'inspect' }).cadenceText, '')
- assert.equal(readAcView({ mode: 'inspect' }).scheduleText, '排程 · 指定时刻检查一次')
- assert.equal(readAcView({ mode: 'adjust_to_26' }).scheduleText, '排程 · 指定时刻检查一次')
- assert.match(taskRequirementsText({ phases: [{ read: { ac: { mode: 'adjust_to_26', cadenceMinutes: 60 } } }] }), /频率 · 每 60 分钟检查一次/)
+ assert.equal(readAcView({ mode: 'inspect' }).scheduleText, '按指定时间检查一次')
+ assert.equal(readAcView({ mode: 'adjust_to_26' }).scheduleText, '按指定时间检查一次')
+ assert.match(taskRequirementsText({ phases: [{ read: { ac: { mode: 'adjust_to_26', cadenceMinutes: 60 } } }] }), /每 60 分钟检查一次/)
 
  const summary = taskExecutionSummaryView({ checkpoints: 2, devices: { total: 3, adjusted: 1, satisfied: 2, skipped: 0, failed: 0, unknown: 0, unverified: 0 },
   energyImpact: { status: 'unavailable', reason: '已调温，但缺少可用的调前设定温度或调温时长不足' } })
- assert.equal(summary.checkpointsText, '2 次检查')
- assert.equal(summary.devicesText, '涉及 3 台 · 已调 1 · 无需 2 · 跳过 0')
+ assert.equal(summary.checkpointsText, '2次检查有结果')
+ assert.equal(summary.devicesText, '涉及3台设备 · 其中1台曾调整温度')
  assert.equal(summary.energy.kind, 'unavailable')
  assert.equal(summary.energy.hero.value, '暂无法可靠估算')
- assert.equal(summary.energy.hero.badge, '口径缺失')
+ assert.equal(summary.energy.hero.badge, '暂时算不出节电量')
  assert.equal(summary.energy.facts.length, 3)
  assert.equal(taskExecutionSummaryView(null), null)
 
@@ -363,13 +363,10 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
 
  const proposalSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskProposalCard.vue'), 'utf8')
  assert.match(proposalSource, /v-for="\(phase, index\) in phasesShown"/, '频率展开的检查点只展示一份窗口事实')
- assert.match(proposalSource, /共 \$\{acWindow\.count\} 个检查点/)
+ assert.match(proposalSource, /共 \$\{acWindow\.count\} 次检查/)
  assert.match(proposalSource, /scheduleText/, '单次空调检查必须显示一次性排程')
- const detailContentSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskDetailContent.vue'), 'utf8')
- assert.match(detailContentSource, /phase\.readAc\.scheduleText/, '任务详情必须显示一次性排程')
  const inboxSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskInboxContent.vue'), 'utf8')
  assert.match(inboxSource, /notification\.summary/)
- assert.match(inboxSource, /次检查/)
 })
 
 test('空调窗口计划显示下一次检查而不是窗口起点', () => {

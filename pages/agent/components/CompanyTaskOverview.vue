@@ -1,5 +1,6 @@
 <template>
  <view class="overview">
+  <DeviceSheet :open="Boolean(issue)" title="查看原因" tall compact-header @close="issue = null"><TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" /></DeviceSheet>
   <view class="overview-head"><text class="overview-title">任务管理</text><button class="inbox-link" @tap="open('inbox')"><uni-icons type="email" size="15" color="#176b54" /><text>通知中心</text><text v-if="unread" class="unread">{{ unread > 99 ? '99+' : unread }}</text></button></view>
   <view v-if="loading && !loaded" class="agenda-state">加载中…</view>
   <view v-else-if="error && !previewDays.length" class="agenda-error"><text>任务暂未加载</text><view class="error-actions"><button class="error-detail" @tap="showError">查看原因</button><button class="error-retry" @tap="load(true)">重试</button></view></view>
@@ -9,7 +10,7 @@
     <view class="agenda-rows">
      <button v-for="task in day.rows" :key="taskKey(task)" class="agenda-row" @tap="open('all', task)">
       <text class="row-clock">{{ taskDayTime(task, day.date) }}</text>
-      <view class="row-copy"><text class="row-name">{{ task.label || '任务安排' }}</text><text v-if="task.repeat || task.occurrence" class="row-rule">周期 · {{ repeatText(task.repeat) || '按周期执行' }}</text></view>
+      <view class="row-copy"><text class="row-name">{{ task.label || '任务安排' }}</text><text v-if="task.repeat || task.occurrence" class="row-rule">{{ repeatText(task.repeat) || '按周期执行' }}</text></view>
       <text class="row-state" :class="'row-state--' + stateTone(task.status)">{{ taskLabel(task.status) }}</text>
      </button>
      <text v-if="day.more" class="row-more">还有 {{ day.more }} 项</text>
@@ -28,10 +29,14 @@ import { listAgentTasks, listNotifications } from '@/apis/agent'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { shiftDate } from '../region-calendar.mjs'
 import { agendaGroups, taskDayTime, taskLabel, taskSettled, taskToday } from '../task-calendar.mjs'
+import DeviceSheet from './DeviceSheet.vue'
+import TaskIssueDetails from './TaskIssueDetails.vue'
+import { taskStatusTone } from '../task-presentation.mjs'
 import { repeatText } from '../task-detail-view.mjs'
 const props = defineProps({ active: Boolean, refreshKey: Number })
 const emit = defineEmits(['open'])
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
+const issue = ref(null)
 const tasks = ref([]), unread = ref(0), loading = ref(false), loaded = ref(false), error = ref(''), today = ref(taskToday())
 const previewDays = computed(() => {
  const days = []
@@ -49,10 +54,10 @@ const previewDays = computed(() => {
 let generation = 0, timer = 0, visible = true, loadedScope = ''
 function open(view, task) { emit('open', { view, date: today.value, task }) }
 function taskKey(task) { return task.taskId || task.id || task.occurrence?.id || task.label }
-function stateTone(status) { return status === 'executing' ? 'executing' : ['failed', 'partial', 'missed', 'interrupted', 'unconfirmed'].includes(status) ? 'warn' : 'plain' }
+const stateTone = taskStatusTone
 function railNum(date) { return date.slice(5, 7) === today.value.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
 function railText(date) { return date === today.value ? '今天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
-function showError() { uni.showModal({ title: '任务加载失败', content: error.value, showCancel: false, confirmText: '知道了' }) }
+function showError() { issue.value = { title: '任务暂未加载', reason: error.value } }
 function stop() { ++generation; clearTimeout(timer); loading.value = false }
 async function load(force = false) {
  if (!props.active || !visible) return
@@ -93,7 +98,7 @@ async function refreshUnread() {
  } catch { /* 未读数失败不影响任务预览 */ }
 }
 watch(() => [props.active, props.refreshKey], ([active, revision], previous) => {
- if (!active) { stop(); return }
+ if (!active) { issue.value = null; stop(); return }
  today.value = taskToday()
  void load(Boolean(previous && previous[1] !== revision))
 }, { immediate: true })
@@ -129,7 +134,7 @@ button::after { border:0; }
 .row-name { white-space:normal; word-break:break-word; font-size:13px; font-weight:600; color:#2b4433; }
 .row-rule { font-size:10px; color:#8b9c90; }
 .row-state { flex-shrink:0; font-size:11px; color:#839287; }
-.row-state--executing { color:#176b54; }.row-state--warn { color:#a16f28; }
+.row-state--active { color:#176b54; }.row-state--warn { color:#a16f28; }
 .row-more { padding:5px 0 3px; color:#99a59d; font-size:10px; }
 .overview-foot { min-height:44px; margin-top:8px; display:flex; align-items:center; justify-content:center; border-top:1px solid #e0e8e0; color:#176b54; font-size:12px; }
 </style>

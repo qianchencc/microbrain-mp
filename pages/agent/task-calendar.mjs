@@ -6,7 +6,7 @@ export const taskDate = value => {
 }
 export const taskToday = () => taskDate(new Date().toISOString())
 export const taskStart = task => task.interval?.startsAt || task.phases?.[0]?.at || task.at || ''
-export const taskLabel = status => ({ scheduled: '待执行', pending: '待确认', executing: '执行中', completed: '已完成', partial: '部分完成', failed: '未完成', unconfirmed: '待核验', cancelled: '已取消', missed: '已错过', interrupted: '已中断', verified: '已核验', satisfied: '无需执行' })[status] || '状态待更新'
+export { taskStatusText as taskLabel } from './task-presentation.mjs'
 export const taskAbnormal = task => ['failed', 'partial', 'missed', 'interrupted', 'unconfirmed'].includes(task.status)
 export function tasksOnDate(tasks, date, priority = false) {
  const from = Date.parse(`${date}T00:00:00+08:00`), to = from + 86400000
@@ -25,7 +25,7 @@ export function taskCalendarMarks(tasks, from, to) {
  return marks
 }
 
-export const taskSettled = task => ['completed', 'verified', 'cancelled', 'satisfied'].includes(task.status)
+export const taskSettled = task => ['completed', 'verified', 'cancelled', 'satisfied', 'partial', 'failed', 'missed', 'interrupted', 'unconfirmed'].includes(task.status)
 
 function occurrenceDates(task) {
  const dates = []
