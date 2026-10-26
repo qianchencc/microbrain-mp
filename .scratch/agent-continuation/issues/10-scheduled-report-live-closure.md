@@ -4,7 +4,7 @@
 
 **Blocked by:** 01, 02, 03, 04, 05, 08, 09
 
-**Status:** draft（待新拆分粒度与阻塞边确认；尚未发布为 ready-for-agent）
+**Status:** ready-for-agent
 
 **规格与追踪：** [业务规格](../spec.md)故事 27–34；[验收矩阵](../acceptance.md) C21–C22，并复核本链路C23；[执行地图](../execution.md)。
 

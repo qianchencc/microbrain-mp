@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** draft（待新拆分粒度与阻塞边确认；尚未发布为 ready-for-agent）
+**Status:** in-progress
 
 **规格与追踪：** [业务规格](../spec.md)故事 1–4、30–34；[验收矩阵](../acceptance.md) C01–C03、C23、C24；[执行地图](../execution.md)。
 
@@ -43,5 +43,5 @@
 
 ## 实施记录
 
-- 当前：未开始。
+- 当前：2026-10-26 开始；先做确认瞬态目录故障恢复到同一任务的最小切片，不预建恢复引擎。
 - 红灯/基线、实现与提交、真实验收、发布版本和资源清理：实施时填写，不预填通过。
