@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createTimeline, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
+import { createTimeline, dateFocusTop, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
 import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
 import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
 import { energyImpactView, readAcView, readAgentView, readTargetText, taskDetailView, taskExecutionSummaryView, taskPlanSnapshot, taskRequirementsText, targetText } from '../pages/agent/task-detail-view.mjs'
@@ -23,6 +23,18 @@ test('跨日任务在中间日期保留可见缎带和卡片，不显示画面�
  assert.ok(scene.cards[0].top > 0 && scene.cards[0].top < scene.height)
  assert.equal(scene.labels.filter(label => label.kind === 'event').length, 0)
  assert.ok(scene.shapes.some(shape => shape.fill === 'future'))
+})
+
+test('点击日期定位到当天第一个任务，空日停 00:00 且跨日任务只算其开始日', () => {
+ const scene = createTimeline({ date: '2026-09-27', now: '2026-09-29T12:00:00+08:00', days: 3, items: [
+  { id: 'span', at: '2026-09-28T22:00:00+08:00', endAt: '2026-09-29T06:00:00+08:00' },
+  { id: 'evening', at: '2026-09-29T18:00:00+08:00' },
+  { id: 'morning', at: '2026-09-29T07:30:00+08:00' },
+ ] })
+ const top = id => scene.cards.find(card => card.id === id).top
+ assert.equal(dateFocusTop({ cards: scene.cards, date: '2026-09-29', dayIndex: 2 }), top('morning') - 30)
+ assert.equal(dateFocusTop({ cards: scene.cards, date: '2026-09-28', dayIndex: 1 }), top('span') - 30)
+ assert.equal(dateFocusTop({ cards: scene.cards, date: '2026-09-27', dayIndex: 0 }), 14)
 })
 
 test('设备阶段卡区分已执行、进行中和未完成', () => {

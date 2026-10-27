@@ -8,6 +8,13 @@ export const localTime = instant => new Date(new Date(instant).getTime() + 8 * 3
 export const timelineYOf = (instant, firstDate) => TOP_PAD + (new Date(instant).getTime() - midnight(firstDate)) / 3600000 * HOUR_PX
 export const railX = (y, peakY) => 55.5 + 8.5 * Math.cos(2 * Math.PI * (y - peakY) / 221)
 
+// 点击日期的落点：优先当天的第一个任务卡，空日仍停在当天 00:00（不看跨日任务的中间卡）。
+export const firstDayCard = (cards, date) => cards.filter(card => localDate(card.at) === date).sort((a, b) => a.top - b.top)[0]
+export const dateFocusTop = ({ cards = [], date, dayIndex = 0 }) => {
+ const first = firstDayCard(cards, date)
+ return Math.max(0, (first ? first.top : TOP_PAD + dayIndex * 24 * HOUR_PX) - 30)
+}
+
 // 输出绘图命令和普通视图的坐标；不依赖 DOM、Canvas 或小程序 API。
 export function createTimeline({ date, items = [], now = new Date().toISOString(), width = 340, days = 1 }) {
  const height = TOP_PAD * 2 + days * 24 * HOUR_PX

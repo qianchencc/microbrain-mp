@@ -28,7 +28,7 @@
 
 <script setup>
 import { computed, getCurrentInstance, nextTick, onMounted, ref, watch } from 'vue'
-import { createTimeline, localDate, HOUR_PX, TOP_PAD } from '../timeline-geometry.mjs'
+import { createTimeline, dateFocusTop, firstDayCard, localDate, HOUR_PX } from '../timeline-geometry.mjs'
 import { timelineSvg } from '../timeline-svg.mjs'
 import RegionCalendar from './RegionCalendar.vue'
 
@@ -88,7 +88,9 @@ function measure() {
   if (result?.width) width.value = result.width
  }).exec()
 }
+let pendingDateFocus = ''
 function focusDate(forceNow = false) {
+ pendingDateFocus = ''
  if (!forceNow && props.focusItems && scene.value.cards.length) {
   const cards = [...scene.value.cards].sort((a, b) => a.top - b.top)
   const target = cards.filter(card => card.top <= scene.value.nowY).at(-1) || cards[0]
@@ -100,7 +102,11 @@ function focusDate(forceNow = false) {
  const dayIndex = Math.round((dayStart(props.date) - dayStart(windowStart.value)) / DAY_MS)
  let targetTop = null
  if (localDate(props.now) === props.date && scene.value.nowVisible) targetTop = Math.max(0, Math.min(scene.value.height - 400, scene.value.nowY - 220))
- else if (dayIndex >= 0 && dayIndex < props.days) targetTop = Math.max(0, TOP_PAD + dayIndex * DAY_PX - 30)
+ else if (dayIndex >= 0 && dayIndex < props.days) {
+  targetTop = dateFocusTop({ cards: scene.value.cards, date: props.date, dayIndex })
+  // 该日任务尚未到达时先停在 00:00；第一张卡出现后再补一次定位。
+  if (!firstDayCard(scene.value.cards, props.date)) pendingDateFocus = props.date
+ }
  if (targetTop === null) return
  if (scrollTop.value === targetTop) { scrollTop.value = targetTop + .5; nextTick(() => { scrollTop.value = targetTop }) }
  else scrollTop.value = targetTop
@@ -115,6 +121,8 @@ onMounted(async () => { await nextTick(); measure(); focusDate() })
 // 日期变化若是滚动上报的回声（emittedDay），视口已经停在那天，不再二次定位。
 watch(() => props.date, value => { if (value !== emittedDay) focusDate() })
 watch(() => props.items.length, (length, previous) => { if (length && !previous) nextTick(focusDate) })
+// 选中日的任务可能晚于定位到达：第一张卡出现时补一次定位；之后的静默刷新不再抢回视口。
+watch(() => scene.value.cards, cards => { if (pendingDateFocus && firstDayCard(cards, pendingDateFocus)) focusDate() })
 // 窗口向上 prepend 时画布整体下移 delta*DAY_PX，补偿 scrollTop 让视口停在原内容上。
 watch(windowStart, (next, previous) => {
  if (!next || !previous) return
