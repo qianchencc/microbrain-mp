@@ -28,6 +28,10 @@ Runtime `67646ba`（基于生产 `ca38bb1`，隔离工作树 `/private/tmp/runti
 
 无 schema 变化：`ln -sfn /opt/iot-agent-runtime/releases/20261027-ca38bb1 .../current`（或 `20261026-efa1fb9`）后 `systemctl restart iot-agent-runtime`，不恢复数据库。
 
+## 后续合并（2026-10-27 14:37 CST）
+
+并行会话的环境历史引用发布最初错误地以 `ca38bb1` 为基线（`94b3654`，14:27 切换），短暂覆盖了 `67646ba`。发现后已基于 `67646ba` 重新合并为 `c530add` 并切换为 `releases/20261027-c530add`；`safety/events.js` 仍为本修复的 `317678d339e58d025ce6e7656fb96b0b692af9bed87c562abeed7c4d1a8ec918`，`67646ba` 的候选范围行为未改变。真实摄像头候选冒烟 200/5.48s、1 个候选。回滚目标改为 `releases/20261027-67646ba`。详见[环境引用交接](2026-10-27-environment-history-quote-reference.md)。
+
 ## 待验收
 
 - 真实安全台账「按当前位置查找监控」候选查询：确认不再请求非监控目录且 15 秒内返回。

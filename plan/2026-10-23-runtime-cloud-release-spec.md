@@ -19,7 +19,7 @@ Cloudflare (proxied, TLS 由源站 Caddy 用 DNS-01 签发)
 |---|---|
 | 云服务器 | `root@38.76.215.138`，Ubuntu 24.04.1 LTS，x86_64，香港 |
 | Node | `/opt/node22/bin/node`，v22.23.2（禁止改用系统 node） |
-| Runtime 版本 | `releases/20261027-67646ba`，源码提交 `67646ba`（基于`ca38bb1`，安全台账摄像头候选改走监控授权范围）；验收见[候选查询发布交接](2026-10-27-safety-camera-candidate-release-handoff.md) |
+| Runtime 版本 | `releases/20261027-c530add`，源码提交 `c530add`（基于 `67646ba`，保留安全摄像头候选授权范围修复，并加入环境历史 `environment_window` 引用）；见[环境引用交接](2026-10-27-environment-history-quote-reference.md)与[安全候选交接](2026-10-27-safety-camera-candidate-release-handoff.md) |
 | Runtime 监听 | `127.0.0.1:3210` |
 | 视频监听 | `127.0.0.1:9415` |
 | 反向代理 | Caddy，配置 `/etc/caddy/Caddyfile` |
