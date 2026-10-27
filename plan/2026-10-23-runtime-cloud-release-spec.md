@@ -19,7 +19,7 @@ Cloudflare (proxied, TLS 由源站 Caddy 用 DNS-01 签发)
 |---|---|
 | 云服务器 | `root@38.76.215.138`，Ubuntu 24.04.1 LTS，x86_64，香港 |
 | Node | `/opt/node22/bin/node`，v22.23.2（禁止改用系统 node） |
-| Runtime 版本 | `releases/20261027-d20332a`，源码提交 `d20332a`（基于 `c530add`，空调巡检事实拆分：放行分数度读数、观察行新增 afterSetpoint 回读值）；见 mp 仓 docs/README.md 2026-10-27 条目 |
+| Runtime 版本 | `releases/20261027-d0df76e`，源码提交 `d0df76e`（基于 `d20332a`，独立合入失败答复与原结果继续建议，保留此前空调、视频、环境引用等修复）；见 `plan/2026-10-25-actionable-failure-responses-handoff.md` 的10-27发布记录 |
 | Runtime 监听 | `127.0.0.1:3210` |
 | 视频监听 | `127.0.0.1:9415` |
 | 反向代理 | Caddy，配置 `/etc/caddy/Caddyfile` |
@@ -38,7 +38,7 @@ Cloudflare 开代理时，公网解析结果仍是 Cloudflare IP；改的是 ori
 
 ```text
 /opt/iot-agent-runtime/
-├── current -> releases/20261027-ca38bb1
+├── current -> releases/20261027-d0df76e
 ├── releases/<YYYYMMDD>-<shortsha>/
 ├── shared/
 │   ├── runtime.env                  # 0600，唯一进程环境文件
