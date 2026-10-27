@@ -114,7 +114,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, companyOverviewCache, readAgentAgenda, peekAgentAgenda, readAgentUnread, peekAgentUnread } from '@/apis/agent'
+import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, agentReadCache, peekAgentNotifications, peekAgentTasks, readAgentNotifications, readAgentTasks } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
@@ -241,16 +241,16 @@ async function loadSimpleAgenda(force = false) {
  const current = ++agendaRequestId
  const range = agendaRange()
  // 有同身份快照先落位：切换模式/重进不回到「读取中」。
- const saved = peekAgentAgenda(range), savedUnread = peekAgentUnread({ limit: 1 })
+ const saved = peekAgentTasks({ source: 'company', ...range }), savedUnread = peekAgentNotifications({ source: 'company', limit: 1 })
  if (saved) { simpleTasks.value = saved.tasks || []; simpleTasksError.value = ''; simpleTasksLoaded.value = true }
  if (savedUnread) simpleUnread.value = Number(savedUnread.unreadCount) || 0
  try {
-  const result = await readAgentAgenda({ ...range, force })
+  const result = await readAgentTasks({ source: 'company', ...range, force })
   if (current !== agendaRequestId || !visible) return
   try { if (getAgentStorageScope() !== scope) return } catch { /* 身份失效丢弃 */ return }
   simpleTasks.value = result.tasks || []; simpleTasksError.value = ''
   try {
-   const unread = await readAgentUnread({ limit: 1, force })
+   const unread = await readAgentNotifications({ source: 'company', limit: 1, force })
    if (current === agendaRequestId && visible) simpleUnread.value = Number(unread.unreadCount) || 0
   } catch { /* 未读数失败不影响任务块 */ }
  } catch (cause) {
@@ -363,7 +363,7 @@ function resetForScope() {
  energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
  ++agendaRequestId; simpleTasks.value = []; simpleTasksLoaded.value = false; simpleTasksError.value = ''; simpleUnread.value = 0
 }
-function invalidateCompanyDashboard() { companyOverviewCache.clear() }
+function invalidateCompanyDashboard() { agentReadCache.clear() }
 function applyCompanyDashboardCache(cached) {
  snapshot.value = cached.snapshot
  loadedSections.value = [...cached.loadedSections]
@@ -378,7 +378,7 @@ function applyCompanyDashboardCache(cached) {
 }
 function saveCompanyDashboardCache() {
  if (!snapshot.value || snapshot.value.errors?.length || Object.keys(sectionErrors.value).length || !devicesLoaded.value || devicesError.value || !energyReport.value || energyReport.value.truncated || energyError.value) return
- companyOverviewCache.put('dashboard-snapshot', {
+ agentReadCache.put('dashboard-snapshot', {
   snapshot: snapshot.value, loadedSections: [...loadedSections.value], sectionErrors: { ...sectionErrors.value },
   catalogDevices: [...catalogDevices.value], devicesLoaded: devicesLoaded.value, devicesError: devicesError.value,
   energyReport: energyReport.value, energyStrip: [...energyStrip.value], energyError: energyError.value, selectedStripDate: selectedStripDate.value,
@@ -404,7 +404,7 @@ async function load(force = false) {
   if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
   if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleTasksLoaded.value = false; simpleTasksError.value = '' }
   if (mode.value === 'simple' && (!simpleTasksLoaded.value || force === true)) void loadSimpleAgenda(force === true)
-  const cached = companyOverviewCache.peek('dashboard-snapshot')
+  const cached = agentReadCache.peek('dashboard-snapshot')
   if (!force && cached) {
    applyCompanyDashboardCache(cached.value)
    error.value = ''

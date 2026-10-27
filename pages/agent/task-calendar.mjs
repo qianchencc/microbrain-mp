@@ -28,6 +28,15 @@ export function taskCalendarMarks(tasks, from, to) {
 
 export const taskSettled = task => ['completed', 'verified', 'observed', 'cancelled', 'satisfied', 'expired'].includes(task.status) || taskNeedsDetails(task.status)
 
+// 任务列表窗口按上海自然日划分，与首页议程同键：进入 Agent 时预取，打开 Sheet 直接命中。
+// 执行结果到期取今天结束而不是 now，否则毫秒级时间戳会让每次打开的键都不同、快照永不命中。
+export const TASK_ALL_CHUNK_DAYS = 62, TASK_ALL_MAX_DAYS = 371
+export function taskListRange(kind, today = taskToday()) {
+ if (kind === 'all') return { from: `${today}T00:00:00+08:00`, to: `${shiftDate(today, TASK_ALL_CHUNK_DAYS)}T00:00:00+08:00` }
+ if (kind === 'upcoming') return { from: `${today}T00:00:00+08:00`, to: `${shiftDate(today, 31)}T00:00:00+08:00` }
+ return { from: `${shiftDate(today, -30)}T00:00:00+08:00`, to: `${shiftDate(today, 1)}T00:00:00+08:00` }
+}
+
 function occurrenceDates(task) {
  const dates = []
  if (task.interval) {

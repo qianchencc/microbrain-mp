@@ -25,7 +25,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
-import { readAgentAgenda, peekAgentAgenda, readAgentUnread, peekAgentUnread } from '@/apis/agent'
+import { peekAgentNotifications, peekAgentTasks, readAgentNotifications, readAgentTasks } from '@/apis/agent'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { shiftDate } from '../region-calendar.mjs'
 import { agendaGroups, taskDayTime, taskLabel, taskSettled, taskToday } from '../task-calendar.mjs'
@@ -71,12 +71,12 @@ async function load(force = false) {
   if (scope !== loadedScope) { tasks.value = []; loaded.value = false; loadedScope = scope }
   const range = agendaRange()
   // 同身份议程快照先落位：重挂载、切模式与短时返回都不闪「加载中…」，随后按同一缓存口径对齐。
-  const saved = peekAgentAgenda(range), savedUnread = peekAgentUnread({ limit: 1 })
+  const saved = peekAgentTasks({ source: 'company', ...range }), savedUnread = peekAgentNotifications({ source: 'company', limit: 1 })
   if (saved && !loaded.value) { tasks.value = saved.tasks || []; loaded.value = true }
   if (savedUnread) unread.value = Number(savedUnread.unreadCount) || 0
   const executing = tasks.value.some(task => task.status === 'executing')
   delay = executing ? 5000 : 30000
-  const result = await readAgentAgenda({ ...range, force })
+  const result = await readAgentTasks({ source: 'company', ...range, force })
   if (current !== generation || scope !== getAgentStorageScope() || !props.active || !visible) return
   tasks.value = result.tasks || []; loaded.value = true
   void refreshUnread(force)
@@ -98,7 +98,7 @@ async function refreshUnread(force = false) {
  try {
   const scope = getAgentStorageScope()
   if (scope !== loadedScope) return
-  const result = await readAgentUnread({ limit: 1, force })
+  const result = await readAgentNotifications({ source: 'company', limit: 1, force })
   if (current === generation && props.active && scope === getAgentStorageScope()) unread.value = Number(result.unreadCount) || 0
  } catch { /* 未读数失败不影响任务预览 */ }
 }

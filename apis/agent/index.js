@@ -6,22 +6,29 @@ import { transportError, createTerminalTracker } from './stream-errors.mjs'
 import { requestJson, httpError, recoverDraftRequest } from './request.mjs'
 import { downloadReportFile } from './report-download.mjs'
 import { conversationSourceBody, withConversationSource } from './conversation-source.mjs'
-import { createCompanyReadCache } from './company-read-cache.mjs'
+import { createAgentReadCache } from './agent-read-cache.mjs'
 
 const STREAM_IDLE_TIMEOUT_MS = 60000
 const STREAM_REQUEST_TIMEOUT_MS = 300000
 const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 
-export const companyOverviewCache = createCompanyReadCache(getAgentStorageScope)
+export const agentReadCache = createAgentReadCache(getAgentStorageScope)
+const isPlansRead = key => key.includes('/agent/task-plans?')
+const isNotificationsRead = key => key.includes('/agent/notifications?')
 const request = async (url, method, data, timeout) => {
  const scope = getAgentStorageScope(), headers = getAgentHeaders()
  const changesDevices = method !== 'GET' && /\/(action-drafts|tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel)(?:\?|$)/.test(url)
- if (changesDevices) companyOverviewCache.clear()
+ // 周期启停与已读只作废各自列表快照：不清空无关概览/统计，也不等待下一次读才发现新状态。
+ const changesPlans = method !== 'GET' && /\/task-plans\/[^/?]+\/status(?:\?|$)/.test(url)
+ const changesNotifications = method !== 'GET' && /\/notifications\/(?:seen-all|[^/?]+\/seen)(?:\?|$)/.test(url)
+ if (changesDevices) agentReadCache.clear()
  try {
   const result = await requestJson(globalConfig.agentUrl + url, method, data, headers, timeout)
+  if (changesPlans) agentReadCache.drop(isPlansRead)
+  if (changesNotifications) agentReadCache.drop(isNotificationsRead)
   return result
  } catch (error) {
-  if ([401, 403].includes(error.status) || error.code === 'AGENT_SESSION_EXPIRED') companyOverviewCache.clear()
+  if ([401, 403].includes(error.status) || error.code === 'AGENT_SESSION_EXPIRED') agentReadCache.clear()
   if (method !== 'GET' && /\/action-drafts\/[^/?]+\/(confirm|selection|parameters|restore|revalidate|cancel)(?:\?|$)/.test(url)
    && (error.transport || error.status >= 500) && scope === getAgentStorageScope()) {
    return recoverDraftRequest(globalConfig.agentUrl + url, method, data, headers, timeout, () => scope === getAgentStorageScope())
@@ -33,14 +40,14 @@ const request = async (url, method, data, timeout) => {
   }
   throw error
  } finally {
-  if (changesDevices) companyOverviewCache.clear()
+  if (changesDevices) agentReadCache.clear()
  }
 }
-const companyRead = (url, timeout, options = {}) => companyOverviewCache.read(globalConfig.agentUrl + url, () => request(url, 'GET', undefined, timeout), options.force === true)
+const readSnapshot = (url, timeout, options = {}) => agentReadCache.read(globalConfig.agentUrl + url, () => request(url, 'GET', undefined, timeout), options.force === true)
 const queryString = query => Object.entries(query).filter(([, value]) => value !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&')
 
 export const createConversation = (source = 'office') => request('/agent/conversations', 'POST', conversationSourceBody(source))
-export const getCompanyDashboard = (section, options) => companyRead('/agent/dashboard?source=company' + (section ? '&section=' + encodeURIComponent(section) : ''), undefined, options)
+export const getCompanyDashboard = (section, options) => readSnapshot('/agent/dashboard?source=company' + (section ? '&section=' + encodeURIComponent(section) : ''), undefined, options)
 export const getSafetyEvent = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
 export const getSafetyEventCameras = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}/cameras?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
 export const listRegions = section => request('/agent/regions' + (section ? '?section=' + encodeURIComponent(section) : ''), 'GET')
@@ -52,19 +59,22 @@ export const listRegionCalendar = (regionId, from, to) => request(`/agent/region
 export const getTaskPlan = (planId, source = 'office') => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}`, source), 'GET')
 export const cancelTaskPlan = (planId, version, scope, date, source = 'office') => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}/cancel`, source), 'POST', { version, scope, ...(date ? { date } : {}) })
 export const setTaskPlanStatus = (planId, version, operation, source = 'office', confirmed = false) => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}/status`, source), 'POST', { version, operation, ...(operation === 'resume' ? { confirmed } : {}) })
-export const listTaskPlans = ({ source = 'office' } = {}) => request(`/agent/task-plans?source=${encodeURIComponent(source)}`, 'GET')
 export const listAgentTasks = ({ source = 'office', from, to } = {}) => request(`/agent/tasks?source=${encodeURIComponent(source)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
-// 首页议程预览（精简与详细共用同一快照）：只缓存首页用到的任务窗与未读数，
-// 任务明细列表（TaskListSheet/TaskCalendarView 的 listAgentTasks）仍实时读取。
-const agentAgendaUrl = ({ from, to }) => '/agent/tasks?' + queryString({ source: 'company', from, to })
-const agentUnreadUrl = ({ limit = 1 }) => '/agent/notifications?' + queryString({ source: 'company', limit })
-const peekCached = url => { try { return companyOverviewCache.peek(globalConfig.agentUrl + url)?.value ?? null } catch { return null } }
-export const readAgentAgenda = ({ from, to, force = false } = {}) => companyRead(agentAgendaUrl({ from, to }), undefined, { force })
-export const peekAgentAgenda = ({ from, to } = {}) => peekCached(agentAgendaUrl({ from, to }))
-export const readAgentUnread = ({ limit = 1, force = false } = {}) => companyRead(agentUnreadUrl({ limit }), undefined, { force })
-export const peekAgentUnread = ({ limit = 1 } = {}) => peekCached(agentUnreadUrl({ limit }))
+// 两端任务、周期安排与通知列表共用同身份读取快照：先落位再对齐，60 秒内复用，
+// 过期占位最多保留 5 分钟；写操作由 request 定点作废，不替代 fresh 写入核验。
+// 任务日历（TaskCalendarView）按 5/30 秒自行轮询，不走这层快照。
+const agentTasksUrl = ({ source = 'company', from, to }) => '/agent/tasks?' + queryString({ source, from, to })
+const agentPlansUrl = ({ source = 'company' }) => '/agent/task-plans?' + queryString({ source })
+const agentNotificationsUrl = ({ source = 'company', limit = 30, before }) => '/agent/notifications?' + queryString({ source, limit, before })
+const peekSnapshot = url => { try { return agentReadCache.peek(globalConfig.agentUrl + url)?.value ?? null } catch { return null } }
+export const readAgentTasks = ({ source = 'company', from, to, force = false } = {}) => readSnapshot(agentTasksUrl({ source, from, to }), undefined, { force })
+export const peekAgentTasks = ({ source = 'company', from, to } = {}) => peekSnapshot(agentTasksUrl({ source, from, to }))
+export const readAgentPlans = ({ source = 'company', force = false } = {}) => readSnapshot(agentPlansUrl({ source }), undefined, { force })
+export const peekAgentPlans = ({ source = 'company' } = {}) => peekSnapshot(agentPlansUrl({ source }))
+export const AGENT_NOTIFICATION_PAGE = 30
+export const readAgentNotifications = ({ source = 'company', limit = AGENT_NOTIFICATION_PAGE, before, force = false } = {}) => readSnapshot(agentNotificationsUrl({ source, limit, before }), undefined, { force })
+export const peekAgentNotifications = ({ source = 'company', limit = AGENT_NOTIFICATION_PAGE, before } = {}) => peekSnapshot(agentNotificationsUrl({ source, limit, before }))
 export const getTaskDetail = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}`, source), 'GET')
-export const listNotifications = ({ source = 'office', limit = 30, before } = {}) => request(`/agent/notifications?source=${encodeURIComponent(source)}&limit=${encodeURIComponent(limit)}${before ? `&before=${encodeURIComponent(before)}` : ''}`, 'GET')
 export const markNotificationSeen = (id, source = 'office') => request(withConversationSource(`/agent/notifications/${encodeURIComponent(id)}/seen`, source), 'POST')
 export const markAllNotificationsSeen = (source = 'office') => request(withConversationSource('/agent/notifications/seen-all', source), 'POST')
 export const getTaskLightingStates = taskId => request(`/agent/tasks/${encodeURIComponent(taskId)}/lighting-states`, 'GET')
@@ -81,15 +91,15 @@ export const listDeviceTimeline = (deviceId, date) => request(`/agent/devices/${
 export const getVideoStream = (deviceId, source = 'office') => request(withConversationSource(`/agent/devices/${encodeURIComponent(deviceId)}/video-stream`, source), 'GET')
 export const listSafetyHistory = (query = {}, options) => {
  const params = queryString(Object.fromEntries(Object.entries(query).filter(([, value]) => value != null && value !== '')))
- return companyRead(`/agent/safety-events?source=company&${params}`, undefined, options)
+ return readSnapshot(`/agent/safety-events?source=company&${params}`, undefined, options)
 }
 
 export const getEnvironmentHistory = (query) => request('/agent/environment-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')
 export const getEnergyHistory = (query = {}) => request('/agent/energy-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')
-export const getCompanyDevices = (options) => companyRead('/agent/company-devices?source=company', undefined, options)
-export const getCompanyEnergyDaily = (query = {}, options) => companyRead('/agent/company-energy-daily?source=company&' + queryString(query), 90000, options)
+export const getCompanyDevices = (options) => readSnapshot('/agent/company-devices?source=company', undefined, options)
+export const getCompanyEnergyDaily = (query = {}, options) => readSnapshot('/agent/company-energy-daily?source=company&' + queryString(query), 90000, options)
 // 计量范围×时间统计（meter-report）：scopeLevel all|floor|location|nameMatch + floor/meterId/text，from/to 带时区，grain 可选。
-export const getCompanyMeterReport = (query = {}, options) => companyRead('/agent/company-meter-report?source=company&' + queryString(query), 90000, options)
+export const getCompanyMeterReport = (query = {}, options) => readSnapshot('/agent/company-meter-report?source=company&' + queryString(query), 90000, options)
 export const listDeviceCalendar = (deviceId, from, to) => request(`/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getReportArtifact = (reportId, source = 'company') => request(`/agent/reports/${encodeURIComponent(reportId)}?source=${encodeURIComponent(source)}`, 'GET')
 export function downloadReportArtifact(reportId, source = 'company', format = 'pdf', options = {}) {

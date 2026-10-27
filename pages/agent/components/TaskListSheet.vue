@@ -5,7 +5,7 @@
   </template>
   <template #header-right>
    <view class="header-actions">
-    <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
+    <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
     <view v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="inbox-entry"><button class="refresh-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /></button><view v-if="inboxUnread" class="inbox-badge"><text>{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></view></view>
    </view>
   </template>
@@ -140,7 +140,7 @@
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { getTaskPlan, cancelTaskPlan, listAgentTasks, listNotifications, listTaskPlans, setTaskPlanStatus } from '@/apis/agent'
+import { getTaskPlan, cancelTaskPlan, peekAgentPlans, peekAgentTasks, readAgentNotifications, readAgentPlans, readAgentTasks, setTaskPlanStatus } from '@/apis/agent'
 import { taskStatusTone } from '../task-presentation.mjs'
 import { repeatText, taskRequirementsText, taskTime } from '../task-detail-view.mjs'
 import DeviceSheet from './DeviceSheet.vue'
@@ -150,14 +150,13 @@ import SlidingSegments from './SlidingSegments.vue'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskCalendarView from './TaskCalendarView.vue'
 import TaskInboxContent from './TaskInboxContent.vue'
-import { agendaGroups, taskDayTime, taskToday, taskSettled, taskLabel as taskStatus } from '../task-calendar.mjs'
+import { agendaGroups, taskDayTime, taskListRange, taskToday, taskSettled, taskLabel as taskStatus, TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS } from '../task-calendar.mjs'
 import { shiftDate } from '../region-calendar.mjs'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' }, initialView: String, date: String, initialTask: Object, refreshKey: Number })
 const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-count'])
 const calendar = ref(null), inbox = ref(null), inboxNavigation = ref({ title: '', canBack: false }), selectedDate = ref(props.date || taskToday())
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
-const ALL_CHUNK_DAYS = 62, ALL_MAX_DAYS = 371
 const views = computed(() => props.source === 'company' ? [{ value: 'all', label: '任务安排' }, { value: 'calendar', label: '日历' }] : [
  { value: 'upcoming', label: '待执行' },
  { value: 'results', label: '执行结果' },
@@ -169,7 +168,7 @@ function showIssue(value) { issue.value = value }
 const loading = ref(false), error = ref(''), planLoading = ref(false), planSwitchRevision = ref(0)
 const plansError = ref(''), plansLoading = ref(false), inboxUnread = ref(0)
 const allLoadedTo = ref(0), moreLoading = ref(false), moreError = ref('')
-const hasMore = computed(() => props.source === 'company' && view.value === 'all' && listLoaded.value && allLoadedTo.value > 0 && allLoadedTo.value < ALL_MAX_DAYS)
+const hasMore = computed(() => props.source === 'company' && view.value === 'all' && listLoaded.value && allLoadedTo.value > 0 && allLoadedTo.value < TASK_ALL_MAX_DAYS)
 const listLoaded = ref(false)
 const taskRows = new Map()
 const plansLoaded = ref(false)
@@ -187,41 +186,12 @@ const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没�
 function railNum(date) { const today = taskToday(); return date.slice(5, 7) === today.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
 function railText(date) { const today = taskToday(); return date === today ? '今天' : date === shiftDate(today, 1) ? '明天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
 let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, moreRequest = 0, loadedScope = '', pageVisible = true
-const taskListInFlight = new Map()
-
-function readTaskList(scope, source, range) {
- const key = JSON.stringify([scope, source, range.from, range.to])
- const existing = taskListInFlight.get(key)
- if (existing) return existing
- const promise = listAgentTasks({ source, ...range }).finally(() => {
-  if (taskListInFlight.get(key) === promise) taskListInFlight.delete(key)
- })
- taskListInFlight.set(key, promise)
- return promise
-}
 
 function resetPlanSwitch() { planSwitchRevision.value += 1 }
 function resetIdentity() { issue.value = null; operationError.value = ''; ++planStatusRequest; ++plansRequest; ++moreRequest; tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded.value = false; allLoadedTo.value = 0; moreLoading.value = false; moreError.value = ''; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false }; planLoading.value = false; plansLoading.value = false; plansError.value = ''; inboxUnread.value = 0; resetPlanSwitch() }
 onHide(() => { pageVisible = false; ++requestId; ++planRequest; ++planStatusRequest; ++plansRequest; ++moreRequest; loading.value = false; planLoading.value = false; plansLoading.value = false; moreLoading.value = false; resetPlanSwitch() })
-onShow(() => { pageVisible = true; if (props.open) void load() })
+onShow(() => { pageVisible = true; if (props.open) void load(false) })
 
-function startOfDay(date) {
- const value = new Date(date)
- value.setHours(0, 0, 0, 0)
- return value
-}
-function dayOffset(date, amount) {
- const value = new Date(date)
- value.setDate(value.getDate() + amount)
- return value
-}
-function taskRange(kind) {
- const now = new Date()
- const today = startOfDay(now)
- if (kind === 'all') return { from: today.toISOString(), to: dayOffset(today, ALL_CHUNK_DAYS).toISOString() }
- if (kind === 'upcoming') return { from: today.toISOString(), to: dayOffset(today, 31).toISOString() }
- return { from: dayOffset(today, -30).toISOString(), to: now.toISOString() }
-}
 function taskKey(task) { return task.taskId || task.id || task.occurrence?.id || task.label }
 function taskTimeValue(task, kind) {
  if (kind === 'results') return task.reportAt || task.interval?.endsAt || task.phases?.at(-1)?.endedAt || task.phases?.at(-1)?.at || task.createdAt
@@ -346,9 +316,10 @@ async function loadPlans(force = true) {
   scope = getAgentStorageScope()
   const source = props.source
   if (scope !== loadedScope) return
-  if (!force && plansLoaded.value) return
+  const saved = peekAgentPlans({ source })
+  if (saved?.plans) { plans.value = saved.plans; plansLoaded.value = true; plansError.value = '' }
   plansLoading.value = true; plansError.value = ''
-  const result = await listTaskPlans({ source })
+  const result = await readAgentPlans({ source, force })
   if (current === plansRequest && pageVisible && props.open && source === props.source && scope === getAgentStorageScope()) {
    plans.value = Array.isArray(result?.plans) ? result.plans : []
    plansLoaded.value = true; plansError.value = ''
@@ -358,12 +329,12 @@ async function loadPlans(force = true) {
  } finally { if (current === plansRequest) plansLoading.value = false }
 }
 
-async function refreshUnread() {
+async function refreshUnread(force = false) {
  if (props.source !== 'company' || !props.open) return
  const current = ++unreadRequest
  try {
   const scope = getAgentStorageScope()
-  const result = await listNotifications({ source: 'company', limit: 1 })
+  const result = await readAgentNotifications({ source: 'company', limit: 1, force })
   if (current === unreadRequest && props.open && scope === getAgentStorageScope()) inboxUnread.value = Number(result?.unreadCount) || 0
  } catch { /* 未读角标失败不阻塞列表 */ }
 }
@@ -388,13 +359,19 @@ async function load(force = true) {
    return
   }
   if (kind === 'all' && props.source === 'company') void loadPlans(force)
-  if (!force && listLoaded.value) return
-  const range = taskRange(kind)
-  const result = await readTaskList(scope, props.source, range)
+  const range = taskListRange(kind)
+  // 同身份快照先落位：重新打开不再空等 Runtime，随后按同一缓存口径对齐。
+  const saved = peekAgentTasks({ source, ...range })
+  if (saved?.tasks?.length) {
+   tasks.value = selectTaskRows(saved.tasks, kind)
+   taskRows.set(kind, tasks.value); listLoaded.value = true; loading.value = false
+   if (kind === 'all') { allLoadedTo.value = TASK_ALL_CHUNK_DAYS; moreError.value = '' }
+  }
+  const result = await readAgentTasks({ source, ...range, force })
   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) {
    tasks.value = selectTaskRows(result?.tasks, kind)
    taskRows.set(kind, tasks.value); listLoaded.value = true
-   if (kind === 'all') { allLoadedTo.value = ALL_CHUNK_DAYS; moreError.value = '' }
+   if (kind === 'all') { allLoadedTo.value = TASK_ALL_CHUNK_DAYS; moreError.value = '' }
   }
  } catch (cause) {
   if (current === requestId && props.open && view.value === kind) {
@@ -413,15 +390,15 @@ async function loadMore() {
  moreLoading.value = true; moreError.value = ''
  try {
   const scope = getAgentStorageScope(), source = props.source
-  const today = startOfDay(new Date())
-  const from = dayOffset(today, allLoadedTo.value).toISOString()
-  const to = dayOffset(today, Math.min(allLoadedTo.value + ALL_CHUNK_DAYS, ALL_MAX_DAYS)).toISOString()
-  const result = await readTaskList(scope, source, { from, to })
+  const today = taskToday()
+  const from = `${shiftDate(today, allLoadedTo.value)}T00:00:00+08:00`
+  const to = `${shiftDate(today, Math.min(allLoadedTo.value + TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS))}T00:00:00+08:00`
+  const result = await readAgentTasks({ source, from, to })
   if (current !== moreRequest || !pageVisible || !props.open || view.value !== 'all' || source !== props.source || scope !== getAgentStorageScope()) return
   const seen = new Set(tasks.value.map(taskKey))
   tasks.value = [...tasks.value, ...(result?.tasks || []).filter(task => !seen.has(taskKey(task)))]
   taskRows.set('all', tasks.value)
-  allLoadedTo.value = Math.min(allLoadedTo.value + ALL_CHUNK_DAYS, ALL_MAX_DAYS)
+  allLoadedTo.value = Math.min(allLoadedTo.value + TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS)
  } catch (cause) {
   if (current === moreRequest) moreError.value = cause.message || '加载失败'
  } finally { if (current === moreRequest) moreLoading.value = false }
@@ -544,7 +521,7 @@ watch(() => props.source, () => {
 })
 watch(() => [props.open, props.source, view.value], ([isOpen, source, currentView], previous) => {
  if (currentView !== 'inbox') inboxNavigation.value = { title: '', canBack: false }
- if (isOpen) void load(!previous || !previous[0] || previous[1] !== source)
+ if (isOpen) void load(Boolean(previous && previous[1] !== source))
  else { ++requestId; ++planStatusRequest; loading.value = false; planLoading.value = false; resetPlanSwitch(); navigation.value = { title: '', canBack: false } }
 }, { immediate: true })
 </script>

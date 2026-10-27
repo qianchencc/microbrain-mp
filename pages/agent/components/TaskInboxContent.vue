@@ -2,7 +2,7 @@
   <view class="inbox-content">
    <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
    <scroll-view :style="{ display: selected || issue ? 'none' : 'block' }" class="inbox-scroll" scroll-y enhanced :show-scrollbar="false" @scrolltolower="load(false)">
-    <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button v-if="unreadCount || markingAll" class="inbox-markall" :loading="markingAll" :disabled="markingAll" @tap="markAllSeen">{{ markingAll ? '正在标记…' : '全部已读' }}</button><button class="inbox-refresh" :disabled="loading || markingAll" @tap="load(true)">刷新</button></view>
+    <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button v-if="unreadCount || markingAll" class="inbox-markall" :loading="markingAll" :disabled="markingAll" @tap="markAllSeen">{{ markingAll ? '正在标记…' : '全部已读' }}</button><button class="inbox-refresh" :disabled="loading || markingAll" @tap="load(true, true)">刷新</button></view>
     <view class="list-summary"><text>任务结束消息</text><text v-if="markingAll" class="markall-status">正在将通知标为已读…</text><text>{{ unreadCount }} 条未读</text></view>
     <view v-if="markAllError" class="markall-error"><TaskErrorNotice :message="markAllError" @details="showIssue" /><button @tap="retryMarkAllSeen">重试</button></view>
     <view v-if="loading && !notifications.length" class="state-message">加载中…</view>
@@ -32,7 +32,7 @@
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { listNotifications, markNotificationSeen, markAllNotificationsSeen } from '@/apis/agent'
+import { AGENT_NOTIFICATION_PAGE, markNotificationSeen, markAllNotificationsSeen, peekAgentNotifications, readAgentNotifications } from '@/apis/agent'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
@@ -51,18 +51,6 @@ watch(() => [selected.value, issue.value, navigation.value.title, navigation.val
 const unreadCount = ref(0), nextCursor = ref('')
 const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref(''), markAllError = ref(''), markingAll = ref(false)
 let requestId = 0, bulkId = 0, loadedScope = '', pageVisible = true
-const notificationListInFlight = new Map()
-
-function readNotificationList(scope, source, before = '') {
- const key = JSON.stringify([scope, source, before])
- const existing = notificationListInFlight.get(key)
- if (existing) return existing
- const promise = listNotifications({ source, limit: 30, ...(before ? { before } : {}) }).finally(() => {
-  if (notificationListInFlight.get(key) === promise) notificationListInFlight.delete(key)
- })
- notificationListInFlight.set(key, promise)
- return promise
-}
 
 function safeScope() { try { return getAgentStorageScope() } catch { return '' } }
 // 批量已读与列表读取使用不同代次：关闭/隐藏/换身份只作废旧批量操作，不让迟到结果卡死按钮或污染新范围。
@@ -81,7 +69,7 @@ function dateTime(value) {
 }
 function publishUnreadCount() { emit('unread-count', unreadCount.value) }
 
-async function load(reset) {
+async function load(reset, force = false) {
  if (!props.open || !pageVisible || markingAll.value) return
  if (!reset && (loading.value || loadingMore.value || !nextCursor.value)) return
  const current = reset ? ++requestId : requestId
@@ -92,7 +80,19 @@ async function load(reset) {
   scope = getAgentStorageScope()
   const source = props.source
   if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
-  const result = await readNotificationList(scope, source, reset || !nextCursor.value ? '' : nextCursor.value)
+  const before = reset ? '' : nextCursor.value
+  // 同身份快照先落位：通知中心重开不再空等 Runtime，随后按同一缓存口径对齐。
+  if (reset) {
+   const saved = peekAgentNotifications({ source, limit: AGENT_NOTIFICATION_PAGE })
+   if (saved) {
+    notifications.value = saved.notifications || []
+    unreadCount.value = Number(saved.unreadCount) || 0
+    nextCursor.value = saved.nextCursor || ''
+    loading.value = false
+    publishUnreadCount()
+   }
+  }
+  const result = await readAgentNotifications({ source, limit: AGENT_NOTIFICATION_PAGE, before, force })
   if (current !== requestId || !props.open || !pageVisible || source !== props.source || scope !== getAgentStorageScope()) return
   const incoming = result.notifications || []
   if (reset) notifications.value = incoming
@@ -123,7 +123,7 @@ function openReport(notification) {
 }
 function backToList() { selected.value = null; markError.value = ''; navigation.value = { title: '', canBack: false } }
 function back() { if (issue.value) { issue.value = null; return true } if (content.value?.back()) return true; if (selected.value) { backToList(); return true } return false }
-defineExpose({ back, refresh: () => load(true) })
+defineExpose({ back, refresh: () => load(true, true) })
 
 async function onReportLoaded(taskId) {
  const notification = selected.value

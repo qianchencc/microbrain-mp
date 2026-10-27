@@ -52,12 +52,13 @@
 </template>
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskChange, discardTaskChange, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, listNotifications, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
+import { cancelAction, cancelRun, confirmAction, confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskChange, discardTaskChange, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, readAgentNotifications, readAgentPlans, readAgentTasks, createConversation, restoreConversation, clearConversation, discardTurn, updateSelection, retrySummary, revalidateAction, restoreAction, streamMessage } from '@/apis/agent'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail } from '../conversation.mjs'
 import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference, preserveComposerView, takeComposerView } from '../composer-drafts.mjs'
 import { createDraftBaseline } from '../action-draft-presentation.js'
 import { mergeTaskPlan, taskNavigation } from '../task-detail-view.mjs'
+import { taskListRange } from '../task-calendar.mjs'
 import { createPresentation } from '../presentation.mjs'
 import { openAgentMenu } from '../agent-menu.mjs'
 import DeviceSheet from './DeviceSheet.vue'
@@ -129,9 +130,27 @@ function setInboxUnreadCount(value) { inboxUnreadCount.value = Number(value) || 
 async function refreshInboxCount() {
  const current = ++inboxCountRequest
  try {
-  const result = await listNotifications({ source: props.source, limit: 1 })
+  const result = await readAgentNotifications({ source: props.source, limit: 1 })
   if (current === inboxCountRequest && !disposed) setInboxUnreadCount(result.unreadCount)
  } catch { /* 通知读取失败不影响会话 */ }
+}
+// 预取：进入 Agent 后把通知、任务首屏与周期安排按序读入同身份快照，打开 Sheet 直接落位。
+// 顺序执行避免同时压 Runtime 的授权读取；同键在途读取由快照合并，不会与用户打开的请求重复。
+let prewarmKey = ''
+async function prewarmLists() {
+ let key = '', scope = ''
+ try { scope = getAgentStorageScope(); key = `${scope}|${props.source}` } catch { return }
+ if (prewarmKey === key) return
+ prewarmKey = key
+ const source = props.source, firstView = source === 'company' ? 'all' : 'upcoming'
+ const live = () => { try { return !disposed && source === props.source && getAgentStorageScope() === scope } catch { return false } }
+ try {
+  await readAgentNotifications({ source })
+  if (!live()) return
+  await readAgentTasks({ source, ...taskListRange(firstView) })
+  if (!live()) return
+  await readAgentPlans({ source })
+ } catch { prewarmKey = '' }
 }
 const draftScope = ref('')
 const input = ref('')
@@ -340,6 +359,7 @@ async function restore() {
   schedule()
   if (turns.value.some(turn => tasksOf(turn).some(task => task.repeat && task.created))) void refreshScheduledTasks()
   void refreshInboxCount()
+  void prewarmLists()
  } catch (error) { if (!disposed) { errorMessage.value = error.message || '未取得网络响应，网络层未提供具体原因'; schedule() } }
  finally { restoring = false }
 }
@@ -433,7 +453,10 @@ async function runTurn(current, content) {
    // 断开≠取消：传输死了但服务端运行继续——保持进行中观感，交给 schedule 的
    // restore 轮询收尾（运行终态后完整回复/错误自然渲染进轮次），停止走 stopRun。
    transportInterrupted = true
-  } else if (!disposed && current.running) current.error = error.message
+  } else if (!disposed && current.running) {
+   if (error.data?.conversationId === conversationId.value && typeof error.data?.turnId === 'string' && error.data.turnId) current.serverId = error.data.turnId
+   current.error = error.message
+  }
  }
  finally {
   current.running = transportInterrupted

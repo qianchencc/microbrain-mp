@@ -1,3 +1,5 @@
+- 2026-10-27 任务列表与通知列表已改为同身份读快照并提前预取：缓存模块更名 `apis/agent/agent-read-cache.mjs`，两端任务/周期安排/通知首屏统一走 `readAgentTasks`/`readAgentPlans`/`readAgentNotifications`（Sheet 打开先 `peek` 落位再对齐，手动刷新与数据变更后 `force`）；进入 Agent 时 `prewarmLists` 按「通知→任务首屏→周期安排」顺序预取，Company「全部任务」首块与首页 62 天议程同键。周期启停只作废周期安排快照、已读只作废通知快照（含在途读取不回写）。取代 10-20「明细列表保持实时」的列表部分，任务日历仍实时轮询。MP 189/189、微信开发与发行编译通过；模拟器/真机二次打开速度未实测。见[交接](../plan/2026-10-27-task-inbox-read-snapshots-handoff.md)与[ADR 0007](adr/0007-client-read-snapshots-for-task-and-notification-lists.md)。
+
 - 2026-10-26 任务读取模型重设计已发布 Runtime `20261026-c9001ca`（基于另一会话的 `e927dca`）：列表只返回摘要、周期计划按 planId 折叠，生产「全部任务」从 262 条/26.5MB/54.7s 降到 11 条/29KB/9.1s；详情按需读取。规格与后续票据在 `.scratch/task-read-model/`，见[交接](../plan/2026-10-26-task-read-model-redesign.md)。
 
 # 项目文档入口

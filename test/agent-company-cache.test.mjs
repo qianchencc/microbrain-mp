@@ -1,11 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createCompanyReadCache } from '../apis/agent/company-read-cache.mjs'
+import { createAgentReadCache } from '../apis/agent/agent-read-cache.mjs'
 
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 function setup() {
  let owner = 'alice', time = 0, calls = 0
- const cache = createCompanyReadCache(() => owner, () => time)
+ const cache = createAgentReadCache(() => owner, () => time)
  const load = async () => ({ count: ++calls, rows: [] })
  return { cache, load, calls: () => calls, owner: value => { owner = value }, time: value => { time = value } }
 }
