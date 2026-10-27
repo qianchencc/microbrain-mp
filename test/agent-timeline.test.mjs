@@ -70,7 +70,7 @@ test('本地演示的区域任务与设备记录指向同一任务及目标', ()
  const unresolved = { ...tasks[0], status: 'unconfirmed', phases: tasks[0].phases.map(phase => ({
   ...phase, status: 'unconfirmed', devices: phase.devices.map(device => ({ ...device, outcome: 'unconfirmed' })),
  })) }
- assert.equal(taskDetailView(unresolved).statusText, '结果待确认')
+ assert.equal(taskDetailView(unresolved).statusText, '暂无结果')
  assert.equal(regionTimelineItems([unresolved])[0].warning, true)
 })
 
@@ -111,7 +111,7 @@ test('独立区间任务使用保存边界，未到终点不淡化', () => {
  const report = { generatedAt: '2026-10-05T08:00:12.000Z', outcome: 'completed',
   phases: [phase('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed'), phase('p2', '2026-10-05T07:30:00.000Z', 'completed', 'verified')] }
  const terminal = taskDetailView({ ...running, status: 'completed', phases: report.phases, report })
- assert.equal(terminal.report.outcomeText, '结果待确认')
+ assert.equal(terminal.report.outcomeText, '指令已发送')
  assert.equal(terminal.report.checkpoints, 2)
  assert.equal(terminal.report.devicesVisible, 1, '报告台数按授权可见的唯一设备统计，同一设备跨检查点不重复')
  const otherPhase = { ...phase('p2b', '2026-10-05T07:30:00.000Z', 'completed', 'verified'),
@@ -256,11 +256,11 @@ test('需核验任务的设备结果区分受理未核验与已核验，不以�
   { id: 'ac', kind: 'ac', name: '26楼空调', target: { power: 'off' }, outcome: 'verified', details: { receipt: 'ACCEPTED', requiresVerification: true } },
  ]
  const view = taskDetailView({ agentSource: 'company', status: 'partial', source: { type: 'scheduled' }, phases: [{ at: '2026-10-19T12:00:00Z', status: 'partial', devices }] })
- assert.deepEqual(view.phases[0].devices.map(device => device.resultText), ['结果待确认', '结果待确认', '已完成'])
+ assert.deepEqual(view.phases[0].devices.map(device => device.resultText), ['暂无结果', '暂无结果', '已完成'])
  assert.deepEqual(view.phases[0].devices.map(device => device.resultTone), ['warn', 'warn', 'ok'])
  const event = device => ({ taskId: 'closure', phaseId: device.id, at: '2026-10-19T12:00:00Z', taskStatus: 'partial', phaseStatus: 'partial', device, target: device.target, outcome: device.outcome, details: device.details })
  const timeline = deviceTimelineItems([event(devices[0])])[0]
- assert.equal(timeline.resultText, '结果待确认')
+ assert.equal(timeline.resultText, '暂无结果')
  assert.equal(timeline.resultTone, 'warn')
  assert.equal(timeline.faded, false)
 })
@@ -270,10 +270,10 @@ test('Company 与Office结果未知都只提醒未确认，不推断为失败', 
   devices: [{ id: 'ac-1', kind: 'ac', name: '展示厅空调', target: { power: 'off' }, outcome, details: {} }] })
  const view = (agentSource, outcome) => taskDetailView({ agentSource, status: 'partial', source: { type: 'scheduled' }, phases: [phase(outcome)] }).phases[0].devices[0]
  const companyUnknown = view('company', 'unknown')
- assert.equal(companyUnknown.resultText, '结果待确认')
+ assert.equal(companyUnknown.resultText, '暂无结果')
  assert.equal(companyUnknown.resultTone, 'warn')
  const officeUnknown = view('office', 'unknown')
- assert.equal(officeUnknown.resultText, '结果待确认')
+ assert.equal(officeUnknown.resultText, '暂无结果')
  assert.equal(officeUnknown.resultTone, 'warn')
  const companyRejected = view('company', 'rejected')
  assert.equal(companyRejected.resultText, '未完成')

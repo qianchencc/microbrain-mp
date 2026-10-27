@@ -100,7 +100,7 @@ function acReportDeviceRows(phases, target) {
   const before = Number.isFinite(device.before) ? `${device.before}℃` : '—'
   if (device.disposition === 'adjusted') return { deviceId, name: device.name, before, after: Number.isFinite(device.after) ? `平台回读 ${device.after}℃` : `目标 ${target}℃`, tone: 'ok' }
   if (device.disposition === 'not_needed') return { deviceId, name: device.name, before, after: '无需调整', tone: 'muted' }
-  return { deviceId, name: device.name, before, after: { not_dispatched: '这次未调整', unknown: '结果待确认' }[device.disposition] || '未调温', tone: 'muted' }
+  return { deviceId, name: device.name, before, after: { not_dispatched: '这次未调整', unknown: '暂无结果' }[device.disposition] || '未调温', tone: 'muted' }
  })
  return { rows: rows.slice(0, ENERGY_DEVICE_ROW_LIMIT), more: Math.max(0, rows.length - ENERGY_DEVICE_ROW_LIMIT) }
 }
@@ -285,11 +285,11 @@ export function taskDetailView(task) {
    time: taskTime(phase.at), clock: taskTime(phase.at).slice(-5), presentationStatus, statusText: taskStatusText(presentationStatus),
    tone: phaseTone(presentationStatus), link: linkProgress(phase, task.phases[index + 1]),
    devices: (phase.devices || []).map(device => {
-    const result = deviceResultView(device)
+    const result = deviceResultView(device), target = targetText(device.kind, device.target)
     return { ...device, artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
-     targetText: targetText(device.kind, device.target),
+     targetText: target,
      resultText: phase.status === 'cancelled' ? '已取消' : result.text,
-     resultReason: deviceResultReason(device),
+     resultReason: deviceResultReason(device, target),
      resultTone: phase.status === 'cancelled' ? 'wait' : result.tone }
    }),
   }

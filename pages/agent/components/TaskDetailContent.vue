@@ -24,7 +24,7 @@
   <view v-else-if="error" class="message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load()">重新加载</button><button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button></view>
   <view v-else-if="detail" class="task-detail">
    <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="#63776a" /> 返回周期安排</button>
-   <view class="task-heading"><text class="task-name">{{ detail.label }}</text><button v-if="taskNeedsDetails(detail.presentationStatus)" class="state-tag result-link" @tap="showTaskIssue">{{ detail.statusText }} ›</button><text v-else class="state-tag" :class="detail.presentationStatus">{{ detail.statusText }}</text></view>
+   <view class="task-heading"><text class="task-name">{{ detail.label }}</text><button v-if="taskNeedsDetails(detail.presentationStatus)" class="state-tag result-link" :class="detail.presentationStatus" @tap="showTaskIssue">{{ detail.statusText }} ›</button><text v-else class="state-tag" :class="detail.presentationStatus">{{ detail.statusText }}</text></view>
    <text v-if="detail.occurrenceText" class="task-when">{{ detail.occurrenceText }}</text>
    <text class="task-when">{{ detail.whenText }}</text>
    <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
@@ -48,7 +48,7 @@
    <view v-for="(phase, index) in visiblePhases" :key="phase.id" class="phase">
     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
-     <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+     <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :class="'tone-' + phase.tone" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
      <ObservationCard v-if="phase.observations?.length && expandedPhases.includes(phase.id)" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" />
      <button v-if="phase.report" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
       <uni-icons type="compose" size="13" color="#176b54" />
@@ -62,7 +62,7 @@
      </button>
      <view v-if="(phase.devices.length <= 1 || expandedPhases.includes(phase.id)) && !phase.observations?.some(block => block.type === 'ac_inspection')" class="device-list">
       <view v-for="device in phase.devices" :key="device.id" class="device-row">
-       <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><button v-if="device.resultTone !== 'ok' && device.outcome !== 'pending' && phase.status !== 'cancelled'" class="result result-link" @tap="showIssue({ title: `${device.name} · ${device.resultText}`, reason: device.resultReason })">{{ device.resultText }} ›</button><text v-else class="result" :class="device.resultTone">{{ device.resultText }}</text>
+       <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><button v-if="device.resultTone !== 'ok' && device.outcome !== 'pending' && phase.status !== 'cancelled'" class="result result-link" :class="device.resultTone" @tap="showIssue({ title: `${device.name} · ${device.resultText}`, reason: device.resultReason })">{{ device.resultText }} ›</button><text v-else class="result" :class="device.resultTone">{{ device.resultText }}</text>
        <text v-if="device.kind === 'lighting' && currentStates[device.id]" class="current-device">现态：{{ currentStates[device.id].state === true ? '开启' : currentStates[device.id].state === false ? '关闭' : '未知' }}</text>
       </view>
       <text v-if="!phase.devices.length" class="no-devices">当前没有可查看的设备</text>
@@ -398,7 +398,7 @@ defineExpose({ returnToPlan, back })
 .records-toggle,.more-info { min-height:44px; margin:0; color:#63776a; font-size:12px; }
 .result-link { min-height:44px; margin:0; padding:0 4px; display:flex; align-items:center; color:#806f50; }
 .phase-head .result-link { margin-inline-start:auto; }
-.task-heading .result-link { flex-shrink:0; background:#f1eee7; }
+.task-heading .result-link { flex-shrink:0; padding:0 14px; border:1px solid rgba(92,72,32,.16); border-radius:999px; box-shadow:0 1px 2px rgba(60,50,20,.07); }
 .more-info { margin-top:16px; }
 
 .reference-actions { margin-top:16px; display:flex; flex-direction:column; gap:8px; }.task-reference { min-height:42px; width:100%; display:flex; align-items:center; justify-content:center; border:1px solid #cadcd1; border-radius:9px; background:linear-gradient(#fafffb,#edf5ef); color:#176b54; font-size:12px; }.task-reference.secondary { background:transparent; color:#6a7f70; }
@@ -434,8 +434,8 @@ button::after { border:0; }
 .owner-mark.cv-slate { background:linear-gradient(145deg,#8fa7b8,#5d7484); }
 .owner-mark.cv-grey { background:linear-gradient(145deg,#a9b0aa,#7a817b); }
 .owner-name { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#718176; font-size:11px; }
-.state-tag { flex-shrink:0; padding:4px 8px; border-radius:8px; color:#4d7663; background:#eaf3ed; font-size:11px; }
-.state-tag.partial,.state-tag.unconfirmed { color:#936827; background:#f9f0df; }
+.state-tag { flex-shrink:0; padding:5px 11px; border-radius:999px; color:#4d7663; background:#eaf3ed; font-size:12px; font-weight:600; }
+.state-tag.dispatched,.state-tag.partial,.state-tag.unconfirmed,.state-tag.unknown,.state-tag.unavailable { color:#936827; background:#f9f0df; }
 .state-tag.failed,.state-tag.interrupted,.state-tag.missed { color:#806f50; background:#f1eee7; }
 .state-tag.cancelled { color:#7a7f76; background:#eef1ef; }
 .plan-toggle-row { margin-top:14px; padding-top:12px; border-top:1px solid #e8ede9; display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -468,7 +468,7 @@ button::after { border:0; }
 .phase-head { display:flex; align-items:baseline; gap:7px; min-width:0; }
 .phase-time { color:#263c2e; font-size:12px; font-weight:700; }
 .phase-title { color:#839189; font-size:11px; }
-.phase-status { margin-left:auto; flex-shrink:0; color:#839189; font-size:11px; }
+.phase-status { margin-left:auto; flex-shrink:0; color:#839189; font-size:12px; }
 .phase-status.tone-ok { color:#397b61; }
 .phase-status.tone-warn { color:#a27128; }
 .phase-status.tone-fail { color:#a15343; }
@@ -489,7 +489,7 @@ button::after { border:0; }
 .device-row { padding:9px 0; border-bottom:1px solid #e2e9e3; display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:8px; row-gap:3px; }
 .device-name { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#304b39; font-size:12px; font-weight:600; }
 .target { color:#63796b; font-size:11px; text-align:right; }
-.result { grid-column:1/-1; font-size:11px; }
+.result { grid-column:1/-1; font-size:12px; }
 .current-device { grid-column:1/-1; color:#507764; font-size:10px; }
 .result.ok { color:#397b61; }.result.warn { color:#a27128; }.result.fail { color:#a15343; }.result.wait { color:#839189; }
 .no-devices { display:block; padding:12px 0; color:#839189; font-size:11px; }
