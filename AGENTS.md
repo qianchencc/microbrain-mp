@@ -26,6 +26,18 @@ This repository uses a single-context domain documentation layout. See `docs/age
 - 提交前必须检查 `git diff --check`、`git status --short` 和提交内容；禁止把构建产物、临时日志、个人工具状态或 `.zcode` 临时计划混入业务提交，除非该文件明确属于项目源代码或文档。
 - 禁止未经明确要求执行 `git push --force`、`git reset --hard`、`git clean -fd`、删除分支或覆盖远端历史；需要远端同步时使用普通 push，并在提交前保留本地可回退点。
 
+## 客户交付边界
+
+本仓库同时存放生产源码与技能工作产物。客户仓库是 `origin`（`microbrain/mp.git`）的 `新世纪办公室` 分支，当前为纯小程序源码树：330 个文件，`plan/`、`docs/`、`.scratch/`、`test/`、`tools/`、`AGENTS.md`、`CONTEXT.md` 一个都没有。交付时必须只带生产源码。
+
+禁止进入客户仓库：`plan/`（计划与 handoff）、`docs/`（研究、ADR、验收底稿）、`.scratch/`（票据与规格）、`test/`（内部回归）、`tools/`（含交付检查脚本）、`AGENTS.md`（含各目录下的）、`CONTEXT.md`、`pages/agent/proto-*.html`（交互原型）。
+
+- 合并前：`node tools/check-delivery.mjs --base origin/新世纪办公室`，列出会进入客户仓库的禁止路径。
+- 准备交付分支/提交后：`node tools/check-delivery.mjs --tree <ref>`，必须 0 条。
+- 直接复制工作区交付时：`node tools/check-delivery.mjs --worktree`（含未跟踪文件）。
+- 原型 `pages/agent/proto-*.html` 与 `deploy/h5player/AGENTS.md` 就在生产目录内，整目录复制最容易把它们顺带带过去，必须按文件复制或按上面的检查兜底。
+- 这些内部产物按项目文档规范继续留在本仓库，不因交付边界删除。
+
 ## 开发版公网预览（2026-10-14 实测）
 
 > 2026-10-23 起 Runtime 与视频播放器直接部署在 `38.76.215.138`，发布规范见 `plan/2026-10-23-runtime-cloud-release-spec.md`；以下 2026-10-14 的本机 frpc 链路为历史记录。
