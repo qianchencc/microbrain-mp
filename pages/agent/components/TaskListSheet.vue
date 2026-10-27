@@ -187,6 +187,19 @@ const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没�
 function railNum(date) { const today = taskToday(); return date.slice(5, 7) === today.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
 function railText(date) { const today = taskToday(); return date === today ? '今天' : date === shiftDate(today, 1) ? '明天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
 let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, moreRequest = 0, loadedScope = '', pageVisible = true
+const taskListInFlight = new Map()
+
+function readTaskList(scope, source, range) {
+ const key = JSON.stringify([scope, source, range.from, range.to])
+ const existing = taskListInFlight.get(key)
+ if (existing) return existing
+ const promise = listAgentTasks({ source, ...range }).finally(() => {
+  if (taskListInFlight.get(key) === promise) taskListInFlight.delete(key)
+ })
+ taskListInFlight.set(key, promise)
+ return promise
+}
+
 function resetPlanSwitch() { planSwitchRevision.value += 1 }
 function resetIdentity() { issue.value = null; operationError.value = ''; ++planStatusRequest; ++plansRequest; ++moreRequest; tasks.value = []; plans.value = []; taskRows.clear(); plansLoaded.value = false; allLoadedTo.value = 0; moreLoading.value = false; moreError.value = ''; listLoaded.value = false; selectedTask.value = null; selectedPlan.value = null; returnPlan.value = null; navigation.value = { title: '', canBack: false }; planLoading.value = false; plansLoading.value = false; plansError.value = ''; inboxUnread.value = 0; resetPlanSwitch() }
 onHide(() => { pageVisible = false; ++requestId; ++planRequest; ++planStatusRequest; ++plansRequest; ++moreRequest; loading.value = false; planLoading.value = false; plansLoading.value = false; moreLoading.value = false; resetPlanSwitch() })
@@ -377,7 +390,7 @@ async function load(force = true) {
   if (kind === 'all' && props.source === 'company') void loadPlans(force)
   if (!force && listLoaded.value) return
   const range = taskRange(kind)
-  const result = await listAgentTasks({ source: props.source, ...range })
+  const result = await readTaskList(scope, props.source, range)
   if (current === requestId && pageVisible && props.open && view.value === kind && source === props.source && scope === getAgentStorageScope()) {
    tasks.value = selectTaskRows(result?.tasks, kind)
    taskRows.set(kind, tasks.value); listLoaded.value = true
@@ -403,7 +416,7 @@ async function loadMore() {
   const today = startOfDay(new Date())
   const from = dayOffset(today, allLoadedTo.value).toISOString()
   const to = dayOffset(today, Math.min(allLoadedTo.value + ALL_CHUNK_DAYS, ALL_MAX_DAYS)).toISOString()
-  const result = await listAgentTasks({ source, from, to })
+  const result = await readTaskList(scope, source, { from, to })
   if (current !== moreRequest || !pageVisible || !props.open || view.value !== 'all' || source !== props.source || scope !== getAgentStorageScope()) return
   const seen = new Set(tasks.value.map(taskKey))
   tasks.value = [...tasks.value, ...(result?.tasks || []).filter(task => !seen.has(taskKey(task)))]

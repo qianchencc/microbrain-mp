@@ -51,6 +51,19 @@ watch(() => [selected.value, issue.value, navigation.value.title, navigation.val
 const unreadCount = ref(0), nextCursor = ref('')
 const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref(''), markAllError = ref(''), markingAll = ref(false)
 let requestId = 0, bulkId = 0, loadedScope = '', pageVisible = true
+const notificationListInFlight = new Map()
+
+function readNotificationList(scope, source, before = '') {
+ const key = JSON.stringify([scope, source, before])
+ const existing = notificationListInFlight.get(key)
+ if (existing) return existing
+ const promise = listNotifications({ source, limit: 30, ...(before ? { before } : {}) }).finally(() => {
+  if (notificationListInFlight.get(key) === promise) notificationListInFlight.delete(key)
+ })
+ notificationListInFlight.set(key, promise)
+ return promise
+}
+
 function safeScope() { try { return getAgentStorageScope() } catch { return '' } }
 // 批量已读与列表读取使用不同代次：关闭/隐藏/换身份只作废旧批量操作，不让迟到结果卡死按钮或污染新范围。
 function invalidateBulk() { ++bulkId; markingAll.value = false }
@@ -79,7 +92,7 @@ async function load(reset) {
   scope = getAgentStorageScope()
   const source = props.source
   if (scope !== loadedScope) { resetIdentity(); loadedScope = scope }
-  const result = await listNotifications({ source: props.source, limit: 30, ...(reset || !nextCursor.value ? {} : { before: nextCursor.value }) })
+  const result = await readNotificationList(scope, source, reset || !nextCursor.value ? '' : nextCursor.value)
   if (current !== requestId || !props.open || !pageVisible || source !== props.source || scope !== getAgentStorageScope()) return
   const incoming = result.notifications || []
   if (reset) notifications.value = incoming
