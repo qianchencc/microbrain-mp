@@ -17,7 +17,7 @@ const git = (args, cwd) => execFileSync('git', args, { cwd, encoding: 'utf8' }).
 
 // 与 check-delivery.mjs 同一套禁止路径；命中即说明 .gitattributes 漏了东西。
 const FORBIDDEN = [
- [/^(plan|docs|test|tools)\//, '计划/研究/回归/内部工具'],
+ [/^(plan|docs|tools)\//, '计划/研究/内部工具'],
  [/^\.scratch\//, '本地票据'],
  [/(^|\/)AGENTS\.md$/, 'agent 上下文'],
  [/^CONTEXT\.md$/, '领域上下文'],
@@ -63,7 +63,7 @@ function main(argv) {
  console.log('后续（在客户仓库执行，不在此代跑）：')
  console.log(`  git fetch ${out} HEAD`)
  console.log('  git merge --allow-unrelated-histories FETCH_HEAD   # 或只取需要的提交')
- console.log('  git ls-tree -r --name-only HEAD | grep -E "^(plan|docs|\\.scratch|test|tools)/|AGENTS\\.md$|^CONTEXT\\.md$"   # 必须为空')
+ console.log('  git ls-tree -r --name-only HEAD | grep -E "^(plan|docs|\\.scratch|tools)/|AGENTS\\.md$|^CONTEXT\\.md$"   # 必须为空')
  return 0
 }
 
