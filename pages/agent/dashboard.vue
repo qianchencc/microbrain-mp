@@ -44,9 +44,16 @@
        <text class="zvalue">{{ zone.value }}</text>
       </button>
      </view>
-     <button class="catalog-entry" :disabled="!devicesLoaded" @tap="openCatalog">
-      <text>设备目录{{ devicesLoaded ? ' · ' + KIND_CELLS.length + ' 类 ' + catalogDevices.length + ' 台' : '' }}</text><text class="go">查看 ›</text>
-     </button>
+     <view class="entry-row">
+      <button class="entry-cell" hover-class="zone--pressed" @tap="openCatalog">
+       <text>设备目录</text>
+       <text class="go">{{ devicesLoaded ? catalogDevices.length + ' 台 ›' : (devicesLoading || loading) ? '读取中' : devicesError ? '暂不可用' : '查看 ›' }}</text>
+      </button>
+      <button class="entry-cell" hover-class="zone--pressed" @tap="openTaskSchedule({ view: 'inbox', date: taskToday(), task: null })">
+       <text>通知中心<text v-if="simpleUnread" class="eunread">{{ simpleUnread > 99 ? '99+' : simpleUnread }}</text></text>
+       <text class="go">›</text>
+      </button>
+     </view>
      <button class="agent-cta" hover-class="zone--pressed" @tap="openCompanyAgent()">
       <view class="cta-orb" />
       <view class="cta-copy"><text class="cta-t">直接问助手</text><text class="cta-s">比如「上周哪天用电最多」</text></view>
@@ -115,7 +122,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, companyOverviewCache, listAgentTasks } from '@/apis/agent'
+import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, companyOverviewCache, listAgentTasks, listNotifications } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
@@ -232,7 +239,7 @@ function setMode(next) {
  try { uni.setStorageSync(MODE_KEY, next) } catch { /* 偏好保存失败不阻塞切换 */ }
  if (next === 'simple' && !simpleTasksLoaded.value) void loadSimpleAgenda()
 }
-const simpleTasks = ref([]), simpleTasksLoaded = ref(false), simpleTasksError = ref('')
+const simpleTasks = ref([]), simpleTasksLoaded = ref(false), simpleTasksError = ref(''), simpleUnread = ref(0)
 let agendaRequestId = 0
 async function loadSimpleAgenda() {
  const current = ++agendaRequestId
@@ -242,6 +249,10 @@ async function loadSimpleAgenda() {
   if (current !== agendaRequestId || !visible) return
   try { if (getAgentStorageScope() !== scope) return } catch { /* 身份失效丢弃 */ return }
   simpleTasks.value = result.tasks || []; simpleTasksError.value = ''
+  try {
+   const unread = await listNotifications({ source: 'company', limit: 1 })
+   if (current === agendaRequestId && visible) simpleUnread.value = Number(unread.unreadCount) || 0
+  } catch { /* 未读数失败不影响任务块 */ }
  } catch (cause) {
   if (current === agendaRequestId) simpleTasksError.value = cause?.message || '暂不可用'
  } finally { if (current === agendaRequestId) simpleTasksLoaded.value = true }
@@ -336,7 +347,7 @@ function resetForScope() {
  catalogDevices.value = []; devicesLoaded.value = false; devicesError.value = ''
  energyReport.value = null; energyStrip.value = []; selectedStripDate.value = ''
  energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
- ++agendaRequestId; simpleTasks.value = []; simpleTasksLoaded.value = false; simpleTasksError.value = ''
+ ++agendaRequestId; simpleTasks.value = []; simpleTasksLoaded.value = false; simpleTasksError.value = ''; simpleUnread.value = 0
 }
 function invalidateCompanyDashboard() { companyOverviewCache.clear() }
 function applyCompanyDashboardCache(cached) {
@@ -526,8 +537,11 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .zstatus { display:block; margin-top:4px; font-size:19px; font-weight:650; color:#293f31; }
 .zstatus.warn { color:#9a784a; }
 .zvalue { display:block; margin-top:3px; font-family:Georgia,"Songti SC",serif; font-size:14.5px; color:#5f7060; font-variant-numeric:tabular-nums; }
-.catalog-entry { margin-top:16px; display:flex; align-items:center; justify-content:space-between; width:100%; padding:13px 2px; border-top:1px solid #ece8d9; font-size:12.5px; color:#5f7060; text-align:left; }
-.catalog-entry .go { color:#176b54; }
+.entry-row { margin-top:16px; display:flex; border-top:1px solid #ece8d9; }
+.entry-cell { flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:13px 4px 13px 2px; font-size:12.5px; color:#5f7060; text-align:left; }
+.entry-cell + .entry-cell { padding-left:14px; border-left:1px solid #ece8d9; }
+.entry-cell .go { color:#176b54; flex-shrink:0; }
+.eunread { display:inline-block; min-width:17px; margin-left:6px; padding:1px 5px; border-radius:9px; background:#176b54; color:#fff; font-size:10px; text-align:center; }
 .agent-cta { margin-top:14px; display:flex; align-items:center; gap:12px; width:100%; padding:13px 16px; border-radius:18px; background:linear-gradient(180deg,#fbfcfb,#f1f5f1); box-shadow:0 6px 18px rgba(28,57,42,.12), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(26,55,43,.12); text-align:left; }
 .cta-orb { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 35% 28%, #58b48c, #176b54 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 3px 9px rgba(23,107,84,.32); }
 .cta-t { display:block; font-size:16px; font-weight:650; color:#176b54; }
