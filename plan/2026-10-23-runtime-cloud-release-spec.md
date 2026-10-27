@@ -19,7 +19,7 @@ Cloudflare (proxied, TLS 由源站 Caddy 用 DNS-01 签发)
 |---|---|
 | 云服务器 | `root@38.76.215.138`，Ubuntu 24.04.1 LTS，x86_64，香港 |
 | Node | `/opt/node22/bin/node`，v22.23.2（禁止改用系统 node） |
-| Runtime 版本 | `releases/20261027-ca38bb1`，源码提交 `ca38bb1`（基于`efa1fb9`，报告导出中文摘要与技术明细分开；此前监控授权、空调核验、控制台与缓存均保留）；验收见[任务展示交接](2026-10-27-task-presentation-handoff.md)及[回放交接](2026-10-27-safety-playback-improvement-handoff.md) |
+| Runtime 版本 | `releases/20261027-67646ba`，源码提交 `67646ba`（基于`ca38bb1`，安全台账摄像头候选改走监控授权范围）；验收见[候选查询发布交接](2026-10-27-safety-camera-candidate-release-handoff.md) |
 | Runtime 监听 | `127.0.0.1:3210` |
 | 视频监听 | `127.0.0.1:9415` |
 | 反向代理 | Caddy，配置 `/etc/caddy/Caddyfile` |
@@ -310,6 +310,8 @@ ADMIN_RESTART=1
 缓存策略：任务/计划列表、详情、时间轴、日历的全量目录授权核验共用 `catalogTtlMs`（生产 60000ms）缓存；确认、取消、已读和扫描器仍强制 fresh。撤权对只读视图最多延迟 60 秒生效。
 
 ## 11. 变更记录
+
+- 2026-10-27 14:19：发布`67646ba`（基于`ca38bb1`），安全台账「按当前位置查找监控」候选查询改走监控授权范围（`loadCompanyDeviceCatalog` 加 `videoOnly: true`），不再请求空调/照明/门禁等无关目录拖耗15秒预算。发布前磁盘100%（44个旧release约19G），清理后仅保留`ca38bb1`与回滚目标`efa1fb9`，journal截至500M。备份`20261027-1421-safety-camera-67646ba`，无schema变更；前后任务49/计划10/阶段195/报告11/通知43一致，quick_check=ok。server.js哈希`126a3994…`（入口未变，与efa1fb9相同），实际变更模块`safety/events.js`哈希`317678d3…`；公网三域healthz均200<0.25s。真实台账候选复验待确认，见[交接](2026-10-27-safety-camera-candidate-release-handoff.md)。
 
 - 2026-10-26 23:48至10-27：发布`efa1fb9`（基于生产`d1f39fc`），Company视频目录冷加载从61次目录请求缩至11次，不改15秒取流/20秒首帧预算。Runtime426/426、类型/构建及双轴审查通过；备份`20261026-2347-video-efa1fb9`，无schema变化，切换前后业务行数一致。随后部署视频SDK本地镜像与Caddy gzip，解码资源不再每次跨客户站加载，MP172/172及修正测试清理后的窄回归通过。真实原窗口首帧1920×1080、烧录10:59:00、重试及停止释放通过；真机微信未验。版本、哈希、备份与分项回滚见[总交接](2026-10-27-safety-playback-improvement-handoff.md)。
 
