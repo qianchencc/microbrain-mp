@@ -54,6 +54,15 @@ export const cancelTaskPlan = (planId, version, scope, date, source = 'office') 
 export const setTaskPlanStatus = (planId, version, operation, source = 'office', confirmed = false) => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}/status`, source), 'POST', { version, operation, ...(operation === 'resume' ? { confirmed } : {}) })
 export const listTaskPlans = ({ source = 'office' } = {}) => request(`/agent/task-plans?source=${encodeURIComponent(source)}`, 'GET')
 export const listAgentTasks = ({ source = 'office', from, to } = {}) => request(`/agent/tasks?source=${encodeURIComponent(source)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
+// 首页议程预览（精简与详细共用同一快照）：只缓存首页用到的任务窗与未读数，
+// 任务明细列表（TaskListSheet/TaskCalendarView 的 listAgentTasks）仍实时读取。
+const agentAgendaUrl = ({ from, to }) => '/agent/tasks?' + queryString({ source: 'company', from, to })
+const agentUnreadUrl = ({ limit = 1 }) => '/agent/notifications?' + queryString({ source: 'company', limit })
+const peekCached = url => { try { return companyOverviewCache.peek(globalConfig.agentUrl + url)?.value ?? null } catch { return null } }
+export const readAgentAgenda = ({ from, to, force = false } = {}) => companyRead(agentAgendaUrl({ from, to }), undefined, { force })
+export const peekAgentAgenda = ({ from, to } = {}) => peekCached(agentAgendaUrl({ from, to }))
+export const readAgentUnread = ({ limit = 1, force = false } = {}) => companyRead(agentUnreadUrl({ limit }), undefined, { force })
+export const peekAgentUnread = ({ limit = 1 } = {}) => peekCached(agentUnreadUrl({ limit }))
 export const getTaskDetail = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}`, source), 'GET')
 export const listNotifications = ({ source = 'office', limit = 30, before } = {}) => request(`/agent/notifications?source=${encodeURIComponent(source)}&limit=${encodeURIComponent(limit)}${before ? `&before=${encodeURIComponent(before)}` : ''}`, 'GET')
 export const markNotificationSeen = (id, source = 'office') => request(withConversationSource(`/agent/notifications/${encodeURIComponent(id)}/seen`, source), 'POST')

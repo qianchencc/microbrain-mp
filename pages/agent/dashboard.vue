@@ -30,7 +30,8 @@
     <view v-else-if="snapshot?.errors?.length" class="notice"><text>部分观测暂不可用</text><button @tap="showErrors">查看</button></view>
 
     <!-- 精简模式：状态灯 + 2×2 状态块（proto-dashboard-directions E 变体），点块仍进原详情 -->
-    <view v-if="mode === 'simple'" class="simple">
+    <!-- 两种模式常驻、只切可见性：切换模式不重建子树，读取与图表位置都不重来 -->
+    <view class="simple" :style="{ display: mode === 'simple' ? 'block' : 'none' }">
      <view class="lamp-hero">
       <view class="lamp" :class="simpleVerdict.state"><view class="lamp-disc">{{ simpleVerdict.mark }}</view></view>
       <text class="verdict">{{ simpleVerdict.text }}</text>
@@ -51,7 +52,7 @@
      </button>
     </view>
 
-    <template v-else>
+    <view v-if="detailMounted" class="detail" :style="{ display: mode === 'simple' ? 'none' : 'block' }">
     <view class="counts">
      <button v-for="cell in KIND_CELLS" :key="cell.kind" class="crow" @tap="openKind(cell.kind)">
       <text class="cc">{{ devicesLoaded ? (kindCounts[cell.kind] ?? 0) : '—' }}</text>
@@ -72,7 +73,7 @@
      <EnergySkeleton v-else-if="energyLoading && !energyError" />
      <text v-if="energyError" class="fineprint dim">逐日能耗暂不可用 · {{ energyError }}</text>
      <text v-else-if="!energyStrip.length && !energyLoading" class="fineprint">暂无可统计的计量日</text>
-     <MonthlyEnergyComparison :active="pageActive && !energyLoading" :refresh-key="monthlyRefresh" :cutoff="energyReport?.latestSampleTime || ''" />
+     <MonthlyEnergyComparison :active="pageActive && !energyLoading && mode === 'detailed'" :refresh-key="monthlyRefresh" :cutoff="energyReport?.latestSampleTime || ''" />
     </view>
 
     <view class="blk">
@@ -86,9 +87,9 @@
     </view>
 
     <view class="blk">
-     <CompanyTaskOverview :active="pageActive && !tasksOpen" :refresh-key="taskRevision" @open="openTaskSchedule" />
+     <CompanyTaskOverview :active="pageActive && !tasksOpen && mode === 'detailed'" :refresh-key="taskRevision" @open="openTaskSchedule" />
     </view>
-    </template>
+    </view>
 
    </view>
   </scroll-view>
@@ -113,7 +114,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, companyOverviewCache, listAgentTasks, listNotifications } from '@/apis/agent'
+import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, companyOverviewCache, readAgentAgenda, peekAgentAgenda, readAgentUnread, peekAgentUnread } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
@@ -225,6 +226,9 @@ const fmtMDT = iso => iso ? iso.slice(5, 16).replace('T', ' ') : ''
 const MODE_KEY = 'agent-dashboard-mode'
 const mode = ref('simple')
 try { mode.value = uni.getStorageSync(MODE_KEY) === 'detailed' ? 'detailed' : 'simple' } catch { /* 存储不可用时保持精简 */ }
+// 详细子树首次展示才挂载；此后只切可见性，切模式不重建日柱、月度对比与议程，也不重复读取。
+const detailMounted = ref(mode.value === 'detailed')
+watch(mode, next => { if (next === 'detailed') detailMounted.value = true })
 function setMode(next) {
  mode.value = next
  try { uni.setStorageSync(MODE_KEY, next) } catch { /* 偏好保存失败不阻塞切换 */ }
@@ -232,16 +236,21 @@ function setMode(next) {
 }
 const simpleTasks = ref([]), simpleTasksLoaded = ref(false), simpleTasksError = ref(''), simpleUnread = ref(0)
 let agendaRequestId = 0
-async function loadSimpleAgenda() {
+const agendaRange = () => { const today = taskToday(); return { from: `${today}T00:00:00+08:00`, to: `${shiftDate(today, 62)}T00:00:00+08:00` } }
+async function loadSimpleAgenda(force = false) {
  const current = ++agendaRequestId
+ const range = agendaRange()
+ // 有同身份快照先落位：切换模式/重进不回到「读取中」。
+ const saved = peekAgentAgenda(range), savedUnread = peekAgentUnread({ limit: 1 })
+ if (saved) { simpleTasks.value = saved.tasks || []; simpleTasksError.value = ''; simpleTasksLoaded.value = true }
+ if (savedUnread) simpleUnread.value = Number(savedUnread.unreadCount) || 0
  try {
-  const today = taskToday()
-  const result = await listAgentTasks({ source: 'company', from: `${today}T00:00:00+08:00`, to: `${shiftDate(today, 62)}T00:00:00+08:00` })
+  const result = await readAgentAgenda({ ...range, force })
   if (current !== agendaRequestId || !visible) return
   try { if (getAgentStorageScope() !== scope) return } catch { /* 身份失效丢弃 */ return }
   simpleTasks.value = result.tasks || []; simpleTasksError.value = ''
   try {
-   const unread = await listNotifications({ source: 'company', limit: 1 })
+   const unread = await readAgentUnread({ limit: 1, force })
    if (current === agendaRequestId && visible) simpleUnread.value = Number(unread.unreadCount) || 0
   } catch { /* 未读数失败不影响任务块 */ }
  } catch (cause) {
@@ -394,7 +403,7 @@ async function load(force = false) {
   if (current !== requestId || !visible) return
   if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
   if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleTasksLoaded.value = false; simpleTasksError.value = '' }
-  if (mode.value === 'simple' && (!simpleTasksLoaded.value || force === true)) void loadSimpleAgenda()
+  if (mode.value === 'simple' && (!simpleTasksLoaded.value || force === true)) void loadSimpleAgenda(force === true)
   const cached = companyOverviewCache.peek('dashboard-snapshot')
   if (!force && cached) {
    applyCompanyDashboardCache(cached.value)

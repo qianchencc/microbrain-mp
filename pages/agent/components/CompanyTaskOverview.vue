@@ -25,7 +25,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
-import { listAgentTasks, listNotifications } from '@/apis/agent'
+import { readAgentAgenda, peekAgentAgenda, readAgentUnread, peekAgentUnread } from '@/apis/agent'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { shiftDate } from '../region-calendar.mjs'
 import { agendaGroups, taskDayTime, taskLabel, taskSettled, taskToday } from '../task-calendar.mjs'
@@ -59,6 +59,7 @@ function railNum(date) { return date.slice(5, 7) === today.value.slice(5, 7) ? S
 function railText(date) { return date === today.value ? '今天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
 function showError() { issue.value = { title: '任务暂未加载', reason: error.value } }
 function stop() { ++generation; clearTimeout(timer); loading.value = false }
+const agendaRange = () => ({ from: `${today.value}T00:00:00+08:00`, to: `${shiftDate(today.value, 62)}T00:00:00+08:00` })
 async function load(force = false) {
  if (!props.active || !visible) return
  clearTimeout(timer)
@@ -68,13 +69,17 @@ async function load(force = false) {
  try {
   scope = getAgentStorageScope()
   if (scope !== loadedScope) { tasks.value = []; loaded.value = false; loadedScope = scope }
+  const range = agendaRange()
+  // 同身份议程快照先落位：重挂载、切模式与短时返回都不闪「加载中…」，随后按同一缓存口径对齐。
+  const saved = peekAgentAgenda(range), savedUnread = peekAgentUnread({ limit: 1 })
+  if (saved && !loaded.value) { tasks.value = saved.tasks || []; loaded.value = true }
+  if (savedUnread) unread.value = Number(savedUnread.unreadCount) || 0
   const executing = tasks.value.some(task => task.status === 'executing')
   delay = executing ? 5000 : 30000
-  const from = `${today.value}T00:00:00+08:00`, to = `${shiftDate(today.value, 62)}T00:00:00+08:00`
-  const result = await listAgentTasks({ source: 'company', from, to })
+  const result = await readAgentAgenda({ ...range, force })
   if (current !== generation || scope !== getAgentStorageScope() || !props.active || !visible) return
   tasks.value = result.tasks || []; loaded.value = true
-  void refreshUnread()
+  void refreshUnread(force)
  } catch (cause) {
   if (current !== generation) return
   let liveScope = ''
@@ -88,12 +93,12 @@ async function load(force = false) {
   }
  }
 }
-async function refreshUnread() {
+async function refreshUnread(force = false) {
  const current = generation
  try {
   const scope = getAgentStorageScope()
   if (scope !== loadedScope) return
-  const result = await listNotifications({ source: 'company', limit: 1 })
+  const result = await readAgentUnread({ limit: 1, force })
   if (current === generation && props.active && scope === getAgentStorageScope()) unread.value = Number(result.unreadCount) || 0
  } catch { /* 未读数失败不影响任务预览 */ }
 }
