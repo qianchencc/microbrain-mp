@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>仪表盘方向原型 — 面向领导层的直观化三个方向</title>
+<style>
+  :root {
+    --jade:#176b54; --jade-ink:#22473a; --paper:#f7f5ef; --card:#fdfdfb;
+    --line:#e3e0d4; --brass:#9a7b2d; --warn:#a27128; --muted:#7a857d; --red:#a33b2e;
+    --ok:#3f9d74;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif; background:var(--paper); color:var(--jade-ink); padding:28px 20px 120px; }
+  .wrap { max-width:460px; margin:0 auto; }
+  h1 { font-size:19px; font-weight:650; }
+  .q { margin-top:8px; font-size:13px; line-height:1.7; color:#4d5f55; }
+  .q code { background:#eceadf; padding:1px 5px; border-radius:4px; font-size:12px; }
+
+  /* —— 场景切换 —— */
+  .bar { margin-top:16px; display:flex; gap:8px; align-items:center; }
+  .bar .lbl { font-size:11px; color:var(--muted); margin-right:2px; }
+  button.act { border:1px solid var(--line); background:var(--card); border-radius:16px; padding:7px 14px; font-size:12.5px; color:var(--jade-ink); cursor:pointer; }
+  button.act.on { background:var(--jade); color:#fff; border-color:var(--jade); }
+
+  /* —— 手机框 —— */
+  .phone { margin:20px auto 0; width:375px; border-radius:36px; border:10px solid #2b3833; background:var(--paper); overflow:hidden; box-shadow:0 18px 50px -18px rgba(35,50,44,.35); }
+  .notch { height:26px; background:var(--paper); display:flex; align-items:center; justify-content:center; }
+  .notch::after { content:''; width:110px; height:8px; border-radius:5px; background:#2b3833; }
+  .screen { height:640px; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; }
+  .screen::-webkit-scrollbar { display:none; }
+  .page { padding:14px 16px 30px; min-height:100%; }
+
+  /* —— 共用件 —— */
+  .date { font-size:12px; color:var(--muted); }
+  .hello { font-size:20px; font-weight:650; }
+  .vrow { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .tap-hint { text-align:center; font-size:10.5px; color:#a8a89c; margin-top:14px; }
+  .agentbar { margin-top:16px; display:flex; align-items:center; gap:10px; background:var(--jade); color:#fff; border-radius:18px; padding:14px 16px; }
+  .agentbar .orb { width:30px; height:30px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #7fd4b4, var(--jade) 70%); border:2px solid rgba(255,255,255,.55); flex-shrink:0; }
+  .agentbar .t { font-size:15px; font-weight:600; }
+  .agentbar .s { font-size:11px; opacity:.75; }
+
+  /* —— A：一句话晨报 —— */
+  .verdict-card { margin-top:12px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px 16px; }
+  .verdict-card.alert { border-color:#e5cfc8; background:#fbf6f3; }
+  .verdict-main { display:flex; align-items:center; gap:10px; }
+  .vmark { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff; flex-shrink:0; }
+  .vmark.ok { background:var(--ok); } .vmark.warn { background:var(--warn); }
+  .verdict-main .big { font-size:19px; font-weight:700; line-height:1.35; }
+  .verdict-sub { margin-top:8px; font-size:12.5px; color:var(--muted); line-height:1.6; }
+  .tiles { margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tile { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px 13px; text-align:left; }
+  .tile .ic { font-size:20px; }
+  .tile .q2 { margin-top:6px; font-size:14px; font-weight:650; }
+  .tile .a2 { margin-top:4px; font-size:12px; color:#4d5f55; line-height:1.5; }
+  .tile .a2 b { color:var(--jade-ink); }
+  .tile .go { margin-top:7px; font-size:10.5px; color:var(--jade); }
+
+  /* —— B：大字长辈模式 —— */
+  .bcard { margin-top:12px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; }
+  .bcard .btop { display:flex; align-items:center; justify-content:space-between; }
+  .bcard .bname { font-size:17px; font-weight:700; display:flex; align-items:center; gap:7px; }
+  .badge { font-size:11.5px; border-radius:10px; padding:3px 9px; font-weight:600; }
+  .badge.ok { background:#e7f1ec; color:var(--ok); }
+  .badge.warn { background:#f6efe0; color:var(--warn); }
+  .bcard .bline { margin-top:9px; font-size:15px; line-height:1.6; color:#33493e; }
+  .bcard .bline .num { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .bcard .bsub { margin-top:5px; font-size:12px; color:var(--muted); }
+  .bcard .bgoto { margin-top:9px; font-size:12px; color:var(--jade); }
+  .minibars { display:flex; align-items:flex-end; gap:3px; height:26px; margin-top:10px; }
+  .minibars i { flex:1; background:#cfe3d6; border-radius:2px 2px 0 0; }
+  .minibars i.sel { background:var(--jade); }
+  .bentry { margin-top:12px; background:transparent; border:1px dashed #c9c4b4; border-radius:14px; padding:12px; font-size:13px; color:var(--muted); text-align:center; }
+
+  /* —— C：我想看… —— */
+  .ask { margin-top:6px; font-size:22px; font-weight:700; line-height:1.4; }
+  .qlist { margin-top:14px; background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+  .qrow { display:flex; align-items:center; gap:12px; padding:15px 15px; text-align:left; }
+  .qrow + .qrow { border-top:1px solid #eceade; }
+  .qrow .ic { font-size:22px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:#f2f1e8; border-radius:10px; flex-shrink:0; }
+  .qrow .tx { flex:1; min-width:0; }
+  .qrow .t1 { font-size:15.5px; font-weight:650; }
+  .qrow .t2 { margin-top:2px; font-size:12px; color:var(--muted); }
+  .qrow .t2 b { color:var(--jade-ink); }
+  .qrow .arr { color:#b9c4b4; font-size:15px; }
+
+  /* —— D：现有仪表盘 + 关怀模式（对齐生产 token：#eef2ee 底 / 发丝线分节 / 衬线数字 / 无卡片） —— */
+  .page.v-d { background:#eef2ee; }
+  .dpage { color:#293f31; }
+  .dnav { display:flex; align-items:center; margin-bottom:14px; }
+  .dnav .dback { font-size:13px; color:#7d8d82; }
+  .dnav .dttl { margin:0 auto; font-size:15.5px; font-weight:600; color:#293f31; display:flex; align-items:center; }
+  .dnav .dsep { width:1px; height:13px; margin:0 11px; background:rgba(41,63,49,.16); }
+  .dnav .doff { font-size:12.5px; color:#7d8d82; font-weight:400; }
+  .dhead { display:flex; align-items:flex-start; justify-content:space-between; }
+  .ddate { font-size:13px; letter-spacing:2.5px; color:#93a08c; }
+  .dhello { margin-top:8px; font-size:30px; font-weight:600; letter-spacing:-.5px; line-height:1.3; }
+  .dref { width:44px; height:44px; border:1px solid #d9e2d7; border-radius:50%; background:linear-gradient(#f9fbf7,#e8eee5); box-shadow:inset 0 1px 0 #fff; display:flex; align-items:center; justify-content:center; font-size:19px; color:#567461; margin-top:4px; flex-shrink:0; }
+  /* 设备计数：保持原四列发丝网格结构，数字放大 */
+  .dcounts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin-top:16px; }
+  .dcounts .dk { display:block; padding:14px 0 12px; border-bottom:1px solid #ece8d9; min-height:64px; }
+  .dcounts .dkc { display:block; font-family:Georgia,"Songti SC",serif; font-size:29px; color:#2e4a38; font-variant-numeric:tabular-nums; letter-spacing:-.5px; }
+  .dcounts .dkn { display:block; margin-top:3px; font-size:11.5px; color:#839287; }
+  /* 区块：保留 .k 发丝线标题结构，字号 ~1.35x，标题内嵌状态词 */
+  .dblk { margin-top:26px; }
+  .dk2 { display:flex; align-items:baseline; gap:9px; font-size:13px; letter-spacing:2px; color:#94a08b; padding-bottom:10px; border-bottom:1px solid #dce4da; }
+  .dk2 .dst { letter-spacing:1px; font-size:12px; color:var(--jade); }
+  .dk2 .dst.warn { color:#9a784a; }
+  .dk2 .dmore { margin-left:auto; letter-spacing:0; font-size:13px; color:var(--jade); }
+  .dk2 .dchips { margin-left:auto; display:flex; gap:6px; letter-spacing:0; }
+  .dk2 .dchips span { font-size:12px; letter-spacing:0; padding:6px 12px; border-radius:10px; color:#809181; background:#edf3e8; }
+  .dk2 .dchips span.on { background:#176b54; color:#fff; }
+  /* 人话结论行：衬线大数字 + 一句判断 */
+  .dline { margin-top:13px; font-size:15px; line-height:1.6; color:#3c4a3e; }
+  .dline .serif { font-family:Georgia,"Songti SC",serif; font-size:34px; color:#2e4a38; letter-spacing:-.5px; font-variant-numeric:tabular-nums; }
+  .dline .du { font-size:14px; color:#8a947f; margin-left:4px; }
+  .dline .dtag { font-size:12.5px; color:#97917e; margin-left:10px; }
+  .dok { display:flex; align-items:center; gap:10px; margin-top:14px; }
+  .dok .vmark { width:30px; height:30px; font-size:16px; }
+  .dok .dokt { font-size:15px; color:#3c4a3e; }
+  .dname2 { display:block; margin-top:7px; font-size:11.5px; color:#91a08f; }
+  /* 能耗条带：同构放大 */
+  .dstrip { display:flex; align-items:flex-end; gap:5px; height:56px; margin-top:12px; }
+  .dstrip .db { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .dstrip .db i { width:100%; background:#d5e2d6; border-radius:2px 2px 0 0; }
+  .dstrip .db.sel i { background:var(--jade); }
+  .dstrip .db s { font-size:10px; color:#97917e; text-decoration:none; }
+  .dfoot { display:block; margin-top:8px; font-size:11px; color:#869780; }
+  /* 台账/任务行：保留发丝线列表，行高加大 */
+  .drow { display:flex; align-items:baseline; gap:10px; padding:13px 0; border-bottom:1px solid #ece8d9; font-size:14px; color:#3c4a3e; min-height:56px; box-sizing:border-box; }
+  .drow .dd { font-size:12px; color:#97917e; font-variant-numeric:tabular-nums; flex-shrink:0; }
+  .drow .dt { flex:1; min-width:0; }
+  .drow .ds { flex-shrink:0; font-size:11.5px; color:#97917e; }
+  .dmoreline { display:block; padding:13px 0 2px; font-size:13px; color:var(--jade); }
+
+  /* —— E：状态灯板精修（拟物材质：白瓷 orb + 发丝内描边 + 玉/黄铜线条图标） —— */
+  .page.v-e { background:#eef2ee; }
+  .epage { color:#293f31; }
+  .enav { margin:-14px -16px 0; padding:9px 8px; background:linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom:1px solid rgba(44,75,58,.05);
+    display:flex; align-items:center; }
+  .enav .eback { width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:17px; color:#5f7060; }
+  .enav .ettl { font-size:15px; font-weight:600; color:#293f31; display:flex; align-items:center; }
+  .enav .esep { width:1px; height:13px; margin:0 11px; background:rgba(41,63,49,.16); }
+  .enav .eoff { font-size:12.5px; color:#7d8d82; font-weight:400; }
+  .ehead { display:flex; align-items:flex-start; justify-content:space-between; margin-top:14px; }
+  .ehero { margin-top:10px; text-align:center; padding:16px 0 20px; border-bottom:1px solid #dce4da; }
+  /* 状态灯 = orb 同款白瓷盘 + 内嵌玉碟 */
+  .elamp { width:82px; height:82px; border-radius:50%; margin:0 auto; padding:7px;
+    background:linear-gradient(160deg,#fefefb,#eef3ef);
+    box-shadow:0 6px 20px rgba(24,60,40,.22), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(26,55,43,.12); }
+  .elamp i { width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; font-style:normal; font-size:32px; color:#fff;
+    background:radial-gradient(circle at 35% 28%, #58b48c, #176b54 78%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(18,80,60,.5), 0 2px 8px rgba(23,107,84,.3); }
+  .elamp.warn i { background:radial-gradient(circle at 35% 28%, #e0a862, #a27128 78%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(140,95,35,.5), 0 2px 8px rgba(162,113,40,.3); }
+  .everdict { margin-top:13px; font-size:22px; font-weight:600; letter-spacing:1px; color:#293f31; }
+  .esub { margin-top:5px; font-size:11.5px; color:#839287; letter-spacing:1.5px; }
+  .ezones { margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .ezone { border-radius:16px; padding:13px 14px 12px; min-height:112px;
+    background:linear-gradient(180deg,#fbfcfb,#f1f5f1);
+    box-shadow:0 4px 14px rgba(28,57,42,.09), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(26,55,43,.11); }
+  .eztop { display:flex; align-items:center; justify-content:space-between; }
+  .eic { width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(160deg,#f2f6f0,#e4ece3); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.1), inset 0 1px 0 rgba(255,255,255,.8); }
+  .eic svg { width:17px; height:17px; display:block; }
+  .epill { font-size:10px; letter-spacing:1px; padding:3px 9px; border-radius:9px; color:#3c8c6b; background:#e9f1ea; }
+  .epill.warn { color:#9a784a; background:#f4ecd9; }
+  .ezone .en { margin-top:10px; font-size:10.5px; letter-spacing:2.5px; color:#94a08b; }
+  .ezone .es { margin-top:4px; font-size:19px; font-weight:650; color:#293f31; }
+  .ezone .es.warn { color:#9a784a; }
+  .ezone .ev { margin-top:3px; font-family:Georgia,"Songti SC",serif; font-size:14.5px; color:#5f7060; font-variant-numeric:tabular-nums; }
+  .eentry { margin-top:16px; display:flex; align-items:center; justify-content:space-between; padding:13px 2px 0; border-top:1px solid #ece8d9; font-size:12.5px; color:#5f7060; }
+  .eentry .go { color:#176b54; }
+  .eagent { margin-top:14px; display:flex; align-items:center; gap:12px; padding:13px 16px; border-radius:18px;
+    background:linear-gradient(180deg,#fbfcfb,#f1f5f1);
+    box-shadow:0 6px 18px rgba(28,57,42,.12), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(26,55,43,.12); }
+  .eagent .orb { width:38px; height:38px; border-radius:50%; flex-shrink:0;
+    background:radial-gradient(circle at 35% 28%, #58b48c, #176b54 78%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 3px 9px rgba(23,107,84,.32); }
+  .eagent .t { font-size:16px; font-weight:650; color:#176b54; }
+  .eagent .s { font-size:11.5px; color:#839287; margin-top:1px; }
+  .efoot { margin-top:12px; text-align:center; font-size:10px; letter-spacing:1px; color:#a0ab95; }
+
+  /* —— 说明区 —— */
+  .note { margin-top:22px; border-left:3px solid var(--brass); padding:10px 14px; font-size:12.5px; line-height:1.8; color:#5d5340; background:#fbf8ef; border-radius:0 10px 10px 0; }
+  .note b { color:var(--jade-ink); }
+  .cmp { margin-top:14px; font-size:12px; line-height:1.9; color:#5d5340; }
+  .cmp td { padding:3px 10px 3px 0; vertical-align:top; }
+
+  /* —— 底部切换条 —— */
+  .switcher { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); display:flex; align-items:center; gap:4px; background:#2b3833; color:#fff; border-radius:24px; padding:6px 8px; box-shadow:0 10px 30px -8px rgba(20,30,25,.5); z-index:9; }
+  .switcher button { border:none; background:transparent; color:#cfe3d6; font-size:17px; width:38px; height:38px; border-radius:50%; cursor:pointer; }
+  .switcher button:hover { background:rgba(255,255,255,.12); }
+  .switcher .cur { min-width:170px; text-align:center; font-size:13px; }
+  .switcher .cur b { font-size:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>仪表盘方向原型（proto-dashboard-directions）</h1>
+  <p class="q">回答的问题：<b>领导层（中老年）觉得现有仪表盘「不知道有什么用、数字太多」，首屏应该长什么样？</b>四个方向共用同一份模拟数据与现有二级页面（能耗面板 / 台账 / 任务 / 设备抽屉），只改首屏组织方式。用底部条或 ← → 键切换，URL 带 <code>?variant=a|b|c|d</code> 可分享。</p>
+  <div class="bar">
+    <span class="lbl">模拟数据</span>
+    <button class="act on" id="scNormal" onclick="setScene('normal')">正常的一天</button>
+    <button class="act" id="scAlert" onclick="setScene('alert')">有告警的一天</button>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen"><div class="page" id="page"></div></div>
+  </div>
+
+  <div class="note" id="note"></div>
+  <table class="cmp"><tr>
+    <td><b>A 一句话晨报</b><br>先给结论再看数<br>改动量：中</td>
+    <td><b>B 大字长辈模式</b><br>收敛成 4 张状态卡<br>改动量：小</td>
+    <td><b>C 我想看…</b><br>按问题组织入口<br>改动量：小-中</td>
+    <td><b>D 关怀模式</b><br>现有布局减字放大<br>改动量：最小</td>
+    <td><b>E 状态灯板</b><br>体检报告式色块<br>改动量：小-中</td>
+  </tr></table>
+</div>
+
+<div class="switcher">
+  <button onclick="cycle(-1)" aria-label="上一方向">‹</button>
+  <div class="cur" id="curLabel"></div>
+  <button onclick="cycle(1)" aria-label="下一方向">›</button>
+</div>
+
+<script>
+/* ============ 模拟数据（字段对齐真实接口：environment/energyDaily/alerts/tasks/devices） ============ */
+const DATA = {
+  normal: {
+    allOk: true,
+    verdict: '今天园区一切正常',
+    verdictSub: '环境舒适 · 用电平稳 · 没有新的安全告警',
+    env: { name: '办公区环境传感器', temp: 25.0, hum: 56, pm25: 36, feel: '体感舒适' },
+    energy: { day: '昨天', kwh: 1240, delta: -3, judge: '用电平稳' },
+    alerts: { count30: 0, latest: null },
+    tasks: { next: '今天 17:00 关闭公共区域照明', more: '另有 2 项周期计划' },
+    devices: { kinds: 7, total: 55 },
+  },
+  alert: {
+    allOk: false,
+    verdict: '昨晚有一条烟感告警',
+    verdictSub: '已记录在台账 · 用电较前天偏高 · 环境正常',
+    env: { name: '办公区环境传感器', temp: 25.8, hum: 61, pm25: 41, feel: '体感舒适' },
+    energy: { day: '昨天', kwh: 1380, delta: +8, judge: '比前天偏高' },
+    alerts: { count30: 3, latest: { kind: '烟感', device: '27楼茶水间光电感烟', time: '昨晚 23:41' } },
+    tasks: { next: '今天 17:00 关闭公共区域照明', more: '另有 2 项周期计划' },
+    devices: { kinds: 7, total: 55 },
+  },
+};
+
+const VARIANTS = [
+  { key: 'a', name: 'A · 一句话晨报', render: renderA,
+    note: `<b>思路：</b>领导只关心「有没有事」。首屏第一句直接回答——一切正常 / 哪里要注意；四个磁贴各给一句人话结论，数字只在结论里出现一次，全部详情仍进现有面板。<b>解决「不知道有什么用」最彻底</b>，但需要一层「正常/注意」的判断规则（可全部在前端按现有数据推导，不动接口）。` },
+  { key: 'b', name: 'B · 大字长辈模式', render: renderB,
+    note: `<b>思路：</b>不改信息结构，把现在七个分区收敛成 4 张大字卡：每张卡一个状态徽标（正常/注意）+ 一句结论 + 至多一个大数字；7 格设备计数收成底部一条入口。<b>改动量最小</b>——基本是现有 block 的样式与文案重写，下钻页面完全不动；适合快速交付先看反应。` },
+  { key: 'c', name: 'C · 我想看…', render: renderC,
+    note: `<b>思路：</b>首屏不摆数据，摆问题。每条入口就是领导会问的一句话（「有没有告警？」「用了多少电？」），行内直接给答案预览，点进去才是完整数据页。<b>「数字太多」解决得最干净</b>——首屏零图表；同时强化「直接问助手」，把 Agent 变成第一入口。` },
+  { key: 'd', name: 'D · 关怀模式', render: renderD,
+    note: `<b>思路：</b>客户评价原版「字太多」，所以这版在现有仪表盘骨架上做<b>减字</b>而不是加字：板块名缩成两字（环境/用电/安全/任务）、设备标签缩成两字、删掉所有人话句子和说明注脚、状态全靠标题线上的状态词（舒适/平稳/无告警）和安全块的 ✓ 图形表达；能耗对比只留「↑8%」符号不进句子；点板块任意处进原详情页，文字细节都在二级页。<b>首屏汉字大约从 200+ 降到 60 左右</b>。改动量仍最小：模板文案收敛 + 样式放大，二级页零改动。` },
+  { key: 'e', name: 'E · 状态灯板', render: renderE,
+    note: `<b>思路：</b>原版的问题不只是字多，是「长得就像一张要逐行读的表」。这版换成<b>体检报告</b>心智：首屏顶部一个大状态灯（绿 ✓ = 一切正常 / 橙 ! = 有要注意的事），下面 2×2 四个大色块，每块只有「图标 + 两字名 + 一个状态词 + 一个衬线数字」——领导不读字，看颜色和灯就知道有没有事；设备目录收成一条入口，Agent 入口放大成底部主按钮。色板仍是玉漆/纸材/黄铜渐变，和现有产品一家亲但一眼看得出是「领导视图」。改动：首屏模板重做 + 一个「正常/注意」判断（前端按现有数据推导），二级页不变。` },
+];
+
+let variant = 'a', scene = 'normal';
+const $page = document.getElementById('page');
+
+/* ---------- A：一句话晨报 ---------- */
+function renderA(d) {
+  const mark = d.allOk ? `<div class="vmark ok">✓</div>` : `<div class="vmark warn">!</div>`;
+  return `
+  <div class="vrow"><div><div class="date">10月27日 · 周一</div><div class="hello">您好，王总</div></div></div>
+  <div class="verdict-card ${d.allOk ? '' : 'alert'}">
+    <div class="verdict-main">${mark}<div class="big">${d.verdict}</div></div>
+    <div class="verdict-sub">${d.verdictSub}</div>
+  </div>
+  <div class="tiles">
+    <div class="tile"><div class="ic">🌿</div><div class="q2">环境</div>
+      <div class="a2">${d.env.feel}，<b>${d.env.temp}°</b></div><div class="go">详情 ›</div></div>
+    <div class="tile"><div class="ic">⚡</div><div class="q2">用电</div>
+      <div class="a2">${d.energy.judge}，${d.energy.day}<b>${d.energy.kwh.toLocaleString()} 度</b></div><div class="go">详情 ›</div></div>
+    <div class="tile"><div class="ic">🛡️</div><div class="q2">安全</div>
+      <div class="a2">${d.alerts.latest ? `${d.alerts.latest.time} ${d.alerts.latest.kind}告警` : '近 30 天<b>无告警</b>'}</div><div class="go">台账 ›</div></div>
+    <div class="tile"><div class="ic">📋</div><div class="q2">自动任务</div>
+      <div class="a2">${d.tasks.next}</div><div class="go">安排 ›</div></div>
+  </div>
+  <div class="agentbar"><div class="orb"></div><div><div class="t">直接问助手</div><div class="s">比如「上周哪天用电最多」</div></div></div>
+  <div class="tap-hint">设备目录等全部入口收在详情页内</div>`;
+}
+
+/* ---------- B：大字长辈模式 ---------- */
+function renderB(d) {
+  const bars = [10,14,12,18,15,20,16].map((h,i)=>`<i style="height:${h+8}px" class="${i===5?'sel':''}"></i>`).join('');
+  return `
+  <div class="vrow"><div><div class="date">10月27日 · 周一</div><div class="hello">您好，王总</div></div></div>
+  <div class="bcard">
+    <div class="btop"><div class="bname">🌿 环境</div><span class="badge ok">正常</span></div>
+    <div class="bline"><span class="num">${d.env.temp}°</span>　湿度 ${d.env.hum}%　${d.env.feel}</div>
+    <div class="bgoto">查看趋势 ›</div>
+  </div>
+  <div class="bcard">
+    <div class="btop"><div class="bname">⚡ 用电</div><span class="badge ${d.energy.delta>5?'warn':'ok'}">${d.energy.delta>5?'偏高':'平稳'}</span></div>
+    <div class="bline">${d.energy.day}用了 <span class="num">${d.energy.kwh.toLocaleString()}</span> 度</div>
+    <div class="bsub">比前天${d.energy.delta>0?'多':'少'} ${Math.abs(d.energy.delta)}%</div>
+    <div class="minibars">${bars}</div>
+    <div class="bgoto">查看全部 ›</div>
+  </div>
+  <div class="bcard">
+    <div class="btop"><div class="bname">🛡️ 安全</div><span class="badge ${d.alerts.latest?'warn':'ok'}">${d.alerts.latest?'有记录':'正常'}</span></div>
+    ${d.alerts.latest
+      ? `<div class="bline">昨晚 ${d.alerts.latest.time.slice(3)} ${d.alerts.latest.device} 报警</div><div class="bsub">30 天内共 ${d.alerts.count30} 条记录</div>`
+      : `<div class="bline">近 30 天没有告警</div>`}
+    <div class="bgoto">查看台账 ›</div>
+  </div>
+  <div class="bcard">
+    <div class="btop"><div class="bname">📋 自动任务</div></div>
+    <div class="bline">${d.tasks.next}</div>
+    <div class="bsub">${d.tasks.more}</div>
+    <div class="bgoto">查看安排 ›</div>
+  </div>
+  <div class="bentry">设备目录 · ${d.devices.kinds} 类 ${d.devices.total} 台 ›</div>`;
+}
+
+/* ---------- C：我想看… ---------- */
+function renderC(d) {
+  return `
+  <div class="date">10月27日 · 周一</div>
+  <div class="ask">您好，王总。<br>今天想了解什么？</div>
+  <div class="qlist">
+    <div class="qrow"><div class="ic">🛡️</div><div class="tx">
+      <div class="t1">有没有安全方面的事？</div>
+      <div class="t2">${d.alerts.latest ? `${d.alerts.latest.time} ${d.alerts.latest.kind}告警 · 30天共<b>${d.alerts.count30}</b>条` : '近 30 天没有告警'}</div></div><div class="arr">›</div></div>
+    <div class="qrow"><div class="ic">⚡</div><div class="tx">
+      <div class="t1">最近用电怎么样？</div>
+      <div class="t2">${d.energy.day} <b>${d.energy.kwh.toLocaleString()} 度</b> · ${d.energy.judge}</div></div><div class="arr">›</div></div>
+    <div class="qrow"><div class="ic">🌿</div><div class="tx">
+      <div class="t1">楼里环境舒服吗？</div>
+      <div class="t2">${d.env.temp}° · 湿度 ${d.env.hum}% · ${d.env.feel}</div></div><div class="arr">›</div></div>
+    <div class="qrow"><div class="ic">📋</div><div class="tx">
+      <div class="t1">自动化在帮我做什么？</div>
+      <div class="t2">${d.tasks.next}</div></div><div class="arr">›</div></div>
+    <div class="qrow"><div class="ic">📹</div><div class="tx">
+      <div class="t1">看看设备和监控</div>
+      <div class="t2">${d.devices.kinds} 类设备 · ${d.devices.total} 台</div></div><div class="arr">›</div></div>
+  </div>
+  <div class="agentbar"><div class="orb"></div><div><div class="t">或者直接问我</div><div class="s">「27楼昨晚报警是怎么回事」</div></div></div>`;
+}
+
+/* ---------- D：现有仪表盘 + 少字关怀模式（结构与 dashboard.vue 一一对应，文字减半） ---------- */
+function renderD(d) {
+  const kinds = [[1,'环境'],[43,'电表'],[3,'消防'],[49,'空调'],[156,'照明'],[4,'门禁'],[12,'视频']];
+  const strip = [['一',12],['二',22],['三',18],['四',30],['五',24],['六',34],['日',26]];
+  const st = (ok, t) => `<span class="dst ${ok ? '' : 'warn'}">${t}</span>`;
+  return `<div class="dpage">
+  <div class="dnav"><span class="dback">‹ 服务首页</span><span class="dttl">物联助手<span class="dsep"></span><span class="doff">办公室 ›</span></span><span style="width:52px"></span></div>
+  <div class="dhead"><div><div class="ddate">10月27日 · 周一</div><div class="dhello">您好，王总</div></div><div class="dref">⟳</div></div>
+
+  <div class="dcounts">${kinds.map(([c,n])=>`<span class="dk"><span class="dkc">${c}</span><span class="dkn">${n}</span></span>`).join('')}</div>
+
+  <div class="dblk">
+    <div class="dk2"><span>环境</span>${st(true,'舒适')}<span class="dmore">›</span></div>
+    <div class="dline"><span class="serif">${d.env.temp}°</span><span class="dtag">湿度 ${d.env.hum}%</span></div>
+  </div>
+
+  <div class="dblk">
+    <div class="dk2"><span>用电</span>${st(d.energy.delta<=5, d.energy.delta<=5?'平稳':'偏高')}<span class="dmore">›</span></div>
+    <div class="dline"><span class="serif">${d.energy.kwh.toLocaleString()}</span><span class="du">度</span><span class="dtag">${d.energy.day}${d.energy.delta>0?' ↑':' ↓'}${Math.abs(d.energy.delta)}%</span></div>
+    <div class="dstrip">${strip.map(([w,h],i)=>`<div class="db${i===5?' sel':''}"><i style="height:${h}px"></i><s>${w}</s></div>`).join('')}</div>
+  </div>
+
+  <div class="dblk">
+    <div class="dk2"><span>安全</span>${d.alerts.latest ? st(false,'有告警') : st(true,'无告警')}<span class="dmore">›</span></div>
+    ${d.alerts.latest
+      ? `<div class="drow"><span class="dd">昨晚</span><span class="dt">${d.alerts.latest.device}</span><span class="ds">${d.alerts.latest.kind}</span></div>`
+      : `<div class="dok"><div class="vmark ok">✓</div><span class="dokt">30 天无告警</span></div>`}
+  </div>
+
+  <div class="dblk">
+    <div class="dk2"><span>任务</span><span class="dmore">›</span></div>
+    <div class="drow"><span class="dd">17:00</span><span class="dt">公共照明关闭</span></div>
+    <div class="drow"><span class="dd">08:00</span><span class="dt">能耗日报</span></div>
+  </div>
+  </div>`;
+}
+
+/* ---------- E：状态灯板（体检报告式 · 拟物材质精修） ---------- */
+const EICON = {
+  leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="#2e6b52" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19C5 10.5 9.5 5.5 20 4c-.7 10.5-5.7 15-15 15z"/><path d="M5 19c2.8-4.6 6.2-7.7 10-9.8"/></svg>',
+  bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="#9a7b2d" stroke-width="1.7" stroke-linejoin="round"><path d="M13.2 2.5 5.5 13.2h5.6l-1.3 8.3 8.7-11.7h-5.9l.6-7.3z"/></svg>',
+  shield: (warn) => `<svg viewBox="0 0 24 24" fill="none" stroke="${warn ? '#a27128' : '#2e6b52'}" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3l7 2.8v5.5c0 4.7-3 7.8-7 9.2-4-1.4-7-4.5-7-9.2V5.8L12 3z"/>${warn ? '<path d="M12 8.5v4"/><circle cx="12" cy="15.6" r=".9" fill="#a27128" stroke="none"/>' : '<path d="M9 11.8l2.2 2.2 4-4.2"/>'}</svg>`,
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="#2e6b52" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.9"/></svg>',
+};
+function renderE(d) {
+  const ok = d.allOk;
+  const pill = (w, t) => `<span class="epill ${w ? 'warn' : ''}">${t}</span>`;
+  return `<div class="epage">
+  <div class="enav"><span class="eback">‹</span><span class="ettl">物联助手<span class="esep"></span><span class="eoff">办公室</span></span></div>
+  <div class="ehead"><div><div class="ddate">10月27日 · 周一</div><div class="dhello">您好，王总</div></div><div class="dref">⟳</div></div>
+
+  <div class="ehero">
+    <div class="elamp ${ok ? '' : 'warn'}"><i>${ok ? '✓' : '!'}</i></div>
+    <div class="everdict">${ok ? '园区一切正常' : '有 1 条安全告警'}</div>
+    <div class="esub">${ok ? '环境 · 用电 · 安全 均正常' : '烟感 · 27 楼茶水间 · 昨晚'}</div>
+  </div>
+
+  <div class="ezones">
+    <div class="ezone"><div class="eztop"><span class="eic">${EICON.leaf}</span>${pill(false, '正常')}</div>
+      <div class="en">环 境</div><div class="es">舒适</div><div class="ev">${d.env.temp}° · 湿度 ${d.env.hum}%</div></div>
+    <div class="ezone"><div class="eztop"><span class="eic">${EICON.bolt}</span>${pill(d.energy.delta > 5, d.energy.delta > 5 ? '注意' : '正常')}</div>
+      <div class="en">用 电</div><div class="es ${d.energy.delta > 5 ? 'warn' : ''}">${d.energy.delta > 5 ? '偏高' : '平稳'}</div><div class="ev">${d.energy.day} ${d.energy.kwh.toLocaleString()} 度</div></div>
+    <div class="ezone"><div class="eztop"><span class="eic">${EICON.shield(!ok)}</span>${pill(!ok, ok ? '正常' : '注意')}</div>
+      <div class="en">安 全</div><div class="es ${ok ? '' : 'warn'}">${ok ? '无告警' : '1 条'}</div><div class="ev">${ok ? '近 30 天' : '昨晚 23:41'}</div></div>
+    <div class="ezone"><div class="eztop"><span class="eic">${EICON.clock}</span>${pill(false, '进行中')}</div>
+      <div class="en">任 务</div><div class="es">2 项</div><div class="ev">最近 17:00 关照明</div></div>
+  </div>
+
+  <div class="eentry"><span>设备目录 · ${d.devices.kinds} 类 ${d.devices.total} 台</span><span class="go">查看 ›</span></div>
+  <div class="eagent"><div class="orb"></div><div><div class="t">直接问助手</div><div class="s">「上周哪天用电最多」</div></div></div>
+  <div class="efoot">数据更新于 09:20</div>
+  </div>`;
+}
+
+/* ---------- 切换逻辑 ---------- */
+function apply() {
+  const d = DATA[scene];
+  const v = VARIANTS.find(x => x.key === variant);
+  $page.className = 'page v-' + variant;
+  $page.innerHTML = v.render(d);
+  document.getElementById('note').innerHTML = v.note;
+  document.getElementById('curLabel').innerHTML = `<b>${v.name}</b>`;
+  const url = new URL(location.href); url.searchParams.set('variant', variant);
+  history.replaceState(null, '', url);
+}
+function cycle(dir) {
+  const i = VARIANTS.findIndex(x => x.key === variant);
+  variant = VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length].key;
+  apply();
+}
+function setScene(s) {
+  scene = s;
+  document.getElementById('scNormal').classList.toggle('on', s === 'normal');
+  document.getElementById('scAlert').classList.toggle('on', s === 'alert');
+  apply();
+}
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea,[contenteditable]')) return;
+  if (e.key === 'ArrowLeft') cycle(-1);
+  if (e.key === 'ArrowRight') cycle(1);
+});
+variant = new URLSearchParams(location.search).get('variant') || 'a';
+if (!VARIANTS.some(v => v.key === variant)) variant = 'a';
+apply();
+</script>
+</body>
+</html>

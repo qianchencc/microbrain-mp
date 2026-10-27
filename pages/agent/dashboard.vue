@@ -18,10 +18,42 @@
       <text class="date">{{ dateLine }}</text>
       <text class="hello">你好{{ userName ? '，' + userName : '' }}</text>
      </view>
-     <button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#567461" /></button>
+     <view class="head-actions">
+      <view class="mode-seg">
+       <button :class="{ on: mode === 'simple' }" @tap="setMode('simple')">精简</button>
+       <button :class="{ on: mode === 'detailed' }" @tap="setMode('detailed')">详细</button>
+      </view>
+      <button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#567461" /></button>
+     </view>
     </view>
     <view v-if="error" class="notice"><text>{{ error }}</text><button @tap="load(true)">重试</button></view>
     <view v-else-if="snapshot?.errors?.length" class="notice"><text>部分观测暂不可用</text><button @tap="showErrors">查看</button></view>
+
+    <!-- 精简模式：状态灯 + 2×2 状态块（proto-dashboard-directions E 变体），点块仍进原详情 -->
+    <view v-if="mode === 'simple'" class="simple">
+     <view class="lamp-hero">
+      <view class="lamp" :class="simpleVerdict.state"><view class="lamp-disc">{{ simpleVerdict.mark }}</view></view>
+      <text class="verdict">{{ simpleVerdict.text }}</text>
+      <text class="verdict-sub">{{ simpleVerdict.sub }}</text>
+     </view>
+     <view class="zones">
+      <button v-for="zone in simpleZones" :key="zone.key" class="zone" hover-class="zone--pressed" :aria-label="zone.name" @tap="zone.go()">
+       <view class="zone-top"><view class="zic"><image class="zicon" :src="zone.icon" mode="aspectFit" /></view><text class="zpill" :class="{ warn: zone.warn }">{{ zone.pill }}</text></view>
+       <text class="zname">{{ zone.name }}</text>
+       <text class="zstatus" :class="{ warn: zone.warn }">{{ zone.status }}</text>
+       <text class="zvalue">{{ zone.value }}</text>
+      </button>
+     </view>
+     <button class="catalog-entry" :disabled="!devicesLoaded" @tap="openCatalog">
+      <text>设备目录{{ devicesLoaded ? ' · ' + KIND_CELLS.length + ' 类 ' + catalogDevices.length + ' 台' : '' }}</text><text class="go">查看 ›</text>
+     </button>
+     <button class="agent-cta" hover-class="zone--pressed" @tap="openCompanyAgent()">
+      <view class="cta-orb" />
+      <view class="cta-copy"><text class="cta-t">直接问助手</text><text class="cta-s">比如「上周哪天用电最多」</text></view>
+     </button>
+    </view>
+
+    <template v-else>
     <view class="counts">
      <button v-for="cell in KIND_CELLS" :key="cell.kind" class="crow" @tap="openKind(cell.kind)">
       <text class="cc">{{ devicesLoaded ? (kindCounts[cell.kind] ?? 0) : '—' }}</text>
@@ -58,6 +90,7 @@
     <view class="blk">
      <CompanyTaskOverview :active="pageActive && !tasksOpen" :refresh-key="taskRevision" @open="openTaskSchedule" />
     </view>
+    </template>
 
    </view>
   </scroll-view>
@@ -82,7 +115,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, companyOverviewCache } from '@/apis/agent'
+import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, companyOverviewCache, listAgentTasks } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
@@ -105,6 +138,7 @@ import CompanyDeviceDrawer from './components/CompanyDeviceDrawer.vue'
 import CompanyAgentFloat from './components/CompanyAgentFloat.vue'
 import { parseAgentContext, meterHistoryPrompt } from './context-link.mjs'
 import { environmentHistoryPrompt, environmentWindowReference } from './environment-reference.mjs'
+import { agendaGroups, taskSettled, taskDayTime, taskToday } from './task-calendar.mjs'
 
 const KIND_CELLS = [
  { kind: 'environment', label: '环境传感器' },
@@ -150,10 +184,12 @@ const kindCounts = computed(() => {
  for (const device of catalogDevices.value) map[device.kind] = (map[device.kind] || 0) + 1
  return map
 })
-const drawerDevices = computed(() => catalogDevices.value.filter(d => d.kind === drawerKind.value))
-const drawerTitle = computed(() => KIND_CELLS.find(c => c.kind === drawerKind.value)?.label || '设备')
+// drawerKind 'catalog' 为精简模式的全量目录入口；其余仍是单类设备抽屉。
+const drawerDevices = computed(() => drawerKind.value === 'catalog' ? catalogDevices.value : catalogDevices.value.filter(d => d.kind === drawerKind.value))
+const drawerTitle = computed(() => drawerKind.value === 'catalog' ? '设备目录' : KIND_CELLS.find(c => c.kind === drawerKind.value)?.label || '设备')
 watch(drawerKind, kind => { if (kind) drawerMounted.value = true }, { flush: 'sync' })
 function openKind(kind) { if (devicesLoaded.value) drawerKind.value = kind }
+function openCatalog() { if (devicesLoaded.value) drawerKind.value = 'catalog' }
 
 /* 能耗统计：横滑日柱 + 拉环开面板 + 同期对比环 */
 const energyReport = ref(null), energyStrip = ref([]), energyError = ref('')
@@ -183,6 +219,110 @@ const alertRows = computed(() => {
 function toggleLedger(key) { ledgerFilter.value = ledgerFilter.value === key ? '' : key }
 function subtypeLabel(value) { return LEDGER_LABEL[value] || '' }
 const fmtMDT = iso => iso ? iso.slice(5, 16).replace('T', ' ') : ''
+
+/* 精简模式（proto-dashboard-directions E 变体）：状态灯 + 2×2 状态块。
+   全部投影自已加载的概览/能耗/目录快照，唯一新增读取是任务议程；
+   判断诚实口径：告警是历史台账（只按最近一条是否在近30天内给「有记录」，不暗示实时），
+   能耗对比只在上一个完整计量日存在时给差值，缺数显示「—」不估算。 */
+const MODE_KEY = 'agent-dashboard-mode'
+const mode = ref('simple')
+try { mode.value = uni.getStorageSync(MODE_KEY) === 'detailed' ? 'detailed' : 'simple' } catch { /* 存储不可用时保持精简 */ }
+function setMode(next) {
+ mode.value = next
+ try { uni.setStorageSync(MODE_KEY, next) } catch { /* 偏好保存失败不阻塞切换 */ }
+ if (next === 'simple' && !simpleTasksLoaded.value) void loadSimpleAgenda()
+}
+const simpleTasks = ref([]), simpleTasksLoaded = ref(false), simpleTasksError = ref('')
+let agendaRequestId = 0
+async function loadSimpleAgenda() {
+ const current = ++agendaRequestId
+ try {
+  const today = taskToday()
+  const result = await listAgentTasks({ source: 'company', from: `${today}T00:00:00+08:00`, to: `${shiftDate(today, 62)}T00:00:00+08:00` })
+  if (current !== agendaRequestId || !visible) return
+  try { if (getAgentStorageScope() !== scope) return } catch { /* 身份失效丢弃 */ return }
+  simpleTasks.value = result.tasks || []; simpleTasksError.value = ''
+ } catch (cause) {
+  if (current === agendaRequestId) simpleTasksError.value = cause?.message || '暂不可用'
+ } finally { if (current === agendaRequestId) simpleTasksLoaded.value = true }
+}
+const svgIcon = (body, color) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`)
+const ZONE_ICONS = {
+ environment: svgIcon('<path d="M5 19C5 10.5 9.5 5.5 20 4c-.7 10.5-5.7 15-15 15z"/><path d="M5 19c2.8-4.6 6.2-7.7 10-9.8"/>', '#2e6b52'),
+ energy: svgIcon('<path d="M13.2 2.5 5.5 13.2h5.6l-1.3 8.3 8.7-11.7h-5.9l.6-7.3z"/>', '#9a7b2d'),
+ safetyOk: svgIcon('<path d="M12 3l7 2.8v5.5c0 4.7-3 7.8-7 9.2-4-1.4-7-4.5-7-9.2V5.8L12 3z"/><path d="M9 11.8l2.2 2.2 4-4.2"/>', '#2e6b52'),
+ safetyWarn: svgIcon('<path d="M12 3l7 2.8v5.5c0 4.7-3 7.8-7 9.2-4-1.4-7-4.5-7-9.2V5.8L12 3z"/><path d="M12 8.5v4"/><circle cx="12" cy="15.6" r=".9" fill="#a27128" stroke="none"/>', '#a27128'),
+ task: svgIcon('<circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.9"/>', '#2e6b52')
+}
+const envError = computed(() => Boolean(sectionErrors.value.environment) || snapshot.value?.errors?.some(row => row.area === 'environment'))
+const simpleEnv = computed(() => {
+ if (envError.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
+ const reading = environment.value?.reading
+ if (!reading) return loadedSections.value.includes('environment')
+  ? { warn: false, pill: '正常', status: '暂无读数', value: '—' }
+  : { warn: false, pill: '读取中', status: '更新中', value: '—' }
+ const pm25 = typeof reading.pm25 === 'number' ? reading.pm25 : null
+ const comfy = pm25 == null || pm25 <= 75
+ const parts = [`${metricValue(reading.temp)}°`]
+ if (typeof reading.humidity === 'number') parts.push(`湿度 ${reading.humidity}%`)
+ return { warn: !comfy, pill: comfy ? '正常' : '注意', status: comfy ? '舒适' : '一般', value: parts.join(' · ') }
+})
+const simpleEnergy = computed(() => {
+ if (energyError.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
+ const usable = [...(energyReport.value?.days || [])].reverse().filter(day => day.usage != null)
+ const latest = usable.find(day => day.complete) || usable[0]
+ if (!latest) return energyLoading.value
+  ? { warn: false, pill: '读取中', status: '更新中', value: '—' }
+  : { warn: false, pill: '正常', status: '暂无数据', value: '—' }
+ const prev = usable.find(day => day !== latest && day.complete && day.date < latest.date)
+ const delta = prev?.usage ? Math.round((latest.usage - prev.usage) / prev.usage * 100) : null
+ const unit = energyReport.value?.basis?.unit === 'kWh' ? ' 度' : ''
+ const dayText = latest.date === shiftDate(shanghaiToday(), -1) ? '昨日' : `${Number(latest.date.slice(5, 7))}月${Number(latest.date.slice(8))}日`
+ const high = delta != null && delta > 10
+ return { warn: high, pill: high ? '注意' : '正常', status: high ? '偏高' : '平稳',
+  value: `${dayText} ${Math.round(latest.usage).toLocaleString()}${unit}${delta != null ? ` ${delta >= 0 ? '↑' : '↓'}${Math.abs(delta)}%` : ''}` }
+})
+const simpleSafety = computed(() => {
+ if (alertsUnavailable.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
+ if (!loadedSections.value.includes('alerts')) return { warn: false, pill: '读取中', status: '更新中', value: '—' }
+ const latest = snapshot.value?.alerts?.records?.[0]
+ if (!latest || Date.parse(latest.occurredAt) < Date.now() - 30 * 864e5)
+  return { warn: false, pill: '正常', status: '无告警', value: '近 30 天' }
+ return { warn: true, pill: '注意', status: '有记录', value: `${Number(latest.occurredAt.slice(5, 7))}月${Number(latest.occurredAt.slice(8, 10))}日 · ${subtypeLabel(latest.subtype || latest.ledger) || '告警'}` }
+})
+const simpleAgenda = computed(() => {
+ if (!simpleTasksLoaded.value) return { warn: false, pill: '读取中', status: '更新中', value: '—' }
+ if (simpleTasksError.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
+ const today = taskToday()
+ let count = 0, next = null
+ for (const day of agendaGroups(simpleTasks.value, today, 62).days) {
+  for (const task of day.rows) {
+   if (taskSettled(task)) continue
+   count += 1
+   if (!next) next = { task, date: day.date }
+  }
+ }
+ if (!next) return { warn: false, pill: '空闲', status: '0 项', value: '近期无待执行任务' }
+ const dayText = next.date === today ? '今天' : `${Number(next.date.slice(5, 7))}月${Number(next.date.slice(8))}日`
+ return { warn: false, pill: '进行中', status: `${count} 项`, value: `${dayText} ${taskDayTime(next.task, next.date)} · ${next.task.label || '任务安排'}` }
+})
+const simpleVerdict = computed(() => {
+ if (loading.value && !loadedSections.value.length && !energyReport.value && !devicesLoaded.value)
+  return { state: 'loading', mark: '…', text: '数据读取中', sub: '正在更新园区概览' }
+ if (error.value) return { state: 'warn', mark: '!', text: '数据暂不可用', sub: error.value }
+ const issues = []
+ if (simpleSafety.value.warn) issues.push('有新的安全记录')
+ if (simpleEnergy.value.warn) issues.push('用电较前期偏高')
+ if (envError.value || alertsUnavailable.value || energyError.value || devicesError.value) issues.push('部分数据暂不可用')
+ if (!issues.length) return { state: 'ok', mark: '✓', text: '园区一切正常', sub: '环境 · 用电 · 安全 均正常' }
+ return { state: 'warn', mark: '!', text: issues[0], sub: issues.slice(1).join(' · ') || '点下方区块查看详情' }
+})
+const simpleZones = computed(() => [
+ { key: 'environment', name: '环 境', icon: ZONE_ICONS.environment, ...simpleEnv.value, go: () => openObservation('environment') },
+ { key: 'energy', name: '用 电', icon: ZONE_ICONS.energy, ...simpleEnergy.value, go: () => openEnergy() },
+ { key: 'safety', name: '安 全', icon: simpleSafety.value.warn ? ZONE_ICONS.safetyWarn : ZONE_ICONS.safetyOk, ...simpleSafety.value, go: () => openObservation('alerts') },
+ { key: 'task', name: '任 务', icon: ZONE_ICONS.task, ...simpleAgenda.value, go: () => openTaskSchedule({ view: 'all', date: taskToday(), task: null }) }
+])
 const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '电表统计', alerts: '安全事件台账' })[observationType.value] || '')
 const observation = computed(() => {
  if (!snapshot.value || !observationType.value || (observationType.value === 'alerts' && alertsUnavailable.value)) return null
@@ -196,6 +336,7 @@ function resetForScope() {
  catalogDevices.value = []; devicesLoaded.value = false; devicesError.value = ''
  energyReport.value = null; energyStrip.value = []; selectedStripDate.value = ''
  energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
+ ++agendaRequestId; simpleTasks.value = []; simpleTasksLoaded.value = false; simpleTasksError.value = ''
 }
 function invalidateCompanyDashboard() { companyOverviewCache.clear() }
 function applyCompanyDashboardCache(cached) {
@@ -236,7 +377,8 @@ async function load(force = false) {
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
   if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
-  if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++ }
+  if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleTasksLoaded.value = false; simpleTasksError.value = '' }
+  if (mode.value === 'simple' && (!simpleTasksLoaded.value || force === true)) void loadSimpleAgenda()
   const cached = companyOverviewCache.peek('dashboard-snapshot')
   if (!force && cached) {
    applyCompanyDashboardCache(cached.value)
@@ -358,6 +500,38 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .date { display:block; font-size:10.5px; letter-spacing:2.5px; color:#93a08c; }
 .hello { display:block; margin-top:9px; font-size:26px; font-weight:600; letter-spacing:-.5px; line-height:1.3; }
 .refresh { width:38px; height:38px; display:flex; align-items:center; justify-content:center; border:1px solid #d9e2d7; border-radius:50%; background:linear-gradient(#f9fbf7,#e8eee5); box-shadow:inset 0 1px 0 #fff; flex-shrink:0; margin-top:4px; }.refresh[disabled] { opacity:.6; }
+.head-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; margin-top:4px; }
+.head-actions .refresh { margin-top:0; }
+.mode-seg { display:flex; background:#e2eae2; border-radius:16px; padding:2px; }
+.mode-seg button { font-size:11.5px; color:#5f7060; padding:6px 11px; border-radius:14px; }
+.mode-seg button.on { background:linear-gradient(#fbfcfb,#eef3ee); color:#176b54; box-shadow:inset 0 1px 0 #fff, 0 1px 3px rgba(28,57,42,.15); }
+
+/* 精简模式：状态灯 + 2×2 状态块（沿用 orb/面板的渐变 + 发丝内描边材质） */
+.lamp-hero { text-align:center; padding:18px 0 20px; border-bottom:1px solid #dce4da; }
+.lamp { width:82px; height:82px; border-radius:50%; margin:0 auto; padding:7px; display:flex; background:linear-gradient(160deg,#fefefb,#eef3ef); box-shadow:0 6px 20px rgba(24,60,40,.22), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(26,55,43,.12); }
+.lamp-disc { flex:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; color:#fff; background:radial-gradient(circle at 35% 28%, #58b48c, #176b54 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(18,80,60,.5), 0 2px 8px rgba(23,107,84,.3); }
+.lamp.warn .lamp-disc { background:radial-gradient(circle at 35% 28%, #e0a862, #a27128 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(140,95,35,.5), 0 2px 8px rgba(162,113,40,.3); }
+.lamp.loading .lamp-disc { background:radial-gradient(circle at 35% 28%, #c2cec4, #94a08b 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(110,122,108,.5), 0 2px 8px rgba(110,122,108,.3); }
+.verdict { display:block; margin-top:13px; font-size:22px; font-weight:600; letter-spacing:1px; color:#293f31; }
+.verdict-sub { display:block; margin-top:5px; font-size:11.5px; letter-spacing:1px; color:#839287; }
+.zones { margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+.zone { border-radius:16px; padding:13px 14px 12px; min-height:112px; text-align:left; background:linear-gradient(180deg,#fbfcfb,#f1f5f1); box-shadow:0 4px 14px rgba(28,57,42,.09), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(26,55,43,.11); }
+.zone--pressed { opacity:.72; }
+.zone-top { display:flex; align-items:center; justify-content:space-between; }
+.zic { width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:linear-gradient(160deg,#f2f6f0,#e4ece3); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.1), inset 0 1px 0 rgba(255,255,255,.8); flex-shrink:0; }
+.zicon { width:17px; height:17px; }
+.zpill { font-size:10px; letter-spacing:1px; padding:3px 9px; border-radius:9px; color:#3c8c6b; background:#e9f1ea; }
+.zpill.warn { color:#9a784a; background:#f4ecd9; }
+.zname { display:block; margin-top:10px; font-size:10.5px; letter-spacing:2.5px; color:#94a08b; }
+.zstatus { display:block; margin-top:4px; font-size:19px; font-weight:650; color:#293f31; }
+.zstatus.warn { color:#9a784a; }
+.zvalue { display:block; margin-top:3px; font-family:Georgia,"Songti SC",serif; font-size:14.5px; color:#5f7060; font-variant-numeric:tabular-nums; }
+.catalog-entry { margin-top:16px; display:flex; align-items:center; justify-content:space-between; width:100%; padding:13px 2px; border-top:1px solid #ece8d9; font-size:12.5px; color:#5f7060; text-align:left; }
+.catalog-entry .go { color:#176b54; }
+.agent-cta { margin-top:14px; display:flex; align-items:center; gap:12px; width:100%; padding:13px 16px; border-radius:18px; background:linear-gradient(180deg,#fbfcfb,#f1f5f1); box-shadow:0 6px 18px rgba(28,57,42,.12), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(26,55,43,.12); text-align:left; }
+.cta-orb { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 35% 28%, #58b48c, #176b54 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 3px 9px rgba(23,107,84,.32); }
+.cta-t { display:block; font-size:16px; font-weight:650; color:#176b54; }
+.cta-s { display:block; font-size:11.5px; color:#839287; margin-top:1px; }
 
 .counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
 .crow { display:block; padding:11px 0 9px; border-bottom:1px solid #ece8d9; text-align:left; }

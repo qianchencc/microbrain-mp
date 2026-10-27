@@ -36,12 +36,6 @@
 									</view>
 									<view class="text">公司<text class="agent-entry-label">物联助手</text></view>
 								</view>
-								<view class="menu-item agent-entry" @click="goPage('/pages/agent/index?source=office')">
-									<view class="agent-entry-icon">
-										<uni-icons type="home-filled" size="28" color="#176b54" />
-									</view>
-									<view class="text">办公室<text class="agent-entry-label">物联助手</text></view>
-								</view>
 								<view v-for="menu in workMenuList" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
 									<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
 									<view class="text">{{ menu.resourceTitle }}</view>
