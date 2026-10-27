@@ -1,7 +1,8 @@
 // Agent 深链上下文解析：office 页面 onLoad 与仪表盘公司浮层共用。
 // URL 参数 → { reference, prompt }；非法参数只提示不中断。面板/页内直开时
-// 不再过 URL，直接用 environmentHistoryPrompt / meterHistoryPrompt 造提示词。
+// 环境历史走 environmentWindowReference，电表仍用 meterHistoryPrompt。
 import { safetyEventReference } from './safety-event.mjs'
+import { environmentHistoryPrompt, environmentWindowReference } from './environment-reference.mjs'
 
 function parseJson(raw, invalidTitle) {
  try { return JSON.parse(decodeURIComponent(raw)) }
@@ -12,11 +13,6 @@ function validWindow(window) {
  return window && typeof window.from === 'string' && typeof window.to === 'string'
   && window.from.length <= 40 && window.to.length <= 40
   && Number.isFinite(Date.parse(window.from)) && Number.isFinite(Date.parse(window.to))
-}
-
-export function environmentHistoryPrompt(window) {
- if (!validWindow(window)) return ''
- return `请查询并解释站点环境历史，期间 ${window.from} 至 ${window.to}。哪些指标变化明显？`
 }
 
 export function meterHistoryPrompt(window) {
@@ -41,8 +37,12 @@ export function parseAgentContext(options = {}, { company = true } = {}) {
   }
  }
  if (options.environmentWindow) {
-  const prompt = environmentHistoryPrompt(parseJson(options.environmentWindow, '环境期间无效'))
-  if (prompt) context.prompt = prompt
+  const value = parseJson(options.environmentWindow, '环境期间无效')
+  if (value !== undefined) {
+   const reference = environmentWindowReference(value)
+   if (reference) { context.reference = reference; context.prompt = environmentHistoryPrompt(value) }
+   else uni.showToast({ title: '环境期间无效', icon: 'none' })
+  }
  }
  if (options.energyWindow) {
   const prompt = meterHistoryPrompt(parseJson(options.energyWindow, '计量点期间无效'))

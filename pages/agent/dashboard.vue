@@ -103,7 +103,8 @@ import CompanyEnergySheet from './components/CompanyEnergySheet.vue'
 import MonthlyEnergyComparison from './components/MonthlyEnergyComparison.vue'
 import CompanyDeviceDrawer from './components/CompanyDeviceDrawer.vue'
 import CompanyAgentFloat from './components/CompanyAgentFloat.vue'
-import { parseAgentContext, environmentHistoryPrompt, meterHistoryPrompt } from './context-link.mjs'
+import { parseAgentContext, meterHistoryPrompt } from './context-link.mjs'
+import { environmentHistoryPrompt, environmentWindowReference } from './environment-reference.mjs'
 
 const KIND_CELLS = [
  { kind: 'environment', label: '环境传感器' },
@@ -316,7 +317,12 @@ function openCompanyAgent(payload = {}) { agentFloat.value?.open(payload) }
 function referenceEvent(reference) { selectedEvent.value = null; observationType.value = ''; openCompanyAgent({ reference }) }
 function referenceTask(reference) { tasksOpen.value = false; openCompanyAgent({ reference }) }
 function tasksChanged() { taskRevision.value++; invalidateCompanyDashboard() }
-function openEnvironmentAgent(window) { observationType.value = ''; openCompanyAgent({ prompt: environmentHistoryPrompt(window) }) }
+function openEnvironmentAgent(window) {
+ const reference = environmentWindowReference(window)
+ if (!reference) return
+ observationType.value = ''
+ openCompanyAgent({ reference, prompt: environmentHistoryPrompt(window) })
+}
 function openMeterAgent(window) { observationType.value = ''; openCompanyAgent({ prompt: meterHistoryPrompt(window) }) }
 function openAgent(source) {
  if (openingAgent.value) return
