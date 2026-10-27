@@ -19,7 +19,7 @@ Cloudflare (proxied, TLS 由源站 Caddy 用 DNS-01 签发)
 |---|---|
 | 云服务器 | `root@38.76.215.138`，Ubuntu 24.04.1 LTS，x86_64，香港 |
 | Node | `/opt/node22/bin/node`，v22.23.2（禁止改用系统 node） |
-| Runtime 版本 | `releases/20261027-c530add`，源码提交 `c530add`（基于 `67646ba`，保留安全摄像头候选授权范围修复，并加入环境历史 `environment_window` 引用）；见[环境引用交接](2026-10-27-environment-history-quote-reference.md)与[安全候选交接](2026-10-27-safety-camera-candidate-release-handoff.md) |
+| Runtime 版本 | `releases/20261027-d20332a`，源码提交 `d20332a`（基于 `c530add`，空调巡检事实拆分：放行分数度读数、观察行新增 afterSetpoint 回读值）；见 mp 仓 docs/README.md 2026-10-27 条目 |
 | Runtime 监听 | `127.0.0.1:3210` |
 | 视频监听 | `127.0.0.1:9415` |
 | 反向代理 | Caddy，配置 `/etc/caddy/Caddyfile` |
@@ -310,6 +310,8 @@ ADMIN_RESTART=1
 缓存策略：任务/计划列表、详情、时间轴、日历的全量目录授权核验共用 `catalogTtlMs`（生产 60000ms）缓存；确认、取消、已读和扫描器仍强制 fresh。撤权对只读视图最多延迟 60 秒生效。
 
 ## 11. 变更记录
+
+- 2026-10-27 14:48：发布 `d20332a`（基于 `c530add`），空调巡检事实拆分：分数度设定值读数不再判为字段不足（25.5<26 可调），ac_inspection 设备行新增 afterSetpoint 记录下发后权威快照回读值，前端据此显示「已下发调到26℃ · 平台回读 X℃」而非把指令目标写成设备事实；节能估算放行分数度调前值。Runtime 定向 16/16、typecheck、云端构建哈希与本地一致（ac-inspection/scanner/report-summary 三模块；server.js 入口未变 `126a3994…`）。备份 `20261027-acfact-d20332a`，无 schema 变更；发布前 executing 阶段 0，前后 tasks49/plans10/phases197/reports11/notifs43 一致，quick_check=ok，公网三域 healthz 200。回滚 `releases/20261027-c530add`。
 
 - 2026-10-27 14:19：发布`67646ba`（基于`ca38bb1`），安全台账「按当前位置查找监控」候选查询改走监控授权范围（`loadCompanyDeviceCatalog` 加 `videoOnly: true`），不再请求空调/照明/门禁等无关目录拖耗15秒预算。发布前磁盘100%（44个旧release约19G），清理后仅保留`ca38bb1`与回滚目标`efa1fb9`，journal截至500M。备份`20261027-1421-safety-camera-67646ba`，无schema变更；前后任务49/计划10/阶段195/报告11/通知43一致，quick_check=ok。server.js哈希`126a3994…`（入口未变，与efa1fb9相同），实际变更模块`safety/events.js`哈希`317678d3…`；公网三域healthz均200<0.25s。真实台账候选复验待确认，见[交接](2026-10-27-safety-camera-candidate-release-handoff.md)。
 
