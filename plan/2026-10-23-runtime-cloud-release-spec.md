@@ -311,6 +311,8 @@ ADMIN_RESTART=1
 
 ## 11. 变更记录
 
+- 2026-10-27 16:35：发布 `f8c6ba4`（基于 `d0df76e` cherry-pick `864cc83` 并合并 `d20332a` 分数度/回读修复），空调条件巡检目标温度参数化：`read.ac` 新增 `target`（整数16–30℃，面板范围，缺省26），条件/动作由服务器派生，下发指令、观察块 criteria、节能估算、周期去重签名与派生标题均按实际目标值；`adjust_to_26` 模式 id 兼容旧数据保留。本地与云端构建哈希一致（ac-inspection `f2551340…`、scanner `69b7c9fe…`、report-summary `82c7cb5c…`，server.js 入口未变 `126a3994…`）。备份 `20261027-ac-target-f8c6ba4`，无 schema 变更；发布窗口等 08:30Z 检查点（executing）收口后切换，前后 tasks50/plans10/phases198/reports11/notifs44 一致，quick_check=ok，公网三域 healthz 200，发布窗口无 executing 中断。回滚 `releases/20261027-d0df76e`。
+
 - 2026-10-27 14:48：发布 `d20332a`（基于 `c530add`），空调巡检事实拆分：分数度设定值读数不再判为字段不足（25.5<26 可调），ac_inspection 设备行新增 afterSetpoint 记录下发后权威快照回读值，前端据此显示「已下发调到26℃ · 平台回读 X℃」而非把指令目标写成设备事实；节能估算放行分数度调前值。Runtime 定向 16/16、typecheck、云端构建哈希与本地一致（ac-inspection/scanner/report-summary 三模块；server.js 入口未变 `126a3994…`）。备份 `20261027-acfact-d20332a`，无 schema 变更；发布前 executing 阶段 0，前后 tasks49/plans10/phases197/reports11/notifs43 一致，quick_check=ok，公网三域 healthz 200。回滚 `releases/20261027-c530add`。
 
 - 2026-10-27 14:19：发布`67646ba`（基于`ca38bb1`），安全台账「按当前位置查找监控」候选查询改走监控授权范围（`loadCompanyDeviceCatalog` 加 `videoOnly: true`），不再请求空调/照明/门禁等无关目录拖耗15秒预算。发布前磁盘100%（44个旧release约19G），清理后仅保留`ca38bb1`与回滚目标`efa1fb9`，journal截至500M。备份`20261027-1421-safety-camera-67646ba`，无schema变更；前后任务49/计划10/阶段195/报告11/通知43一致，quick_check=ok。server.js哈希`126a3994…`（入口未变，与efa1fb9相同），实际变更模块`safety/events.js`哈希`317678d3…`；公网三域healthz均200<0.25s。真实台账候选复验待确认，见[交接](2026-10-27-safety-camera-candidate-release-handoff.md)。
