@@ -44,16 +44,7 @@
        <text class="zvalue">{{ zone.value }}</text>
       </button>
      </view>
-     <view class="entry-row">
-      <button class="entry-cell" hover-class="zone--pressed" @tap="openCatalog">
-       <text>设备目录</text>
-       <text class="go">{{ devicesLoaded ? catalogDevices.length + ' 台 ›' : (devicesLoading || loading) ? '读取中' : devicesError ? '暂不可用' : '查看 ›' }}</text>
-      </button>
-      <button class="entry-cell" hover-class="zone--pressed" @tap="openTaskSchedule({ view: 'inbox', date: taskToday(), task: null })">
-       <text>通知中心<text v-if="simpleUnread" class="eunread">{{ simpleUnread > 99 ? '99+' : simpleUnread }}</text></text>
-       <text class="go">›</text>
-      </button>
-     </view>
+
      <button class="agent-cta" hover-class="zone--pressed" @tap="openCompanyAgent()">
       <view class="cta-orb" />
       <view class="cta-copy"><text class="cta-t">直接问助手</text><text class="cta-s">比如「上周哪天用电最多」</text></view>
@@ -263,7 +254,9 @@ const ZONE_ICONS = {
  energy: svgIcon('<path d="M13.2 2.5 5.5 13.2h5.6l-1.3 8.3 8.7-11.7h-5.9l.6-7.3z"/>', '#9a7b2d'),
  safetyOk: svgIcon('<path d="M12 3l7 2.8v5.5c0 4.7-3 7.8-7 9.2-4-1.4-7-4.5-7-9.2V5.8L12 3z"/><path d="M9 11.8l2.2 2.2 4-4.2"/>', '#2e6b52'),
  safetyWarn: svgIcon('<path d="M12 3l7 2.8v5.5c0 4.7-3 7.8-7 9.2-4-1.4-7-4.5-7-9.2V5.8L12 3z"/><path d="M12 8.5v4"/><circle cx="12" cy="15.6" r=".9" fill="#a27128" stroke="none"/>', '#a27128'),
- task: svgIcon('<circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.9"/>', '#2e6b52')
+ task: svgIcon('<circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.9"/>', '#2e6b52'),
+ catalog: svgIcon('<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>', '#2e6b52'),
+ inbox: svgIcon('<path d="M12 4a5.5 5.5 0 0 1 5.5 5.5c0 3.4.8 4.9 1.7 6.4H4.8c.9-1.5 1.7-3 1.7-6.4A5.5 5.5 0 0 1 12 4z"/><path d="M10 19a2 2 0 0 0 4 0"/>', '#2e6b52')
 }
 const envError = computed(() => Boolean(sectionErrors.value.environment) || snapshot.value?.errors?.some(row => row.area === 'environment'))
 const simpleEnv = computed(() => {
@@ -328,11 +321,23 @@ const simpleVerdict = computed(() => {
  if (!issues.length) return { state: 'ok', mark: '✓', text: '园区一切正常', sub: '环境 · 用电 · 安全 均正常' }
  return { state: 'warn', mark: '!', text: issues[0], sub: issues.slice(1).join(' · ') || '点下方区块查看详情' }
 })
+const simpleCatalog = computed(() => {
+ if (devicesError.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
+ if (!devicesLoaded.value) return { warn: false, pill: '读取中', status: '更新中', value: '—' }
+ return { warn: false, pill: '正常', status: `${catalogDevices.value.length} 台`, value: `${KIND_CELLS.length} 类设备` }
+})
+const simpleInbox = computed(() => {
+ if (!simpleTasksLoaded.value) return { warn: false, pill: '读取中', status: '更新中', value: '任务与报告' }
+ if (simpleUnread.value > 0) return { warn: true, pill: '待查看', status: `${simpleUnread.value > 99 ? '99+' : simpleUnread.value} 条未读`, value: '任务与报告' }
+ return { warn: false, pill: '正常', status: '无未读', value: '任务与报告' }
+})
 const simpleZones = computed(() => [
  { key: 'environment', name: '环 境', icon: ZONE_ICONS.environment, ...simpleEnv.value, go: () => openObservation('environment') },
  { key: 'energy', name: '用 电', icon: ZONE_ICONS.energy, ...simpleEnergy.value, go: () => openEnergy() },
  { key: 'safety', name: '安 全', icon: simpleSafety.value.warn ? ZONE_ICONS.safetyWarn : ZONE_ICONS.safetyOk, ...simpleSafety.value, go: () => openObservation('alerts') },
- { key: 'task', name: '任 务', icon: ZONE_ICONS.task, ...simpleAgenda.value, go: () => openTaskSchedule({ view: 'all', date: taskToday(), task: null }) }
+ { key: 'task', name: '任 务', icon: ZONE_ICONS.task, ...simpleAgenda.value, go: () => openTaskSchedule({ view: 'all', date: taskToday(), task: null }) },
+ { key: 'catalog', name: '设 备', icon: ZONE_ICONS.catalog, ...simpleCatalog.value, go: openCatalog },
+ { key: 'inbox', name: '通 知', icon: ZONE_ICONS.inbox, ...simpleInbox.value, go: () => openTaskSchedule({ view: 'inbox', date: taskToday(), task: null }) }
 ])
 const observationTitle = computed(() => ({ environment: '环境历史趋势', energy: '电表统计', alerts: '安全事件台账' })[observationType.value] || '')
 const observation = computed(() => {
@@ -537,11 +542,7 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .zstatus { display:block; margin-top:4px; font-size:19px; font-weight:650; color:#293f31; }
 .zstatus.warn { color:#9a784a; }
 .zvalue { display:block; margin-top:3px; font-family:Georgia,"Songti SC",serif; font-size:14.5px; color:#5f7060; font-variant-numeric:tabular-nums; }
-.entry-row { margin-top:16px; display:flex; border-top:1px solid #ece8d9; }
-.entry-cell { flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:13px 4px 13px 2px; font-size:12.5px; color:#5f7060; text-align:left; }
-.entry-cell + .entry-cell { padding-left:14px; border-left:1px solid #ece8d9; }
-.entry-cell .go { color:#176b54; flex-shrink:0; }
-.eunread { display:inline-block; min-width:17px; margin-left:6px; padding:1px 5px; border-radius:9px; background:#176b54; color:#fff; font-size:10px; text-align:center; }
+
 .agent-cta { margin-top:14px; display:flex; align-items:center; gap:12px; width:100%; padding:13px 16px; border-radius:18px; background:linear-gradient(180deg,#fbfcfb,#f1f5f1); box-shadow:0 6px 18px rgba(28,57,42,.12), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(26,55,43,.12); text-align:left; }
 .cta-orb { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 35% 28%, #58b48c, #176b54 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 3px 9px rgba(23,107,84,.32); }
 .cta-t { display:block; font-size:16px; font-weight:650; color:#176b54; }
