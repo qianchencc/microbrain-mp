@@ -1,18 +1,17 @@
 import globalConfig from '@/config'
 import { HTTP_CODE, SERVER_CODE } from './codeMap'
-import { storageGet } from '@/utils/storage.js'
 import { getToken } from '@/utils/auth'
 import { useUserStoreHook } from '@/store/modules/user'
 
 const createRequest = (options = {}) => {
-	const headers = {}
-	const request = {}
-	request.globalRequest = (url, method, data) => {
-		const token = getToken()
-		const district = useUserStoreHook().getDistrict?.id
-		headers['Authorization'] = token
-		if (district) headers['tenantCode'] = district
-		return uni.request({
+  const request = {}
+  request.globalRequest = (url, method, data) => {
+    const token = getToken()
+    const district = useUserStoreHook().getDistrict?.id
+    const headers = {}
+    if (token) headers.Authorization = token
+    if (district) headers.tenantCode = district
+    return uni.request({
 			url: options.baseUrl ? options.baseUrl + url : globalConfig.baseUrl + url,
 			method,
 			data: data,

@@ -60,22 +60,17 @@ export const useUserStore = defineStore({
 				client_id: '2460feb0ab054e1e',
 				client_secret: 'smaEMjAyMzAzMTExNTI5MzgGQd'
 			}
-			login(data).then(async res => {
-					if (res) {
-						const { token_type, access_token, expires_in } = res.content
-						const token = `${token_type} ${access_token}`
-						const expires = Math.ceil(expires_in / 60 / 60 / 24)
-						setToken(res.content)
-						this.authorized = true
-						usePermissionStoreHook().setAuthority()
-						uni.reLaunch({
-							url: '/pages/index/index'
-						})
-					}
-				})
-				.catch(error => {
-					reject(error)
-				})
+			const res = await login(data)
+			if (!res?.content?.access_token || !res.content.token_type) {
+				throw new Error('客户登录失败')
+			}
+			setToken(res.content)
+			this.authorized = true
+			await usePermissionStoreHook().setAuthority()
+			uni.reLaunch({
+				url: '/pages/index/index'
+			})
+			return res
 		},
 		async thirdLogin(code) {
 			if (!code) return

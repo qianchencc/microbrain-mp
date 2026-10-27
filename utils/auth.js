@@ -18,7 +18,6 @@ export function setToken(data) {
 	const dataString = `${token_type} ${access_token}`
 	useUserStoreHook().SET_TOKEN(dataString)
 	storageSet(TokenKey, dataString)
-	uni.setStorageSync('authorized-token', dataString)
 	if (Number.isFinite(Number(expires_in)) && Number(expires_in) > 0) {
 		storageSet(TokenExpiresKey, Date.now() + Number(expires_in) * 1000)
 	}
