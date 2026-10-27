@@ -11,3 +11,6 @@ menu.sql
 .agents/
 .codex/
 .recovery/
+
+# Word/Office 打开文档时的所有者锁文件，不是交付物
+~$*
