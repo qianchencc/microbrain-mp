@@ -26,6 +26,19 @@ export function taskCalendarMarks(tasks, from, to) {
  return marks
 }
 
+// 日历只刷新今天：按任务身份替换当天行，其余日期保留已读结果，不重取整格。
+export function mergeDayTasks(rows, fresh, date) {
+ const merged = new Map(rows.map(row => [row.taskId, row])), todayIds = new Set(fresh.map(row => row.taskId))
+ for (const row of rows) if (!todayIds.has(row.taskId) && tasksOnDate([row], date).length) merged.delete(row.taskId)
+ for (const row of fresh) merged.set(row.taskId, row)
+ return [...merged.values()]
+}
+// 过去日不会新增任务：网格不含今天时不再定时；含今天时只监视今天（执行中 5 秒，其他 30 秒）。
+export function calendarPollDelay(rows, today, from, to) {
+ if (!from || !to || today < from || today > to) return 0
+ return rows.some(row => row.status === 'executing' && tasksOnDate([row], today).length) ? 5000 : 30000
+}
+
 export const taskSettled = task => ['completed', 'verified', 'observed', 'cancelled', 'satisfied', 'expired'].includes(task.status) || taskNeedsDetails(task.status)
 
 // 任务列表窗口按上海自然日划分，与首页议程同键：进入 Agent 时预取，打开 Sheet 直接命中。

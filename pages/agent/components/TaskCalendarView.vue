@@ -19,11 +19,11 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onHide, onShow } from '@dcloudio/uni-app'
-import { listAgentTasks } from '@/apis/agent'
+import { peekAgentCalendar, readAgentCalendar, readAgentCalendarDay } from '@/apis/agent'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionCalendar from './RegionCalendar.vue'
 import { calendarWindow, shiftDate, validCalendarDate } from '../region-calendar.mjs'
-import { taskToday, taskDayTime, taskCalendarMarks, tasksOnDate, taskLabel, taskAbnormal } from '../task-calendar.mjs'
+import { taskToday, taskDayTime, taskCalendarMarks, tasksOnDate, taskLabel, taskAbnormal, mergeDayTasks, calendarPollDelay } from '../task-calendar.mjs'
 const props = defineProps({ active: Boolean, compact: Boolean, date: String, refreshKey: Number, source: { type: String, default: 'company' } })
 const emit = defineEmits(['date-change', 'select-task', 'open-date', 'refreshed', 'issue'])
 const today = ref(taskToday()), selected = ref(validCalendarDate(props.date) ? props.date : today.value)
@@ -34,34 +34,36 @@ const marks = computed(() => taskCalendarMarks(tasks.value, window.value.from, w
 const dayTasks = computed(() => tasksOnDate(tasks.value, selected.value, props.compact))
 const visibleTasks = computed(() => props.compact ? dayTasks.value.slice(0, 2) : dayTasks.value)
 let generation = 0, timer = 0, visible = true, loadedScope = ''
-let inFlight = null, loadedAt = 0, loadedKey = ''
 function clock(task) { return taskDayTime(task, selected.value) }
 function selectDate(date) { selected.value = date; emit('date-change', date) }
 function changeMonth(value) { if (month.value !== value) month.value = value }
 function showError() { emit('issue', { title: '任务暂未加载', reason: error.value }) }
 function stop() { ++generation; clearTimeout(timer); loading.value = false }
+function schedule() {
+ clearTimeout(timer)
+ const delay = calendarPollDelay(tasks.value, today.value, window.value.from, window.value.to)
+ if (delay) timer = setTimeout(pollToday, delay)
+}
+const calendarRange = queryMonth => {
+ const range = calendarWindow(queryMonth)
+ return { from: `${range.from}T00:00:00+08:00`, to: `${shiftDate(range.to, 1)}T00:00:00+08:00` }
+}
 async function load(force = false) {
  if (!props.active || !visible) return
  clearTimeout(timer)
  const current = ++generation, source = props.source, queryMonth = month.value
+ const range = calendarRange(queryMonth), historical = queryMonth < today.value.slice(0, 7)
  loading.value = true; error.value = ''
- let scope = '', delay = 30000
+ let scope = ''
  try {
   scope = getAgentStorageScope()
   if (scope !== loadedScope) { tasks.value = []; loaded.value = false; loadedScope = scope }
-  const range = calendarWindow(queryMonth)
-  const key = JSON.stringify([scope, source, queryMonth, props.refreshKey])
-  const interval = tasks.value.some(task => task.status === 'executing') ? 5000 : 30000
-  delay = interval
-  if (!force && loaded.value && loadedKey === key && Date.now() - loadedAt < interval) { delay = Math.max(1, interval - (Date.now() - loadedAt)); return }
-  if (inFlight?.key !== key) {
-   const promise = listAgentTasks({ source, from: `${range.from}T00:00:00+08:00`, to: `${shiftDate(range.to, 1)}T00:00:00+08:00` })
-   inFlight = { key, promise }
-   promise.then(() => { if (inFlight?.promise === promise) inFlight = null }, () => { if (inFlight?.promise === promise) inFlight = null })
-  }
-  const result = await inFlight.promise
+  // 先落位再对齐：历史月永久命中，当月与未来月一分钟内命中；打开日历不等于重新读取整格。
+  const saved = peekAgentCalendar({ source, ...range, historical })
+  if (saved) { tasks.value = saved.tasks || []; loaded.value = true; loading.value = false }
+  const result = await readAgentCalendar({ source, ...range, historical, force })
   if (current !== generation || source !== props.source || scope !== getAgentStorageScope() || !props.active || !visible) return
-  tasks.value = result.tasks || []; loaded.value = true; loadedAt = Date.now(); loadedKey = key
+  tasks.value = result.tasks || []; loaded.value = true
   emit('refreshed')
  } catch (cause) {
   if (current !== generation) return
@@ -70,10 +72,22 @@ async function load(force = false) {
   if (cause.data || !scope || scope !== liveScope) { tasks.value = []; loaded.value = false }
   error.value = cause.message || '日程暂不可用'
  } finally {
-  if (current === generation) {
-   loading.value = false
-   if (props.active && visible) timer = setTimeout(() => load(true), delay)
-  }
+  if (current === generation) { loading.value = false; schedule() }
+ }
+}
+// 定时只刷新今天，并按任务身份合并进整格：过去日不会新增任务，整格不再重复读取。
+async function pollToday() {
+ if (!props.active || !visible) return
+ const current = ++generation, source = props.source, date = today.value
+ try {
+  const result = await readAgentCalendarDay({ source, from: `${date}T00:00:00+08:00`, to: `${shiftDate(date, 1)}T00:00:00+08:00`, force: true })
+  if (current !== generation || source !== props.source || !props.active || !visible) return
+  tasks.value = mergeDayTasks(tasks.value, result.tasks || [], date)
+ } catch (cause) {
+  if (current !== generation) return
+  error.value = cause.message || '日程暂不可用'
+ } finally {
+  if (current === generation) schedule()
  }
 }
 watch(() => props.date, value => { if (validCalendarDate(value)) selected.value = value })

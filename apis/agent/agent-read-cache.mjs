@@ -19,13 +19,15 @@ export function createAgentReadCache(getScope, now = Date.now) {
   entries.set(key, { value: copy(value), at: now() })
   if (entries.size > MAX_ENTRIES) entries.delete(entries.keys().next().value)
  }
- function peek(key) {
+ // 历史日历月等不会自变的窗口按调用方给的 TTL 复用；未给时沿用 60 秒 / 5 分钟口径。
+ function peek(key, options = {}) {
+  const freshMs = options.freshMs ?? FRESH_MS, staleMs = options.staleMs ?? PLACEHOLDER_MS
   scope()
   const entry = entries.get(key)
   if (!entry) return null
   const age = now() - entry.at
-  if (age < 0 || age >= PLACEHOLDER_MS) { entries.delete(key); return null }
-  return { value: copy(entry.value), fresh: age < FRESH_MS }
+  if (age < 0 || age >= staleMs) { entries.delete(key); return null }
+  return { value: copy(entry.value), fresh: age < freshMs }
  }
  function epochOf(key) { return epochs.get(key) || 0 }
  // 定点作废：写操作只丢弃受影响的读取，不连带清空无关概览快照。
@@ -36,9 +38,10 @@ export function createAgentReadCache(getScope, now = Date.now) {
   for (const key of [...entries.keys()]) if (hit(key)) entries.delete(key)
   for (const key of jobs.keys()) if (hit(key)) epochs.set(key, epochOf(key) + 1)
  }
- async function read(key, load, force = false) {
+ async function read(key, load, options = {}) {
+  const force = options === true || options.force === true
   const requestScope = scope(), version = generation
-  const saved = peek(key)
+  const saved = peek(key, options)
   if (!force && saved?.fresh) return saved.value
   let job = jobs.get(key)
   if (!job) {

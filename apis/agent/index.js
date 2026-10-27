@@ -43,7 +43,7 @@ const request = async (url, method, data, timeout) => {
   if (changesDevices) agentReadCache.clear()
  }
 }
-const readSnapshot = (url, timeout, options = {}) => agentReadCache.read(globalConfig.agentUrl + url, () => request(url, 'GET', undefined, timeout), options.force === true)
+const readSnapshot = (url, timeout, options = {}) => agentReadCache.read(options.key || globalConfig.agentUrl + url, () => request(url, 'GET', undefined, timeout), options)
 const queryString = query => Object.entries(query).filter(([, value]) => value !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&')
 
 export const createConversation = (source = 'office') => request('/agent/conversations', 'POST', conversationSourceBody(source))
@@ -62,13 +62,23 @@ export const setTaskPlanStatus = (planId, version, operation, source = 'office',
 export const listAgentTasks = ({ source = 'office', from, to } = {}) => request(`/agent/tasks?source=${encodeURIComponent(source)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 // 两端任务、周期安排与通知列表共用同身份读取快照：先落位再对齐，60 秒内复用，
 // 过期占位最多保留 5 分钟；写操作由 request 定点作废，不替代 fresh 写入核验。
-// 任务日历（TaskCalendarView）按 5/30 秒自行轮询，不走这层快照。
 const agentTasksUrl = ({ source = 'company', from, to }) => '/agent/tasks?' + queryString({ source, from, to })
 const agentPlansUrl = ({ source = 'company' }) => '/agent/task-plans?' + queryString({ source })
 const agentNotificationsUrl = ({ source = 'company', limit = 30, before }) => '/agent/notifications?' + queryString({ source, limit, before })
 const peekSnapshot = url => { try { return agentReadCache.peek(globalConfig.agentUrl + url)?.value ?? null } catch { return null } }
 export const readAgentTasks = ({ source = 'company', from, to, force = false } = {}) => readSnapshot(agentTasksUrl({ source, from, to }), undefined, { force })
 export const peekAgentTasks = ({ source = 'company', from, to } = {}) => peekSnapshot(agentTasksUrl({ source, from, to }))
+// 日历月窗口另立快照键：历史月不会新增任务（任务不能创建到过去），永久复用；
+// 当月与未来月 60 秒。打开日历只刷新今天（#calendar-day），不重取整格。
+const calendarUrl = ({ source = 'company', from, to }, suffix = '#calendar') => globalConfig.agentUrl + agentTasksUrl({ source, from, to }) + suffix
+const calendarTtl = historical => historical ? { freshMs: Infinity, staleMs: Infinity } : {}
+export const readAgentCalendar = ({ source = 'company', from, to, historical = false, force = false } = {}) =>
+ readSnapshot(agentTasksUrl({ source, from, to }), undefined, { key: calendarUrl({ source, from, to }), ...calendarTtl(historical), force })
+export const peekAgentCalendar = ({ source = 'company', from, to, historical = false } = {}) => {
+ try { return agentReadCache.peek(calendarUrl({ source, from, to }), calendarTtl(historical))?.value ?? null } catch { return null }
+}
+export const readAgentCalendarDay = ({ source = 'company', from, to, force = false } = {}) =>
+ readSnapshot(agentTasksUrl({ source, from, to }), undefined, { key: calendarUrl({ source, from, to }, '#calendar-day'), force })
 export const readAgentPlans = ({ source = 'company', force = false } = {}) => readSnapshot(agentPlansUrl({ source }), undefined, { force })
 export const peekAgentPlans = ({ source = 'company' } = {}) => peekSnapshot(agentPlansUrl({ source }))
 export const AGENT_NOTIFICATION_PAGE = 30
