@@ -1,6 +1,6 @@
 # 连续委托执行地图
 
-**Status:** in-progress（2026-10-27：十票已建立；01已适配当前生产事件存储、03已实现并验收，均待发布；02a一般目录失败意图保留已提交，02b引用恢复未完成；04–10未关闭）。
+**Status:** in-progress（2026-10-27：01与03已随 `f174632` 发布；02a一般目录失败意图保留同批上线，02b引用恢复未完成；04–10未关闭）。
 
 ## 唯一入口与首个业务
 
@@ -10,7 +10,7 @@
 
 2026-10-25 起草基线：MP f7a9ca3；Runtime f5fe8d1。起草前 MP 无未提交修改。Runtime 在同级独立仓库 `/Users/qianchen/works/新发展/iot-agent-runtime`，MP 为 `/Users/qianchen/works/新发展/mp`。后续开工前必须分别重新查 git status/log/diff，当前本文不是生产版本核验。
 
-2026-10-27 已现场核验并将失败答复独立发布为生产 `d0df76e`（基于 `d20332a`），备份、构建哈希、健康及真实只读冒烟见[失败答复发布记录](../../../plan/2026-10-25-actionable-failure-responses-handoff.md)。这不等于自动承接完备。票03源码 `412d0ac` 仍待发布；票01不能覆盖当前生产 `turn_events` 迁移而恢复旧整轮写法。Runtime 原有未跟踪 `.scratch/agent-location-groups/`、`:memory:.sessions`、`apps/runtime/:memory:.sessions` 不属于本功能，不清理/提交。
+2026-10-27 已先将失败答复独立发布为 `d0df76e`，见[首批记录](../../../plan/2026-10-25-actionable-failure-responses-handoff.md)；16:47再基于并行更新的 `f8c6ba4` 发布01/03/02a为 `f174632`，保留空调目标参数化和 `turn_events` 迁移，未用旧源码覆盖生产。备份、哈希、在途门禁及真实只读冒烟见[发布规范第11节](../../../plan/2026-10-23-runtime-cloud-release-spec.md)。这仍不等于连续委托整组完备。Runtime 原有未跟踪 `.scratch/agent-location-groups/`、`:memory:.sessions`、`apps/runtime/:memory:.sessions` 不属于本功能，不清理/提交。
 
 设计依据：[设计审视](../../docs/research/2026-10-25-agent-continuation-design-audit.md)、[社区一手来源](../../docs/research/2026-10-25-agent-continuation-community-sources.md)、[反例记录](../../docs/research/agent-error-recovery-acceptance/continuation-audit-2026-10-25.json)。历史“应如何继续”由本规格细化为待批准票据，不反向修改旧证据结论。
 
@@ -62,7 +62,7 @@ flowchart LR
   T09 --> T10
 ```
 
-一次一票推进，不新增语义阻塞边。2026-10-27 按用户“先上线已完成部分，再补必要开发”要求，先独立发布失败建议，再完成无02依赖的03（`412d0ac`）、01生产事件存储适配（`7e7c24e`）及02a一般目录失败意图保留（`7e1e7ef`）。这三片进入下一批发布门禁；02b引用恢复及04–10继续开发，不能将02a视为整票02完成。产品代码预估总量750–1420行左右（逐票上界为预警，不是需求或准确承诺），不含必要测试/证据；优先复用和删除重复路径。如需要广泛新状态机/队列，先回到业务收窄，不凭“统一架构”扩范围。
+一次一票推进，不新增语义阻塞边。2026-10-27 按用户“先上线已完成部分，再补必要开发”要求，先独立发布失败建议，再完成无02依赖的03（`412d0ac`）、01生产事件存储适配（`7e7c24e`）及02a一般目录失败意图保留（`7e1e7ef`），三片已随 `f174632` 上线。02b引用恢复及04–10继续开发，不能将02a视为整票02完成。产品代码预估总量750–1420行左右（逐票上界为预警，不是需求或准确承诺），不含必要测试/证据；优先复用和删除重复路径。如需要广泛新状态机/队列，先回到业务收窄，不凭“统一架构”扩范围。
 
 ## 新旧票据承接
 
