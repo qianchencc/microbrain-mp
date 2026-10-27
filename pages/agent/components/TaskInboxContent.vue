@@ -2,8 +2,9 @@
   <view class="inbox-content">
    <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
    <scroll-view :style="{ display: selected || issue ? 'none' : 'block' }" class="inbox-scroll" scroll-y enhanced :show-scrollbar="false" @scrolltolower="load(false)">
-    <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button v-if="unreadCount" class="inbox-markall" :disabled="markingAll" @tap="markAllSeen">全部已读</button><button class="inbox-refresh" :disabled="loading" @tap="load(true)">刷新</button></view>
-    <view class="list-summary"><text>任务结束消息</text><text>{{ unreadCount }} 条未读</text></view>
+    <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button v-if="unreadCount || markingAll" class="inbox-markall" :loading="markingAll" :disabled="markingAll" @tap="markAllSeen">{{ markingAll ? '正在标记…' : '全部已读' }}</button><button class="inbox-refresh" :disabled="loading || markingAll" @tap="load(true)">刷新</button></view>
+    <view class="list-summary"><text>任务结束消息</text><text v-if="markingAll" class="markall-status">正在将通知标为已读…</text><text>{{ unreadCount }} 条未读</text></view>
+    <view v-if="markAllError" class="markall-error"><TaskErrorNotice :message="markAllError" @details="showIssue" /><button @tap="retryMarkAllSeen">重试</button></view>
     <view v-if="loading && !notifications.length" class="state-message">加载中…</view>
     <view v-else-if="error && !notifications.length" class="state-message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load(true)">重试</button></view>
     <view v-else-if="!visibleNotifications.length" class="state-message">{{ filter === 'unread' ? nextCursor ? '已加载的消息中没有未读消息' : '没有未读消息' : filter === 'abnormal' ? nextCursor ? '已加载的消息中没有待查看结果' : '没有待查看结果消息' : '任务结束后，结果消息会出现在这里' }}</view>
@@ -48,10 +49,13 @@ const filters = [{ value: 'all', label: '全部' }, { value: 'unread', label: '�
 const visibleNotifications = computed(() => notifications.value.filter(item => filter.value === 'unread' ? !item.readAt : filter.value === 'abnormal' ? taskNeedsDetails(item.outcome) : true))
 watch(() => [selected.value, issue.value, navigation.value.title, navigation.value.canBack], () => emit('navigation', { title: issue.value ? '查看原因' : navigation.value.title || (selected.value ? '任务详情' : '通知中心'), canBack: Boolean(selected.value || issue.value) }), { immediate: true })
 const unreadCount = ref(0), nextCursor = ref('')
-const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref(''), markingAll = ref(false)
-let requestId = 0, loadedScope = '', pageVisible = true
-function resetIdentity() { issue.value = null; notifications.value = []; selected.value = null; nextCursor.value = ''; unreadCount.value = 0; markError.value = ''; navigation.value = { title: '', canBack: false }; publishUnreadCount() }
-onHide(() => { pageVisible = false; ++requestId; loading.value = false; loadingMore.value = false })
+const loading = ref(false), loadingMore = ref(false), error = ref(''), markError = ref(''), markAllError = ref(''), markingAll = ref(false)
+let requestId = 0, bulkId = 0, loadedScope = '', pageVisible = true
+function safeScope() { try { return getAgentStorageScope() } catch { return '' } }
+// 批量已读与列表读取使用不同代次：关闭/隐藏/换身份只作废旧批量操作，不让迟到结果卡死按钮或污染新范围。
+function invalidateBulk() { ++bulkId; markingAll.value = false }
+function resetIdentity() { issue.value = null; notifications.value = []; selected.value = null; nextCursor.value = ''; unreadCount.value = 0; markError.value = ''; markAllError.value = ''; invalidateBulk(); marking.clear(); seenFailed.clear(); navigation.value = { title: '', canBack: false }; publishUnreadCount() }
+onHide(() => { pageVisible = false; ++requestId; invalidateBulk(); loading.value = false; loadingMore.value = false })
 onShow(() => { pageVisible = true; if (props.open) void load(true) })
 const marking = new Set(), seenFailed = new Set()
 
@@ -65,7 +69,7 @@ function dateTime(value) {
 function publishUnreadCount() { emit('unread-count', unreadCount.value) }
 
 async function load(reset) {
- if (!props.open || !pageVisible) return
+ if (!props.open || !pageVisible || markingAll.value) return
  if (!reset && (loading.value || loadingMore.value || !nextCursor.value)) return
  const current = reset ? ++requestId : requestId
  if (reset) { loading.value = true; loadingMore.value = false; error.value = '' }
@@ -137,26 +141,49 @@ function retryMarkSeen() {
  void onReportLoaded(notification.taskId)
 }
 async function markAllSeen() {
- if (markingAll.value || !unreadCount.value) return
- const current = ++requestId
+ if (markingAll.value || !unreadCount.value || !props.open || !pageVisible) return
+ // 点击前会话已切换或身份失效：丢弃旧范围的列表与计数，按当前身份重新加载，绝不带旧范围发出已读请求。
+ let scope = ''
+ try { scope = getAgentStorageScope() } catch { scope = '' }
+ if (!scope || scope !== loadedScope) {
+  resetIdentity()
+  if (scope) void load(true)
+  else error.value = '当前登录状态不可用，请稍后重试'
+  return
+ }
+ const current = ++bulkId
+ // 批量操作开始即作废旧列表读取并清掉悬挂的加载标记，避免迟到的列表结果覆盖已读结果。
+ ++requestId
+ loading.value = false
+ loadingMore.value = false
  markingAll.value = true
+ markAllError.value = ''
+ const source = props.source
  try {
-  const scope = getAgentStorageScope(), source = props.source
   const result = await markAllNotificationsSeen(source)
-  if (current !== requestId || !props.open || !pageVisible || source !== props.source || scope !== getAgentStorageScope()) return
+  if (current !== bulkId || !props.open || !pageVisible || source !== props.source || scope !== safeScope()) return
   notifications.value = notifications.value.map(item => item.readAt ? item : { ...item, readAt: result.readAt })
   if (selected.value && !selected.value.readAt) selected.value = { ...selected.value, readAt: result.readAt }
   unreadCount.value = 0
   publishUnreadCount()
  } catch (cause) {
-  if (current === requestId) error.value = cause.message || '暂时没能标记已读，请重试'
- } finally { if (current === requestId) markingAll.value = false }
+  if (current === bulkId && props.open && pageVisible && source === props.source && scope === safeScope()) markAllError.value = cause.message || '暂时没能标记已读，请重试'
+ } finally {
+  if (current === bulkId) {
+   markingAll.value = false
+   // 请求途中身份/范围已切换：旧身份列表不能残留，按当前可用身份重新加载。
+   if (scope !== safeScope()) { resetIdentity(); if (props.open && pageVisible) void load(true) }
+  }
+  // 旧批量操作在关闭/重开后迟到完成：同范围仍在展示且没有更新的批量操作时，用一次新列表请求对齐实际已读状态。
+  else if (scope && props.open && pageVisible && source === props.source && scope === safeScope() && !markingAll.value) void load(true)
+ }
 }
+function retryMarkAllSeen() { markAllError.value = ''; void markAllSeen() }
 
 watch(() => [props.open, props.source], ([value, source], previous) => {
  if (previous && source !== previous[1]) resetIdentity()
  if (value) void load(true)
- else { issue.value = null; ++requestId; loading.value = false; loadingMore.value = false; backToList() }
+ else { issue.value = null; ++requestId; invalidateBulk(); loading.value = false; loadingMore.value = false; backToList() }
 }, { immediate: true })
 </script>
 
@@ -186,6 +213,9 @@ button::after { border:0; }
 .list-error { color:#a15343; }
 .mark-error { flex-shrink:0; padding:7px 16px; display:flex; align-items:center; gap:10px; background:#fbf2e6; color:#936827; font-size:11px; }
 .mark-error button { margin:0 0 0 auto; flex-shrink:0; }
+.markall-status { color:#176b54; }
+.markall-error { padding:4px 2px 8px; display:flex; align-items:center; gap:10px; color:#a15343; font-size:11px; }
+.markall-error button { margin:0 0 0 auto; flex-shrink:0; color:#176b54; font-size:12px; }
 .task-content-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
 .inbox-filters { display:flex; gap:8px; padding:6px 0 12px; }
 .inbox-filters button { padding:7px 12px; border-radius:16px; font-size:11px; color:#7e9083; }
