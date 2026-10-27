@@ -348,7 +348,7 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
   coverage: { adjusted: 5, estimated: 5 }, reason: '按调前设定温度与经验参数估算，非电表实测' },
   { total: 6, adjusted: 5, satisfied: 1, skipped: 0, failed: 0, unknown: 0, unverified: 0 },
   [{ observations: [{ type: 'ac_inspection', mode: 'adjust_to_26', devices: [
-   { deviceId: 'd1', name: '空调一', setpoint: 24, disposition: 'adjusted' },
+   { deviceId: 'd1', name: '空调一', setpoint: 24, disposition: 'adjusted', afterSetpoint: 26 },
    { deviceId: 'd2', name: '空调二', setpoint: 26, disposition: 'not_needed' }] }] }])
  assert.equal(assumed.kind, 'assumption')
  assert.equal(assumed.text, '预计节电约 2.6 度 · 折合电费约 ¥2.1')
@@ -358,7 +358,7 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
  assert.match(assumed.notes[0], /调前平均 24\.5℃.*不代表已实测节电/)
  assert.match(assumed.notes[1], /2026-10-22 12:00 至 2026-10-22 14:00/)
  assert.deepEqual(assumed.devices.rows, [
-  { deviceId: 'd1', name: '空调一', before: '24℃', after: '26℃', tone: 'ok' },
+  { deviceId: 'd1', name: '空调一', before: '24℃', after: '平台回读 26℃', tone: 'ok' },
   { deviceId: 'd2', name: '空调二', before: '26℃', after: '无需调整', tone: 'muted' }])
 
  const proposalSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskProposalCard.vue'), 'utf8')

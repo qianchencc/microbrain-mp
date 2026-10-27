@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { isObservationKind, regionDeviceGroups } from '../pages/agent/region-device-view.mjs'
 import { applyEvent, createTurn, restoreTurns } from '../pages/agent/conversation.mjs'
-import { energyStale, videoViewLabel, environmentCells, fmtShanghaiDateTime } from '../pages/agent/observation-view.mjs'
+import { acInspectionMeta, acReadbackText, energyStale, videoViewLabel, environmentCells, fmtShanghaiDateTime } from '../pages/agent/observation-view.mjs'
 
 const videoDevice = { id: 'video-1', kind: 'video', name: '视频监控-26楼走廊', location: '26楼运营走廊' }
 const envDevice = { id: 'env-1', kind: 'environment', name: '环境传感器-26楼', location: '26楼' }
@@ -107,6 +107,21 @@ for (const type of ['energy_comparison', 'company_energy', 'energy_report']) tes
  const restored = restoreTurns([{ id: 't1', content: '比较', events: [event('pending'), event('failed')] }, { id: 't2', content: '解读', events: [event('ready')] }])
  assert.equal(restored.flatMap(t => t.observations).length, 1)
  assert.equal(restored[0].observations[0].blocks[0].report.explanation.status, 'ready')
+})
+
+test('空调巡检行分开展示调前读数与平台回读，指令目标不冒充设备实际结果', () => {
+ const adjusted = { name: '空调-机房前', power: 'on', mode: 'cool', setpoint: 25, disposition: 'adjusted', afterSetpoint: 26 }
+ assert.equal(acInspectionMeta(adjusted, 'adjust_to_26'), '已下发调到26℃ · 检查前：开机 · 制冷 · 25℃ · 平台回读 26℃')
+ const legacy = { ...adjusted, afterSetpoint: undefined }
+ assert.equal(acInspectionMeta(legacy, 'adjust_to_26'), '已下发调到26℃ · 检查前：开机 · 制冷 · 25℃', '旧记录没有回读事实时不补写温度')
+ const fractional = { name: '空调-机房前', power: 'on', mode: 'cool', setpoint: 25.5, disposition: 'adjusted', afterSetpoint: 26 }
+ assert.match(acInspectionMeta(fractional, 'adjust_to_26'), /25\.5℃ · 平台回读 26℃/, '分数度调前读数按原值展示')
+ const unconfirmed = { power: 'on', mode: 'cool', setpoint: 25, disposition: 'unknown', afterSetpoint: 25 }
+ assert.match(acInspectionMeta(unconfirmed, 'adjust_to_26'), /结果待确认 · 检查前：开机 · 制冷 · 25℃ · 平台回读 25℃/)
+ const skipped = { power: 'off', mode: 'cool', setpoint: 26, disposition: 'not_dispatched' }
+ assert.equal(acReadbackText(skipped), '', '未下发的设备没有回读事实')
+ assert.equal(acInspectionMeta(skipped, 'adjust_to_26'), '这次未调整 · 检查前：关机 · 制冷 · 26℃')
+ assert.equal(acInspectionMeta({ power: 'on', mode: 'cool', setpoint: 26, disposition: 'not_needed' }, 'inspect'), '无需调整 · 开机 · 制冷 · 26℃')
 })
 
 test('报告附件按保存 id 去重：重放/跨轮同一链接只更新，run.failed 不丢附件', () => {

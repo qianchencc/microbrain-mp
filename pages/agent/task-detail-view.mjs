@@ -67,7 +67,8 @@ export function readAcView(ac) {
 }
 
 // 报告设备行聚合与 report-summary 同口径：adjusted 优先，not_dispatched/unknown 逐级让位；
-// before 取设备首次出现的调前 setpoint，after 按最终处置表达，不据指令反推。
+// before 取首个 adjusted 检查点记录的调前 setpoint，after 只写平台权威快照的回读值（afterSetpoint），
+// 缺回读时如实标「目标」而不是把指令值写成设备实际结果。
 const ENERGY_DEVICE_ROW_LIMIT = 6
 function acReportDeviceRows(phases, target) {
  const seen = new Map()
@@ -76,8 +77,13 @@ function acReportDeviceRows(phases, target) {
    if (block?.type !== 'ac_inspection' || block.mode !== 'adjust_to_26') continue
    for (const device of block.devices || []) {
     const entry = seen.get(device.deviceId)
-    if (!entry) seen.set(device.deviceId, { name: device.name, before: device.setpoint, disposition: device.disposition })
-    else if (device.disposition === 'adjusted') entry.disposition = 'adjusted'
+    if (!entry) seen.set(device.deviceId, { name: device.name, before: device.setpoint, disposition: device.disposition,
+     after: device.disposition === 'adjusted' ? device.afterSetpoint : undefined })
+    else if (device.disposition === 'adjusted') {
+     if (entry.disposition !== 'adjusted') entry.before = device.setpoint
+     entry.disposition = 'adjusted'
+     if (!Number.isFinite(entry.after)) entry.after = device.afterSetpoint
+    }
     else if (device.disposition === 'not_dispatched' && entry.disposition !== 'adjusted') entry.disposition = 'not_dispatched'
     else if (device.disposition === 'unknown' && !['adjusted', 'not_dispatched'].includes(entry.disposition)) entry.disposition = 'unknown'
    }
@@ -85,7 +91,7 @@ function acReportDeviceRows(phases, target) {
  }
  const rows = [...seen.entries()].map(([deviceId, device]) => {
   const before = Number.isFinite(device.before) ? `${device.before}℃` : '—'
-  if (device.disposition === 'adjusted') return { deviceId, name: device.name, before, after: `${target}℃`, tone: 'ok' }
+  if (device.disposition === 'adjusted') return { deviceId, name: device.name, before, after: Number.isFinite(device.after) ? `平台回读 ${device.after}℃` : `目标 ${target}℃`, tone: 'ok' }
   if (device.disposition === 'not_needed') return { deviceId, name: device.name, before, after: '无需调整', tone: 'muted' }
   return { deviceId, name: device.name, before, after: { not_dispatched: '这次未调整', unknown: '结果待确认' }[device.disposition] || '未调温', tone: 'muted' }
  })

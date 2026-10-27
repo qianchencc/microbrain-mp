@@ -1,5 +1,7 @@
 // 观察面共用呈现助手（ObservationCard / 区域抽屉观察 pane）：只格式化 runtime 给出的原始事实，不编造取值。
 
+import { modeLabels } from './ac-draft.js'
+
 const OBSERVE_STALE_MS = 24 * 3600 * 1000
 
 const SAFETY_SUBTYPES = { smoke: '烟感', water: '水浸', gas: '燃气' }
@@ -87,3 +89,16 @@ export function safetySubtypeOfName(name) {
 }
 
 export const safetySubtypeText = subtype => SAFETY_SUBTYPES[subtype] || '安全'
+
+// 空调巡检/调温行：指令与回读是不同事实。adjusted 只承诺「已下发调温指令」，
+// 调后温度只写平台权威快照的回读值（afterSetpoint），不从指令目标反推设备已达 26℃；
+// 平台读数可能与现场面板（半度设定、事后手动改回）不一致，如实标注为平台回读。
+const AC_DISPOSITIONS = { adjustable: '可调', not_needed: '无需调整', unknown: '结果待确认', adjusted: '已下发调到26℃', not_dispatched: '这次未调整' }
+export const acDispositionText = device => AC_DISPOSITIONS[device.disposition] || '状态未知'
+export const acReadbackText = device => finite(device?.afterSetpoint) !== null ? `平台回读 ${device.afterSetpoint}℃` : ''
+export const acStateText = device => [device.power === 'on' ? '开机' : device.power === 'off' ? '关机' : '电源未知', modeLabels[device.mode] || device.mode || '模式未知', Number.isFinite(device.setpoint) ? `${device.setpoint}℃` : '设定未知'].join(' · ')
+export const acDotOf = device => device.disposition === 'adjustable' ? 'on' : device.disposition === 'not_needed' ? 'off' : 'warn'
+export function acInspectionMeta(device, mode) {
+ const readback = acReadbackText(device)
+ return `${acDispositionText(device)} · ${mode === 'adjust_to_26' ? '检查前：' : ''}${acStateText(device)}${readback ? ` · ${readback}` : ''}`
+}

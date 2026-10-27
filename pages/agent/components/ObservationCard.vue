@@ -73,7 +73,7 @@
        <text class="nm">{{ d.name }}</text>
        <text class="loc">{{ d.location }}</text>
       </view>
-      <text class="meta">{{ acDispositionText(d) }} · {{ block.mode === 'adjust_to_26' ? '检查前：' : '' }}{{ acStateText(d) }}</text>
+      <text class="meta">{{ acInspectionMeta(d, block.mode) }}</text>
       <button v-if="d.reason" class="omore" @tap="showAcIssue(d)">查看说明 ›</button>
       <text v-if="d.reportedAt" class="meta">状态时间 · {{ fmtDateTime(d.reportedAt) }}</text>
      </view>
@@ -116,8 +116,7 @@ import DeviceSheet from './DeviceSheet.vue'
 import VideoPlaybackForm from './VideoPlaybackForm.vue'
 import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
 import { meterReportHasData } from '../meter-report-view.mjs'
-import { modeLabels } from '../ac-draft.js'
-import { ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
+import { acDotOf, acInspectionMeta, ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
 
 const props = defineProps({ showIssue: Function, observation: { type: Object, required: true }, readOnly: Boolean, running: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
 const visibleBlocks = computed(() => (props.observation?.blocks || []).filter(block =>
@@ -162,9 +161,6 @@ function showAcIssue(device) {
  if (props.showIssue) props.showIssue(issue)
  else uni.showModal({ title: '检查说明', content: device.reason, showCancel: false, confirmText: '知道了' })
 }
-const acDispositionText = device => ({ adjustable: '可调', not_needed: '无需调整', unknown: '结果待确认', adjusted: '已调到26℃', not_dispatched: '这次未调整' })[device.disposition] || '状态未知'
-const acStateText = device => [device.power === 'on' ? '开机' : device.power === 'off' ? '关机' : '电源未知', modeLabels[device.mode] || device.mode || '模式未知', Number.isFinite(device.setpoint) ? `${device.setpoint}℃` : '设定未知'].join(' · ')
-const acDotOf = device => device.disposition === 'adjustable' ? 'on' : device.disposition === 'not_needed' ? 'off' : 'warn'
 const dotOf = online => online === true ? 'on' : online === false ? 'off' : 'warn'
 const cellsOf = reading => environmentCells(reading)
 const sourceOf = reading => environmentSource(reading)

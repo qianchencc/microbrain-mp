@@ -49,6 +49,15 @@ test('流程结束不冒充目标确认，读取不足不当作执行失败，�
  assert.equal(view.progressText, '已结束1次 · 正在做1次 · 还有0次安排')
  assert.equal(taskLabel('completed'), '已结束')
  assert.equal(taskDetailView({ status: 'completed', phases: [{ ...ac, devices: [{ id: 'ac1', outcome: 'verified' }] }] }).statusText, '已完成')
+ const reportPhases = [{ at, observations: [{ type: 'ac_inspection', mode: 'adjust_to_26', devices: [
+  { deviceId: 'ac1', name: '空调A', setpoint: 25.5, disposition: 'adjusted', afterSetpoint: 26, outcome: 'verified' },
+  { deviceId: 'ac2', name: '空调B', setpoint: 24, disposition: 'adjusted', outcome: 'verified' },
+ ] }] }]
+ const energy = taskExecutionSummaryView({ checkpoints: 1, devices: { total: 2, adjusted: 2, satisfied: 0, skipped: 0, failed: 0, unknown: 0, unverified: 0 },
+  energyImpact: { status: 'estimated', basis: 'assumption', value: 1, unit: '度', cost: { value: 0.8, unit: '元' }, deviceCount: 2, baseline: { averageSetpoint: 24.75, target: 26, averageRise: 1.25 }, assumptions: { ratePerDegree: 0.07, powerKw: 2.5, pricePerKwh: 0.8 }, coverage: { adjusted: 2, estimated: 2 }, from: at, to: at } }, reportPhases)?.energy
+ assert.equal(energy.devices.rows[0].before, '25.5℃', '调前保留分数度原值')
+ assert.equal(energy.devices.rows[0].after, '平台回读 26℃', '调后写平台回读事实，不写指令目标')
+ assert.equal(energy.devices.rows[1].after, '目标 26℃', '缺回读事实时如实标注为目标值')
  const rules = taskDetailView({ status: 'scheduled', phases: [30, 60].map(cadenceMinutes => ({ ...ac, read: { ac: { mode: 'adjust_to_26', cadenceMinutes } } })) }).rulesText
  assert.equal(rules.match(/不开机/g).length, 1)
  assert.equal(rules.match(/只调整开着/g).length, 1)
