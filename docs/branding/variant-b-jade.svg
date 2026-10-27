@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="tileB" cx="0.5" cy="0.34" r="0.85">
+      <stop offset="0" stop-color="#237a5f"/>
+      <stop offset="0.6" stop-color="#14563f"/>
+      <stop offset="1" stop-color="#0b3a2c"/>
+    </radialGradient>
+    <linearGradient id="ivory" x1="0.25" y1="0.05" x2="0.75" y2="1">
+      <stop offset="0" stop-color="#fdfef9"/>
+      <stop offset="0.6" stop-color="#eef4ea"/>
+      <stop offset="1" stop-color="#d9e6d8"/>
+    </linearGradient>
+    <filter id="softB" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <filter id="specB" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#tileB)"/>
+  <ellipse cx="256" cy="392" rx="118" ry="16" fill="#041f16" opacity="0.30" filter="url(#softB)"/>
+  <g transform="translate(256,262) scale(4.55) translate(-50.94,-51.49)">
+    <path d="M86.87 51.49C86.87 72.77 72.95 86.23 50.94 86.23C28.93 86.23 15.01 72.77 15.01 51.49C15.01 30.21 28.93 16.75 50.94 16.75C72.95 16.75 86.87 30.21 86.87 51.49Z" fill="url(#ivory)"/>
+    <ellipse cx="39" cy="30" rx="24" ry="11" fill="#ffffff" opacity="0.5" transform="rotate(-18 39 30)" filter="url(#specB)"/>
+    <path d="M42.78 51.23C42.08 59.32 42.08 59.32 38.58 59.02C35.07 58.72 35.07 58.72 35.77 50.63C36.46 42.53 36.46 42.53 39.97 42.83C43.47 43.13 43.47 43.13 42.78 51.23Z" fill="#176b54"/>
+    <path d="M67.02 51.52C66.02 63.22 66.02 63.22 61.72 62.86C57.42 62.49 57.42 62.49 58.42 50.79C59.42 39.08 59.42 39.08 63.72 39.45C68.02 39.82 68.02 39.82 67.02 51.52Z" fill="#176b54"/>
+  </g>
+</svg>
