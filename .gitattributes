@@ -1,6 +1,5 @@
-# `git archive` / 交付导出时排除内部产物（不影响 git push、合并或工作区）。
-# 客户仓库是纯小程序源码树；这些路径只服务本仓库的计划、票据、验收与 agent 上下文。
-# 目录一律用前导 `/` 锚定根目录：不带 `/` 的 `tools/`、`test/` 会连带排除任意层级同名目录（uni_modules 内就有）。
+# `git archive` / 交付导出时排除内部产物（只影响 archive 与 tools/deliver.mjs，不影响 push/合并/工作区）。
+# 目录一律用前导 `/` 锚定根目录：不带 `/` 的 `tools/`、`test/` 会连带排除任意层级同名目录。
 /plan/ export-ignore
 /docs/ export-ignore
 /.scratch/ export-ignore
@@ -8,4 +7,5 @@
 /tools/ export-ignore
 AGENTS.md export-ignore
 /CONTEXT.md export-ignore
+/README.md export-ignore
 /pages/agent/proto-*.html export-ignore
