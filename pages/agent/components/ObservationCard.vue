@@ -73,7 +73,7 @@
        <text class="nm">{{ d.name }}</text>
        <text class="loc">{{ d.location }}</text>
       </view>
-      <text class="meta">{{ acInspectionMeta(d, block.mode) }}</text>
+      <text class="meta">{{ acInspectionMeta(d, block) }}</text>
       <button v-if="d.reason" class="omore" @tap="showAcIssue(d)">查看说明 ›</button>
       <text v-if="d.reportedAt" class="meta">状态时间 · {{ fmtDateTime(d.reportedAt) }}</text>
      </view>

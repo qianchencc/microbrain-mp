@@ -53,15 +53,19 @@ export function readAgentView(agent) {
 
 const acModeLabels = { inspect: '空调检查', adjust_to_26: '空调温度调整' }
 
+// 目标温度是提案/任务保存的事实：归一化后的 action/condition 值，缺失时回退默认 26。
+export const acTargetOf = ac => ac?.action?.setpoint ?? ac?.condition?.setpoint?.value ?? ac?.target ?? 26
+
 export function readAcView(ac) {
  if (!ac?.mode) return null
+ const target = acTargetOf(ac)
  return {
   title: acModeLabels[ac.mode] || '空调检查',
-  summary: ac.mode === 'adjust_to_26' ? '符合条件的空调调到26℃' : '只检查状态，不调整空调',
-  criteriaText: ac.mode === 'adjust_to_26' ? '只调整开着、正在制冷且设定温度低于26℃的空调' : '',
+  summary: ac.mode === 'adjust_to_26' ? `符合条件的空调调到${target}℃` : '只检查状态，不调整空调',
+  criteriaText: ac.mode === 'adjust_to_26' ? `只调整开着、正在制冷且设定温度低于${target}℃的空调` : '',
   cadenceText: ac.cadenceMinutes ? `每 ${ac.cadenceMinutes} 分钟检查一次` : '',
   scheduleText: ac.cadenceMinutes ? '' : '按指定时间检查一次',
-  actionText: ac.mode === 'adjust_to_26' ? '符合条件时调到26℃' : '只检查，不调整设备',
+  actionText: ac.mode === 'adjust_to_26' ? `符合条件时调到${target}℃` : '只检查，不调整设备',
   limitText: '不开机、不改模式和风速',
  }
 }
@@ -70,6 +74,9 @@ export function readAcView(ac) {
 // before 取首个 adjusted 检查点记录的调前 setpoint，after 只写平台权威快照的回读值（afterSetpoint），
 // 缺回读时如实标「目标」而不是把指令值写成设备实际结果。
 const ENERGY_DEVICE_ROW_LIMIT = 6
+// 报告的调温目标取检查点记录的 criteria；旧数据缺失时回退 26。
+const acReportTarget = phases => phases?.flatMap(phase => phase.observations || [])
+ .find(block => block?.type === 'ac_inspection')?.criteria?.setpoint?.value ?? 26
 function acReportDeviceRows(phases, target) {
  const seen = new Map()
  for (const phase of phases || []) {
@@ -132,7 +139,7 @@ export function energyImpactView(impact, devices, reportPhases) {
     `采用调前平均 ${impact.baseline?.averageSetpoint ?? '—'}℃、每升高 1℃ 约节电 ${rate}% 的经验参数；这是估算，不代表已实测节电`,
     `估算窗口 · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}（上海时间）${missing ? ` · 其中 ${missing} 台缺少调前温度未参与` : ''}`,
    ],
-   devices: acReportDeviceRows(reportPhases, impact.baseline?.target ?? 26),
+   devices: acReportDeviceRows(reportPhases, impact.baseline?.target ?? acReportTarget(reportPhases)),
   }
  }
  if (impact.status === 'unavailable' && devices) {
@@ -148,7 +155,7 @@ export function energyImpactView(impact, devices, reportPhases) {
    basisTitle: '已确认的执行事实',
    formula: `${devices.total || 0} 台纳入 · ${devices.adjusted || 0} 台调节 · ${devices.satisfied || 0} 台无需调整`,
    notes: [],
-   devices: acReportDeviceRows(reportPhases, 26),
+   devices: acReportDeviceRows(reportPhases, acReportTarget(reportPhases)),
   }
  }
  if (impact.status === 'estimated') {

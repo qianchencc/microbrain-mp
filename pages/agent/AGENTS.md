@@ -1,6 +1,6 @@
 # Agent Page Notes
 
-- 空调巡检行事实拆分（2026-10-27）：`acInspectionMeta`（observation-view.mjs）统一生成行文案——`adjusted` 只写「已下发调到26℃」（指令事实），调后温度只写 `afterSetpoint` 平台回读值并标注「平台回读」，缺回读不补温度；聚合行 `acReportDeviceRows` 的 after 同样写「平台回读 X℃」或「目标 26℃」。平台影子可能是指令回声或与现场面板不一致（半度设定、事后改回），禁止把指令目标写成设备实际结果。回归见 `test/agent-observation.test.mjs`。
+- 空调巡检行事实拆分（2026-10-27）：`acInspectionMeta`（observation-view.mjs）统一生成行文案——`adjusted` 只写「已下发调到X℃」（指令事实，X 取该检查点 criteria 的目标温度），调后温度只写 `afterSetpoint` 平台回读值并标注「平台回读」，缺回读不补温度；聚合行 `acReportDeviceRows` 的 after 同样写「平台回读 X℃」或「目标 X℃」。平台影子可能是指令回声或与现场面板不一致（半度设定、事后改回），禁止把指令目标写成设备实际结果。回归见 `test/agent-observation.test.mjs`。
 
 - 任务展示（2026-10-27，替代下文任务相关旧文案）：统一经`task-presentation.mjs`生成状态，摘要`completed`只写“已结束”；详情从设备事实投影，未确认写“结果待确认”，全有确认依据才写“已完成”，不改原状态；完成/颜色不能比较中文字符串；平台受理只写“指令已发送”，没有证据不能写完成。错误默认简短中性，`TaskIssueDetails`在同一Sheet内显示可滚动/复制的原始原因；原因页组件宿主须显式`height:0;min-height:0;flex:1;display:flex;flex-direction:column`，否则微信虽有文本节点但视口为0；已有顶部返回时用`back-in-header`。宿主`back()`优先退原因页，保留任务节点与位置。长任务先显示最近3次，全部记录可展开；规则只显示一次，创建资料进更多信息。汇总分类可能重叠，不相加做进度。详见`plan/2026-10-26-task-presentation-audit.md`。
 

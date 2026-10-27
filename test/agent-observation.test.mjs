@@ -110,18 +110,21 @@ for (const type of ['energy_comparison', 'company_energy', 'energy_report']) tes
 })
 
 test('空调巡检行分开展示调前读数与平台回读，指令目标不冒充设备实际结果', () => {
+ const block = { mode: 'adjust_to_26', criteria: { setpoint: { value: 26 } } }
  const adjusted = { name: '空调-机房前', power: 'on', mode: 'cool', setpoint: 25, disposition: 'adjusted', afterSetpoint: 26 }
- assert.equal(acInspectionMeta(adjusted, 'adjust_to_26'), '已下发调到26℃ · 检查前：开机 · 制冷 · 25℃ · 平台回读 26℃')
+ assert.equal(acInspectionMeta(adjusted, block), '已下发调到26℃ · 检查前：开机 · 制冷 · 25℃ · 平台回读 26℃')
  const legacy = { ...adjusted, afterSetpoint: undefined }
- assert.equal(acInspectionMeta(legacy, 'adjust_to_26'), '已下发调到26℃ · 检查前：开机 · 制冷 · 25℃', '旧记录没有回读事实时不补写温度')
+ assert.equal(acInspectionMeta(legacy, block), '已下发调到26℃ · 检查前：开机 · 制冷 · 25℃', '旧记录没有回读事实时不补写温度')
  const fractional = { name: '空调-机房前', power: 'on', mode: 'cool', setpoint: 25.5, disposition: 'adjusted', afterSetpoint: 26 }
- assert.match(acInspectionMeta(fractional, 'adjust_to_26'), /25\.5℃ · 平台回读 26℃/, '分数度调前读数按原值展示')
+ assert.match(acInspectionMeta(fractional, block), /25\.5℃ · 平台回读 26℃/, '分数度调前读数按原值展示')
  const unconfirmed = { power: 'on', mode: 'cool', setpoint: 25, disposition: 'unknown', afterSetpoint: 25 }
- assert.match(acInspectionMeta(unconfirmed, 'adjust_to_26'), /结果待确认 · 检查前：开机 · 制冷 · 25℃ · 平台回读 25℃/)
+ assert.match(acInspectionMeta(unconfirmed, block), /结果待确认 · 检查前：开机 · 制冷 · 25℃ · 平台回读 25℃/)
  const skipped = { power: 'off', mode: 'cool', setpoint: 26, disposition: 'not_dispatched' }
  assert.equal(acReadbackText(skipped), '', '未下发的设备没有回读事实')
- assert.equal(acInspectionMeta(skipped, 'adjust_to_26'), '这次未调整 · 检查前：关机 · 制冷 · 26℃')
- assert.equal(acInspectionMeta({ power: 'on', mode: 'cool', setpoint: 26, disposition: 'not_needed' }, 'inspect'), '无需调整 · 开机 · 制冷 · 26℃')
+ assert.equal(acInspectionMeta(skipped, block), '这次未调整 · 检查前：关机 · 制冷 · 26℃')
+ assert.equal(acInspectionMeta({ power: 'on', mode: 'cool', setpoint: 26, disposition: 'not_needed' }, { mode: 'inspect' }), '无需调整 · 开机 · 制冷 · 26℃')
+ const target27 = { mode: 'adjust_to_26', criteria: { setpoint: { value: 27 } } }
+ assert.equal(acInspectionMeta(adjusted, target27), '已下发调到27℃ · 检查前：开机 · 制冷 · 25℃ · 平台回读 26℃', '调温目标按检查点 criteria 展示')
 })
 
 test('报告附件按保存 id 去重：重放/跨轮同一链接只更新，run.failed 不丢附件', () => {
