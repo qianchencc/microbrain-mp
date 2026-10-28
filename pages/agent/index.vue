@@ -30,7 +30,7 @@ let pendingReference = null
 onLoad(options => {
  returnLabel.value = previousPageLabel(getCurrentPages())
  const o = options || {}
- if (o.source === 'company' || o.alertPrompt !== undefined || o.safetyReference !== undefined || o.environmentWindow !== undefined || o.energyWindow !== undefined) {
+ if (o.source === 'company' || o.alertPrompt !== undefined || o.prompt !== undefined || o.safetyReference !== undefined || o.environmentWindow !== undefined || o.energyWindow !== undefined) {
   redirecting.value = true
   uni.redirectTo({ url: '/pages/agent/dashboard?' + Object.keys(o).map(key => `${key}=${encodeURIComponent(o[key])}`).join('&') })
   return

@@ -1,13 +1,14 @@
 # 2026-10-28 消息卡片跳转探索（客户告警卡片 → 公司 Agent）
 
-结论先行。第 1 节是决策所需事实，第 2 节是上游证据，第 3 节是我方缺口，第 4 节建议冻结的契约，第 5 节客户需提供的支持，第 6 节验收与未验证项。本文只做只读探索，未改产品代码。
+结论先行。第 1 节是决策所需事实，第 2 节是上游证据，第 3 节是我方缺口，第 4 节建议冻结的契约，第 5 节客户需提供的支持，第 6 节验收与未验证项。上游探索为只读；本轮只补了 `prompt` 参数与解码容错（第 3 节 1），未改登录与热启动生命周期。
 
 ## 1. 结论
 
 1. 客户小程序里的告警消息卡片走的是**微信「设备订阅消息」**，不是普通一次性/长期订阅消息，也不是公众号模板消息：客户 mp 分支 2026-10-15 的“新增设备订阅”提交引入 `wx.requestSubscribeDeviceMessage`（`pages/user/device.vue`）与 `/api/perception/fire/alarmSubConfig/*`、`/api/perception/alarmUserSub/` 三个接口（`apis/user/device.js`）。这类消息由发送方服务端调用 `POST /cgi-bin/message/device/subscribe/send` 下发。
 2. 该接口的 `page` 字段**必填且支持带 query**（“点击模板卡片后的跳转页面，仅限本小程序内的页面。支持带参数”），不填则模板无跳转；路径错误返回 `41030 invalid page`，要求页面存在于**现网版本**小程序；`miniprogram_state` 可选 `developer`/`trial`/`formal`（默认 formal）。来源见第 2.2 节。因此**不需要 URL Link、URL Scheme 或 H5 中转**，卡片可以直接落在 `pages/agent/dashboard` 并携带告警内容。
 3. 我方页面与 Runtime 的主要能力已经具备：仪表盘能解析 `source=company`/`alertPrompt` 并自动展开公司 Agent 浮层；`alertPrompt` 作为 `customer_alert` 引用进入输入区，不自动发送；Runtime 对 `customer_alert` 只接受 company 来源并要求内容非空。
-4. 我方仍缺四个代码闭环（第 3 节）：`prompt` 参数未实现；未登录冷启动会被 `thirdLogin` 的 `reLaunch('/pages/index/index')` 丢掉原始跳转参数；小程序已在前台/后台时新卡片参数无人接收；参数长度、编码与重复卡片没有契约。
+4. `prompt` 参数已补（2026-10-28）。仍缺三个代码闭环：未登录冷启动会被 `thirdLogin` 的 `reLaunch('/pages/index/index')` 丢掉原始跳转参数；小程序已在前台/后台时新卡片参数无人接收；重复卡片没有去重。
+5. 客户只给“一个页面路径”也能先跑通：静态路径带固定 `prompt`，Agent 用现有 `query_alerts` 读同一套 perception 告警台账（第 4 节 A）。代价是无法保证就是卡片那一条，也没有 `customer_alert` 原文引用；要保留引用则需客户按条拼 query（第 4 节 B）。
 5. 上游**发送端当前 `page` 填了什么无法核实**：发送代码不在可见 GitLab 仓库（只看到 `microbrain/mp`、空的 `microbrain/iot-agent-backend`、`microbrain/front-h5player`），测试服务器只有 gateway/sso/nacos/redis/mysql，数据库里没有 alarm 表，也没有 perception 服务。因此“他们是否已配 page、配成什么”必须由客户提供一次真实调用样例或配合实测（第 5 节）。
 
 ## 2. 已核实证据
@@ -42,7 +43,7 @@
 | --- | --- | --- |
 | 仪表盘深链解析 | `pages/agent/dashboard.vue:504-509` | `source=company`/`alertPrompt`/`taskReference`/`safetyReference`/`environmentWindow`/`energyWindow` 可解析，`onMounted` 打开浮层 |
 | 告警内容 → 引用 | `pages/agent/context-link.mjs:51-56` | `decodeURIComponent` 后 trim，≤2000 字，生成 `{ type:'customer_alert', content }`；非法只 toast |
-| `prompt` 参数 | `pages/agent/context-link.mjs:25` | **未实现**（只有环境/电表窗口会生成 prompt） |
+| `prompt` 参数 | `pages/agent/context-link.mjs:61-66` | 已支持（2026-10-28）：decode 一次、trim、≤200 字、拒绝控制字符；参数未编码时按原文保留 |
 | 浮层接收上下文 | `pages/agent/components/CompanyAgentFloat.vue:56-66` | `open({reference, prompt})`，引用/预填交给会话 |
 | 会话暂存与消费 | `pages/agent/components/AgentConversation.vue:291-304, 308+` | hydration 前暂存、hydration 后落地；输入非空时替换需确认 |
 | 冷启动登录 | `App.vue:10-21`、`store/modules/user.js:75-100` | 无 token 时 `thirdLogin` 静默登录，成功后 `uni.reLaunch('/pages/index/index')`，**原始跳转页与参数丢失** |
@@ -51,9 +52,9 @@
 | 页面注册 | `pages.json:119-146` | `pages/agent` 为分包，`dashboard` 已注册 |
 | 线上版本 | `plan/2026-10-28-miniapp-upload-2026.10.28-1.md` | 只有开发版 `2026.10.28-1`（AppID `wxe60e1f697d115f96`），未提审、未发布；`formal` 状态下发 `page` 会 `41030` |
 
-## 3. 我方代码缺口（按最小闭环排序）
+## 3. 我方代码缺口与实施状态（按最小闭环排序）
 
-1. **支持 `prompt` 参数**：`parseAgentContext` 增加 `options.prompt`（decode 一次、trim、≤200 字、拒绝控制字符），返回 `context.prompt`；`dashboard.onLoad` 已有打开通道，`CompanyAgentFloat`/`AgentConversation` 的暂存队列不需要改。
+1. **支持 `prompt` 参数**：已完成（2026-10-28，`context-link.mjs`、`dashboard.vue:507`、`index.vue:33`）。`parseAgentContext` 解码一次、trim、≤200 字、拒绝控制字符；参数未被编码时按原文保留；回归见 `test/agent-card-link.test.mjs`。
 2. **登录前的跳转参数保留**：`App.onShow` 与 `onLaunch` 用 `wx.getEnterOptionsSync()`/launch options 记录 `{path, query}`；`thirdLogin` 成功后不再无条件 `reLaunch('/pages/index/index')`，而是回到原目标（带 query）；`dashboard.onLoad` 同时消费该暂存，避免两条路径都消费导致重复。
 3. **已打开时的新卡片**：`App.onShow(options)` 若当前前台页是 `pages/agent/dashboard`，把新上下文投递给浮层（事件或页面方法）；否则按第 2 条的目标页重开。
 4. **去重与提示**：同一 `alertPrompt` 内容不重复插引用；浮层已展开且有草稿时沿用现有“替换输入”确认；无效/超长参数只 toast，不阻断进入仪表盘。所有路径都不自动发送。
@@ -61,25 +62,51 @@
 
 风险与取舍：
 - `page` 中的中文/长文本长度上限没有官方数值；建议 `alertPrompt` ≤300 字、`prompt` ≤200 字，并压测一次真实卡片（超长时客户应改传更短摘要）。
-- onLoad 的 query 是否已被框架解码一次，必须以开发者工具“启动参数”实测确认；现有 `alertPrompt`/`safetyReference` 的“一次 decode”约定来自已实测的 `navigateTo` 路径，卡片冷启动尚需复核，避免双重解码。
+- onLoad 的 query 官方语义是“路径参数需要 decodeURIComponent”（[页面间关系](https://developers.weixin.qq.com/miniprogram/dev/framework/app-service/page-relation.html)），即框架传原文；因此发送方 encode 一次、客户端 decode 一次。卡片冷启动仍建议用开发者工具“启动参数”复验一次，避免订阅消息链路出现差异。
 - `page` 必须存在于线上版本：正式期客户若仍用 `formal`，必须等我方合并并发布包含 `pages/agent/dashboard` 的版本；测试期用 `miniprogram_state=developer` 指向 `2026.10.28-1` 开发版。
 
-## 4. 建议冻结的契约
+## 4. 契约与两种可用配置
+
+微信订阅/设备消息**不会把模板内容传给小程序**：点击后小程序只能拿到 `page` 里的路径与 query（`getEnterOptionsSync` 也只有 path/query/scene/referrerInfo）。所以“引用告警”只有两条路：发送方把内容写进 `page`（动态），或者我方按平台台账自己读（静态）。
+
+### A. 静态路径（客户只配置一次，推荐先上线）
 
 ```text
-page: pages/agent/dashboard?source=company&alertPrompt=<encodeURIComponent(简短告警)>[&prompt=<encodeURIComponent(预置问题)>]
+pages/agent/dashboard?source=company&prompt=%E6%88%91%E5%88%9A%E6%94%B6%E5%88%B0%E4%B8%80%E6%9D%A1%E5%91%8A%E8%AD%A6%E6%8E%A8%E9%80%81%E3%80%82%E8%AF%B7%E5%88%97%E5%87%BA%E6%9C%80%E8%BF%91%2024%20%E5%B0%8F%E6%97%B6%E7%9A%84%E7%83%9F%E6%84%9F%E3%80%81%E7%87%83%E6%B0%94%E3%80%81%E6%B0%B4%E6%B5%B8%E5%91%8A%E8%AD%A6%EF%BC%8C%E6%8C%89%E6%97%B6%E9%97%B4%E4%BB%8E%E6%96%B0%E5%88%B0%E6%97%A7%EF%BC%8C%E5%B9%B6%E5%91%8A%E8%AF%89%E6%88%91%E9%9C%80%E8%A6%81%E6%80%8E%E4%B9%88%E5%A4%84%E7%90%86%E3%80%82
 ```
 
-- `source=company`：固定，标识进公司 Agent（缺省时 `alertPrompt` 也会打开，但保留以便兼容现有重定向）。
-- `alertPrompt`：客户告警卡片必填；建议内容为「设备名 · 告警类型 · 时间」这类可自解释摘要，≤300 字；发送方 encode 一次，客户端 decode 一次；超出 2000 字被客户端拒收。
-- `prompt`：可选，≤200 字；缺省时客户端不预填，用户直接看到引用。若希望“点卡片即得到处置建议”，客户传固定问句即可，例如“请帮我核实这条告警并给出处置建议”。
-- 不传 `alertId`：本期不建立告警详情查询接口；引用内容即事实边界，Agent 不得声称已核验平台告警记录。
-- 客户端始终只填输入框，不自动发送；真正下发仍走用户点击发送 + Runtime 权限/确认。
+- 解码后的问题：`我刚收到一条告警推送。请列出最近 24 小时的烟感、燃气、水浸告警，按时间从新到旧，并告诉我需要怎么处理。`
+- 不产生 `customer_alert` 引用；用户点发送后，Agent 用现有 `query_alerts` 读同一套 perception 告警台账（Runtime 已接 `/micro-api/api/perception/fire/{ledger}/alarm/page`，Company 目录含 FIRE 设备时可用），回答里的记录可点开成安全事件详情。
+- 局限：无法保证就是卡片那一条；近期多条时用户需按卡片上的设备名/时间再说明。台账是历史记录，不是实时推送，也不能据此断言“当前仍在报警/已恢复”。
+- 优点：客户零改造、URL 短、无编码风险；只需要我方发布含 `prompt` 支持的版本。
+
+### B. 动态 query（客户发送时按条拼接，可保留告警引用）
+
+```text
+pages/agent/dashboard?source=company&alertPrompt=<encodeURIComponent(设备名 · 类型 · 时间)>&prompt=<encodeURIComponent(请帮我核实这条告警并给出处置建议)>
+```
+
+示例（`alertPrompt` 解码为 `烟感 · 3 楼东侧机房 · 2026-10-28 09:41`）：
+
+```text
+pages/agent/dashboard?source=company&alertPrompt=%E7%83%9F%E6%84%9F%20%C2%B7%203%20%E6%A5%BC%E4%B8%9C%E4%BE%A7%E6%9C%BA%E6%88%BF%20%C2%B7%202026-10-28%2009%3A41&prompt=%E8%AF%B7%E5%B8%AE%E6%88%91%E6%A0%B8%E5%AE%9E%E8%BF%99%E6%9D%A1%E5%91%8A%E8%AD%A6%E5%B9%B6%E7%BB%99%E5%87%BA%E5%A4%84%E7%BD%AE%E5%BB%BA%E8%AE%AE
+```
+
+- `alertPrompt` 变成 `customer_alert` 引用随用户消息进入 Runtime；`prompt` 只预填。
+- 约束：发送方 encode 一次；建议 `alertPrompt` ≤300 字、`prompt` ≤200 字；超出 2000 字客户端拒收。不要传完整告警文本或 JSON，路径会过长。
+- 若客户后台只能存固定字符串但按设备一行配置，可退化为每台设备一个路径，带 `alertPrompt=<设备名>` 或后续新增的 `alertDevice=<sn>`。
+
+### 共同约定
+
+- `source=company` 固定；`alertPrompt`/`prompt` 缺一不影响另一项。
+- 客户端只预填，不自动发送；最终下发仍走用户点击发送 + Runtime 权限/确认。
+- 不传 `alertId`：本期不建告警详情接口；引用内容即事实边界，Agent 不得声称已核验平台告警记录。
+- `page` 必须存在于线上版本；测试期 `miniprogram_state=developer` 指向 `2026.10.28-1`。
 
 ## 5. 需要客户提供的支持（按重要性）
 
 1. 确认告警发送端就是 `sendHardwareDeviceMessage`，并给一次**脱敏请求样例**（`template_id`、`sn`、`modelId`、`page`、`miniprogram_state`、`data` 字段名可脱敏），用于确认 `page` 现状。
-2. 把 `page` 按第 4 节契约配置（改代码或后台配置均可）；测试期 `miniprogram_state=developer`（或 `trial`），正式期再改 `formal`。
+2. 确认他们的“配置页面路径”是**固定字符串**还是**按条拼 query**：固定就选第 4 节 A（直接抄上面的整条路径），能拼就选 B（动态 `alertPrompt`）。测试期 `miniprogram_state=developer`（或 `trial`），正式期再改 `formal`。
 3. 一台已完成设备订阅的测试设备、一个测试微信账号，并触发一次真实告警；说明该账号对我们当前 `2026.10.28-1` 开发版是否有权限。
 4. 若第 1 条暂时给不了：提供发送端所在仓库/分支或配置入口（当前 GitLab 账号看不到该仓库），或先手工发一条只带 `page=pages/agent/dashboard` 的测试消息。
 5. 正式上线前双方各自发布：我方把 `pages/agent/dashboard` 合入并发布线上版本，客户再把 `miniprogram_state` 恢复 `formal`。
@@ -87,7 +114,7 @@ page: pages/agent/dashboard?source=company&alertPrompt=<encodeURIComponent(简�
 ## 6. 验收方式（本轮未执行）
 
 - 开发者工具“编译模式 → 启动参数”填 `pages/agent/dashboard?source=company&alertPrompt=...&prompt=...` 冷启动：浮层展开、引用与预填正确、不自动发送。
-- 真机：开发版 + `miniprogram_state=developer` 的卡片，分别验证「已登录冷启动」「已登录热启动（小程序在后台）」「未登录冷启动 → 登录后回落」。
+- 真机：开发版 + `miniprogram_state=developer` 的卡片，分别验证「已登录冷启动」「已登录热启动（小程序在后台）」「未登录冷启动 → 登录后回落」。静态 A 还要确认：Agent 能列出最近告警、记录可点开；动态 B 要确认引用显示为客户告警原文。
 - 发送后检查：Runtime 收到 `customer_alert`（company 来源），引用随本轮落库；设备控制仍需二次确认。
 
-未验证项：`page` 长度上限；卡片冷启动 query 的解码次数；客户告警模板 `data` 是否已包含设备/时间；客户线上版本是否已有 `pages/agent/dashboard`；客户发送端是否已配置任何 `page`。
+未验证项：`page` 长度上限；卡片冷启动与 `navigateTo` 的解码行为是否完全一致；客户告警模板 `data` 是否已包含设备/时间；客户线上版本是否已有 `pages/agent/dashboard`；客户发送端是否已配置任何 `page`；登录恢复与热启动参数（第 3 节 2、3 条）尚未实现。

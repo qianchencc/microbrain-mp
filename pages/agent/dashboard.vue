@@ -504,7 +504,7 @@ function openAgent(source) {
 onLoad(options => {
  const o = options || {}
  // 公司深链（含 index 兼容重定向、客户告警跳转）：浮层带上下文直接展开
- if (o.source === 'company' || o.taskReference || o.alertPrompt !== undefined || o.safetyReference !== undefined || o.environmentWindow !== undefined || o.energyWindow !== undefined) pendingAgentOpen = parseAgentContext(o)
+ if (o.source === 'company' || o.taskReference || o.alertPrompt !== undefined || o.prompt !== undefined || o.safetyReference !== undefined || o.environmentWindow !== undefined || o.energyWindow !== undefined) pendingAgentOpen = parseAgentContext(o)
 })
 onMounted(() => { if (pendingAgentOpen) agentFloat.value?.open(pendingAgentOpen) })
 function back() { backToParent('/pages/index/index') }

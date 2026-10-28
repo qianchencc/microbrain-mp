@@ -9,6 +9,11 @@ function parseJson(raw, invalidTitle) {
  catch { uni.showToast({ title: invalidTitle, icon: 'none' }); return undefined }
 }
 
+// 卡片/深链参数可能已被框架解码过一次；再解码失败就按原文使用，不整条丢引用。
+function decodeParam(raw) {
+ try { return decodeURIComponent(raw) } catch { return raw }
+}
+
 function validWindow(window) {
  return window && typeof window.from === 'string' && typeof window.to === 'string'
   && window.from.length <= 40 && window.to.length <= 40
@@ -49,10 +54,15 @@ export function parseAgentContext(options = {}, { company = true } = {}) {
   if (prompt) context.prompt = prompt
  }
  if (options.alertPrompt !== undefined) {
-  let content = ''
-  try { content = decodeURIComponent(options.alertPrompt).trim() } catch { /* malformed customer quote */ }
+  const content = decodeParam(String(options.alertPrompt)).trim()
   if (content && content.length <= 2000) context.reference = { type: 'customer_alert', content }
   else uni.showToast({ title: '告警引用无效或超过2000字', icon: 'none' })
+ }
+ // 消息卡片预置问题：只填输入框等用户发送，不自动发起对话。
+ if (options.prompt !== undefined) {
+  const prompt = decodeParam(String(options.prompt)).trim()
+  if (prompt && prompt.length <= 200 && !/[\u0000-\u001f]/.test(prompt)) context.prompt = prompt
+  else if (prompt) uni.showToast({ title: '预置问题无效或超过200字', icon: 'none' })
  }
  return context
 }
