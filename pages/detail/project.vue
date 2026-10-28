@@ -51,12 +51,39 @@
 					</view>
 				</view>
 			</view>
+
+			<!-- 最新现场图片：仅最新进度模块显示 -->
+			<view class="card site-image-card" v-if="currentSection.key === 'latestProgress'">
+				<view class="card-title">
+					<view class="bar"></view>
+					<text>最新现场图片</text>
+				</view>
+				<view class="kv-item">
+					<view class="label">最新提交时间</view>
+					<view class="value">{{ formatTime(siteImageSubmitTime, '{y}-{m}-{d}') || '-' }}</view>
+				</view>
+				<view class="image-list" v-if="siteImageList.length">
+					<image
+						v-for="(img, index) in siteImageList"
+						:key="index"
+						class="site-image"
+						:src="getUrl(img)"
+						mode="widthFix"
+						@click="previewSiteImage(index)">
+					</image>
+				</view>
+				<view class="empty" v-else>
+					<uni-icons type="image" size="60" color="#C7D6F7"></uni-icons>
+					<text class="empty-text">暂无现场图片</text>
+				</view>
+			</view>
 		</view>
 	</view>
 </template>
 
 <script>
 import {fetchProjectDetail} from "@/apis/common";
+import {getUrl, formatTime} from "@/utils/tools";
 
 const SECTIONS = [
 	{
@@ -83,8 +110,8 @@ const SECTIONS = [
 			{ label: '投标编号', prop: 'bidNo' },
 			{ label: '投标项目名称', prop: 'bidProjectName', full: true },
 			{ label: '投标项目经理', prop: 'bidProjectManager' },
-			{ label: '开标日期', prop: 'bidOpeningDate' },
-			{ label: '中标日期', prop: 'bidWinningDate' }
+			{ label: '开标日期', prop: 'bidOpeningDate', type: 'date' },
+			{ label: '中标日期', prop: 'bidWinningDate', type: 'date' }
 		]
 	},
 	{
@@ -95,7 +122,7 @@ const SECTIONS = [
 			{ label: '进度比例', prop: 'progressRatio', type: 'progress' },
 			{ label: '进度详情', prop: 'progressDetail', full: true },
 			{ label: '提交人', prop: 'submitter' },
-			{ label: '提交时间', prop: 'submitTime' }
+			{ label: '提交时间', prop: 'submitTime', type: 'date' }
 		]
 	},
 	{
@@ -108,7 +135,7 @@ const SECTIONS = [
 			{ label: '变更后合同金额', prop: 'modifiedContractAmount', type: 'money' },
 			{ label: '累计变更金额', prop: 'totalChangeAmount', type: 'money' },
 			{ label: '累计收款金额', prop: 'totalReceiptAmount', type: 'money' },
-			{ label: '更新日期', prop: 'updateDate' },
+			{ label: '更新日期', prop: 'updateDate', type: 'date' },
 			{ label: '更新人', prop: 'updater' }
 		]
 	},
@@ -166,7 +193,9 @@ export default {
 			currentNav: 0,
 			navIntoView: '',
 			sections: SECTIONS,
-			detail: {}
+			detail: {},
+			siteImageList: [],
+			siteImageSubmitTime: ''
 		}
 	},
 	computed: {
@@ -184,28 +213,50 @@ export default {
 		this.getDetail()
 	},
 	methods: {
+		getUrl,
+		formatTime,
 		// 获取项目详情（接口未接入，暂时使用假数据）
 		async getDetail() {
 			let res = await fetchProjectDetail({type: this.currentSection.key, code: this.code})
 			if (!res) return
-			this.detail = res.content
+			this.detail = res.content || {}
+		},
+		// 获取最新现场图片（单独接口）
+		async getSiteImages() {
+			this.siteImageList = []
+			this.siteImageSubmitTime = ''
+			let res = await fetchProjectDetail({type: 'latestProgressPicture', code: this.code})
+			if (!res) return
+			const content = res.content
+			this.siteImageList = content?.pictureList || []
+			this.siteImageSubmitTime = content?.submitTime || ''
 		},
 		// 切换nav
 		switchNav(index) {
 			this.currentNav = index
 			this.getDetail()
+			if (this.currentSection.key === 'latestProgress') this.getSiteImages()
 			this.navIntoView = ''
 			this.$nextTick(() => {
 				this.navIntoView = 'nav-' + Math.max(0, index - 1)
 			})
 		},
 
-		// 值格式化：空值显示-，金额千分位
+		// 预览现场图片
+		previewSiteImage(index) {
+			uni.previewImage({
+				urls: this.siteImageList,
+				current: index
+			})
+		},
+
+		// 值格式化：空值显示-，金额千分位，日期强制年月日
 		formatValue(field) {
 			const val = this.detail[field.prop]
 			if (val === null || val === undefined || val === '') return '-'
 			if (field.type === 'money') return this.formatMoney(val)
 			if (field.type === 'boolean') return val ? '是' : '否'
+			if (field.type === 'date') return this.formatTime(val, '{y}-{m}-{d}')
 			return val
 		},
 		formatMoney(val) {
@@ -427,6 +478,43 @@ export default {
 			font-size: 26rpx;
 			font-weight: 600;
 			color: #3974F6;
+		}
+	}
+
+	/* 最新现场图片 */
+	.site-image-card {
+		margin-top: 24rpx;
+
+		.image-list {
+			padding: 24rpx 0 20rpx;
+
+			.site-image {
+				display: block;
+				width: 100%;
+				border-radius: 16rpx;
+				background-color: #F5F5F5;
+				margin-bottom: 20rpx;
+
+				&:last-child {
+					margin-bottom: 0;
+				}
+			}
+		}
+
+		.empty {
+			margin: 24rpx 0 20rpx;
+			padding: 60rpx 0;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			background-color: #F7F9FE;
+			border-radius: 16rpx;
+
+			.empty-text {
+				margin-top: 16rpx;
+				font-size: 24rpx;
+				color: #A0A8B8;
+			}
 		}
 	}
 }

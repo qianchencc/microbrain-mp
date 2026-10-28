@@ -12,7 +12,7 @@
 						<view v-if="chatItem.type === 'AI_ANSWER'" class="ai">
 							<zero-markdown-view :markdown="chatItem.data" @load="toBottom"/>
 						</view>
-						<project-con v-else :list="chatItem.data"></project-con>
+						<project-con v-else :query="chatItem.data"></project-con>
 					</view>
 				</view>
 			</template>
@@ -58,13 +58,10 @@ export default {
 			}
 			this.loading = true
 			chatToAiProject(data.data).then(res => {
+				this.loading = false
 				if (res) {
-					let haveData = res.content.content && res.content.content.length
-					this.chatList.push({
-						type: haveData ? 'PRROJECT' : 'AI_ANSWER',
-						data: haveData ? res.content.content : '未查询到任何项目,请重新描述'
-					})
-					this.loading = false
+					let queryData = res.content || {}
+					this.chatList.push({type: 'PROJECT', data: queryData})
 					this.toBottom()
 				}
 			})

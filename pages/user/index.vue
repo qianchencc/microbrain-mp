@@ -48,8 +48,9 @@
 		</view>
 		<view class="list">
 			<uni-list :border="false">
-				<uni-list-item :border="false" title="关于我们" showArrow link="navigateTo" to="./about" />
+				<uni-list-item :border="false" title="关于我们" showArrow link="navigateTo" to="/pages/user/about" />
 				<uni-list-item :border="false" title="意见反馈" showArrow clickable @click="toOpinion()" />
+				<uni-list-item :border="false" title="授权告警设备订阅通知" link="navigateTo" to="/pages/user/device" />
 			</uni-list>
 		</view>
 		

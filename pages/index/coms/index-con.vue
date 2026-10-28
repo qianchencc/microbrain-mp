@@ -21,6 +21,7 @@
 									</view>
 								</swiper-item>
 							</swiper>
+							<view class="notice-more" @click="goPage('/pages/news/noticeList')">更多</view>
 						</view>
 						<view class="top-menu">
 							<view v-for="menu in topMenuList" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
@@ -28,20 +29,23 @@
 								<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
 							</view>
 						</view>
-						<scroll-view class="scroll-menu" scroll-x="true">
-							<view class="menu-one">
-								<view class="menu-item agent-entry" @click="goPage('/pages/agent/dashboard')">
-									<view class="agent-entry-icon">
-										<image class="agent-entry-avatar" src="/static/iot-assistant-icon.png" />
+						<swiper class="menu-swiper" v-if="workMenuPages.length"
+							:style="{ height: workMenuPages.length > 1 ? '300rpx' : '250rpx' }"
+							:indicator-dots="workMenuPages.length > 1"
+							indicator-color="rgba(54, 96, 146, 0.3)"
+							indicator-active-color="#366092">
+							<swiper-item v-for="(page, index) in workMenuPages" :key="index">
+								<view class="menu-one">
+									<view v-for="menu in page" :key="menu.id" class="menu-item" :class="{ 'agent-entry': menu.agent }" @click="menu.agent ? goPage('/pages/agent/dashboard') : jumpUrl(menu)">
+										<view v-if="menu.agent" class="agent-entry-icon">
+											<image class="agent-entry-avatar" src="/static/iot-assistant-icon.png" />
+										</view>
+										<image v-else :src="getUrl(menu.icon)" mode="aspectFit"></image>
+										<view class="text">{{ menu.resourceTitle }}</view>
 									</view>
-									<view class="text">物联助手</view>
 								</view>
-								<view v-for="menu in workMenuList" :key="menu.id" class="menu-item" @click="jumpUrl(menu)">
-									<image :src="getUrl(menu.icon)" mode="aspectFit"></image>
-									<view class="text">{{ menu.resourceTitle }}</view>
-								</view>
-							</view>
-						</scroll-view>
+							</swiper-item>
+						</swiper>
 					</view>
 					<view class="line"></view>
 					<view class="menu-con" v-if="serviceMenuList.length">
@@ -78,32 +82,46 @@
 <script setup>
 	import { usePermissionStoreHook } from '@/store/modules/permission'
 	import { computed, ref } from 'vue'
-	import {fetchNewsPage} from '@/apis/home'
+	import {fetchNoticePage} from '@/apis/home'
 	import {getUrl, goPage, jumpUrl} from '@/utils/tools'
 	import { useBannerHook } from '../utils/banner.js'
 	import {isDev} from "@/config/settings";
 	import {useUserStoreHook} from "@/store/modules/user";
 	
-	const { bannerList } = useBannerHook()
+	const { bannerList, getBannerList } = useBannerHook()
 	// 是否显示首页菜单
 	const showIndex = computed(() => useUserStoreHook().getShowIndex)
 	// 菜单列表
 	const menuList = computed(() => usePermissionStoreHook().getMenuList)
-	// 顶部菜单配置（key: 菜单名称，value: 菜单图标）
-	const topObj = computed(() => useUserStoreHook().getDict['MiniTopMenu'] || {})
-	const topMenu = computed(() => Object.values(topObj.value))
-	const workMenu = computed(() => menuList.value.find(item => item.resourceName === 'workSpace')?.children || [])
+	// 顶部菜单
 	const topMenuList = computed(() => {
-		let obj = {};
-		Object.entries(topObj.value).forEach(([k, v]) => obj[v] = k)
-		return workMenu.value.filter(item => topMenu.value.includes(item.resourceTitle)).map(item => ({
+		const list = menuList.value.find(item => item.resourceName === 'topMenu')?.children || []
+		return list.map(item => ({
 			...item,
-			icon: obj[item.resourceTitle],
 			resourceTitle: item.resourceTitle.slice(0, 2) + '<br/>' + item.resourceTitle.slice(2)
 		}))
 	})
 	// 工作菜单
-	const workMenuList = computed(() => workMenu.value.filter(item => !topMenu.value.includes(item.resourceTitle)))
+	const workMenuList = computed(() => {
+		const list = menuList.value.find(item => item.resourceName === 'workSpace')?.children || [];
+		const sortObj = useUserStoreHook().getDict['IndexMenuSort'] || {}
+		const menuMap = new Map(list.map(item => [item.id, item]))
+		// 按字典排序值升序排列的菜单id
+		const sortedIds = Object.entries(sortObj)
+			.sort((a, b) => parseInt(a[1]) - parseInt(b[1]))
+			.map(([id]) => id)
+			.filter(id => menuMap.has(id))
+		return sortedIds.map(id => menuMap.get(id))
+	})
+	// 第一页固定保留物联助手入口，余下工作菜单每页 8 个（首屏 1+7）。
+	const workMenuPages = computed(() => {
+		const menus = workMenuList.value
+		const pages = [[{ id: 'agent-entry', resourceTitle: '物联助手', agent: true }, ...menus.slice(0, 7)]]
+		for (let i = 7; i < menus.length; i += 8) {
+			pages.push(menus.slice(i, i + 8))
+		}
+		return pages
+	})
 	// 服务菜单
 	const serviceMenuList = computed(() => menuList.value.find(item => item.resourceName === 'serviceSpace')?.children || [])
 	
@@ -145,7 +163,7 @@
 	
 	const noticeList = ref([])
 	const getNoticePage = () => {
-		fetchNewsPage({
+		fetchNoticePage({
 			size: 3,
 			page: 0,
 			contentType: 'ANNOUNCEMENT',
@@ -157,6 +175,7 @@
 	}
 	
 	const initData = async () => {
+		getBannerList()
 		getNoticePage()
 		getGoodList()
 	}
@@ -251,7 +270,7 @@
 				width: 50rpx;
 				height: 50rpx;
 				flex-shrink: 0;
-				margin-right: 5rpx;
+				margin-right: 15rpx;
 			}
 			$height: 50rpx;
 			.notice-list {
@@ -267,19 +286,27 @@
 				white-space: nowrap;
 				font-size: 30rpx;
 			}
+			.notice-more {
+				flex-shrink: 0;
+				margin-left: 15rpx;
+				font-size: 22rpx;
+				color: #6a6a6a;
+				&:after {
+					content: ">";
+				}
+			}
 		}
 		
 		.top-menu {
 			display: grid;
-			grid-template-columns: repeat(3, 1fr);
-			grid-gap: 20rpx;
+			grid-template-columns: repeat(4, 1fr);
+			grid-gap: 10rpx;
 			padding: 20rpx 0;
 			.menu-item {
 				width: 100%;
-				background-color: #ecf3fe;
 				border-radius: 15rpx;
 				padding: 10rpx;
-				height: 140rpx;
+				height: 120rpx;
 				position: relative;
 				.text {
 					position: absolute;
@@ -287,22 +314,26 @@
 					right: 10rpx;
 					z-index: 5;
 					text-align: right;
-					font-size: 26rpx;
+					font-size: 20rpx;
 					line-height: 1.2;
 				}
 				image {
 					position: absolute;
-					bottom: 10rpx;
-					left: 10rpx;
-					width: 90rpx;
-					height: 90rpx;
+					top: 0;
+					left: 0;
+					width: 100%;
+					height: 100%;
 				}
 			}
 		}
 		
+		.menu-swiper {
+			width: 100%;
+		}
+
 		.menu-one {
 			display: grid;
-			grid-template-columns: repeat(7, 165rpx);
+			grid-template-columns: repeat(4, 1fr);
 			grid-gap: 20rpx 0;
 			.menu-item {
 				text-align: center;
@@ -325,7 +356,10 @@
 					height: 80rpx;
 				}
 				.text {
-					font-size: 24rpx;
+					font-size: 20rpx;
+					overflow: hidden;
+					white-space: nowrap;
+					text-overflow: ellipsis;
 				}
 				&.agent-entry .text {
 					white-space: nowrap;

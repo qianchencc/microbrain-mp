@@ -16,6 +16,12 @@
 					<NewsCon v-else-if="chatItem.type === 'NEWS'" @toBottom="toBottom"/>
 					<MenuCon v-else-if="chatItem.type === 'BUSINESS_MODULE'" :name="chatItem.data" @toBottom="toBottom" />
 				</view>
+				<!--该条回答的建议-->
+				<view v-if="chatItem.suggests && chatItem.suggests.length" class="suggest-con">
+					<view v-for="(item, index) in chatItem.suggests" :key="index" class="suggest-item" @click="clickSuggest(item)">
+						{{ item.text }}
+					</view>
+				</view>
 			</view>
 			<loading ref="loading" v-if="loading" @toLoading="toBottom"></loading>
 			<!--为了滚动到底做的view-->
@@ -39,6 +45,7 @@
 	import NewsCon from "@/pages/index/coms/NewsCon.vue";
 	import MenuCon from "@/pages/index/coms/MenuCon.vue";
 	import {chatToAi} from "@/apis/common";
+	import { useUserStoreHook } from "@/store/modules/user";
 	
 	export default {
 		components: {
@@ -86,7 +93,7 @@
 								this.$refs.loading.toEnd()
 								if (res) {
 									let chat = res.content
-									this.chatList.push({type: chat.scene, data: chat.message})
+									this.chatList.push({type: chat.scene, data: chat.message, suggests: this.getSuggests()})
 								}
 								this.loading = false
 								this.toBottom()
@@ -96,19 +103,30 @@
 						this.$nextTick(() => {
 							this.$refs.loading.toEnd()
 							// 内部模块，自定义参数，直接推入
-							this.chatList.push(data.params)
+							this.chatList.push({...data.params, suggests: this.getSuggests()})
 							this.loading = false
 							this.toBottom()
 						})
 					}
 				} else {
 					this.inView = 'bottom';
-					this.chatList.push(data.auto)
+					this.chatList.push({...data.auto, suggests: this.getSuggests()})
 					this.loading = false;
 					this.toBottom()
 				}
 			},
-			
+
+			// 从字典AITalkSuggest随机获取3条建议
+			getSuggests() {
+				const dict = useUserStoreHook().getDict['AITalkSuggest'] || {}
+				const list = Object.keys(dict).map(key => ({value: key, text: dict[key]}))
+				return list.sort(() => Math.random() - 0.5).slice(0, 3)
+			},
+			// 点击建议，发送建议内容
+			clickSuggest(item) {
+				this.sendMsg({type: 'me', data: item.text, query: {message: item.text}})
+			},
+
 			// 清空聊天记录
 			clearChat() {
 				this.chatList = []
@@ -213,6 +231,26 @@
 				background-color: #E6F3D0;
 				border-radius: 35rpx 35rpx 35rpx 0;
 				@extend .chat-style;
+			}
+		}
+		.suggest-con {
+			width: fit-content;
+			max-width: 100%;
+			margin-bottom: 20rpx;
+			background-color: #ffffff;
+			border: 2rpx solid #3974F6;
+			border-radius: 35rpx 35rpx 35rpx 0;
+			padding: 10rpx 25rpx;
+			display: flex;
+			flex-direction: column;
+			.suggest-item {
+				font-size: $fz;
+				color: #3974F6;
+				text-decoration: underline;
+				padding: 12rpx 0;
+				&:not(:first-child) {
+					border-top: 1rpx solid #EBEEF5;
+				}
 			}
 		}
 	}

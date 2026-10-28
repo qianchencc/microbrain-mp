@@ -1,16 +1,12 @@
 <template>
 	<view class="content">
 		<z-paging ref="paging" v-model="dataList" default-page-no="0" @query="queryList">
-			<view class="message-item" v-for="(item,index) in dataList" :key="index" @click="handleRouteNewsDetail(item.id)">
-				<image class="message-item_image" :src="getUrl(item.coverPicUrl)" mode="aspectFill"></image>
-				<view class="message-item_detail">
-					<view class="detail_title text-wrap">
-						{{item.infoSubject}}
-					</view>
-					<view class="detail_footer">
-						<view class=" detail_footer_label">
-							{{item.createdAt.substring(0,11)}}
-						</view>
+			<view class="list">
+				<view class="news-item" v-for="(item,index) in dataList" :key="index" @click="handleRouteNewsDetail(item.url)">
+					<image class="cover" :src="getUrl(item.cover)" mode="aspectFill"></image>
+					<view class="detail">
+						<view class="title">{{item.title}}</view>
+						<view class="time">{{formatTime(item.publishTime, '{y}-{m}-{d}')}}</view>
 					</view>
 				</view>
 			</view>
@@ -19,78 +15,63 @@
 </template>
 
 <script setup>
-	import { ref, watch,computed } from 'vue'
+	import { ref } from 'vue'
 	import { fetchNewsPage } from "@/apis/home"
-	import {getUrl} from "@/utils/tools";
+	import {getUrl, formatTime, goPage} from "@/utils/tools";
 	const dataList = ref([])
 	const paging = ref(null)
 
 	const queryList = async (pageNo, pageSize) => {
-		const res = await fetchNewsPage({ pageFlag: 1, size: pageSize, page: pageNo })
+		const res = await fetchNewsPage({ size: pageSize, page: pageNo })
 		if (res.content) {
-			paging.value.complete(res.content.content)
+			paging.value.complete(res.content.records)
 		} else {
 			paging.value.complete(false)
 		}
 	}
 
-	const handleRouteNewsDetail = async (id) => {
-		if (!id) return
-		uni.navigateTo({
-			url: `/pages/index/news/detail?id=${id}`
-		})
+	const handleRouteNewsDetail = (url) => {
+		if (!url) return
+		goPage(`/pages/news/web?url=${encodeURIComponent(url)}`)
 	}
 </script>
 
 <style lang="scss" scoped>
-	.content {
-		padding: 30rpx;
+	.list {
+		padding: 25rpx;
 	}
 
-	.message-item {
-		display: flex;
-		align-items: center;
-		padding: 30rpx;
+	.news-item {
+		margin-bottom: 25rpx;
+		padding: 25rpx;
+		background-color: white;
+		border-radius: 25rpx;
+		box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
 
-		.message-item_image {
-			flex: none;
-			width: 180upx;
-			height: 140upx;
-			margin: 0;
-			margin-right: 27upx;
-			border-radius: 12upx;
+		.cover {
+			width: 100%;
+			height: 350rpx;
+			border-radius: 15rpx;
 		}
 
-		.message-item_detail {
-			height: 140upx;
-			display: flex;
-			flex-direction: column;
-			justify-content: space-between;
-			flex: 1;
-			width: 1%;
+		.detail {
+			padding: 20rpx 10rpx 5rpx;
 
-			.detail_title {
-				color: #303030;
-				font-size: 30upx;
-				line-height: 1.5;
+			.title {
+				font-size: 30rpx;
+				line-height: 40rpx;
+				font-weight: bolder;
+				display: -webkit-box;
+				-webkit-box-orient: vertical;
+				-webkit-line-clamp: 2;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				margin-bottom: 15rpx;
 			}
 
-			.detail_footer_label {
-				line-height: 22upx;
-				font-size: 22upx;
-				color: #B6B7BA;
-			}
-
-			.detail_footer {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-
-				.detail_footer_label {
-					line-height: 22upx;
-					font-size: 22upx;
-					color: #B6B7BA;
-				}
+			.time {
+				color: #6a6a6a;
+				font-size: 24rpx;
 			}
 		}
 	}

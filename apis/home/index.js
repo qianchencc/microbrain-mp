@@ -3,11 +3,17 @@ import request from './api.js'
 // 首页banner
 export const fetchBanner = () => request.globalRequest('/api/publish/banner/current', 'GET')
 
+// 公告发布记录
+export const fetchNoticePage = (data) => request.globalRequest('/api/publish/history/page', 'GET', data)
+
 // 新闻发布记录
-export const fetchNewsPage = (data) => request.globalRequest('/api/publish/history/page', 'GET', data)
+export const fetchNewsPage = (data) => request.globalRequest('/api/publish/newsUrl/page', 'GET', data)
 
 // 新闻详情
 export const fetchNewsById = (id) => request.globalRequest(`/api/publish/history/${id}`, 'GET')
+
+// 确认收到（发布确认记录）
+export const confirmPublishRecord = (data) => request.globalRequest('/api/publish/publishConfirmRecord/', 'POST', data)
 
 // 消息提醒
 export const fetchRemindPage = (type, data) => request.globalRequest(`/api/${type}/remind/setting/page`, 'GET', data)
@@ -25,4 +31,4 @@ export const fetchCurrentUsed = () => request.globalRequest('/api/card/account/c
 export const fetchEnvData = () => request.globalRequest('/api/iot-center/home/yq/env/data', 'GET')
 
 // 获取活动分页
-export const fetchActivityPage = (data) => request.globalRequest('/api/activity/activity/page', 'GET', data)
+export const fetchActivityPage = (data) => request.globalRequest('/api/activity/activity/agent/page', 'GET', data)

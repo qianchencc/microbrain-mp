@@ -7,17 +7,81 @@
 		"title": "微脑管理APP",
 		"children": [
 			{
+				"id": "38fd198d09cb4f638fa2f00eacb027b3",
+				"title": "顶部菜单",
+				"name": "topMenu",
+				"type": "MODULE",
+				"children": [
+					{
+						"id": "ac9861c838944e66a56664824b4c223d",
+						"title": "人员培训",
+						"name": "training",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefN2AHVHOAAG7H1U3fn0112.png",
+						"uri": "toOtherApp:=:https://ksgl.577119.com",
+						"type": "MENU"
+					},
+					{
+						"id": "78293111c71d4080a8c87595a43196e9",
+						"title": "考评中心",
+						"name": "testOnline",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefO2AEua3AAGsRcWzsdU366.png",
+						"uri": "https://ks.577119.com",
+						"type": "MENU"
+					},
+					{
+						"id": "86a35ebb35fa4bb0b3dfc5b126ec5001",
+						"title": "我的办公室",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefM-AcFWSAAGw927mbpU507.png",
+						"uri": "/#/pages/office/index",
+						"type": "MENU"
+					},
+					{
+						"id": "a5e3809ee6684aa58f3dbf432f1dc582",
+						"title": "新闻资讯",
+						"name": "news",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefLmAIgRnAAGQA09DWKY997.png",
+						"uri": "inMini=/pages/news/newList",
+						"type": "MENU"
+					}
+				]
+			},
+			{
 				"id": "5924eccc12994667b8e82ac7140dad53",
 				"title": "工作区",
 				"name": "workSpace",
 				"type": "MODULE",
 				"children": [
 					{
-						"id": "80a67f2aeba146729aa5e983830544bf",
-						"title": "项目查询",
-						"name": "project",
-						"icon": "https://ncim.577119.com/sso-api/upload/upload/1784794712054.png",
-						"uri": "inMini=/pages/index/project",
+						"id": "d2263d13aa0b46b8a55d696db45e24e8",
+						"title": "智慧空调",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5Wqefd2AUQAKAAA8mbClluY512.png",
+						"uri": "/#/pages/aircold/index",
+						"type": "MENU"
+					},
+					{
+						"id": "6a0a9b4c5f3b43a28d0c2a2c4b4d53a0",
+						"title": "智慧照明",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefemAFKIhAAAwD8SHkXI362.png",
+						"uri": "/#/pages/light/index",
+						"type": "MENU"
+					},
+					{
+						"id": "6f21e0ccdcc843e1aeb721ebf0a5408d",
+						"title": "智慧门禁",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqeffqAbRrYAAAtdnaxeqw271.png",
+						"uri": "/#/pages/access/index",
+						"type": "MENU"
+					},
+					{
+						"id": "f3472174f1d041f5bbf2ad49d47b2f0e",
+						"title": "智慧监控",
+						"name": "owner",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/96/wKgB5WqefgiAet0iAAAuj249oUg378.png",
+						"uri": "/#/pages/monitor/index",
 						"type": "MENU"
 					},
 					{
@@ -29,74 +93,10 @@
 						"type": "MENU"
 					},
 					{
-						"id": "ac9861c838944e66a56664824b4c223d",
-						"title": "人员培训",
-						"name": "training",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8flmAWZPDAACz275ih_E197.png",
-						"uri": "toOtherApp:=:https://ksgl.577119.com",
-						"type": "MENU"
-					},
-					{
-						"id": "78293111c71d4080a8c87595a43196e9",
-						"title": "考评中心",
-						"name": "testOnline",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8fmOAJnqYAAEJt_LYXqE390.png",
-						"uri": "https://ks.577119.com",
-						"type": "MENU"
-					},
-					{
-						"id": "86a35ebb35fa4bb0b3dfc5b126ec5001",
-						"title": "我的办公室",
-						"name": "owner",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo8fmyAeR7jAAC6iAXiohw168.png",
-						"uri": "/#/pages/office/index",
-						"type": "MENU"
-					},
-					{
-						"id": "6f21e0ccdcc843e1aeb721ebf0a5408d",
-						"title": "智慧门禁",
-						"name": "owner",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7fwmABN30AACQOGkE-SI835.png",
-						"uri": "/#/pages/access/index",
-						"type": "MENU"
-					},
-					{
-						"id": "f3472174f1d041f5bbf2ad49d47b2f0e",
-						"title": "智慧监控",
-						"name": "owner",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7fxOAS7oMAACjNeCtJAE096.png",
-						"uri": "/#/pages/monitor/index",
-						"type": "MENU"
-					},
-					{
-						"id": "vhfvtycebjqorpijhcj7u8gqwpaeamj7",
-						"title": "访客管理",
-						"name": "visitors",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7fx-AYhpMAADahKtvhHo973.png",
-						"uri": "/",
-						"type": "MENU"
-					},
-					{
-						"id": "d2263d13aa0b46b8a55d696db45e24e8",
-						"title": "智慧空调",
-						"name": "owner",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7fv-AO4BOAABWhf1o_Js606.png",
-						"uri": "/#/pages/aircold/index",
-						"type": "MENU"
-					},
-					{
-						"id": "6a0a9b4c5f3b43a28d0c2a2c4b4d53a0",
-						"title": "智慧照明",
-						"name": "owner",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo7f8yABkUcAAAe6AuOYzQ031.png",
-						"uri": "/#/pages/light/index",
-						"type": "MENU"
-					},
-					{
 						"id": "6a2ad67d52c74bb495a7f817a61fcf84",
 						"title": "会议管理",
 						"name": "meeting",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7fyuAQQf2AADArwIkCX0808.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefrOAYy28AAA3Lxr40R0532.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -104,31 +104,47 @@
 						"id": "67044949fdb649ee929dafd5c564fea3",
 						"title": "投诉建议",
 						"name": "onestop",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7f0SAD1_aAAC-AfiPvnE027.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefsOAXMaeAAAuNjeO8q4474.png",
 						"uri": "/index?eventType=COMPLAINT",
 						"type": "MENU"
 					},
 					{
-						"id": "09drtoozjudsurofnrwdfuf5axnp0bno",
-						"title": "活动管理",
-						"name": "activity",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7f1CAYO-EAAC6YOL-Y7A432.png",
-						"uri": "/",
+						"id": "80a67f2aeba146729aa5e983830544bf",
+						"title": "项目查询",
+						"name": "project",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefmKARA1LAAA18vMBtpM593.png",
+						"uri": "inMini=/pages/index/project",
 						"type": "MENU"
 					},
 					{
 						"id": "aec49aadbca94f5da776f170a5923f77",
 						"title": "物业报修",
 						"name": "event",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7f1uAMRAkAAC4IPbiSHU419.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefnOAXmkeAAAwBvX32RM319.png",
 						"uri": "/eventReport?eventTypeId=0fb6ef848c8779370d4053029b5047f1",
+						"type": "MENU"
+					},
+					{
+						"id": "09drtoozjudsurofnrwdfuf5axnp0bno",
+						"title": "活动管理",
+						"name": "activity",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5Wqefn-AARgVAAAzdeUemvk638.png",
+						"uri": "/",
+						"type": "MENU"
+					},
+					{
+						"id": "vhfvtycebjqorpijhcj7u8gqwpaeamj7",
+						"title": "访客预约",
+						"name": "visitors",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefoyALP5xAAAz4UHgKDs752.png",
+						"uri": "/",
 						"type": "MENU"
 					},
 					{
 						"id": "6qtuwdg8yxxnefpmxnljmd4prmdqgapl",
 						"title": "事件处理",
 						"name": "event/eventHandlers",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7f2WAD0SKAADAHnC3RTA109.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefpmAfA1pAAAz0IOG71s532.png",
 						"uri": "/",
 						"type": "MENU"
 					},
@@ -136,7 +152,7 @@
 						"id": "736ff6e613c44ecb8eaead0fa5d03395",
 						"title": "随手拍",
 						"name": "event",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7f3CATHZgAACxlBH-7dM718.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefqaAenixAAAwStaLqEo497.png",
 						"uri": "/eventReport?eventTypeId=6c01e4f5b811258115fac28a8f84d45c",
 						"type": "MENU"
 					}
@@ -152,23 +168,23 @@
 						"id": "39fb420ccb13445f95e4a22c5132a39f",
 						"title": "零里服务",
 						"name": "neighborhoodServices",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/5F/wKgB5Wo7f4KAATWvAACZYyqnZ4E405.png",
-						"uri": "miniAppId=wxd72afcdd37d26bfc=%2Fpages%2Ftabbar%2Findex",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefueAMrQUAABGlT-k_JQ056.png",
+						"uri": "miniAppId=wxe210b0a16b50444c=%2Fpages%2Ftabbar%2Findex",
 						"type": "MENU"
 					},
 					{
 						"id": "2abedfcddeeb44e3a5e12b73b98d301f",
 						"title": "周边推荐",
 						"name": "aroundRecommend",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo7f42AYSHCAACyJj4H3Z4219.png",
-						"uri": "miniAppId=wxd72afcdd37d26bfc=%2FpagesB%2Fcircum%2Findex",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefvCARIIyAAA_WfDOUqw686.png",
+						"uri": "miniAppId=wx3e9bb6b4d60aa30d=%2FpagesB%2Fcircum%2Findex%3FisOther%3D1%26agentCode%3D00000000%26label%3D%E5%85%B1%E4%BA%AB%E5%A4%A7%E6%95%B0%E6%8D%AE",
 						"type": "MENU"
 					},
 					{
 						"id": "eb90a10f1f8b407db14a41b6251c3b2e",
 						"title": "我的小店",
 						"name": "myShop",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo7f5yANh7MAACR1elGcQo488.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefvqAMopCAABFj2OHKTs646.png",
 						"uri": "miniAppId=wxd72afcdd37d26bfc=%2FpagesF%2Fdistr%2Fregister",
 						"type": "MENU"
 					},
@@ -176,7 +192,7 @@
 						"id": "a15da7e3640f4b5cb2ff7099cc675503",
 						"title": "积分商城",
 						"name": "pointShop",
-						"icon": "https://ncim.577119.com/file/group1/M00/02/60/wKgB5Wo7f6WAfv46AACFt12jyE8382.png",
+						"icon": "https://ncim.577119.com/file/group1/M00/02/97/wKgB5WqefwWAUTHhAAA6S-W4ikQ072.png",
 						"uri": "miniAppId=wxd72afcdd37d26bfc=%2FpagesE%2Fintegral%2Findex",
 						"type": "MENU"
 					}
