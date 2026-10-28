@@ -14,6 +14,13 @@ function decodeParam(raw) {
  try { return decodeURIComponent(raw) } catch { return raw }
 }
 
+const ALERT_LEDGERS = ['gas', 'flooding', 'smoke']
+const isAlertLedger = value => ALERT_LEDGERS.includes(value)
+
+function param(raw) {
+ return raw === undefined || raw === null ? '' : decodeParam(String(raw))
+}
+
 function validWindow(window) {
  return window && typeof window.from === 'string' && typeof window.to === 'string'
   && window.from.length <= 40 && window.to.length <= 40
@@ -53,16 +60,30 @@ export function parseAgentContext(options = {}, { company = true } = {}) {
   const prompt = meterHistoryPrompt(parseJson(options.energyWindow, '计量点期间无效'))
   if (prompt) context.prompt = prompt
  }
- if (options.alertPrompt !== undefined) {
-  const content = decodeParam(String(options.alertPrompt)).trim()
-  if (content && content.length <= 2000) context.reference = { type: 'customer_alert', content }
-  else uni.showToast({ title: '告警引用无效或超过2000字', icon: 'none' })
+ // 消息卡片三元组：ledger + eventId + deviceId 由发送端按条拼，落地即结构化引用。
+ // 缺 eventId 时退化为客户告警文本（设备/时间仍可指导检索），不静默丢引用。
+ if (options.alertLedger !== undefined || options.alertEventId !== undefined || options.alertDeviceId !== undefined) {
+  const ledger = param(options.alertLedger).trim()
+  const eventId = param(options.alertEventId).trim()
+  const deviceId = param(options.alertDeviceId).trim()
+  const label = param(options.alertLabel).trim().slice(0, 300)
+  if (ledger && !isAlertLedger(ledger)) uni.showToast({ title: '告警台账类型无效', icon: 'none' })
+  else if (eventId.length > 300 || deviceId.length > 300) uni.showToast({ title: '告警标识超过300字', icon: 'none' })
+  else if (isAlertLedger(ledger) && eventId && deviceId) context.reference = { type: 'safety_event', ledger, eventId, deviceId, ...(label ? { label } : {}) }
+  else if (label) { context.reference = { type: 'customer_alert', content: label }; uni.showToast({ title: '缺少告警记录标识，按原文引用', icon: 'none' }) }
+  else uni.showToast({ title: '告警引用缺少记录标识', icon: 'none' })
  }
- // 消息卡片预置问题：只填输入框等用户发送，不自动发起对话。
+ // 预置问题：只填输入框等用户发送，不自动发起对话。
  if (options.prompt !== undefined) {
   const prompt = decodeParam(String(options.prompt)).trim()
   if (prompt && prompt.length <= 200 && !/[\u0000-\u001f]/.test(prompt)) context.prompt = prompt
   else if (prompt) uni.showToast({ title: '预置问题无效或超过200字', icon: 'none' })
+ }
+ // 卡片同时带结构化引用与 alertPrompt 时，结构化优先；alertPrompt 只在没有引用的旧路径生效。
+ if (options.alertPrompt !== undefined && !context.reference) {
+  const content = decodeParam(String(options.alertPrompt)).trim()
+  if (content && content.length <= 2000) context.reference = { type: 'customer_alert', content }
+  else uni.showToast({ title: '告警引用无效或超过2000字', icon: 'none' })
  }
  return context
 }

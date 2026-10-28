@@ -114,6 +114,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
+import { pickAgentLaunch, savePendingAgentLaunch, takePendingAgentLaunch } from '@/utils/agent-launch-link.mjs'
 import { getCompanyDashboard, getCompanyDevices, getCompanyEnergyDaily, agentReadCache, peekAgentNotifications, peekAgentTasks, readAgentNotifications, readAgentTasks } from '@/apis/agent'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
@@ -501,18 +502,28 @@ function openAgent(source) {
  openingAgent.value = source
  uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard`, fail: () => { openingAgent.value = ''; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
 }
+// 卡片/深链参数在 onLoad 只写入暂存；真正的消费点只有 onShow（App 的登录恢复、
+// 后台热启动都写同一个槽），避免两条路径各开一次浮层。
+function openPendingAgentLaunch() {
+ if (!pendingAgentOpen || !agentFloat.value) return
+ const payload = pendingAgentOpen
+ pendingAgentOpen = null
+ agentFloat.value.open(payload)
+}
 onLoad(options => {
- const o = options || {}
- // 公司深链（含 index 兼容重定向、客户告警跳转）：浮层带上下文直接展开
- if (o.source === 'company' || o.taskReference || o.alertPrompt !== undefined || o.prompt !== undefined || o.safetyReference !== undefined || o.environmentWindow !== undefined || o.energyWindow !== undefined) pendingAgentOpen = parseAgentContext(o)
+ const launch = pickAgentLaunch('pages/agent/dashboard', options || {})
+ if (launch) savePendingAgentLaunch(launch)
 })
-onMounted(() => { if (pendingAgentOpen) agentFloat.value?.open(pendingAgentOpen) })
+onMounted(openPendingAgentLaunch)
 function back() { backToParent('/pages/index/index') }
 onShow(() => {
  visible = true; pageActive.value = true; openingAgent.value = ''
  try { if (scope && scope !== getAgentStorageScope()) { resetForScope(); scope = '' } }
  catch { resetForScope(); scope = '' }
+ const pending = takePendingAgentLaunch()
+ if (pending) pendingAgentOpen = parseAgentContext(pending.query)
  load()
+ openPendingAgentLaunch()
 })
 function hide() { visible = false; pageActive.value = false; ++requestId; allLoaded() }
 onHide(hide); onUnload(hide)

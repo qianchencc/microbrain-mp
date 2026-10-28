@@ -72,7 +72,7 @@ export const useUserStore = defineStore({
 			})
 			return res
 		},
-		async thirdLogin(code) {
+		async thirdLogin(code, redirect = '/pages/index/index') {
 			if (!code) return
 			// #ifdef MP-WEIXIN
 			const { content } = await getWxOpenId(code)
@@ -97,7 +97,8 @@ export const useUserStore = defineStore({
 			setToken(response.data)
 			this.authorized = true
 			await usePermissionStoreHook().setAuthority()
-			uni.reLaunch({ url: '/pages/index/index' })
+			const target = typeof redirect === 'function' ? redirect() : redirect
+			uni.reLaunch({ url: target || '/pages/index/index' })
 		},
 		async setDict() {
 			const res = await getAllDictMap()
