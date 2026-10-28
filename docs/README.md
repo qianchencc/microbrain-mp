@@ -1,3 +1,5 @@
+- 2026-10-28 任务与通知的结果文案不再自我否定：控制已下发但平台没有回传时统一写“已下发”，删除“暂无结果/等待核验/指令已发送/以现场为准”等描述（`task-presentation.mjs` 的 `dispatched`/`unconfirmed`/`unknown`/`unavailable` 收敛为同一态，`taskResultStatus` 相应投影为`dispatched`）；这四态不再计为异常，因此不再出现“查看原因”入口、日历橙点与收件箱异常命中，只有`failed/partial/missed/interrupted`保留失败展示。任务详情同时去掉次要的现态读取错误条与空占位文案，原因页只在有真实原因时打开。设备行仍按后台回读展示“已完成/平台回读”，不把指令目标写成设备事实。MP 194/194、微信开发与发行编译通过；模拟器/真机复验待做。
+
 - 2026-10-28 任务日历整格轮询已移除：任务不能创建到过去，过去日不会新增行，因此整格 5–6 周轮询没有可观察的变化来源。`TaskCalendarView` 改走 `readAgentCalendar`/`peekAgentCalendar`（快照键带 `#calendar`：历史月永久复用、当月与未来月 60 秒；打开与切月先落位再对齐），实时只刷新今天（`readAgentCalendarDay` + `mergeDayTasks` 按 `taskId` 合并进整格，整格不重取），`calendarPollDelay` 在网格不含今天时完全不定时、含今天时执行中 5 秒/其他 30 秒。MP 194/194、微信开发与发行编译通过；模拟器/真机复验待做。决定与代价见 [ADR 0007 修订](adr/0007-client-read-snapshots-for-task-and-notification-lists.md)。
 
 - 2026-10-28 小程序已上传开发版 `2026.10.28-1`（AppID `wxe60e1f697d115f96`，2.1MB，CLI `✔ upload`）：内容含任务/通知读快照与预取、结果文案去核验术语、时间轴点日期定位首卡、首页单行「物联助手」入口与品牌图标。仅到「开发版」，未提交审核、未发布线上版，也未做真机走查；上线需公众平台管理员「提交审核 → 发布」。见[上传记录](../plan/2026-10-28-miniapp-upload-2026.10.28-1.md)。

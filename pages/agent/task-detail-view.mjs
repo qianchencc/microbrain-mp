@@ -100,7 +100,7 @@ function acReportDeviceRows(phases, target) {
   const before = Number.isFinite(device.before) ? `${device.before}℃` : '—'
   if (device.disposition === 'adjusted') return { deviceId, name: device.name, before, after: Number.isFinite(device.after) ? `平台回读 ${device.after}℃` : `目标 ${target}℃`, tone: 'ok' }
   if (device.disposition === 'not_needed') return { deviceId, name: device.name, before, after: '无需调整', tone: 'muted' }
-  return { deviceId, name: device.name, before, after: { not_dispatched: '这次未调整', unknown: '暂无结果' }[device.disposition] || '未调温', tone: 'muted' }
+  return { deviceId, name: device.name, before, after: { not_dispatched: '这次未调整', unknown: '已下发' }[device.disposition] || '未调温', tone: 'muted' }
  })
  return { rows: rows.slice(0, ENERGY_DEVICE_ROW_LIMIT), more: Math.max(0, rows.length - ENERGY_DEVICE_ROW_LIMIT) }
 }

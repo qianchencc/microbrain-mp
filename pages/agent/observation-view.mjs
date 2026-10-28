@@ -93,7 +93,7 @@ export const safetySubtypeText = subtype => SAFETY_SUBTYPES[subtype] || '安全'
 // 空调巡检/调温行：指令与回读是不同事实。adjusted 只承诺「已下发调温指令」，
 // 调后温度只写平台权威快照的回读值（afterSetpoint），不从指令目标反推设备已达目标值；
 // 平台读数可能与现场面板（半度设定、事后手动改回）不一致，如实标注为平台回读。
-const AC_DISPOSITIONS = { adjustable: '可调', not_needed: '无需调整', unknown: '暂无结果', not_dispatched: '这次未调整' }
+const AC_DISPOSITIONS = { adjustable: '可调', not_needed: '无需调整', unknown: '已下发', not_dispatched: '这次未调整' }
 const acAdjustedText = target => Number.isFinite(target) ? `已下发调到${target}℃` : '已下发调温指令'
 export const acDispositionText = (device, target) => (device.disposition === 'adjusted' ? acAdjustedText(target) : AC_DISPOSITIONS[device.disposition]) || '状态未知'
 export const acReadbackText = device => finite(device?.afterSetpoint) !== null ? `平台回读 ${device.afterSetpoint}℃` : ''

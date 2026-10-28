@@ -39,7 +39,7 @@ export function calendarPollDelay(rows, today, from, to) {
  return rows.some(row => row.status === 'executing' && tasksOnDate([row], today).length) ? 5000 : 30000
 }
 
-export const taskSettled = task => ['completed', 'verified', 'observed', 'cancelled', 'satisfied', 'expired'].includes(task.status) || taskNeedsDetails(task.status)
+export const taskSettled = task => ['completed', 'verified', 'observed', 'cancelled', 'satisfied', 'expired', 'dispatched', 'unconfirmed', 'unknown', 'unavailable'].includes(task.status) || taskNeedsDetails(task.status)
 
 // 任务列表窗口按上海自然日划分，与首页议程同键：进入 Agent 时预取，打开 Sheet 直接命中。
 // 执行结果到期取今天结束而不是 now，否则毫秒级时间戳会让每次打开的键都不同、快照永不命中。

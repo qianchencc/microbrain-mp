@@ -11,14 +11,14 @@ test('同一任务在详情与日程使用普通词，待确认结果不会变�
  const view = taskDetailView(task)
  assert.equal(view.statusText, '进行中')
  assert.equal(view.statusText, taskLabel(task.status))
- assert.deepEqual(view.phases[0].devices.map(d => d.resultText), ['已完成', '指令已发送', '暂无结果'])
- assert.equal(view.phases[0].statusText, '暂无结果')
+ assert.deepEqual(view.phases[0].devices.map(d => d.resultText), ['已完成', '已下发', '已下发'])
+ assert.equal(view.phases[0].statusText, '已下发')
  const event = { taskId: 't', phaseId: 'p1', at: task.phases[0].at, device: device('unconfirmed'), outcome: 'unconfirmed', details: { receipt: 'ACCEPTED' }, target: { power: 'off' } }
  assert.equal(deviceTimelineItems([event])[0].faded, false)
  assert.equal(taskDetailView({ ...task, status: 'future_code' }).statusText, '状态待更新')
  assert.equal(taskSettled({ status: 'failed' }), true)
  assert.equal(taskSettled({ status: 'unknown' }), true)
- assert.deepEqual(taskCalendarMarks([{ ...task, status: 'unknown' }], '2026-10-26', '2026-10-26'), [{ date: '2026-10-26', abnormal: true }])
+ assert.deepEqual(taskCalendarMarks([{ ...task, status: 'unknown' }], '2026-10-26', '2026-10-26'), [{ date: '2026-10-26', abnormal: false }])
 })
 
 test('47次任务先展示最近记录和真实进度，错误原文仍可取回，分类不重复相加', () => {
@@ -38,11 +38,11 @@ test('流程结束不冒充目标确认，读取不足不当作执行失败，�
  const ac = { id: 'p1', at, status: 'completed', read: { ac: { mode: 'adjust_to_26' } }, devices: [{ id: 'ac1', kind: 'ac', outcome: 'unconfirmed', details: { receipt: 'ACCEPTED' } }] }
  const agent = { id: 'p2', at, status: 'executing', read: { agent: { objective: '汇总本月电量' } }, devices: [{ id: 'meter', outcome: 'unavailable' }] }
  const view = taskDetailView({ status: 'completed', occurrence: { virtual: true }, phases: [ac, agent] })
- assert.equal(view.statusText, '暂无结果')
+ assert.equal(view.statusText, '已下发')
  assert.equal(view.status, 'completed')
- assert.equal(view.phases[0].statusText, '指令已发送')
- assert.equal(view.phases[1].devices[0].resultText, '暂无结果')
- assert.match(view.phases[1].devices[0].resultReason, /暂时没读到设备数据/)
+ assert.equal(view.phases[0].statusText, '已下发')
+ assert.equal(view.phases[1].devices[0].resultText, '已下发')
+ assert.equal(view.phases[1].devices[0].resultReason, '', '没有回传时不追加不确定说明')
  assert.match(view.rulesText, /不开机、不改模式和风速/)
  assert.match(view.rulesText, /汇总本月电量/)
  assert.equal(view.occurrenceText, '以后的安排')

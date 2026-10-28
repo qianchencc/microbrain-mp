@@ -42,7 +42,6 @@
    </view>
    <TaskErrorNotice v-if="plan?.pauseReason" :message="plan.pauseReason" summary="安排已暂停" @details="showIssue" />
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>现在状态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="#176b54" /></button></view>
-   <TaskErrorNotice v-if="currentError" :message="currentError" summary="暂时没读到现在状态" @details="showIssue" />
    <TaskErrorNotice v-if="actionError" :message="actionError" summary="这次操作未完成" @details="showIssue" />
    <view class="records-heading"><text class="section-title">{{ detail.interval || detail.phases.some(p => p.readAc) ? '检查记录' : '操作记录' }}</text><button v-if="detail.phases.length > 3" class="records-toggle" @tap="allPhases = !allPhases">{{ allPhases ? '收起记录' : `查看全部${detail.phases.length}次` }} ›</button></view>
    <view v-for="(phase, index) in visiblePhases" :key="phase.id" class="phase">
@@ -62,10 +61,9 @@
      </button>
      <view v-if="(phase.devices.length <= 1 || expandedPhases.includes(phase.id)) && !phase.observations?.some(block => block.type === 'ac_inspection')" class="device-list">
       <view v-for="device in phase.devices" :key="device.id" class="device-row">
-       <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><button v-if="device.resultTone !== 'ok' && device.outcome !== 'pending' && phase.status !== 'cancelled'" class="result result-link" :class="device.resultTone" @tap="showIssue({ title: `${device.name} · ${device.resultText}`, reason: device.resultReason })">{{ device.resultText }} ›</button><text v-else class="result" :class="device.resultTone">{{ device.resultText }}</text>
+       <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><button v-if="device.resultTone === 'warn' && phase.status !== 'cancelled'" class="result result-link" :class="device.resultTone" @tap="showIssue({ title: `${device.name} · ${device.resultText}`, reason: device.resultReason })">{{ device.resultText }} ›</button><text v-else class="result" :class="device.resultTone">{{ device.resultText }}</text>
        <text v-if="device.kind === 'lighting' && currentStates[device.id]" class="current-device">现态：{{ currentStates[device.id].state === true ? '开启' : currentStates[device.id].state === false ? '关闭' : '未知' }}</text>
       </view>
-      <text v-if="!phase.devices.length" class="no-devices">当前没有可查看的设备</text>
      </view>
     </view>
    </view>
@@ -136,18 +134,21 @@ const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false), planSwitchRevision = ref(0)
 const detailFresh = ref(false)
-const currentStates = ref({}), currentLoading = ref(false), currentError = ref('')
+const currentStates = ref({}), currentLoading = ref(false)
 const expandedPhases = ref([]), allPhases = ref(false), moreInfo = ref(false), energyBasis = ref(false), issue = ref(null)
 const visiblePhases = computed(() => allPhases.value ? detail.value?.phases : detail.value?.previewPhases)
 
 function showIssue(value) { issue.value = value }
+// 只有真实失败才给“查看原因”；已下发等无回传状态不追加说明，避免展示多余内容。
 function showPhaseIssue(phase) {
- showIssue({ title: `${phase.clock} · ${phase.statusText}`, reason: [phase.failureReason,
-  ...phase.devices.filter(d => !['verified', 'satisfied', 'observed', 'pending'].includes(d.outcome)).map(d => `${d.name}：${d.resultReason}`)].filter(Boolean).join('\n\n') || '这次结果暂无更多说明。' })
+ const reason = [phase.failureReason, ...phase.devices.filter(d => d.resultTone === 'warn').map(d => `${d.name}：${d.resultReason}`)].filter(Boolean).join('\n\n')
+ if (reason) showIssue({ title: `${phase.clock} · ${phase.statusText}`, reason })
 }
 function showTaskIssue() {
- showIssue({ title: detail.value.statusText, reason: detail.value.phases.filter(p => taskNeedsDetails(p.presentationStatus) || p.failureReason)
-  .map(p => `${p.time} · ${p.statusText}\n${p.failureReason || p.devices.filter(d => d.resultTone !== 'ok').map(d => `${d.name}：${d.resultReason}`).join('\n') || '暂无更多说明'}`).join('\n\n') })
+ const reason = detail.value.phases.filter(p => taskNeedsDetails(p.presentationStatus) || p.failureReason)
+  .map(p => [`${p.time} · ${p.statusText}`, p.failureReason || p.devices.filter(d => d.resultTone === 'warn').map(d => `${d.name}：${d.resultReason}`).join('\n')].filter(Boolean).join('\n'))
+  .join('\n\n')
+ if (reason) showIssue({ title: detail.value.statusText, reason })
 }
 watch(issue, value => emit('navigation', { title: value ? '查看原因' : '', canBack: Boolean(value) }))
 const detail = computed(() => {
@@ -314,13 +315,13 @@ async function load(silent = false) {
 async function loadCurrentStates(taskId = activeTaskId.value) {
  const current = ++currentRequestId
  if (!pageVisible || !props.active || !taskId || props.sampleTask || props.source !== 'office') return
- currentError.value = ''; currentLoading.value = true
+ currentLoading.value = true
  try {
   const result = await getTaskLightingStates(taskId)
   if (current === currentRequestId && pageVisible && props.active && activeTaskId.value === taskId) {
    currentStates.value = Object.fromEntries((result.states || []).map(state => [state.id, state]))
   }
- } catch (cause) { if (current === currentRequestId) { currentStates.value = {}; currentError.value = cause.message || '当前状态暂不可用' } }
+ } catch { if (current === currentRequestId) currentStates.value = {} }
  finally { if (current === currentRequestId) currentLoading.value = false }
 }
 const stateRefresh = createStateRefresh(() => loadCurrentStates(activeTaskId.value))
@@ -367,7 +368,7 @@ async function deleteTask() {
 watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.source], () => {
  ++planStatusRequest; planSwitchRevision.value += 1
  clearInterval(refreshTimer)
- stateRefresh.cancel(); ++currentRequestId; currentLoading.value = false; currentError.value = ''
+ stateRefresh.cancel(); ++currentRequestId; currentLoading.value = false
  activeTaskId.value = props.taskId || ''
  activePlanId.value = props.planId || ''
  returnPlan.value = null
@@ -492,7 +493,6 @@ button::after { border:0; }
 .result { grid-column:1/-1; font-size:12px; }
 .current-device { grid-column:1/-1; color:#507764; font-size:10px; }
 .result.ok { color:#397b61; }.result.warn { color:#a27128; }.result.fail { color:#a15343; }.result.wait { color:#839189; }
-.no-devices { display:block; padding:12px 0; color:#839189; font-size:11px; }
 .task-report { margin-top:14px; padding:12px 14px; border:1px solid #e0e9e1; border-radius:10px; background:linear-gradient(#fdfefd,#f6f8f5); box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.05); }
 .latest-report-link { width:100%; margin:8px 0 0; color:#176b54; font-size:11px; text-align:left; }
 .report-title { display:block; color:#4d7663; font-size:11px; font-weight:700; }

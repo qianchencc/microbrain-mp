@@ -42,7 +42,7 @@ test('设备阶段卡区分已执行、进行中和未完成', () => {
   phaseId, at, outcome, device: { id: 'ac-1', kind: 'ac', name: '空调' }, target: { power: 'on' } })
  const morning = event('start', 'verified', '2026-09-27T01:00:00Z')
  const later = outcome => event('end', outcome, '2026-09-27T06:00:00Z')
- assert.equal(deviceTimelineItems([{ ...event('only', 'unconfirmed', morning.at), details: { receipt: 'ACCEPTED' } }])[0].resultText, '指令已发送')
+ assert.equal(deviceTimelineItems([{ ...event('only', 'unconfirmed', morning.at), details: { receipt: 'ACCEPTED' } }])[0].resultText, '已下发')
  assert.equal(deviceTimelineItems([morning, later('pending')])[0].resultText, '未开始')
  assert.equal(deviceTimelineItems([morning, later('rejected')])[0].resultText, '未完成')
  assert.equal(deviceTimelineItems([{ ...morning, phaseStatus: 'executing', outcome: 'pending' }])[0].resultText, '进行中')
@@ -70,8 +70,8 @@ test('本地演示的区域任务与设备记录指向同一任务及目标', ()
  const unresolved = { ...tasks[0], status: 'unconfirmed', phases: tasks[0].phases.map(phase => ({
   ...phase, status: 'unconfirmed', devices: phase.devices.map(device => ({ ...device, outcome: 'unconfirmed' })),
  })) }
- assert.equal(taskDetailView(unresolved).statusText, '暂无结果')
- assert.equal(regionTimelineItems([unresolved])[0].warning, true)
+ assert.equal(taskDetailView(unresolved).statusText, '已下发')
+ assert.equal(regionTimelineItems([unresolved])[0].warning, false, '已下发不再标记为异常')
 })
 
 test('独立区间任务使用保存边界，未到终点不淡化', () => {
@@ -104,14 +104,14 @@ test('独立区间任务使用保存边界，未到终点不淡化', () => {
  assert.deepEqual(detail.phases.map(item => item.title), ['第1次操作', '第2次操作'], '检查点不沿用开始/结束命名')
  assert.equal(detail.statusText, '进行中')
  assert.equal(taskDetailView({ ...running, executionActive: true }).statusText, '进行中')
- assert.equal(detail.phases[0].devices[0].resultText, '指令已发送')
+ assert.equal(detail.phases[0].devices[0].resultText, '已下发')
  assert.equal(detail.phases[0].devices[0].outcome, 'unconfirmed', '受理结果不被改写成物理核验')
  const verified = phase('p3', '2026-10-05T06:45:00.000Z', 'completed', 'verified')
  assert.equal(taskDetailView({ ...running, phases: [verified] }).phases[0].devices[0].outcome, 'verified')
  const report = { generatedAt: '2026-10-05T08:00:12.000Z', outcome: 'completed',
   phases: [phase('p1', '2026-10-05T06:10:00.000Z', 'completed', 'unconfirmed'), phase('p2', '2026-10-05T07:30:00.000Z', 'completed', 'verified')] }
  const terminal = taskDetailView({ ...running, status: 'completed', phases: report.phases, report })
- assert.equal(terminal.report.outcomeText, '指令已发送')
+ assert.equal(terminal.report.outcomeText, '已下发')
  assert.equal(terminal.report.checkpoints, 2)
  assert.equal(terminal.report.devicesVisible, 1, '报告台数按授权可见的唯一设备统计，同一设备跨检查点不重复')
  const otherPhase = { ...phase('p2b', '2026-10-05T07:30:00.000Z', 'completed', 'verified'),
@@ -256,25 +256,25 @@ test('需核验任务的设备结果区分受理未核验与已核验，不以�
   { id: 'ac', kind: 'ac', name: '26楼空调', target: { power: 'off' }, outcome: 'verified', details: { receipt: 'ACCEPTED', requiresVerification: true } },
  ]
  const view = taskDetailView({ agentSource: 'company', status: 'partial', source: { type: 'scheduled' }, phases: [{ at: '2026-10-19T12:00:00Z', status: 'partial', devices }] })
- assert.deepEqual(view.phases[0].devices.map(device => device.resultText), ['暂无结果', '暂无结果', '已完成'])
- assert.deepEqual(view.phases[0].devices.map(device => device.resultTone), ['warn', 'warn', 'ok'])
+ assert.deepEqual(view.phases[0].devices.map(device => device.resultText), ['已下发', '已下发', '已完成'])
+ assert.deepEqual(view.phases[0].devices.map(device => device.resultTone), ['wait', 'wait', 'ok'])
  const event = device => ({ taskId: 'closure', phaseId: device.id, at: '2026-10-19T12:00:00Z', taskStatus: 'partial', phaseStatus: 'partial', device, target: device.target, outcome: device.outcome, details: device.details })
  const timeline = deviceTimelineItems([event(devices[0])])[0]
- assert.equal(timeline.resultText, '暂无结果')
- assert.equal(timeline.resultTone, 'warn')
+ assert.equal(timeline.resultText, '已下发')
+ assert.equal(timeline.resultTone, 'wait')
  assert.equal(timeline.faded, false)
 })
 
-test('Company 与Office结果未知都只提醒未确认，不推断为失败', () => {
+test('结果未知统一写已下发，不标记异常；平台拒绝仍写未完成', () => {
  const phase = outcome => ({ at: '2026-10-20T01:00:00Z', status: 'partial', failureReason: null,
   devices: [{ id: 'ac-1', kind: 'ac', name: '展示厅空调', target: { power: 'off' }, outcome, details: {} }] })
  const view = (agentSource, outcome) => taskDetailView({ agentSource, status: 'partial', source: { type: 'scheduled' }, phases: [phase(outcome)] }).phases[0].devices[0]
  const companyUnknown = view('company', 'unknown')
- assert.equal(companyUnknown.resultText, '暂无结果')
- assert.equal(companyUnknown.resultTone, 'warn')
+ assert.equal(companyUnknown.resultText, '已下发')
+ assert.equal(companyUnknown.resultTone, 'wait')
  const officeUnknown = view('office', 'unknown')
- assert.equal(officeUnknown.resultText, '暂无结果')
- assert.equal(officeUnknown.resultTone, 'warn')
+ assert.equal(officeUnknown.resultText, '已下发')
+ assert.equal(officeUnknown.resultTone, 'wait')
  const companyRejected = view('company', 'rejected')
  assert.equal(companyRejected.resultText, '未完成')
  assert.equal(companyRejected.resultTone, 'warn')
