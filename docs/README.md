@@ -1,3 +1,5 @@
+- 2026-10-28 首页精简模式议程与未读数改为并行读取且各自落位：`dashboard.vue` 的 `loadSimpleAgenda` 不再先等任务窗返回再读未读数，两路各自持有 loaded/error（`simpleTasksLoaded`/`simpleUnreadLoaded`），任务块只等任务窗、通知块只等未读数，一侧在途或失败不再拖住另一侧；未读数失败显示「暂不可用」而不是冒充「无未读」，任务失败仍只影响任务块。同身份快照先落位、手动刷新与身份切换同时失效两路的既有行为不变。MP 194/194、微信开发与发行编译通过；首页时序收益与模拟器/真机复验待做。
+
 - 2026-10-28 任务与通知的结果文案不再自我否定：控制已下发但平台没有回传时统一写“已下发”，删除“暂无结果/等待核验/指令已发送/以现场为准”等描述（`task-presentation.mjs` 的 `dispatched`/`unconfirmed`/`unknown`/`unavailable` 收敛为同一态，`taskResultStatus` 相应投影为`dispatched`）；这四态不再计为异常，因此不再出现“查看原因”入口、日历橙点与收件箱异常命中，只有`failed/partial/missed/interrupted`保留失败展示。任务详情同时去掉次要的现态读取错误条与空占位文案，原因页只在有真实原因时打开。设备行仍按后台回读展示“已完成/平台回读”，不把指令目标写成设备事实。MP 194/194、微信开发与发行编译通过；模拟器/真机复验待做。
 
 - 2026-10-28 任务日历整格轮询已移除：任务不能创建到过去，过去日不会新增行，因此整格 5–6 周轮询没有可观察的变化来源。`TaskCalendarView` 改走 `readAgentCalendar`/`peekAgentCalendar`（快照键带 `#calendar`：历史月永久复用、当月与未来月 60 秒；打开与切月先落位再对齐），实时只刷新今天（`readAgentCalendarDay` + `mergeDayTasks` 按 `taskId` 合并进整格，整格不重取），`calendarPollDelay` 在网格不含今天时完全不定时、含今天时执行中 5 秒/其他 30 秒。MP 194/194、微信开发与发行编译通过；模拟器/真机复验待做。决定与代价见 [ADR 0007 修订](adr/0007-client-read-snapshots-for-task-and-notification-lists.md)。

@@ -232,9 +232,10 @@ watch(mode, next => { if (next === 'detailed') detailMounted.value = true })
 function setMode(next) {
  mode.value = next
  try { uni.setStorageSync(MODE_KEY, next) } catch { /* 偏好保存失败不阻塞切换 */ }
- if (next === 'simple' && !simpleTasksLoaded.value) void loadSimpleAgenda()
+ if (next === 'simple' && (!simpleTasksLoaded.value || !simpleUnreadLoaded.value)) void loadSimpleAgenda()
 }
 const simpleTasks = ref([]), simpleTasksLoaded = ref(false), simpleTasksError = ref(''), simpleUnread = ref(0)
+const simpleUnreadLoaded = ref(false), simpleUnreadError = ref('')
 let agendaRequestId = 0
 const agendaRange = () => { const today = taskToday(); return { from: `${today}T00:00:00+08:00`, to: `${shiftDate(today, 62)}T00:00:00+08:00` } }
 async function loadSimpleAgenda(force = false) {
@@ -243,19 +244,21 @@ async function loadSimpleAgenda(force = false) {
  // 有同身份快照先落位：切换模式/重进不回到「读取中」。
  const saved = peekAgentTasks({ source: 'company', ...range }), savedUnread = peekAgentNotifications({ source: 'company', limit: 1 })
  if (saved) { simpleTasks.value = saved.tasks || []; simpleTasksError.value = ''; simpleTasksLoaded.value = true }
- if (savedUnread) simpleUnread.value = Number(savedUnread.unreadCount) || 0
+ if (savedUnread) { simpleUnread.value = Number(savedUnread.unreadCount) || 0; simpleUnreadError.value = ''; simpleUnreadLoaded.value = true }
+ // 任务窗与未读数并行，各自落位、各自报错：一侧在途或失败都不拖住另一侧。
  const applyTasks = readAgentTasks({ source: 'company', ...range, force }).then(result => {
   if (current !== agendaRequestId || !visible) return
   try { if (getAgentStorageScope() !== scope) return } catch { return }
   simpleTasks.value = result.tasks || []; simpleTasksError.value = ''
  }, cause => { if (current === agendaRequestId) simpleTasksError.value = cause?.message || '暂不可用' })
- // 未读数与任务窗口并行：通知块不再等任务列表返回。
+  .finally(() => { if (current === agendaRequestId) simpleTasksLoaded.value = true })
  const applyUnread = readAgentNotifications({ source: 'company', limit: 1, force }).then(unread => {
   if (current !== agendaRequestId || !visible) return
   try { if (getAgentStorageScope() !== scope) return } catch { return }
-  simpleUnread.value = Number(unread.unreadCount) || 0
- }, () => { /* 未读数失败不影响任务块 */ })
- try { await Promise.all([applyTasks, applyUnread]) } finally { if (current === agendaRequestId) simpleTasksLoaded.value = true }
+  simpleUnread.value = Number(unread.unreadCount) || 0; simpleUnreadError.value = ''
+ }, cause => { if (current === agendaRequestId) simpleUnreadError.value = cause?.message || '暂不可用' })
+  .finally(() => { if (current === agendaRequestId) simpleUnreadLoaded.value = true })
+ await Promise.all([applyTasks, applyUnread])
 }
 const svgIcon = (body, color) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`)
 const ZONE_ICONS = {
@@ -336,7 +339,8 @@ const simpleCatalog = computed(() => {
  return { warn: false, pill: '正常', status: `${catalogDevices.value.length} 台`, value: `${KIND_CELLS.length} 类设备` }
 })
 const simpleInbox = computed(() => {
- if (!simpleTasksLoaded.value) return { warn: false, pill: '读取中', status: '更新中', value: '任务与报告' }
+ if (!simpleUnreadLoaded.value) return { warn: false, pill: '读取中', status: '更新中', value: '任务与报告' }
+ if (simpleUnreadError.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '任务与报告' }
  if (simpleUnread.value > 0) return { warn: true, pill: '待查看', status: `${simpleUnread.value > 99 ? '99+' : simpleUnread.value} 条未读`, value: '任务与报告' }
  return { warn: false, pill: '正常', status: '无未读', value: '任务与报告' }
 })
@@ -362,6 +366,7 @@ function resetForScope() {
  energyReport.value = null; energyStrip.value = []; selectedStripDate.value = ''
  energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
  ++agendaRequestId; simpleTasks.value = []; simpleTasksLoaded.value = false; simpleTasksError.value = ''; simpleUnread.value = 0
+ simpleUnreadLoaded.value = false; simpleUnreadError.value = ''
 }
 function invalidateCompanyDashboard() { agentReadCache.clear() }
 function applyCompanyDashboardCache(cached) {
@@ -402,8 +407,8 @@ async function load(force = false) {
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
   if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
-  if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleTasksLoaded.value = false; simpleTasksError.value = '' }
-  if (mode.value === 'simple' && (!simpleTasksLoaded.value || force === true)) void loadSimpleAgenda(force === true)
+  if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleTasksLoaded.value = false; simpleTasksError.value = ''; simpleUnreadLoaded.value = false; simpleUnreadError.value = '' }
+  if (mode.value === 'simple' && (!simpleTasksLoaded.value || !simpleUnreadLoaded.value || force === true)) void loadSimpleAgenda(force === true)
   const cached = agentReadCache.peek('dashboard-snapshot')
   if (!force && cached) {
    applyCompanyDashboardCache(cached.value)
