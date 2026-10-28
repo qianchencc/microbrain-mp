@@ -2,7 +2,7 @@
  * ip地址或域名
  */
 
-import { DOMAIN, isDev } from './settings'
+import { ENDPOINT, DOMAIN } from './settings'
 
 // #ifdef MP-WEIXIN
 const ipAddress = DOMAIN //'https://ncim.577119.com' //
@@ -42,22 +42,19 @@ const getFileBaseUrl = () => {
 }
 
 const getAgentBaseUrl = () => {
-	// 客户登录、园区和物联接口始终走客户公网；开发阶段 Agent 使用 Mac 当前局域网地址。
-	// 本机 3200 是唯一 Runtime 实例：直连真实客户网关的真实物联后端，不存在模拟数据源。
-	return isDev ? 'https://mp-agent.qianc.ltd/api' : getGatewayBaseUrl() + '/api/ai'
+	// 客户登录、园区和物联接口始终走客户公网；Agent 地址按环境取 ENDPOINTS。
+	return ENDPOINT.agentBaseUrl
 }
 
-// 自建 H5 监控播放页部署位：客户确认 ncim 静态路径后填入（如 ipAddress + '/owner/h5player/index.html'）。
-// 开发期经本机 frpc 隧道暴露 9415 视频服务（~/frp/frpc.toml），HTTPS 供微信 webView 访问；
+// 自建 H5 监控播放页部署位：客户确认后填入 ENDPOINTS.videoPlayerUrl。
 // 为空时「查看画面」按钮置灰显示“播放页接入中”，不跳取流。
 const getAgentVideoPlayerUrl = () => {
-	return isDev ? 'https://mp-video.qianc.ltd/player.html' : ''
+	return ENDPOINT.videoPlayerUrl
 }
 
-// 播放页内取流回连的 Runtime 基址：HTTPS 页面不能请求 HTTP Runtime（混合内容），
-// 开发期经隧道 /api 代理到本机 3200；生产与 agentUrl 同客户域。
+// 播放页内取流回连的 Runtime 基址：HTTPS 页面不能请求 HTTP Runtime（混合内容）。
 const getAgentVideoApiUrl = () => {
-	return isDev ? 'https://mp-video.qianc.ltd/api' : getAgentBaseUrl()
+	return ENDPOINT.videoApiBaseUrl
 }
 
 export default {
