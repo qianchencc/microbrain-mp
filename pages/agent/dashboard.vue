@@ -244,18 +244,18 @@ async function loadSimpleAgenda(force = false) {
  const saved = peekAgentTasks({ source: 'company', ...range }), savedUnread = peekAgentNotifications({ source: 'company', limit: 1 })
  if (saved) { simpleTasks.value = saved.tasks || []; simpleTasksError.value = ''; simpleTasksLoaded.value = true }
  if (savedUnread) simpleUnread.value = Number(savedUnread.unreadCount) || 0
- try {
-  const result = await readAgentTasks({ source: 'company', ...range, force })
+ const applyTasks = readAgentTasks({ source: 'company', ...range, force }).then(result => {
   if (current !== agendaRequestId || !visible) return
-  try { if (getAgentStorageScope() !== scope) return } catch { /* 身份失效丢弃 */ return }
+  try { if (getAgentStorageScope() !== scope) return } catch { return }
   simpleTasks.value = result.tasks || []; simpleTasksError.value = ''
-  try {
-   const unread = await readAgentNotifications({ source: 'company', limit: 1, force })
-   if (current === agendaRequestId && visible) simpleUnread.value = Number(unread.unreadCount) || 0
-  } catch { /* 未读数失败不影响任务块 */ }
- } catch (cause) {
-  if (current === agendaRequestId) simpleTasksError.value = cause?.message || '暂不可用'
- } finally { if (current === agendaRequestId) simpleTasksLoaded.value = true }
+ }, cause => { if (current === agendaRequestId) simpleTasksError.value = cause?.message || '暂不可用' })
+ // 未读数与任务窗口并行：通知块不再等任务列表返回。
+ const applyUnread = readAgentNotifications({ source: 'company', limit: 1, force }).then(unread => {
+  if (current !== agendaRequestId || !visible) return
+  try { if (getAgentStorageScope() !== scope) return } catch { return }
+  simpleUnread.value = Number(unread.unreadCount) || 0
+ }, () => { /* 未读数失败不影响任务块 */ })
+ try { await Promise.all([applyTasks, applyUnread]) } finally { if (current === agendaRequestId) simpleTasksLoaded.value = true }
 }
 const svgIcon = (body, color) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`)
 const ZONE_ICONS = {
