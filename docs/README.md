@@ -1,3 +1,5 @@
+- 2026-10-28 Runtime 客户仓库部署沟通已准备：后端代码已在客户 GitLab `microbrain/iot-agent-backend` `stable`（`b2ca767`），尚未部署；本地 `f007780` 把 deploy 模板参数化但还没推，建议先补推再让客户部署。沟通稿覆盖运行要求（Node 22.19–22.x、回环 3210、SQLite 持久盘）、网关 `/micro-api/api/ai/agent/*` → `/api/agent/*` 的重写/头透传/流式/超时、密钥与管理员归属、部署后验收与“先发布小程序再切正式版 page”的顺序。见[部署沟通与清单](../plan/2026-10-28-runtime-customer-deploy-communication.md)。
+
 - 2026-10-28 公司 Agent 浮层深链交付修复：仪表盘 `onMounted` 打开浮层时子组件实例还没出现，原实现只 `await nextTick()` 就调 `setReference`/`prefill`，引用与预填被静默丢弃；改为先暂存 payload，`watch(conv)` 挂载后再交付。开发者工具自动化实测（合并后 dev 构建）：动态 `alertPrompt`+`prompt` 深链显示「客户告警引用」chip 并预填问题，静态 `prompt` 深链只预填问题，均不自动发送；`pageStack.query` 为未解码原文。MP 200/200、开发与发行编译通过。
 
 - 2026-10-28 消息卡片预置问题参数 `prompt` 已支持：`pages/agent/context-link.mjs` 解码一次、trim、≤200 字、拒绝控制字符；参数未被编码时按原文保留（`alertPrompt` 同样容错）。`dashboard`/`index` 深链识别 `prompt` 并展开公司浮层，只填输入框、不自动发送。客户只给一条静态 `page` 时可用固定 `prompt`，由 Agent 现有 `query_alerts` 读 perception 告警台账；要保留卡片原文引用则需客户按条拼 `alertPrompt`。MP 200/200、微信开发与发行编译通过；登录恢复与热启动待做。见[探索第 4 节](../plan/2026-10-28-message-card-jump-exploration.md)。
