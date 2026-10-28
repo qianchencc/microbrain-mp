@@ -44,7 +44,7 @@
 | 仪表盘深链解析 | `pages/agent/dashboard.vue:504-509` | `source=company`/`alertPrompt`/`taskReference`/`safetyReference`/`environmentWindow`/`energyWindow` 可解析，`onMounted` 打开浮层 |
 | 告警内容 → 引用 | `pages/agent/context-link.mjs:51-56` | `decodeURIComponent` 后 trim，≤2000 字，生成 `{ type:'customer_alert', content }`；非法只 toast |
 | `prompt` 参数 | `pages/agent/context-link.mjs:61-66` | 已支持（2026-10-28）：decode 一次、trim、≤200 字、拒绝控制字符；参数未编码时按原文保留 |
-| 浮层接收上下文 | `pages/agent/components/CompanyAgentFloat.vue:56-66` | `open({reference, prompt})`，引用/预填交给会话 |
+| 浮层接收上下文 | `pages/agent/components/CompanyAgentFloat.vue:56-79` | `open({reference, prompt})`；子组件未挂载时暂存 payload，`watch(conv)` 出现后再交付（2026-10-28 修复） |
 | 会话暂存与消费 | `pages/agent/components/AgentConversation.vue:291-304, 308+` | hydration 前暂存、hydration 后落地；输入非空时替换需确认 |
 | 冷启动登录 | `App.vue:10-21`、`store/modules/user.js:75-100` | 无 token 时 `thirdLogin` 静默登录，成功后 `uni.reLaunch('/pages/index/index')`，**原始跳转页与参数丢失** |
 | 已打开时新参数 | `App.vue:10` | `onShow` 不接收 launch options，热启动卡片参数无人处理 |
@@ -111,9 +111,9 @@ pages/agent/dashboard?source=company&alertPrompt=%E7%83%9F%E6%84%9F%20%C2%B7%203
 4. 若第 1 条暂时给不了：提供发送端所在仓库/分支或配置入口（当前 GitLab 账号看不到该仓库），或先手工发一条只带 `page=pages/agent/dashboard` 的测试消息。
 5. 正式上线前双方各自发布：我方把 `pages/agent/dashboard` 合入并发布线上版本，客户再把 `miniprogram_state` 恢复 `formal`。
 
-## 6. 验收方式（本轮未执行）
+## 6. 验收方式与已做验证
 
-- 开发者工具“编译模式 → 启动参数”填 `pages/agent/dashboard?source=company&alertPrompt=...&prompt=...` 冷启动：浮层展开、引用与预填正确、不自动发送。
+- 已做（2026-10-28 开发者工具自动化，合并后 dev 构建）：`navigateTo /pages/agent/dashboard?source=company&alertPrompt=...&prompt=...` 后浮层展开，引用 chip 显示「烟感 · 3 楼东侧机房 · 2026-10-28…」，输入框预填「请帮我核实这条告警并给出处置建议」，未自动发送；静态路径仅 `prompt` 时无引用 chip、只预填问题。`pageStack.query` 保留未解码原文，与官方“路径参数需要 decodeURIComponent”一致。
 - 真机：开发版 + `miniprogram_state=developer` 的卡片，分别验证「已登录冷启动」「已登录热启动（小程序在后台）」「未登录冷启动 → 登录后回落」。静态 A 还要确认：Agent 能列出最近告警、记录可点开；动态 B 要确认引用显示为客户告警原文。
 - 发送后检查：Runtime 收到 `customer_alert`（company 来源），引用随本轮落库；设备控制仍需二次确认。
 

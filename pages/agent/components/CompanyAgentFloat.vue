@@ -23,7 +23,7 @@
 // 展开后 orb 缩小停靠面板右上角沿、兼任收起把手；点遮罩同样收起。
 // 收起是最小化：面板保持挂载、在途流继续跑；orb 给运行中环/未读角标。
 // 键盘零专门处理——输入区走 AgentComposer 的 adjust-position=false + keyboard-dock。
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import AgentAvatar from './AgentAvatar.vue'
 import AgentConversation from './AgentConversation.vue'
 import { navMetrics } from '../nav-metrics.js'
@@ -53,16 +53,29 @@ const orbStyle = computed(() => {
  return { transform: `translate(20px, ${dy}px) scale(.62)` }
 })
 
+let pendingPayload = null
+function deliver(payload) {
+ if (!payload) return
+ // 引用/预填交给会话组件：未 hydration 时内部自动转暂存队列
+ if (payload.reference) conv.value?.setReference(payload.reference)
+ if (payload.prompt) conv.value?.prefill(payload.prompt)
+}
+// 小程序子组件要等 setData 往返后才拿得到实例；深链在页面 onMounted 就打开浮层，
+// 引用/预填必须暂存到 conv 真正挂载再交付，不能静默丢弃。
+watch(conv, value => {
+ if (!value || !pendingPayload) return
+ const payload = pendingPayload
+ pendingPayload = null
+ deliver(payload)
+})
 async function openPanel(payload = {}) {
  hinted.value = true
  unread.value = 0
  if (!mounted.value) mounted.value = true
- await nextTick()
  open.value = true
  await nextTick()
- // 引用/预填交给会话组件：未 hydration 时内部自动转暂存队列
- if (payload.reference) conv.value?.setReference(payload.reference)
- if (payload.prompt) conv.value?.prefill(payload.prompt)
+ if (conv.value) deliver(payload)
+ else pendingPayload = payload
 }
 function collapse() { open.value = false }
 function toggle() { if (open.value) collapse(); else openPanel() }
