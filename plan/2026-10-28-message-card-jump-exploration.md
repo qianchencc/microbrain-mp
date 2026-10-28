@@ -118,3 +118,48 @@ pages/agent/dashboard?source=company&alertPrompt=%E7%83%9F%E6%84%9F%20%C2%B7%203
 - 发送后检查：Runtime 收到 `customer_alert`（company 来源），引用随本轮落库；设备控制仍需二次确认。
 
 未验证项：`page` 长度上限；卡片冷启动与 `navigateTo` 的解码行为是否完全一致；客户告警模板 `data` 是否已包含设备/时间；客户线上版本是否已有 `pages/agent/dashboard`；客户发送端是否已配置任何 `page`；登录恢复与热启动参数（第 3 节 2、3 条）尚未实现。
+
+## 7. 后端部署后的预期效果（验收口径）
+
+### 7.1 先分清两个“后端”
+
+| 后端 | 归属 | 决定什么 | 部署后能验证到 |
+| --- | --- | --- | --- |
+| 告警发送端（perception/fire 告警订阅与发送） | 客户 | `page`、`miniprogram_state`、模板 `data` | 点卡片跳到哪、带什么参数、落在哪个版本 |
+| 客户网关 `/micro-api/api/ai` → 我方 Runtime | 客户网关 + 我方 Runtime | 会话建立、鉴权/租户、流式回复、任务/通知/告警台账、设备控制草案 | 页面打开后 Agent 是否真的能答、能读、能走确认 |
+
+两个都就绪才形成完整闭环；只完成任一个都只能看到部分效果，不能当成整体验收。
+
+### 7.2 端到端预期（按点击顺序）
+
+1. 发送侧：`/cgi-bin/message/device/subscribe/send` 返回 `errcode=0`；卡片字段正常渲染；`page` 指向 `pages/agent/dashboard`；`miniprogram_state` 按阶段（测试 developer/trial，正式 formal）。
+2. 点击侧：直接落在仪表盘，不经过首页、不闪跳；`pageStack.query` 保留未解码原文；公司 Agent 浮层自动展开。
+3. 展示侧：B 方案显示「客户告警引用」chip + 预填问题；A 方案只有预填问题、无引用 chip；两种情况都不自动发送、不触发任何设备控制。
+4. 对话侧：用户点发送后，Runtime 新增一轮，`reference=customer_alert`（B）随消息落库；模型基于引用回答，不声称已核验平台记录；若调用 `query_alerts`，返回的记录可点开为安全事件；若需要设备动作，先出草案卡，用户确认后才下发。
+5. 权限侧：未登录或租户/园区不匹配时明确报身份错误，不建立会话、不落引用；company 来源限制与既有一致。
+6. 版本侧：developer/trial/formal 都能跳到 `pages/agent/dashboard`；`formal` 要求该页存在于现网版本，否则发送直接失败。
+7. 观测侧：Runtime 有该轮 run 与 `turn_events`；客户网关日志有 `/api/ai` 请求；无自动发送、无越权控制。
+
+### 7.3 部署后应能区分的失败信号
+
+- `41030`：`page` 不在目标版本（最常见：还没发布就切了 formal）。
+- `43101`：用户未订阅/已取消该设备模板。
+- `47003`：模板 `data` 不合法（与跳转无关，但要和 41030 分开定位）。
+- 页面打开但 Agent「连接失败/读取失败」：网关 `/api/ai`、鉴权 header（`Authorization`/`Tenantcode`）或租户映射问题。
+- 点击后浮层不展开：query 没到达，或设备打开的是不含 `prompt` 支持的旧包。
+- 只有预填、没有引用：客户只配了 `prompt`（A 方案），符合预期，不是故障。
+- 点击后回到首页或没有预填：命中我方已知缺口（未登录冷启动丢参、后台热启动未接管）。
+
+### 7.4 部署顺序（避免把告警打断）
+
+1. 在 developer/trial 验证整条链路，正式版 `page` 保持原值不动。
+2. 我方发布含 `pages/agent/dashboard` 的线上版本（提审 → 发布，客户管理员操作）。
+3. 客户把 `page` 切到契约路径，`miniprogram_state=formal`。
+4. 发一条真实测试告警，逐项核对 7.2。
+5. 观察一段时间发送成功率与 `errcode` 分布，再扩大范围。
+
+### 7.5 仍需我方先补的三处（否则 7.2 在特定场景不成立）
+
+- 未登录冷启动：`thirdLogin` 成功后会 `reLaunch('/pages/index/index')`，原始路径与参数丢失。
+- 小程序在后台时点卡片：`App.onShow` 没有接收/分发新的 launch options。
+- 已有未发送草稿时：新卡片的预置问题不会替换（实测保留旧草稿，未出现替换确认）。
