@@ -22,7 +22,8 @@ import { onHide, onShow } from '@dcloudio/uni-app'
 import { peekAgentCalendar, readAgentCalendar, readAgentCalendarDay } from '@/apis/agent/tasks'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionCalendar from './RegionCalendar.vue'
-import { calendarWindow, shiftDate, validCalendarDate, taskToday, taskDayTime, taskCalendarMarks, tasksOnDate, taskLabel, taskAbnormal, mergeDayTasks, calendarPollDelay } from '../lib/tasks.mjs'
+import { calendarWindow, shiftDate, validCalendarDate } from '../lib/region.mjs'
+import { taskToday, taskDayTime, taskCalendarMarks, tasksOnDate, taskLabel, taskAbnormal, mergeDayTasks, calendarPollDelay } from '../lib/tasks.mjs'
 const props = defineProps({ active: Boolean, compact: Boolean, date: String, refreshKey: Number, source: { type: String, default: 'company' } })
 const emit = defineEmits(['date-change', 'select-task', 'open-date', 'refreshed', 'issue'])
 const today = ref(taskToday()), selected = ref(validCalendarDate(props.date) ? props.date : today.value)

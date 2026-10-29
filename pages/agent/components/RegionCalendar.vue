@@ -21,7 +21,7 @@
 </template>
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { calendarDates, shiftDate } from '../lib/tasks.mjs'
+import { calendarDates, shiftDate } from '../lib/region.mjs'
 
 const props = defineProps({ date: String, today: String, minDate: String, maxDate: String, error: { type: String, default: '' }, compact: Boolean, marks: { type: Array, default: () => [] } })
 const emit = defineEmits(['select', 'month-change'])

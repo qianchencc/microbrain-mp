@@ -12,7 +12,7 @@ const STREAM_IDLE_TIMEOUT_MS = 60000
 const STREAM_REQUEST_TIMEOUT_MS = 300000
 const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 
-export const agentReadCache = createAgentReadCache(getAgentStorageScope)
+const agentReadCache = createAgentReadCache(getAgentStorageScope)
 export const clearCompanyReadCache = () => agentReadCache.clear()
 export const readCompanyDashboardCache = () => agentReadCache.peek('dashboard-snapshot')
 export const writeCompanyDashboardCache = value => agentReadCache.put('dashboard-snapshot', value)

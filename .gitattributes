@@ -9,4 +9,4 @@ AGENTS.md export-ignore
 /CONTEXT.md export-ignore
 /GLOSSARY.md export-ignore
 /README.md export-ignore
-/pages/agent/proto-*.html export-ignore
+/pages/agent/prototypes/ export-ignore

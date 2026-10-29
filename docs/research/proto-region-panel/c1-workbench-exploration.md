@@ -2,7 +2,7 @@
 
 日期：2026-09-27
 状态：探索记录；页面结构已选定 P2（时间轴主页 + 设备抽屉），其余决策见第五节；非生产实现。
-原型：`pages/agent/proto-region-workbench.html`（仓库根目录 `python3 -m http.server 8766` 后打开 `/pages/agent/proto-region-workbench.html`）。
+原型：`../../pages/agent/prototypes/proto-region-workbench.html`（仓库根目录 `python3 -m http.server 8766` 后打开 `/pages/agent/prototypes/proto-region-workbench.html`）。
 时间轴组件契约仍以 [B6 时间轴设计](./b6-timeline-design.md) 为准；C1 只把 B6 分支移植成可复用组件，曲线、34px/h、缎带、节点和刻痕参数不变。旧原型 `proto-region-panel.html` 保持冻结，作为 B4/B5/B6 对照。
 
 ## 一、系统中关于“自动化”的全部设计（盘点）

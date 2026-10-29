@@ -9,7 +9,7 @@
  </view>
 </template>
 <script setup>
-import { navMetrics } from '../nav-metrics.js'
+import { navMetrics } from '../lib/navigation.mjs'
 defineProps({ title: String, backLabel: { type: String, default: '上一页' }, context: Boolean })
 defineEmits(['back'])
 const { top, barHeight, rightInset } = navMetrics()

@@ -121,8 +121,9 @@ import { peekAgentNotifications, peekAgentTasks, readAgentNotifications, readAge
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/AssistantNav.vue'
-import { backToParent } from './navigation.mjs'
+import { backToParent } from './lib/navigation.mjs'
 import { shiftDate, shanghaiToday, mergeStripDays, STRIP_PAGE_DAYS } from './lib/energy.mjs'
+import { metricValue } from './lib/dashboard.mjs'
 import TaskListSheet from './components/TaskListSheet.vue'
 import CompanyTaskOverview from './components/CompanyTaskOverview.vue'
 import DeviceSheet from './components/DeviceSheet.vue'
@@ -140,7 +141,6 @@ import CompanyAgentFloat from './components/CompanyAgentFloat.vue'
 import { parseAgentContext, meterHistoryPrompt } from './lib/conversation.mjs'
 import { environmentHistoryPrompt, environmentWindowReference } from './lib/observations.mjs'
 import { agendaGroups, taskSettled, taskDayTime, taskToday } from './lib/tasks.mjs'
-const metricValue = value => typeof value === 'number' && Number.isFinite(value) ? String(value) : '—'
 
 const KIND_CELLS = [
  { kind: 'environment', label: '环境传感器' },

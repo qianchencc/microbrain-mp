@@ -1,6 +1,6 @@
 # B6 时间轴设计
 
-状态：可评审原型，尚未获最终视觉确认，非生产实现。入口：`pages/agent/proto-region-panel.html?variant=b6`。唯一设计稿：`b5-node-time-concept-v2.png`。`b4-frozen-reference.png` 仅用于检查 B4 未被改动，不是第二份设计稿。本轮仅定义时间轴、区间、节点和时刻；任务卡内容及自动化执行不在该组件契约内。
+状态：可评审原型，尚未获最终视觉确认，非生产实现。入口：`../../pages/agent/prototypes/proto-region-panel.html?variant=b6`。唯一设计稿：`b5-node-time-concept-v2.png`。`b4-frozen-reference.png` 仅用于检查 B4 未被改动，不是第二份设计稿。本轮仅定义时间轴、区间、节点和时刻；任务卡内容及自动化执行不在该组件契约内。
 
 ## 先取样，再绘制
 

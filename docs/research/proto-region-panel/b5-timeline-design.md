@@ -1,6 +1,6 @@
 # B5 时间轴设计
 
-状态：B5 探索记录，近时刻端点避让与细线刻度已被 [B6 设计](./b6-timeline-design.md) 废弃。入口：`pages/agent/proto-region-panel.html?variant=b5`，仅供历史对照。
+状态：B5 探索记录，近时刻端点避让与细线刻度已被 [B6 设计](./b6-timeline-design.md) 废弃。入口：`../../pages/agent/prototypes/proto-region-panel.html?variant=b5`，仅供历史对照。
 
 ## 设计依据
 

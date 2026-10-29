@@ -16,6 +16,7 @@ export {
   TASK_ALL_CHUNK_DAYS,
   TASK_ALL_MAX_DAYS,
 } from '../task-calendar.mjs'
+export { shiftDate } from '../region-calendar.mjs'
 export {
   taskDetailView,
   taskExecutionSummaryView,
@@ -37,7 +38,4 @@ export {
   taskNeedsDetails,
   taskResultStatus,
 } from '../task-presentation.mjs'
-export { calendarDates, calendarWindow, shiftDate, validCalendarDate } from '../region-calendar.mjs'
-export { localDate } from '../timeline-geometry.mjs'
-export { regionTimelineItems } from '../region-timeline.mjs'
 export { deviceTimelineItems } from '../device-timeline-view.mjs'

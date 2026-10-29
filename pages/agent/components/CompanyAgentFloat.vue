@@ -26,7 +26,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import AgentAvatar from './AgentAvatar.vue'
 import AgentConversation from './AgentConversation.vue'
-import { navMetrics } from '../nav-metrics.js'
+import { navMetrics } from '../lib/navigation.mjs'
 
 // pageActive 由宿主页转发（onShow/onHide）：页面被 navigateTo 压栈时
 // 会话等价收起——保草稿停轮询、在途流继续。

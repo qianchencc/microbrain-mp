@@ -21,8 +21,8 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { listDeviceCalendar, listDeviceTimeline } from '@/apis/agent/observations'
-import { calendarWindow, shiftDate, localDate, deviceTimelineItems, targetText } from '../lib/tasks.mjs'
-import { deviceSampleEvents, regionSampleTaskDetail } from '../lib/region.mjs'
+import { deviceTimelineItems, targetText } from '../lib/tasks.mjs'
+import { calendarWindow, shiftDate, localDate, deviceSampleEvents, regionSampleTaskDetail } from '../lib/region.mjs'
 import RegionTimeline from './RegionTimeline.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
 

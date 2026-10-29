@@ -28,8 +28,7 @@
 
 <script setup>
 import { computed, getCurrentInstance, nextTick, onMounted, ref, watch } from 'vue'
-import { createTimeline, dateFocusTop, firstDayCard, localDate, HOUR_PX } from '../timeline-geometry.mjs'
-import { timelineSvg } from '../timeline-svg.mjs'
+import { createTimeline, dateFocusTop, firstDayCard, localDate, HOUR_PX, timelineSvg } from '../lib/timeline.mjs'
 import RegionCalendar from './RegionCalendar.vue'
 
 const props = defineProps({ interactive: { type: Boolean, default: true }, calendar: Boolean, compactCalendar: Boolean, focusItems: Boolean, bottomPad: { type: Number, default: 0 }, calendarMarks: { type: Array, default: () => [] }, calendarError: { type: String, default: '' }, maxDate: String, items: { type: Array, default: () => [] }, date: { type: String, default: () => localDate(new Date()) }, now: { type: String, default: () => new Date().toISOString() }, start: String, days: { type: Number, default: 1 } })

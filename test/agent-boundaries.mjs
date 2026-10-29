@@ -7,6 +7,17 @@ const repo = process.cwd()
 const roots = ['pages/agent', 'apis/agent', 'test']
 const extensions = ['.js', '.mjs', '.vue']
 const sourceExtensions = new Set(extensions)
+const privatePageModules = new Set([
+  'conversation.mjs', 'presentation.mjs', 'composer-drafts.mjs', 'context-link.mjs',
+  'task-calendar.mjs', 'task-detail-view.mjs', 'task-presentation.mjs', 'region-calendar.mjs',
+  'region-timeline.mjs', 'device-timeline-view.mjs', 'region-device-view.mjs', 'region-sample-tasks.mjs',
+  'observation-view.mjs', 'safety-event.mjs', 'video-playback-window.mjs',
+  'energy-daily-view.mjs', 'energy-chart.mjs', 'energy-business-view.mjs', 'energy-comparison-view.mjs',
+  'meter-report-view.mjs', 'meter-panel-view.mjs', 'monthly-energy-view.mjs',
+  'ac-draft.js', 'action-draft-presentation.js', 'device-card-state.js', 'device-roster.js',
+  'state-refresh.mjs', 'list-viewport.mjs', 'navigation.mjs', 'region-focus.js', 'agent-menu.mjs',
+  'timeline-geometry.mjs', 'timeline-svg.mjs',
+])
 const errors = []
 const files = []
 
@@ -38,12 +49,17 @@ for (const file of files) {
     const privateTestSeam = isTest && source.includes('@boundary-private-test-seam')
     const normalized = specifier.split('?')[0]
     const isAgentBarrel = normalized === '@/apis/agent' || normalized === '@/apis/agent/index.js' || normalized.endsWith('/apis/agent/index.js')
-    const isPrivateAgentAdapter = normalized.includes('/apis/agent/') && /(?:request|ndjson|agent-read-cache|report-download|index)\.(?:mjs|js)$/.test(normalized)
+    const isPrivateAgentAdapter = normalized.includes('/apis/agent/') && /(?:request|ndjson|agent-read-cache|report-download|conversation-source|idle-watchdog|stream-errors|index)\.(?:mjs|js)$/.test(normalized)
+    const isPageCaller = relative.startsWith('pages/agent/components/') || relative.endsWith('.vue') || isTest
+    const privatePageImport = specifier.startsWith('.') && privatePageModules.has(path.basename(normalized))
     if (isAgentBarrel && !(isTest && privateTestSeam)) {
       errors.push(`${relative}: import Agent API through a domain entrypoint, not ${specifier}`)
     }
     if (isPrivateAgentAdapter && !(isTest && privateTestSeam)) {
       errors.push(`${relative}: direct Agent adapter import requires an explicit private test seam marker`)
+    }
+    if (isPageCaller && privatePageImport && !normalized.includes('/lib/') && !(isTest && privateTestSeam)) {
+      errors.push(`${relative}: import page implementation through a domain entrypoint, not ${specifier}`)
     }
     if (specifier.includes('/pages/agent/proto-') || specifier.endsWith('/proto-')) {
       errors.push(`${relative}: production code must not import prototype material (${specifier})`)
