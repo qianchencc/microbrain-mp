@@ -5,7 +5,7 @@
   "scripts": {
     "menu": "node createMenu.mjs",
     "test:agent": "node --test test/agent-*.test.mjs",
-    "lint:boundaries": "node tools/check-agent-boundaries.mjs"
+    "lint:boundaries": "node test/agent-boundaries.mjs"
   },
   "dependencies": {
     "crypto-js": "^4.1.1",
