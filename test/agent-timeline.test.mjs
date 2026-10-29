@@ -304,8 +304,8 @@ test('周期计划执行要求只汇总接口返回的阶段事实，不从模�
 })
 
 test('任务结果的安全台账点击在同层导航，不再丢弃告警事件', () => {
- const detailSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskDetailContent.vue'), 'utf8')
- const resultSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskResultContent.vue'), 'utf8')
+ const detailSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/tasks/TaskDetailContent.vue'), 'utf8')
+ const resultSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/tasks/TaskResultContent.vue'), 'utf8')
  assert.match(detailSource, /@select-alert="\$emit\('select-alert', \$event\)"/)
  assert.match(detailSource, /@browse-alerts="\$emit\('browse-alerts'\)"/)
  assert.match(resultSource, /@select-alert="openSafetyEvent"/)
@@ -317,8 +317,8 @@ test('任务结果的安全台账点击在同层导航，不再丢弃告警事�
 })
 
 test('周期计划无管理权限时给出只读原因，详情读取失败保留可见反馈', () => {
- const listSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskListSheet.vue'), 'utf8')
- const detailSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskDetailContent.vue'), 'utf8')
+ const listSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/tasks/TaskListSheet.vue'), 'utf8')
+ const detailSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/tasks/TaskDetailContent.vue'), 'utf8')
  assert.match(listSource, /需使用创建者账号，且当前范围覆盖全部设备才能管理/)
  assert.match(listSource, /planDetailError/)
  assert.match(detailSource, /plan-switch-wrap--disabled/)
@@ -371,11 +371,11 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
   { deviceId: 'd1', name: '空调一', before: '24℃', after: '平台回读 26℃', tone: 'ok' },
   { deviceId: 'd2', name: '空调二', before: '26℃', after: '无需调整', tone: 'muted' }])
 
- const proposalSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskProposalCard.vue'), 'utf8')
+ const proposalSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/tasks/TaskProposalCard.vue'), 'utf8')
  assert.match(proposalSource, /v-for="\(phase, index\) in phasesShown"/, '频率展开的检查点只展示一份窗口事实')
  assert.match(proposalSource, /共 \$\{acWindow\.count\} 次检查/)
  assert.match(proposalSource, /scheduleText/, '单次空调检查必须显示一次性排程')
- const inboxSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/TaskInboxContent.vue'), 'utf8')
+ const inboxSource = readFileSync(resolve(import.meta.dirname, '../pages/agent/components/tasks/TaskInboxContent.vue'), 'utf8')
  assert.match(inboxSource, /notification\.summary/)
 })
 
