@@ -38,9 +38,10 @@ const issue = ref(null)
 import RegionDeviceDrawer from './components/RegionDeviceDrawer.vue'
 import { preserveComposerReference } from './lib/conversation.mjs'
 import TaskDetailSheet from './components/TaskDetailSheet.vue'
-import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion, queueComposePrefill } from './lib/region.mjs'
+import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion, queueComposePrefill } from './lib/region-focus.mjs'
 import { localDate } from './timeline-geometry.mjs'
-import { calendarWindow, shiftDate, validCalendarDate, regionTimelineItems, taskNeedsDetails, regionSampleTasks, regionSampleTaskDetail } from './lib/tasks.mjs'
+import { calendarWindow, shiftDate, validCalendarDate, regionTimelineItems, taskNeedsDetails } from './lib/tasks.mjs'
+import { regionSampleTasks, regionSampleTaskDetail } from './lib/region.mjs'
 import AssistantNav from './components/AssistantNav.vue'
 import { backToParent, previousPageLabel, returnToOfficeConversation } from './lib/navigation.mjs'
 const backLabel = ref('办公室 Agent')

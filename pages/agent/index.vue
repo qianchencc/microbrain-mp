@@ -19,7 +19,7 @@ import AgentHeader from './components/AgentHeader.vue'
 import RegionChip from './components/RegionChip.vue'
 import AgentConversation from './components/AgentConversation.vue'
 import { backToParent, previousPageLabel } from './lib/navigation.mjs'
-import { focusRegion } from './lib/region.mjs'
+import { focusRegion } from './lib/region-focus.mjs'
 import { parseAgentContext } from './lib/conversation.mjs'
 
 const conv = ref(null), pageActive = ref(false), redirecting = ref(false)

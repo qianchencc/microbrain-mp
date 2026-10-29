@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createTimeline, dateFocusTop, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
-import { deviceTimelineItems, regionTimelineItems, energyImpactView, readAcView, readAgentView, readTargetText, taskDetailView, taskExecutionSummaryView, taskPlanSnapshot, taskRequirementsText, targetText, deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/lib/tasks.mjs'
+import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/lib/region.mjs'
+import { deviceTimelineItems, regionTimelineItems, energyImpactView, readAcView, readAgentView, readTargetText, taskDetailView, taskExecutionSummaryView, taskPlanSnapshot, taskRequirementsText, targetText } from '../pages/agent/lib/tasks.mjs'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 

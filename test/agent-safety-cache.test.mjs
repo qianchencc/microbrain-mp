@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { registerHooks } from 'node:module'
+// @boundary-private-test-seam: isolates module-level cache behavior.
 
 let instance = 0
 async function setup(t) {

@@ -20,7 +20,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
-import { regions, focusRegion, focusRegionId, regionsLoading, regionsError, selectFocusRegion, loadRegionFocus } from '../lib/region.mjs'
+import { regions, focusRegion, focusRegionId, regionsLoading, regionsError, selectFocusRegion, loadRegionFocus } from '../lib/region-focus.mjs'
 defineProps({ workbench: Boolean, nav: Boolean })
 const emit = defineEmits(['open', 'change'])
 const open = ref(false)

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createNdjsonStreamDecoder } from '../apis/agent/ndjson.mjs'
+// @boundary-private-test-seam: tests the NDJSON transport adapter directly.
 
 test('NDJSON 分块即使拆分中文 UTF-8 字节也不会丢事件', () => {
 	const received = []

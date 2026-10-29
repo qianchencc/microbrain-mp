@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { registerHooks } from 'node:module'
 import { shiftDate, taskListRange } from '../pages/agent/lib/tasks.mjs'
+// @boundary-private-test-seam: isolates module-level cache behavior.
 
 let instance = 0
 const RANGE = { from: '2026-10-27T00:00:00+08:00', to: '2026-12-28T00:00:00+08:00' }

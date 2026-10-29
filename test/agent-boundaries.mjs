@@ -4,7 +4,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 const repo = process.cwd()
-const roots = ['pages/agent', 'apis/agent']
+const roots = ['pages/agent', 'apis/agent', 'test']
 const extensions = ['.js', '.mjs', '.vue']
 const sourceExtensions = new Set(extensions)
 const errors = []
@@ -34,9 +34,16 @@ for (const file of files) {
   while ((match = importPattern.exec(source))) {
     const specifier = match[1]
     const relative = path.relative(repo, file)
-    const isProductionOrTest = relative.startsWith('pages/agent/') || relative.startsWith('apis/agent/') || relative.startsWith('test/')
-    if (isProductionOrTest && (specifier === '@/apis/agent' || specifier === '@/apis/agent/index.js' || specifier.endsWith('/apis/agent/index.js'))) {
+    const isTest = relative.startsWith('test/')
+    const privateTestSeam = isTest && source.includes('@boundary-private-test-seam')
+    const normalized = specifier.split('?')[0]
+    const isAgentBarrel = normalized === '@/apis/agent' || normalized === '@/apis/agent/index.js' || normalized.endsWith('/apis/agent/index.js')
+    const isPrivateAgentAdapter = normalized.includes('/apis/agent/') && /(?:request|ndjson|agent-read-cache|report-download|index)\.(?:mjs|js)$/.test(normalized)
+    if (isAgentBarrel && !(isTest && privateTestSeam)) {
       errors.push(`${relative}: import Agent API through a domain entrypoint, not ${specifier}`)
+    }
+    if (isPrivateAgentAdapter && !(isTest && privateTestSeam)) {
+      errors.push(`${relative}: direct Agent adapter import requires an explicit private test seam marker`)
     }
     if (specifier.includes('/pages/agent/proto-') || specifier.endsWith('/proto-')) {
       errors.push(`${relative}: production code must not import prototype material (${specifier})`)

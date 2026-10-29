@@ -76,7 +76,7 @@ import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskInboxSheet from './TaskInboxSheet.vue'
 import TaskDetailSheet from './TaskDetailSheet.vue'
 import ReportPreviewContent from './ReportPreviewContent.vue'
-import { focusRegion, focusRegionId, regionsLoading, regionsError, loadRegionFocus, consumeComposePrefill } from '../lib/region.mjs'
+import { focusRegion, focusRegionId, regionsLoading, regionsError, loadRegionFocus, consumeComposePrefill } from '../lib/region-focus.mjs'
 // source: 'office' | 'company'；active: 宿主可见性（页面 onShow / 浮层展开），
 // false 等价页面 onHide——保留草稿、停轮询，但不中止在途流（收起≠销毁）。
 const props = defineProps({ source: { type: String, default: 'office' }, active: Boolean })

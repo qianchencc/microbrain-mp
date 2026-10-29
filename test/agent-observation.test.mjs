@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { isObservationKind, regionDeviceGroups } from '../pages/agent/lib/tasks.mjs'
+import { isObservationKind, regionDeviceGroups } from '../pages/agent/lib/region.mjs'
 import { applyEvent, createTurn, restoreTurns } from '../pages/agent/lib/conversation.mjs'
 import { acInspectionMeta, acReadbackText, energyStale, videoViewLabel, environmentCells, fmtShanghaiDateTime } from '../pages/agent/lib/observations.mjs'
 

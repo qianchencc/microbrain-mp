@@ -13,6 +13,11 @@ const STREAM_REQUEST_TIMEOUT_MS = 300000
 const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 
 export const agentReadCache = createAgentReadCache(getAgentStorageScope)
+export const clearCompanyReadCache = () => agentReadCache.clear()
+export const readCompanyDashboardCache = () => agentReadCache.peek('dashboard-snapshot')
+export const writeCompanyDashboardCache = value => agentReadCache.put('dashboard-snapshot', value)
+export const readCompanyMonthlyCache = key => agentReadCache.peek(key)
+export const writeCompanyMonthlyCache = (key, value) => agentReadCache.put(key, value)
 const isPlansRead = key => key.includes('/agent/task-plans?')
 const isNotificationsRead = key => key.includes('/agent/notifications?')
 const request = async (url, method, data, timeout) => {

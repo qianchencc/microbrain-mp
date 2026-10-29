@@ -1,6 +1,8 @@
 // Observations API entrypoint. Dashboard, region, environment, safety, and device observations share index.js internals.
 export {
-  agentReadCache,
+  clearCompanyReadCache,
+  readCompanyDashboardCache,
+  writeCompanyDashboardCache,
   getCompanyDashboard,
   getCompanyDevices,
   listRegions,

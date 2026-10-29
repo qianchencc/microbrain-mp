@@ -56,7 +56,7 @@
 </template>
 <script setup>
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
-import { getCompanyMeterReport, agentReadCache } from '@/apis/agent/energy'
+import { getCompanyMeterReport, readCompanyMonthlyCache, writeCompanyMonthlyCache } from '@/apis/agent/energy'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
 import { monthlyEnergyWindows, monthlyEnergyView, readMonthlyEnergy, monthlyNumber } from '../lib/energy.mjs'
@@ -97,7 +97,7 @@ async function load(force = false) {
   if (scope !== nextScope || !sameWindow) states.value = {}
   scope = nextScope; windows.value = nextWindows
   const key = 'monthly-snapshot:' + JSON.stringify(nextWindows)
-  const cached = agentReadCache.peek(key)
+  const cached = readCompanyMonthlyCache(key)
   if (cached && force !== true) {
    states.value = cached.value
    if (cached.fresh) return
@@ -116,7 +116,7 @@ async function load(force = false) {
     ++requestId; failAll(result.error)
    } else states.value = { ...states.value, [key]: result }
   })
-  if (active() && !hasError.value && !Object.values(states.value).some(state => state.report?.coverage?.truncated)) agentReadCache.put(key, states.value)
+  if (active() && !hasError.value && !Object.values(states.value).some(state => state.report?.coverage?.truncated)) writeCompanyMonthlyCache(key, states.value)
  } catch (error) {
   if (id === requestId && props.active) failAll(error.message || '月度统计读取失败')
  }

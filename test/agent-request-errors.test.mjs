@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { requestJson, downloadHttpError, recoverDraftRequest } from '../apis/agent/request.mjs'
+// @boundary-private-test-seam: tests the request adapter contract directly.
 import { friendlyError } from '../pages/agent/lib/conversation.mjs'
 
 test('lost door confirmation reads the original receipt without another control request', async () => {

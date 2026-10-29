@@ -1,8 +1,66 @@
-// Energy domain entrypoint. Statistics, comparisons and chart projections cross this seam.
-export * from '../energy-daily-view.mjs'
-export * from '../energy-chart.mjs'
-export * from '../energy-business-view.mjs'
-export * from '../energy-comparison-view.mjs'
-export * from '../meter-report-view.mjs'
-export * from '../meter-panel-view.mjs'
-export * from '../monthly-energy-view.mjs'
+// Energy domain entrypoint. Statistics, comparisons and report projections cross this seam.
+export {
+  STRIP_COL_WIDTH,
+  STRIP_PAGE_DAYS,
+  PIE_COLORS,
+  mergeStripDays,
+  padStripDays,
+  markStripFailed,
+  donutImage,
+  shiftDate,
+  shanghaiToday,
+  dayLabel,
+  unitOf,
+  unitNote,
+  stripDays,
+  floorOf,
+  meterRows,
+  floorComposition,
+  compositionFromUsage,
+  completeDayComparison,
+  round2,
+  fmtUsage,
+  comparePct,
+  statusText,
+  fixedEnergyContext,
+  fixedEnergyWindow,
+  meterStatisticsDailyView,
+} from '../energy-daily-view.mjs'
+export { meterBarChart, meterRankingChart, contributionChart, trendLineChart, floorSplitChart, loadShapeChart } from '../energy-chart.mjs'
+export { energyKindLabel, energyValue, singleMeterOf, energyBusinessChart, legacyCompanyEnergy } from '../energy-business-view.mjs'
+export { comparisonNumber, comparisonDate, comparisonRatio, comparisonChip, comparisonColumns, energyComparisonChart } from '../energy-comparison-view.mjs'
+export {
+  meterReportIsComparison,
+  meterReportAxis,
+  meterReportHasData,
+  meterCompareViews,
+  meterReportGrains,
+  meterReportIsDay,
+  meterReportGrainOptions,
+  degreeText,
+  meterReportPeriodLabels,
+  meterReportSpan,
+  meterReportParamLine,
+  meterReportHero,
+  meterReportContext,
+  meterReportMetrics,
+  meterReportMetricHeads,
+  meterReportMetricTable,
+  meterReportLoadCurve,
+  meterReportBuckets,
+  meterReportCompareView,
+  meterReportCompareViews,
+  meterReportBarLegend,
+  meterReportCompareBuckets,
+  meterReportContribution,
+  meterReportRankingTitle,
+  meterReportRanking,
+  meterReportRegionRankings,
+  meterReportEvidence,
+  meterReportSpanText,
+  meterReportEvidenceSections,
+  meterReportHistoryQuery,
+  meterReportPowerFactor,
+} from '../meter-report-view.mjs'
+export { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../meter-panel-view.mjs'
+export { monthlyNumber, monthlyDate, monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView } from '../monthly-energy-view.mjs'

@@ -38,7 +38,6 @@ export {
   taskResultStatus,
 } from '../task-presentation.mjs'
 export { calendarDates, calendarWindow, shiftDate, validCalendarDate } from '../region-calendar.mjs'
+export { localDate } from '../timeline-geometry.mjs'
 export { regionTimelineItems } from '../region-timeline.mjs'
 export { deviceTimelineItems } from '../device-timeline-view.mjs'
-export { regionDeviceGroups, isObservationKind } from '../region-device-view.mjs'
-export { regionSampleTasks, regionSampleTaskDetail, deviceSampleEvents } from '../region-sample-tasks.mjs'

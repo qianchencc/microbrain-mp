@@ -115,7 +115,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { pickAgentLaunch, savePendingAgentLaunch, takePendingAgentLaunch } from '@/utils/agent-launch-link.mjs'
-import { getCompanyDashboard, getCompanyDevices, agentReadCache } from '@/apis/agent/observations'
+import { getCompanyDashboard, getCompanyDevices, clearCompanyReadCache, readCompanyDashboardCache, writeCompanyDashboardCache } from '@/apis/agent/observations'
 import { getCompanyEnergyDaily } from '@/apis/agent/energy'
 import { peekAgentNotifications, peekAgentTasks, readAgentNotifications, readAgentTasks } from '@/apis/agent/tasks'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
@@ -371,7 +371,7 @@ function resetForScope() {
  ++agendaRequestId; simpleTasks.value = []; simpleTasksLoaded.value = false; simpleTasksError.value = ''; simpleUnread.value = 0
  simpleUnreadLoaded.value = false; simpleUnreadError.value = ''
 }
-function invalidateCompanyDashboard() { agentReadCache.clear() }
+function invalidateCompanyDashboard() { clearCompanyReadCache() }
 function applyCompanyDashboardCache(cached) {
  snapshot.value = cached.snapshot
  loadedSections.value = [...cached.loadedSections]
@@ -386,7 +386,7 @@ function applyCompanyDashboardCache(cached) {
 }
 function saveCompanyDashboardCache() {
  if (!snapshot.value || snapshot.value.errors?.length || Object.keys(sectionErrors.value).length || !devicesLoaded.value || devicesError.value || !energyReport.value || energyReport.value.truncated || energyError.value) return
- agentReadCache.put('dashboard-snapshot', {
+ writeCompanyDashboardCache({
   snapshot: snapshot.value, loadedSections: [...loadedSections.value], sectionErrors: { ...sectionErrors.value },
   catalogDevices: [...catalogDevices.value], devicesLoaded: devicesLoaded.value, devicesError: devicesError.value,
   energyReport: energyReport.value, energyStrip: [...energyStrip.value], energyError: energyError.value, selectedStripDate: selectedStripDate.value,
@@ -412,7 +412,7 @@ async function load(force = false) {
   if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
   if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleTasksLoaded.value = false; simpleTasksError.value = ''; simpleUnreadLoaded.value = false; simpleUnreadError.value = '' }
   if (mode.value === 'simple' && (!simpleTasksLoaded.value || !simpleUnreadLoaded.value || force === true)) void loadSimpleAgenda(force === true)
-  const cached = agentReadCache.peek('dashboard-snapshot')
+  const cached = readCompanyDashboardCache()
   if (!force && cached) {
    applyCompanyDashboardCache(cached.value)
    error.value = ''

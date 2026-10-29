@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { downloadReportFile } from '../apis/agent/report-download.mjs'
+// @boundary-private-test-seam: tests the download adapter contract directly.
 
 // 下载行为公开回归：注入 uni 风格 downloadFile/openDocument 适配器，不读 Vue 源码。
 const adapters = (overrides = {}) => ({

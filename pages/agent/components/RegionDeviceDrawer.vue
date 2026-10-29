@@ -61,7 +61,7 @@ import DeviceTimelineView from './DeviceTimelineView.vue'
 import DeviceObservationView from './DeviceObservationView.vue'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
-import { isObservationKind, regionDeviceGroups } from '../lib/tasks.mjs'
+import { isObservationKind, regionDeviceGroups } from '../lib/region.mjs'
 import { createStateRefresh } from '../lib/actions.mjs'
 
 const issue = ref(null)

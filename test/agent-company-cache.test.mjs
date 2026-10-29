@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createAgentReadCache } from '../apis/agent/agent-read-cache.mjs'
+// @boundary-private-test-seam: tests the cache adapter contract directly.
 
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 function setup() {
