@@ -31,12 +31,12 @@ Architecture terms and the accepted Agent page module decision are in [GLOSSARY.
 
 本仓库同时存放生产源码与技能工作产物。客户仓库是 `origin`（`microbrain/mp.git`）的 `新世纪办公室` 分支，当前为纯小程序源码树（330 个文件，无 `plan/`、`docs/`、`.scratch/`、`tools/`、`AGENTS.md`、`CONTEXT.md`）。交付时必须只带程序本身的内容。
 
-禁止进入客户仓库：`plan/`（计划与 handoff）、`docs/`（研究、ADR、验收底稿）、`.scratch/`（票据与规格）、`tools/`（交付与检查脚本）、`AGENTS.md`（含各目录下的）、`CONTEXT.md`、`README.md`、`pages/agent/proto-*.html`（交互原型）。回归测试 `test/` 属于程序内容，随源码交付（`package.json` 的 `test:agent` 指向它），但 `test/AGENTS.md` 仍排除。
+禁止进入客户仓库：`plan/`（计划与 handoff）、`docs/`（研究、ADR、验收底稿）、`.scratch/`（票据与规格）、`tools/`（交付与检查脚本）、`AGENTS.md`（含各目录下的）、`CONTEXT.md`、`README.md`、`pages/agent/prototypes/`（交互原型）。回归测试 `test/` 属于程序内容，随源码交付（`package.json` 的 `test:agent` 指向它），但 `test/AGENTS.md` 仍排除。
 
 - 生成交付内容：`node tools/deliver.mjs`，以 `.gitattributes` 的 `export-ignore` 为唯一规则导出干净单提交仓库，并核对禁止路径必须为 0。合并/推送客户仓库按它打印的命令执行。
 - 合并前预检：`node tools/check-delivery.mjs --base origin/新世纪办公室`，列出会进入客户仓库的禁止路径。
 - 直接复制工作区交付时：`node tools/check-delivery.mjs --worktree`（含未跟踪文件）。
-- 原型 `pages/agent/proto-*.html` 与 `deploy/h5player/AGENTS.md` 就在生产目录内，整目录复制最容易把它们顺带带过去，必须按文件复制或按上面的检查兜底。
+- 原型 `pages/agent/prototypes/` 与 `deploy/h5player/AGENTS.md` 就在生产目录内，整目录复制最容易把它们顺带带过去，必须按文件复制或按上面的检查兜底。
 - 这些内部产物按项目文档规范继续留在本仓库，不因交付边界删除。
 
 ## 开发版公网预览（2026-10-14 实测）
