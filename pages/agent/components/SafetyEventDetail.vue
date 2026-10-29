@@ -27,11 +27,10 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import VideoPlaybackForm from './VideoPlaybackForm.vue'
-import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
-import { getSafetyEvent, getSafetyEventCameras } from '@/apis/agent'
+import { openVideoPlayer, videoPlayerReady } from '../lib/video.mjs'
+import { fmtDateTime, safetySubtypeText, safetyEventReference } from '../lib/observations.mjs'
+import { getSafetyEvent, getSafetyEventCameras } from '@/apis/agent/observations'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { fmtDateTime, safetySubtypeText } from '../observation-view.mjs'
-import { safetyEventReference } from '../safety-event.mjs'
 
 const props = defineProps({ snapshot: { type: Object, required: true }, active: Boolean })
 const emit = defineEmits(['reference'])

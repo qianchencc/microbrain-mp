@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { environmentHistoryPrompt, environmentWindowReference } from '../pages/agent/environment-reference.mjs'
-import { parseAgentContext } from '../pages/agent/context-link.mjs'
+import { environmentHistoryPrompt, environmentWindowReference } from '../pages/agent/lib/observations.mjs'
+import { parseAgentContext } from '../pages/agent/lib/conversation.mjs'
 
 globalThis.uni = { showToast() {} }
 

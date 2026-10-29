@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView } from '../pages/agent/monthly-energy-view.mjs'
+import { monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView } from '../pages/agent/lib/energy.mjs'
 const now = () => new Date('2026-10-25T18:00:00+08:00')
 const report = (span, value, ids = ['a','b']) => ({
  kind: 'statistics', params: { span: { requested: span, observed: { from: span.from, to: span.to } } },

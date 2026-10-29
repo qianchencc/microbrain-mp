@@ -1,8 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { taskDetailView, taskExecutionSummaryView } from '../pages/agent/task-detail-view.mjs'
-import { taskLabel, taskSettled, taskCalendarMarks } from '../pages/agent/task-calendar.mjs'
-import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
+import { taskDetailView, taskExecutionSummaryView, taskLabel, taskSettled, taskCalendarMarks, deviceTimelineItems } from '../pages/agent/lib/tasks.mjs'
 
 test('同一任务在详情与日程使用普通词，待确认结果不会变成完成', () => {
  const device = outcome => ({ id: outcome, kind: 'ac', name: '空调', outcome, target: { power: 'off' }, details: { receipt: 'ACCEPTED' } })

@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportCompareViews, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText, meterReportPowerFactor, meterReportHasData, meterReportPeriodLabels } from '../pages/agent/meter-report-view.mjs'
-import { loadShapeChart, contributionChart, meterBarChart } from '../pages/agent/energy-chart.mjs'
+import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportCompareViews, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText, meterReportPowerFactor, meterReportHasData, meterReportPeriodLabels, loadShapeChart, contributionChart, meterBarChart } from '../pages/agent/lib/energy.mjs'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
 const report = {
@@ -762,7 +761,7 @@ test('图表 SVG 根节点声明 preserveAspectRatio="none"，超宽图在原生
  assert.ok(wide.width > 17000)
 })
 
-import { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../pages/agent/meter-panel-view.mjs'
+import { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../pages/agent/lib/energy.mjs'
 
 test('面板查询：预设跨度本地时区、单日/自定义含端点、对比轴、楼层取自 location', () => {
  const now = Date.parse('2024-09-11T10:30:00+08:00')

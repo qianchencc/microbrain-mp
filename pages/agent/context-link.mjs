@@ -1,8 +1,7 @@
 // Agent 深链上下文解析：office 页面 onLoad 与仪表盘公司浮层共用。
 // URL 参数 → { reference, prompt }；非法参数只提示不中断。面板/页内直开时
 // 环境历史走 environmentWindowReference，电表仍用 meterHistoryPrompt。
-import { safetyEventReference } from './safety-event.mjs'
-import { environmentHistoryPrompt, environmentWindowReference } from './environment-reference.mjs'
+import { safetyEventReference, environmentHistoryPrompt, environmentWindowReference } from './lib/observations.mjs'
 
 function parseJson(raw, invalidTitle) {
  try { return JSON.parse(decodeURIComponent(raw)) }

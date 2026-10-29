@@ -12,7 +12,7 @@
 const props = defineProps({ status: String, agentName: { type: String, default: '物联 Agent' }, backLabel: String, context: Boolean, workbench: Boolean, workbenchBusy: Boolean, inboxEnabled: Boolean, tasksEnabled: Boolean, inboxUnreadCount: { type: Number, default: 0 }, disabled: Boolean, error: Boolean })
 const emit = defineEmits(['clear', 'back', 'open-inbox', 'open-tasks', 'workbench'])
 import AssistantNav from './AssistantNav.vue'
-import { openAgentMenu } from '../agent-menu.mjs'
+import { openAgentMenu } from '../lib/navigation.mjs'
 function openMenu() { openAgentMenu(props, event => emit(event)) }
 </script>
 <style scoped>

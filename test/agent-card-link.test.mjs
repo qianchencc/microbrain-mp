@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { parseAgentContext } from '../pages/agent/context-link.mjs'
+import { parseAgentContext } from '../pages/agent/lib/conversation.mjs'
 
 const toasts = []
 globalThis.uni = { showToast: options => toasts.push(options.title) }

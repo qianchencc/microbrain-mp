@@ -21,9 +21,9 @@
 <script setup>
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
-import { listSafetyHistory } from '@/apis/agent'
+import { listSafetyHistory } from '@/apis/agent/observations'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { fmtDateTime } from '../observation-view.mjs'
+import { fmtDateTime } from '../lib/observations.mjs'
 
 const props = defineProps({ active: Boolean })
 defineEmits(['select'])

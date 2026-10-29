@@ -17,7 +17,7 @@
 </template>
 <script setup>
 import { computed, ref, watch, getCurrentInstance, onMounted, onUnmounted } from 'vue'
-import { STRIP_COL_WIDTH } from '../energy-daily-view.mjs'
+import { STRIP_COL_WIDTH } from '../lib/energy.mjs'
 
 const props = defineProps({ days: { type: Array, default: () => [] }, selected: String, viewportWidth: { type: Number, default: 0 }, pullEnabled: Boolean })
 const emit = defineEmits(['select', 'pull-open', 'reach-left', 'visible-range'])

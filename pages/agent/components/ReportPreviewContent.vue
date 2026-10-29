@@ -62,10 +62,10 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onHide, onShow } from '@dcloudio/uni-app'
-import { getReportArtifact, downloadReportArtifact } from '@/apis/agent'
+import { getReportArtifact, downloadReportArtifact } from '@/apis/agent/reports'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { fmtShanghaiDateTime } from '../observation-view.mjs'
-import { meterReportEvidenceSections, meterReportSpanText } from '../meter-report-view.mjs'
+import { fmtShanghaiDateTime } from '../lib/observations.mjs'
+import { meterReportEvidenceSections, meterReportSpanText } from '../lib/energy.mjs'
 import ReportFactSection from './ReportFactSection.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'

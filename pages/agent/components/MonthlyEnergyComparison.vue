@@ -56,10 +56,10 @@
 </template>
 <script setup>
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
-import { getCompanyMeterReport, agentReadCache } from '@/apis/agent'
+import { getCompanyMeterReport, agentReadCache } from '@/apis/agent/energy'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
-import { monthlyEnergyWindows, monthlyEnergyView, readMonthlyEnergy, monthlyNumber } from '../monthly-energy-view.mjs'
+import { monthlyEnergyWindows, monthlyEnergyView, readMonthlyEnergy, monthlyNumber } from '../lib/energy.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 const props = defineProps({ active: Boolean, refreshKey: Number, cutoff: String })
 const windows = ref(monthlyEnergyWindows()), states = ref({})

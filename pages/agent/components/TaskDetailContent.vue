@@ -118,15 +118,14 @@
 </template>
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { cancelTask, cancelTaskPlan, getTaskDetail, getTaskLightingStates, getTaskPlan, setTaskPlanStatus } from '@/apis/agent'
-import { taskDetailView, taskPlanSnapshot, taskTime } from '../task-detail-view.mjs'
+import { cancelTask, cancelTaskPlan, getTaskDetail, getTaskLightingStates, getTaskPlan, setTaskPlanStatus } from '@/apis/agent/tasks'
+import { taskDetailView, taskPlanSnapshot, taskTime, taskNeedsDetails } from '../lib/tasks.mjs'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { createStateRefresh } from '../state-refresh.mjs'
+import { createStateRefresh } from '../lib/actions.mjs'
 import ObservationCard from './ObservationCard.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
-import { taskNeedsDetails } from '../task-presentation.mjs'
 
 const props = defineProps({ active: Boolean, taskId: String, planId: String, sampleTask: Object, initialTask: Object, snapshotScope: String, source: { type: String, default: 'office' } })
 const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss', 'select-alert', 'browse-alerts', 'navigation'])

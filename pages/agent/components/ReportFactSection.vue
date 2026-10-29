@@ -91,7 +91,7 @@
 </template>
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { meterReportIsComparison, meterReportAxis, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportPeriodLabels } from '../meter-report-view.mjs'
+import { meterReportIsComparison, meterReportAxis, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportPeriodLabels } from '../lib/energy.mjs'
 
 const props = defineProps({ report: { type: Object, required: true } })
 const emit = defineEmits(['evidence'])

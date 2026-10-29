@@ -140,9 +140,8 @@
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { getTaskPlan, cancelTaskPlan, peekAgentPlans, peekAgentTasks, readAgentNotifications, readAgentPlans, readAgentTasks, setTaskPlanStatus } from '@/apis/agent'
-import { taskStatusTone } from '../task-presentation.mjs'
-import { repeatText, taskRequirementsText, taskTime } from '../task-detail-view.mjs'
+import { getTaskPlan, cancelTaskPlan, peekAgentPlans, peekAgentTasks, readAgentNotifications, readAgentPlans, readAgentTasks, setTaskPlanStatus } from '@/apis/agent/tasks'
+import { taskStatusTone, repeatText, taskRequirementsText, taskTime, agendaGroups, taskDayTime, taskListRange, taskToday, taskSettled, taskLabel as taskStatus, TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS, shiftDate } from '../lib/tasks.mjs'
 import DeviceSheet from './DeviceSheet.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
@@ -150,8 +149,6 @@ import SlidingSegments from './SlidingSegments.vue'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskCalendarView from './TaskCalendarView.vue'
 import TaskInboxContent from './TaskInboxContent.vue'
-import { agendaGroups, taskDayTime, taskListRange, taskToday, taskSettled, taskLabel as taskStatus, TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS } from '../task-calendar.mjs'
-import { shiftDate } from '../region-calendar.mjs'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' }, initialView: String, date: String, initialTask: Object, refreshKey: Number })
 const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-count'])

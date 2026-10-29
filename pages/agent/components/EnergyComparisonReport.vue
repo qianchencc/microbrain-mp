@@ -57,8 +57,8 @@
 import { computed, ref } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import MeterHistoryView from './MeterHistoryView.vue'
-import { fmtShanghaiDateTime as fmtDateTime } from '../observation-view.mjs'
-import { energyComparisonChart, comparisonColumns, comparisonNumber, comparisonRatio, comparisonChip } from '../energy-comparison-view.mjs'
+import { fmtShanghaiDateTime as fmtDateTime } from '../lib/observations.mjs'
+import { energyComparisonChart, comparisonColumns, comparisonNumber, comparisonRatio, comparisonChip } from '../lib/energy.mjs'
 
 const props = defineProps({ report: { type: Object, required: true } })
 const selectedIndex = ref(0), sheetOpen = ref(false), sheetMounted = ref(false), pane = ref('evidence')

@@ -156,8 +156,8 @@
 import { computed, ref } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import MeterHistoryView from './MeterHistoryView.vue'
-import { fmtShanghaiDateTime as fmtTime } from '../observation-view.mjs'
-import { energyKindLabel, energyValue as value, energyBusinessChart, singleMeterOf } from '../energy-business-view.mjs'
+import { fmtShanghaiDateTime as fmtTime } from '../lib/observations.mjs'
+import { energyKindLabel, energyValue as value, energyBusinessChart, singleMeterOf } from '../lib/energy.mjs'
 
 const props = defineProps({ report: { type: Object, required: true }, running: Boolean })
 const grain = ref('week'), mounted = ref(false), sheetOpen = ref(false), pane = ref('evidence'), selectedId = ref(null), finding = ref(null), stack = ref([])

@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { listRegions, markRegionSeen } from '@/apis/agent'
+import { listRegions, markRegionSeen } from '@/apis/agent/observations'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 
 export const regions = ref([])

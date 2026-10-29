@@ -10,7 +10,7 @@
  </view>
 </template>
 <script setup>
-import { fmtShanghaiDateTime as fmtDateTime } from '../observation-view.mjs'
+import { fmtShanghaiDateTime as fmtDateTime } from '../lib/observations.mjs'
 defineProps({ report: { type: Object, required: true } })
 const labels = { epf: '反向累计（epf）', epz: '正向累计（epz）', totalElectric: '平台总示数' }
 </script>

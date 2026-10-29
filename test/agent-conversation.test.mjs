@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createTurn, applyEvent, restoreTurns, restartTurn, mergeTaskDetail } from '../pages/agent/conversation.mjs'
+import { createTurn, applyEvent, restoreTurns, restartTurn, mergeTaskDetail } from '../pages/agent/lib/conversation.mjs'
 
 test('告警引用固定在原轮，恢复和编辑重试不替换成后来的引用', () => {
 	for (const reference of [{ type: 'customer_alert', content: '客户告警A：展示厅水浸' }, { type: 'safety_event', ledger: 'gas', eventId: 'event-a', deviceId: 'device-a', label: '燃气记录' }]) {

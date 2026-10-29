@@ -18,7 +18,7 @@
 </template>
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { acSummary, acTemperatureStep, commonSetting, editSettings, effectiveSettings, settingStatus, modeLabels, fanLabels } from '../ac-draft.js'
+import { acSummary, acTemperatureStep, commonSetting, editSettings, effectiveSettings, settingStatus, modeLabels, fanLabels } from '../lib/actions.mjs'
 import SlidingSegments from './SlidingSegments.vue'
 defineOptions({ options: { virtualHost: true } })
 const props = defineProps({ action: Object, actions: Array, states: Object, busy: Boolean, error: String, embedded: Boolean })

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { taskDate, tasksOnDate, taskCalendarMarks, taskDayTime, agendaGroups, taskSettled, mergeDayTasks, calendarPollDelay } from '../pages/agent/task-calendar.mjs'
+import { taskDate, tasksOnDate, taskCalendarMarks, taskDayTime, agendaGroups, taskSettled, mergeDayTasks, calendarPollDelay } from '../pages/agent/lib/tasks.mjs'
 test('上海自然日包含周期发生、已完成和跨日区间；午夜结束不占次日', () => {
  const tasks = [
   { id: 'recurring', occurrence: { virtual: true }, status: 'scheduled', phases: [{ at: '2026-10-19T16:30:00Z' }] },

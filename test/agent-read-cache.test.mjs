@@ -1,8 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { registerHooks } from 'node:module'
-import { shiftDate } from '../pages/agent/region-calendar.mjs'
-import { taskListRange } from '../pages/agent/task-calendar.mjs'
+import { shiftDate, taskListRange } from '../pages/agent/lib/tasks.mjs'
 
 let instance = 0
 const RANGE = { from: '2026-10-27T00:00:00+08:00', to: '2026-12-28T00:00:00+08:00' }
@@ -10,7 +9,8 @@ const TASKS = { tasks: [{ taskId: 't1', label: '夜间简报' }] }
 
 async function setup(t, { hold } = {}) {
  const previousUni = globalThis.uni, previousScope = globalThis.agendaTestScope
- globalThis.agendaTestScope = 'alice'
+ const testInstance = ++instance
+ globalThis.agendaTestScope = `alice-${testInstance}`
  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-10-27T02:00:00Z') })
  const hooks = registerHooks({ resolve(specifier, context, next) {
   if (specifier === '@/config') return { url: 'data:text/javascript,export default {agentUrl:"https://agent.test/api"}', shortCircuit: true }
@@ -31,7 +31,8 @@ async function setup(t, { hold } = {}) {
   if (hold?.(options)) { pending.push(reply); return }
   queueMicrotask(reply)
  } }
- const client = await import(new URL(`../apis/agent/index.js?agenda-test=${++instance}`, import.meta.url).href)
+ // 每个测试必须取得独立的模块级读缓存；生产调用方仍只走 tasks.js 领域入口。
+ const client = await import(new URL(`../apis/agent/index.js?agenda-test=${testInstance}`, import.meta.url).href)
  return { client, calls, pending }
 }
 const reads = calls => calls.filter(call => call.method === 'GET')

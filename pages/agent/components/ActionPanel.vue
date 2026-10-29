@@ -42,7 +42,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { rosterLiveStats } from '../device-roster.js'
+import { rosterLiveStats } from '../lib/actions.mjs'
 import ActionDraftCard from './ActionDraftCard.vue'
 import DeviceRoster from './DeviceRoster.vue'
 

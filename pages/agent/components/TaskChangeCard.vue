@@ -36,7 +36,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { readTargetText, repeatText, taskTime, targetText } from '../task-detail-view.mjs'
+import { readTargetText, repeatText, taskTime, targetText } from '../lib/tasks.mjs'
 
 const props = defineProps({ change: { type: Object, required: true }, busy: Boolean })
 defineEmits(['confirm', 'discard'])

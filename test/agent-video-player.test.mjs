@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import vm from 'node:vm'
-import { defaultPlaybackDates, playbackDates, playbackWindowDates } from '../pages/agent/video-playback-window.mjs'
+import { defaultPlaybackDates, playbackDates, playbackWindowDates } from '../pages/agent/lib/observations.mjs'
 import { videoPageUrl } from '../pages/webView/video-query.mjs'
 
 const flush = async () => { for (let n = 0; n < 8; n++) await new Promise(resolve => setImmediate(resolve)) }
@@ -222,8 +222,7 @@ test('video navigation carries source and device without waiting for stream fetc
  // Resolve uni-app aliases for Node; exercise the exported navigation function.
  let source = await readFile(new URL('../pages/agent/video-player.js', import.meta.url), 'utf8')
  const config = 'data:text/javascript,' + encodeURIComponent('export default { videoPlayerUrl:"https://customer.test/player",agentUrl:"https://runtime.test/api" }')
- const api = 'data:text/javascript,' + encodeURIComponent('export function getVideoStream(){ return new Promise(()=>{}); }')
- source = source.replace("'@/config'", JSON.stringify(config)).replace("'@/apis/agent'", JSON.stringify(api))
+ source = source.replace("'@/config'", JSON.stringify(config))
  const oldUni = globalThis.uni, oldPages = globalThis.getCurrentPages
  let navigation
  globalThis.getCurrentPages = () => [{}]

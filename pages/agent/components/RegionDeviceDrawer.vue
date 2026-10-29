@@ -54,15 +54,15 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
-import { listRegionDevices, listRegionDeviceStates } from '@/apis/agent'
+import { listRegionDevices, listRegionDeviceStates } from '@/apis/agent/observations'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import DeviceSheet from './DeviceSheet.vue'
 import DeviceTimelineView from './DeviceTimelineView.vue'
 import DeviceObservationView from './DeviceObservationView.vue'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
-import { isObservationKind, regionDeviceGroups } from '../region-device-view.mjs'
-import { createStateRefresh } from '../state-refresh.mjs'
+import { isObservationKind, regionDeviceGroups } from '../lib/tasks.mjs'
+import { createStateRefresh } from '../lib/actions.mjs'
 
 const issue = ref(null)
 const props = defineProps({ open: Boolean, regionId: String, regionName: String, regionError: String, date: String, now: String, refreshSignal: Number, sampleMode: Boolean, sampleDate: String, sampleTasks: { type: Array, default: () => [] } })

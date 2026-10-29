@@ -11,8 +11,8 @@
 </template>
 <script setup>
 import { computed, getCurrentInstance, ref } from 'vue'
-import { fmtDateTime } from '../observation-view.mjs'
-import { trendLineChart } from '../energy-chart.mjs'
+import { fmtDateTime } from '../lib/observations.mjs'
+import { trendLineChart } from '../lib/energy.mjs'
 const props = defineProps({ report: { type: Object, required: true } })
 const metricKey = ref('temp'), selectedId = ref('')
 const metric = computed(() => props.report.metrics.find(item => item.key === metricKey.value))

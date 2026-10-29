@@ -1,10 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createTimeline, dateFocusTop, timelineYOf, localDate } from '../pages/agent/timeline-geometry.mjs'
-import { deviceTimelineItems } from '../pages/agent/device-timeline-view.mjs'
-import { regionTimelineItems } from '../pages/agent/region-timeline.mjs'
-import { energyImpactView, readAcView, readAgentView, readTargetText, taskDetailView, taskExecutionSummaryView, taskPlanSnapshot, taskRequirementsText, targetText } from '../pages/agent/task-detail-view.mjs'
-import { deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/region-sample-tasks.mjs'
+import { deviceTimelineItems, regionTimelineItems, energyImpactView, readAcView, readAgentView, readTargetText, taskDetailView, taskExecutionSummaryView, taskPlanSnapshot, taskRequirementsText, targetText, deviceSampleEvents, regionSampleTaskDetail, regionSampleTasks } from '../pages/agent/lib/tasks.mjs'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -122,7 +119,7 @@ test('独立区间任务使用保存边界，未到终点不淡化', () => {
 })
 
 test('周期安排区分未来发生与实际报告，并导航到同一发生', async () => {
- const { repeatText, taskNavigation, mergeTaskPlan } = await import('../pages/agent/task-detail-view.mjs')
+ const { repeatText, taskNavigation, mergeTaskPlan } = await import('../pages/agent/lib/tasks.mjs')
  assert.equal(repeatText({ frequency: 'weekdays' }), '周一至周五 · 不含节假日调整')
  assert.equal(repeatText({ frequency: 'weekly', weekdays: [1, 5], until: '2026-10-16' }), '每周一、五 · 至 2026-10-16')
  const card = { taskId: 'plan-1', repeat: { frequency: 'weekdays' }, phases: [{ at: '2026-10-09T10:00:00Z', actions: [] }], regionIds: ['office-1'] }

@@ -130,7 +130,7 @@
 import { computed, ref, watch, getCurrentInstance } from 'vue'
 import DeviceSheet from './DeviceSheet.vue'
 import MeterReportDetails from './MeterReportDetails.vue'
-import { meterReportIsComparison, meterReportAxis, meterReportCompareView, meterReportCompareViews, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution } from '../meter-report-view.mjs'
+import { meterReportIsComparison, meterReportAxis, meterReportCompareView, meterReportCompareViews, meterReportGrainOptions, meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportBarLegend, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution } from '../lib/energy.mjs'
 
 const props = defineProps({ report: { type: Object, required: true }, embedded: Boolean })
 const emit = defineEmits(['evidence'])

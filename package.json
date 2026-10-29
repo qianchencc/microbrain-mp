@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "menu": "node createMenu.mjs",
-    "test:agent": "node --test test/agent-*.test.mjs"
+    "test:agent": "node --test test/agent-*.test.mjs",
+    "lint:boundaries": "node tools/check-agent-boundaries.mjs"
   },
   "dependencies": {
     "crypto-js": "^4.1.1",

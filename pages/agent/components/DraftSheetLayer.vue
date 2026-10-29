@@ -35,13 +35,9 @@
 </template>
 <script setup>
 import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { readDeviceStates, updateParameters } from '@/apis/agent'
-import { operationLabel } from '../ac-draft.js'
-import { receiptPhase } from '../device-card-state.js'
-import { createStateRefresh } from '../state-refresh.mjs'
-import { computeDeviceGrid, createDraftGroups, draftBaselineChanged, firstRowBelowFold, remainingBelowFold } from '../action-draft-presentation.js'
-import { createViewportMeasurer } from '../list-viewport.mjs'
-import { receiptText } from '../conversation.mjs'
+import { readDeviceStates, updateParameters } from '@/apis/agent/actions'
+import { operationLabel, receiptPhase, createStateRefresh, computeDeviceGrid, createDraftGroups, draftBaselineChanged, firstRowBelowFold, remainingBelowFold, createViewportMeasurer } from '../lib/actions.mjs'
+import { receiptText } from '../lib/conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
 import DeviceSheet from './DeviceSheet.vue'
 import ParameterEditor from './ParameterEditor.vue'

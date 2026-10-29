@@ -21,7 +21,7 @@
 
 <script setup>
 import { computed, getCurrentInstance, nextTick, onMounted, ref, watch } from 'vue'
-import { rosterGroups, rosterLiveView } from '../device-roster.js'
+import { rosterGroups, rosterLiveView } from '../lib/actions.mjs'
 
 const props = defineProps({
 	entries: { type: Array, required: true },

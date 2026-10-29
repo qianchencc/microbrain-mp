@@ -55,13 +55,13 @@
 <script setup>
 import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { onHide, onShow } from '@dcloudio/uni-app'
-import { getCompanyEnergyDaily, getCompanyMeterReport } from '@/apis/agent'
+import { getCompanyEnergyDaily, getCompanyMeterReport } from '@/apis/agent/energy'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import RegionCalendar from './RegionCalendar.vue'
 import CompanyEnergyStrip from './CompanyEnergyStrip.vue'
 import EnergySkeleton from './EnergySkeleton.vue'
-import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView } from '../energy-daily-view.mjs'
-import { fmtDateTime } from '../observation-view.mjs'
+import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView } from '../lib/energy.mjs'
+import { fmtDateTime } from '../lib/observations.mjs'
 
 const props = defineProps({ active: Boolean, focusDate: String, bounded: Boolean, initialQuery: Object })
 defineEmits(['refresh'])

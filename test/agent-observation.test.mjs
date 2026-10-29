@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { isObservationKind, regionDeviceGroups } from '../pages/agent/region-device-view.mjs'
-import { applyEvent, createTurn, restoreTurns } from '../pages/agent/conversation.mjs'
-import { acInspectionMeta, acReadbackText, energyStale, videoViewLabel, environmentCells, fmtShanghaiDateTime } from '../pages/agent/observation-view.mjs'
+import { isObservationKind, regionDeviceGroups } from '../pages/agent/lib/tasks.mjs'
+import { applyEvent, createTurn, restoreTurns } from '../pages/agent/lib/conversation.mjs'
+import { acInspectionMeta, acReadbackText, energyStale, videoViewLabel, environmentCells, fmtShanghaiDateTime } from '../pages/agent/lib/observations.mjs'
 
 const videoDevice = { id: 'video-1', kind: 'video', name: '视频监控-26楼走廊', location: '26楼运营走廊' }
 const envDevice = { id: 'env-1', kind: 'environment', name: '环境传感器-26楼', location: '26楼' }

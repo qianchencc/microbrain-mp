@@ -16,11 +16,9 @@
 </template>
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { readDeviceStates } from '@/apis/agent'
-import { operationLabel } from '../ac-draft.js'
-import { receiptPhase } from '../device-card-state.js'
-import { createStateRefresh } from '../state-refresh.mjs'
-import { receiptText } from '../conversation.mjs'
+import { readDeviceStates } from '@/apis/agent/actions'
+import { operationLabel, receiptPhase, createStateRefresh } from '../lib/actions.mjs'
+import { receiptText } from '../lib/conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
 const props = defineProps({ source: { type: String, default: 'office' }, draft: {type:Object,required:true}, result:Object, busy:Boolean, embedded:Boolean })
 const emit = defineEmits(['confirm','cancel','select','revalidate','updated','editing','configure','browse'])

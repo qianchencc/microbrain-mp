@@ -25,14 +25,9 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
-import { peekAgentNotifications, peekAgentTasks, readAgentNotifications, readAgentTasks } from '@/apis/agent'
+import { peekAgentNotifications, peekAgentTasks, readAgentNotifications, readAgentTasks } from '@/apis/agent/tasks'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { shiftDate } from '../region-calendar.mjs'
-import { agendaGroups, taskDayTime, taskLabel, taskSettled, taskToday } from '../task-calendar.mjs'
-import DeviceSheet from './DeviceSheet.vue'
-import TaskIssueDetails from './TaskIssueDetails.vue'
-import { taskStatusTone } from '../task-presentation.mjs'
-import { repeatText } from '../task-detail-view.mjs'
+import { shiftDate, agendaGroups, taskDayTime, taskLabel, taskSettled, taskToday, taskStatusTone, repeatText } from '../lib/tasks.mjs'
 const props = defineProps({ active: Boolean, refreshKey: Number })
 const emit = defineEmits(['open'])
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']

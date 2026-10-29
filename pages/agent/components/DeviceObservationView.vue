@@ -43,9 +43,9 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
+import { openVideoPlayer, videoPlayerReady } from '../lib/video.mjs'
 import VideoPlaybackForm from './VideoPlaybackForm.vue'
-import { ageHint, energyCurrentCells, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, safetySubtypeOfName, safetySubtypeText, videoOnline, videoStateText, videoViewLabel } from '../observation-view.mjs'
+import { ageHint, energyCurrentCells, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, safetySubtypeOfName, safetySubtypeText, videoOnline, videoStateText, videoViewLabel } from '../lib/observations.mjs'
 
 const props = defineProps({ device: Object, reading: Object, source: { type: String, default: 'office' } })
 const fetching = ref(false)

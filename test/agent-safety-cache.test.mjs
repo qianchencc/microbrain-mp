@@ -5,7 +5,8 @@ import { registerHooks } from 'node:module'
 let instance = 0
 async function setup(t) {
  const previousUni = globalThis.uni, previousScope = globalThis.safetyTestScope
- globalThis.safetyTestScope = 'alice'
+ const testInstance = ++instance
+ globalThis.safetyTestScope = `alice-${testInstance}`
  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-10-26T12:00:00Z') })
  const hooks = registerHooks({ resolve(specifier, context, next) {
   if (specifier === '@/config') return { url: 'data:text/javascript,export default {agentUrl:"https://agent.test/api"}', shortCircuit: true }
@@ -21,7 +22,8 @@ async function setup(t) {
    coverageComplete: false, nextCursor: `${type}:next` }
  }
  globalThis.uni = { request(options) { calls.push(options); queueMicrotask(() => options.success({ statusCode: 200, data: response(options.url) })) } }
- const client = await import(new URL(`../apis/agent/index.js?safety-test=${++instance}`, import.meta.url).href)
+ // 每个测试必须取得独立的模块级读缓存；生产调用方仍只走 observations.js 领域入口。
+ const client = await import(new URL(`../apis/agent/index.js?safety-test=${testInstance}`, import.meta.url).href)
  const query = { type: 'gas', to: '2026-10-26T23:59:59.999+08:00', limit: 20 }
  return { client, calls, query, response }
 }

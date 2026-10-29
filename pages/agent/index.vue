@@ -18,9 +18,9 @@ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import AgentHeader from './components/AgentHeader.vue'
 import RegionChip from './components/RegionChip.vue'
 import AgentConversation from './components/AgentConversation.vue'
-import { backToParent, previousPageLabel } from './navigation.mjs'
-import { focusRegion } from './region-focus.js'
-import { parseAgentContext } from './context-link.mjs'
+import { backToParent, previousPageLabel } from './lib/navigation.mjs'
+import { focusRegion } from './lib/region.mjs'
+import { parseAgentContext } from './lib/conversation.mjs'
 
 const conv = ref(null), pageActive = ref(false), redirecting = ref(false)
 const returnLabel = ref('总览')

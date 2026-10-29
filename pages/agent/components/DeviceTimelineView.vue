@@ -20,12 +20,8 @@
 </template>
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { listDeviceCalendar, listDeviceTimeline } from '@/apis/agent'
-import { calendarWindow, shiftDate } from '../region-calendar.mjs'
-import { localDate } from '../timeline-geometry.mjs'
-import { deviceTimelineItems } from '../device-timeline-view.mjs'
-import { targetText, taskTime } from '../task-detail-view.mjs'
-import { deviceSampleEvents, regionSampleTaskDetail } from '../region-sample-tasks.mjs'
+import { listDeviceCalendar, listDeviceTimeline } from '@/apis/agent/observations'
+import { calendarWindow, shiftDate, deviceTimelineItems, targetText, taskTime, deviceSampleEvents, regionSampleTaskDetail } from '../lib/tasks.mjs'
 import RegionTimeline from './RegionTimeline.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
 

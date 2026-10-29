@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeStripDays, padStripDays, markStripFailed, compositionFromUsage, completeDayComparison, comparePct, unitOf, donutImage, shiftDate, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, meterRows, floorComposition } from '../pages/agent/energy-daily-view.mjs'
+import { mergeStripDays, padStripDays, markStripFailed, compositionFromUsage, completeDayComparison, comparePct, unitOf, donutImage, shiftDate, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, meterRows, floorComposition } from '../pages/agent/lib/energy.mjs'
 
 test('日期条窗口合并：左端拼接保持升序、同日去重', () => {
  const current = [{ date: '2026-10-01', usage: 10 }, { date: '2026-10-02', usage: 11 }]

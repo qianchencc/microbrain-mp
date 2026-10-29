@@ -60,8 +60,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
-import { readAcView, readAgentView, readTargetText, repeatText, taskTime, targetText } from '../task-detail-view.mjs'
-import { taskStatusText } from '../task-presentation.mjs'
+import { readAcView, readAgentView, readTargetText, repeatText, taskTime, targetText, taskStatusText } from '../lib/tasks.mjs'
 import { resolveDeviceArtwork } from '../device-art/catalog.js'
 
 // 单 phase 动作与待读设备共用 4 行预算；公司级任务的长清单默认收成尾巴可展开。

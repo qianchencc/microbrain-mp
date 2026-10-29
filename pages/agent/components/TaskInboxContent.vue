@@ -32,13 +32,12 @@
 import { computed, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { AGENT_NOTIFICATION_PAGE, markNotificationSeen, markAllNotificationsSeen, peekAgentNotifications, readAgentNotifications } from '@/apis/agent'
+import { AGENT_NOTIFICATION_PAGE, markNotificationSeen, markAllNotificationsSeen, peekAgentNotifications, readAgentNotifications } from '@/apis/agent/tasks'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
-import { taskStatusText, taskStatusTone, taskNeedsDetails } from '../task-presentation.mjs'
-import { taskExecutionSummaryView } from '../task-detail-view.mjs'
-import { fmtShanghaiDateTime } from '../observation-view.mjs'
+import { taskStatusText, taskStatusTone, taskNeedsDetails, taskExecutionSummaryView } from '../lib/tasks.mjs'
+import { fmtShanghaiDateTime } from '../lib/observations.mjs'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
 const emit = defineEmits(['unread-count', 'reference', 'navigation', 'changed'])

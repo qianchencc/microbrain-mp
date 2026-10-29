@@ -21,7 +21,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { deviceDisplayName, deviceLocationLabel, resolveDeviceArtwork } from '../device-art/catalog.js'
-import { cardConfigurable, reduceCardHold, stateText, tapBlockHint } from '../device-card-state.js'
+import { cardConfigurable, reduceCardHold, stateText, tapBlockHint } from '../lib/actions.mjs'
 // 点选走原生 @tap；touch 流驱动长按进度与滚动取消，原生 longpress 兜底提交意图，监听一律不带 .stop。
 // committed 须等 terminal touch 进入 released 后才 emit configure，避免手指仍按住旧卡片时挂载 popup；正常抬手的随行 tap 用一次性 holdDone 屏蔽。
 // 位移超 14px 视为滚动并取消；禁止 reintroduce catch 触摸事件或 suppress 时间戳（会吞滚动/误吞点击）。

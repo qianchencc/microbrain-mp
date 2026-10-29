@@ -26,7 +26,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { listRegionTimeline, listRegionCalendar, listRegionDevices } from '@/apis/agent'
+import { listRegionTimeline, listRegionCalendar, listRegionDevices } from '@/apis/agent/observations'
 import { isDev } from '@/config/settings'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionChip from './components/RegionChip.vue'
@@ -36,16 +36,13 @@ import TaskErrorNotice from './components/TaskErrorNotice.vue'
 import TaskIssueDetails from './components/TaskIssueDetails.vue'
 const issue = ref(null)
 import RegionDeviceDrawer from './components/RegionDeviceDrawer.vue'
-import { preserveComposerReference } from './composer-drafts.mjs'
+import { preserveComposerReference } from './lib/conversation.mjs'
 import TaskDetailSheet from './components/TaskDetailSheet.vue'
-import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion, queueComposePrefill } from './region-focus.js'
+import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion, queueComposePrefill } from './lib/region.mjs'
 import { localDate } from './timeline-geometry.mjs'
-import { calendarWindow, shiftDate, validCalendarDate } from './region-calendar.mjs'
-import { regionTimelineItems } from './region-timeline.mjs'
-import { taskNeedsDetails } from './task-presentation.mjs'
-import { regionSampleTasks, regionSampleTaskDetail } from './region-sample-tasks.mjs'
+import { calendarWindow, shiftDate, validCalendarDate, regionTimelineItems, taskNeedsDetails, regionSampleTasks, regionSampleTaskDetail } from './lib/tasks.mjs'
 import AssistantNav from './components/AssistantNav.vue'
-import { backToParent, previousPageLabel, returnToOfficeConversation } from './navigation.mjs'
+import { backToParent, previousPageLabel, returnToOfficeConversation } from './lib/navigation.mjs'
 const backLabel = ref('办公室 Agent')
 const error = ref(''), loading = ref(true), sampleTasks = ref([]), sampleMode = ref(false)
 // 任务按天缓存、按窗口渲染：滚动跨天时窗口向两侧扩展，选中日跟随视口。

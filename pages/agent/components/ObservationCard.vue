@@ -114,9 +114,9 @@ import EnvironmentTrend from './EnvironmentTrend.vue'
 import MeterHistoryReport from './MeterHistoryReport.vue'
 import DeviceSheet from './DeviceSheet.vue'
 import VideoPlaybackForm from './VideoPlaybackForm.vue'
-import { openVideoPlayer, videoPlayerReady } from '../video-player.js'
-import { meterReportHasData } from '../meter-report-view.mjs'
-import { acDotOf, acInspectionMeta, ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../observation-view.mjs'
+import { openVideoPlayer, videoPlayerReady } from '../lib/video.mjs'
+import { meterReportHasData } from '../lib/energy.mjs'
+import { acDotOf, acInspectionMeta, ageHint, energyPowerText, energyStale, environmentCells, environmentSource, fmtDateTime, fmtShanghaiDateTime, safetySubtypeText, videoOnline, videoViewLabel } from '../lib/observations.mjs'
 
 const props = defineProps({ showIssue: Function, observation: { type: Object, required: true }, readOnly: Boolean, running: Boolean, source: { type: String, default: 'office' }, inlinePlayback: Boolean })
 const visibleBlocks = computed(() => (props.observation?.blocks || []).filter(block =>

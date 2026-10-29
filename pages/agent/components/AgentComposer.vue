@@ -36,7 +36,7 @@
  </view>
 </template>
 <script setup>
-import { referenceTitle as titleOfReference } from '../safety-event.mjs'
+import { referenceTitle as titleOfReference } from '../lib/observations.mjs'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { createVoiceInput } from '../voice-input.mjs'
 import { createFieldEchoGuard } from '../field-echo-guard.mjs'

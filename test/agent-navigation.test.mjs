@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { backToParent, returnToOfficeConversation } from '../pages/agent/navigation.mjs'
-import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference, preserveComposerView, takeComposerView } from '../pages/agent/composer-drafts.mjs'
+import { backToParent, returnToOfficeConversation } from '../pages/agent/lib/navigation.mjs'
+import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference, preserveComposerView, takeComposerView } from '../pages/agent/lib/conversation.mjs'
 
 test('工作台新建任务只回办公室对话；没有办公室历史时保留上层栈并替换工作台', () => {
  const requests = []

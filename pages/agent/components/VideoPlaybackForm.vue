@@ -12,7 +12,7 @@
 </template>
 <script setup>
 import { reactive, ref } from 'vue'
-import { defaultPlaybackDates, playbackDates, playbackWindowDates } from '../video-playback-window.mjs'
+import { defaultPlaybackDates, playbackDates, playbackWindowDates } from '../lib/observations.mjs'
 const props = defineProps({ device: { type: Object, required: true }, ready: Boolean, busy: Boolean })
 const emit = defineEmits(['open'])
 const dates = reactive(props.device.beginTime && props.device.endTime ? playbackWindowDates(props.device) : defaultPlaybackDates()), error = ref('')

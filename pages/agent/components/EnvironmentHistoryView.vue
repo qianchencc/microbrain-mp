@@ -13,10 +13,10 @@
 <script setup>
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { onHide, onShow } from '@dcloudio/uni-app'
-import { getEnvironmentHistory } from '@/apis/agent'
+import { getEnvironmentHistory } from '@/apis/agent/observations'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import EnvironmentTrend from './EnvironmentTrend.vue'
-import { fmtDateTime } from '../observation-view.mjs'
+import { fmtDateTime } from '../lib/observations.mjs'
 const props = defineProps({ active: Boolean })
 defineEmits(['question'])
 const today = fmtDateTime(new Date().toISOString()).slice(0, 10)

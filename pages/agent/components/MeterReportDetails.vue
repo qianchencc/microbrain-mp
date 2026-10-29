@@ -26,7 +26,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import MeterHistoryView from './MeterHistoryView.vue'
-import { meterReportAxis, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportPowerFactor, meterReportSpanText } from '../meter-report-view.mjs'
+import { meterReportAxis, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportPowerFactor, meterReportSpanText } from '../lib/energy.mjs'
 
 const props = defineProps({ report: { type: Object, required: true }, active: Boolean })
 const emit = defineEmits(['navigation'])
