@@ -10,7 +10,7 @@ export {
   modeLabels,
   operationLabel,
   settingStatus,
-} from '../ac-draft.js'
+} from '../domains/actions/ac-draft.js'
 export {
   computeDeviceGrid,
   createDraftBaseline,
@@ -18,8 +18,8 @@ export {
   draftBaselineChanged,
   firstRowBelowFold,
   remainingBelowFold,
-} from '../action-draft-presentation.js'
-export { cardConfigurable, receiptPhase, reduceCardHold, stateText, tapBlockHint } from '../device-card-state.js'
-export { rosterGroups, rosterLiveStats, rosterLiveView } from '../device-roster.js'
-export { createStateRefresh } from '../state-refresh.mjs'
-export { createViewportMeasurer } from '../list-viewport.mjs'
+} from '../domains/actions/action-draft-presentation.js'
+export { cardConfigurable, receiptPhase, reduceCardHold, stateText, tapBlockHint } from '../domains/actions/device-card-state.js'
+export { rosterGroups, rosterLiveStats, rosterLiveView } from '../domains/actions/device-roster.js'
+export { createStateRefresh } from '../domains/actions/state-refresh.mjs'
+export { createViewportMeasurer } from '../domains/actions/list-viewport.mjs'

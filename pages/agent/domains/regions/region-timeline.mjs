@@ -1,5 +1,5 @@
-import { resolveDeviceArtwork } from './device-art/catalog.js'
-import { taskNeedsDetails, taskResultStatus } from './task-presentation.mjs'
+import { resolveDeviceArtwork } from '../../device-art/catalog.js'
+import { taskNeedsDetails, taskResultStatus } from '../tasks/task-presentation.mjs'
 import { creatorVariant } from './region-device-view.mjs'
 
 export function regionTimelineItems(tasks) {

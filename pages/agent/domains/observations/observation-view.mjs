@@ -1,6 +1,6 @@
 // 观察面共用呈现助手（ObservationCard / 区域抽屉观察 pane）：只格式化 runtime 给出的原始事实，不编造取值。
 
-import { modeLabels } from './lib/actions.mjs'
+import { modeLabels } from '../actions/ac-draft.js'
 
 const OBSERVE_STALE_MS = 24 * 3600 * 1000
 

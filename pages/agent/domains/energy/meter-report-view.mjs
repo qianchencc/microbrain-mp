@@ -4,7 +4,7 @@
 // 对比只比较两期都有效的同一批表：差额 = 本期 − 基期；贡献按位置差额绝对值排序。
 import { meterBarChart, meterRankingChart, loadShapeChart, floorSplitChart, contributionChart } from './energy-chart.mjs'
 import { comparisonDate } from './energy-comparison-view.mjs'
-import { fmtShanghaiDateTime } from './observation-view.mjs'
+import { fmtShanghaiDateTime } from '../observations/observation-view.mjs'
 
 const finite = value => typeof value === 'number' && Number.isFinite(value)
 export const meterReportIsComparison = report => report?.kind === 'comparison'

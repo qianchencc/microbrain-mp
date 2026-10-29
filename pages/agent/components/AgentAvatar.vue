@@ -1,7 +1,7 @@
 <template><view class="avatar" :class="{ running }"><image :src="layers.body" class="body" /><view class="eyes-pos" :style="{ transform: `translate(${x}px,${y}px)` }"><image :src="layers.eyes" class="eyes" :class="{ blink: blinking }" /></view></view></template>
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { avatarLayers } from '../avatar.js'
+import { avatarLayers } from '../domains/shared/avatar.js'
 const props = defineProps({running:Boolean})
 const layers = computed(() => avatarLayers())
 const x = ref(0), y = ref(0), blinking = ref(false)

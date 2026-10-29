@@ -10,4 +10,4 @@ export {
   acknowledgeRegion,
   queueComposePrefill,
   consumeComposePrefill,
-} from '../region-focus.js'
+} from '../domains/regions/region-focus.js'

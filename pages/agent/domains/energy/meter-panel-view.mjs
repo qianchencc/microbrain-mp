@@ -1,4 +1,4 @@
-import { readWhenReady } from './preparing-read.mjs'
+import { readWhenReady } from '../conversation/preparing-read.mjs'
 
 const DAY = 86400000
 const OFFSET = 8 * 3600000

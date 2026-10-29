@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { renderAnswer } from '../pages/agent/answer.mjs'
+import { renderAnswer } from '../pages/agent/domains/conversation/answer.mjs'
 
 // 微信 rich-text 节点契约：文本叶子必须是 { type: 'text', text }，元素样式只能放 attrs.style。
 function assertRichTextSchema(nodes) {

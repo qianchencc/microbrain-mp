@@ -1,4 +1,4 @@
-import { resolveDeviceArtwork } from './device-art/catalog.js'
+import { resolveDeviceArtwork } from '../../device-art/catalog.js'
 
 const kindNames = { lighting: '照明', ac: '空调', access: '门禁', video: '视频', environment: '环境', energy: '能耗', safety: '安全', unknown: '其他' }
 const kindOrder = { lighting: 0, ac: 1, access: 2, video: 3, environment: 4, energy: 5, safety: 6, unknown: 7 }

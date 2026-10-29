@@ -15,8 +15,8 @@ export {
   taskDayTime,
   TASK_ALL_CHUNK_DAYS,
   TASK_ALL_MAX_DAYS,
-} from '../task-calendar.mjs'
-export { shiftDate } from '../region-calendar.mjs'
+} from '../domains/tasks/task-calendar.mjs'
+export { shiftDate } from '../domains/regions/region-calendar.mjs'
 export {
   taskDetailView,
   taskExecutionSummaryView,
@@ -31,11 +31,11 @@ export {
   readAcView,
   mergeTaskPlan,
   energyImpactView,
-} from '../task-detail-view.mjs'
+} from '../domains/tasks/task-detail-view.mjs'
 export {
   taskStatusText,
   taskStatusTone,
   taskNeedsDetails,
   taskResultStatus,
-} from '../task-presentation.mjs'
-export { deviceTimelineItems } from '../device-timeline-view.mjs'
+} from '../domains/tasks/task-presentation.mjs'
+export { deviceTimelineItems } from '../domains/tasks/device-timeline-view.mjs'

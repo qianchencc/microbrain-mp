@@ -1,5 +1,5 @@
-import { fanLabels, modeLabels } from './lib/actions.mjs'
-import { resolveDeviceArtwork } from './device-art/catalog.js'
+import { fanLabels, modeLabels } from '../actions/ac-draft.js'
+import { resolveDeviceArtwork } from '../../device-art/catalog.js'
 
 import { taskStatusText, taskStatusTone, taskResultStatus, deviceResultView, deviceResultReason } from './task-presentation.mjs'
 

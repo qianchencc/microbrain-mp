@@ -220,7 +220,7 @@ test('return during SDK connection releases the late session instead of painting
 
 test('video navigation carries source and device without waiting for stream fetching', async () => {
  // Resolve uni-app aliases for Node; exercise the exported navigation function.
- let source = await readFile(new URL('../pages/agent/video-player.js', import.meta.url), 'utf8')
+ let source = await readFile(new URL('../pages/agent/domains/video/video-player.js', import.meta.url), 'utf8')
  const config = 'data:text/javascript,' + encodeURIComponent('export default { videoPlayerUrl:"https://customer.test/player",agentUrl:"https://runtime.test/api" }')
  source = source.replace("'@/config'", JSON.stringify(config))
  const oldUni = globalThis.uni, oldPages = globalThis.getCurrentPages

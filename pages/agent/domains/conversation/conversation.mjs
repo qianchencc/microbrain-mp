@@ -1,4 +1,4 @@
-import { fieldLabels } from './lib/actions.mjs'
+import { fieldLabels } from '../actions/ac-draft.js'
 
 export function createTurn(id, content) {
 	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], items: [], lastSeq: 0, draft: null, task: null, tasks: [], roster: null, result: null, observations: [], running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }

@@ -9,8 +9,8 @@ export {
   friendlyError,
   operationText,
   receiptText,
-} from '../conversation.mjs'
-export { createPresentation } from '../presentation.mjs'
+} from '../domains/conversation/conversation.mjs'
+export { createPresentation } from '../domains/conversation/presentation.mjs'
 export {
   preserveComposerDraft,
   takeComposerDraft,
@@ -18,5 +18,5 @@ export {
   takeComposerReference,
   preserveComposerView,
   takeComposerView,
-} from '../composer-drafts.mjs'
-export { parseAgentContext, meterHistoryPrompt } from '../context-link.mjs'
+} from '../domains/conversation/composer-drafts.mjs'
+export { parseAgentContext, meterHistoryPrompt } from '../domains/conversation/context-link.mjs'

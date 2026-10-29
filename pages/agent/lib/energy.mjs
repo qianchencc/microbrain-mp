@@ -25,10 +25,10 @@ export {
   fixedEnergyContext,
   fixedEnergyWindow,
   meterStatisticsDailyView,
-} from '../energy-daily-view.mjs'
-export { meterBarChart, meterRankingChart, contributionChart, trendLineChart, floorSplitChart, loadShapeChart } from '../energy-chart.mjs'
-export { energyKindLabel, energyValue, singleMeterOf, energyBusinessChart, legacyCompanyEnergy } from '../energy-business-view.mjs'
-export { comparisonNumber, comparisonDate, comparisonRatio, comparisonChip, comparisonColumns, energyComparisonChart } from '../energy-comparison-view.mjs'
+} from '../domains/energy/energy-daily-view.mjs'
+export { meterBarChart, meterRankingChart, contributionChart, trendLineChart, floorSplitChart, loadShapeChart } from '../domains/energy/energy-chart.mjs'
+export { energyKindLabel, energyValue, singleMeterOf, energyBusinessChart, legacyCompanyEnergy } from '../domains/energy/energy-business-view.mjs'
+export { comparisonNumber, comparisonDate, comparisonRatio, comparisonChip, comparisonColumns, energyComparisonChart } from '../domains/energy/energy-comparison-view.mjs'
 export {
   meterReportIsComparison,
   meterReportAxis,
@@ -61,6 +61,6 @@ export {
   meterReportEvidenceSections,
   meterReportHistoryQuery,
   meterReportPowerFactor,
-} from '../meter-report-view.mjs'
-export { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../meter-panel-view.mjs'
-export { monthlyNumber, monthlyDate, monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView } from '../monthly-energy-view.mjs'
+} from '../domains/energy/meter-report-view.mjs'
+export { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../domains/energy/meter-panel-view.mjs'
+export { monthlyNumber, monthlyDate, monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView } from '../domains/energy/monthly-energy-view.mjs'

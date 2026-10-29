@@ -1,5 +1,5 @@
 import { targetText } from './task-detail-view.mjs'
-import { creatorVariant } from './region-device-view.mjs'
+import { creatorVariant } from '../regions/region-device-view.mjs'
 
 import { deviceResultView, taskStatusText, taskStatusTone } from './task-presentation.mjs'
 

@@ -38,9 +38,9 @@
 <script setup>
 import { referenceTitle as titleOfReference } from '../lib/observations.mjs'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { createVoiceInput } from '../voice-input.mjs'
-import { createFieldEchoGuard } from '../field-echo-guard.mjs'
-import { resolveKeyboardDock } from '../keyboard-dock.mjs'
+import { createVoiceInput } from '../domains/conversation/voice-input.mjs'
+import { createFieldEchoGuard } from '../domains/conversation/field-echo-guard.mjs'
+import { resolveKeyboardDock } from '../domains/conversation/keyboard-dock.mjs'
 const props = defineProps({ modelValue: { type: String, default: '' }, disabled: Boolean, running: Boolean, editing: Boolean, placeholder: String, reference: Object })
 const emit = defineEmits(['update:modelValue', 'send', 'stop', 'voice', 'keyboard', 'cancel-edit', 'remove-reference'])
 const referenceTitle = computed(() => titleOfReference(props.reference))

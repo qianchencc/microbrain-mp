@@ -1,7 +1,7 @@
 <template><rich-text class="answer" :nodes="rendered" :selectable="true" /></template>
 <script setup>
 import { computed } from 'vue'
-import { renderAnswer } from '../answer.mjs'
+import { renderAnswer } from '../domains/conversation/answer.mjs'
 const props = defineProps({content:String})
 const rendered = computed(() => renderAnswer(props.content))
 </script>

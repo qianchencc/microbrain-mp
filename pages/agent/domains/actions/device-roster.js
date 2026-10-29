@@ -1,5 +1,5 @@
 import { acSummary, operationLabel } from './ac-draft.js'
-import { resolveDeviceArtwork, deviceDisplayName } from './device-art/catalog.js'
+import { resolveDeviceArtwork, deviceDisplayName } from '../../device-art/catalog.js'
 
 // 设备清单（action.proposed.inventory）：inventory 存提案时刻原始事实；
 // 处置槽由活草案 join 推导——勾选/空调调温实时回流，清单是草案的活视图而非快照。
