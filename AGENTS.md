@@ -11,6 +11,7 @@ Use the five default triage-role labels. See `docs/agents/triage-labels.md`.
 ### Domain docs
 
 This repository uses a single-context domain documentation layout. See `docs/agents/domain.md`.
+Architecture terms and the accepted Agent page module decision are in [GLOSSARY.md](./GLOSSARY.md) and [docs/adr/0008-agent-page-deep-module-architecture.md](./docs/adr/0008-agent-page-deep-module-architecture.md).
 
 ### Documentation entry
 
