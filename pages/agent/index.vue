@@ -15,9 +15,9 @@
 // 公司 Agent 已迁至仪表盘浮层；source=company / 告警 / 引用 / 窗口参数一律重定向。
 import { onMounted, ref } from 'vue'
 import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
-import AgentHeader from './components/AgentHeader.vue'
-import RegionChip from './components/RegionChip.vue'
-import AgentConversation from './components/AgentConversation.vue'
+import AgentHeader from './components/shared/AgentHeader.vue'
+import RegionChip from './components/regions/RegionChip.vue'
+import AgentConversation from './components/conversation/AgentConversation.vue'
 import { backToParent, previousPageLabel } from './lib/navigation.mjs'
 import { focusRegion } from './lib/region-focus.mjs'
 import { parseAgentContext } from './lib/conversation.mjs'
