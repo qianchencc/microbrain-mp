@@ -420,6 +420,7 @@ async function load(force = false) {
    if (cached.fresh) return
   }
   loading.value = true; energyLoading.value = !energyReport.value; alertsLoading.value = !loadedSections.value.includes('alerts'); devicesLoading.value = !devicesLoaded.value; error.value = ''; sectionErrors.value = {}
+  let criticalSectionsRemaining = 3
   await Promise.allSettled(['environment', 'alerts', 'devices', 'energyDaily'].map(async section => {
    const active = () => {
     if (current !== requestId || !visible) return false
@@ -465,7 +466,10 @@ async function load(force = false) {
      if (snapshot.value) snapshot.value = { ...snapshot.value, errors: [...snapshot.value.errors.filter(row => row.area !== section), { area: section, message: sectionErrors.value[section] }] }
     }
    } finally {
-    if (current === requestId && section !== 'environment') ({ alerts: alertsLoading, devices: devicesLoading, energyDaily: energyLoading })[section].value = false
+    if (current === requestId && section !== 'energyDaily') {
+     criticalSectionsRemaining--
+     if (criticalSectionsRemaining === 0) loading.value = false
+    }
    }
   }))
   if (current === requestId && visible) saveCompanyDashboardCache()
