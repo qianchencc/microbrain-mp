@@ -1,7 +1,7 @@
 import { fieldLabels } from '../actions/ac-draft.js'
 
 export function createTurn(id, content) {
-	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], items: [], lastSeq: 0, draft: null, task: null, tasks: [], roster: null, result: null, observations: [], running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
+	return { id, serverId: id.startsWith('local-') ? '' : id, content, text: '', streaming: false, activities: [], items: [], lastSeq: -1, draft: null, task: null, tasks: [], roster: null, result: null, observations: [], running: true, traceOpen: true, error: '', startedAt: Date.now(), seconds: 0 }
 }
 
 export function canRecoverTurn(turn, isLatest) {
@@ -16,7 +16,7 @@ export function restartTurn(turn, content = turn.content) {
 		text: '',
 		activities: [],
 		items: [],
-		lastSeq: 0,
+		lastSeq: -1,
 		draft: null,
 		task: null,
 		tasks: [],
@@ -49,7 +49,10 @@ function foldIdea(turn, text) {
 export function applyEvent(turn, event, turns = [turn]) {
 	// tool/run 事件经 presentation 队列延迟应用，可能与即时应用的后续增量交错；
 	// sequence 是事件真实到达序，折叠只作用于早于本事件的条目。
-	if (typeof event.sequence === 'number') turn.lastSeq = event.sequence
+	if (typeof event.sequence === 'number') {
+		if (event.sequence <= turn.lastSeq) return
+		turn.lastSeq = event.sequence
+	}
 	if (event.type === 'run.started') {
 		// 同一委托的系统承接追加新答复，前段终稿保留自己的文本。
 		for (const item of turn.items) {
@@ -162,6 +165,12 @@ export function applyEvent(turn, event, turns = [turn]) {
 		turn.task = turn.tasks[0]
 		turn.traceOpen = false
 	}
+	if (event.type === 'task.confirmation') {
+		for (const task of turn.tasks) {
+			if (task.taskId === event.taskId) task.confirmation = event.confirmation || null
+		}
+		if (turn.task?.taskId === event.taskId) turn.task.confirmation = event.confirmation || null
+	}
 	if (event.type === 'task.resolved') for (const task of turn.tasks) if (task.taskId === event.taskId && !task.cancellationId) task.status = event.status
 	if (event.type === 'task.change.resolved') for (const task of turn.tasks) if (task.changeId === event.changeId) task.status = event.status
 	if (event.type === 'task.cancellation.resolved') for (const task of turn.tasks) if (task.cancellationId === event.cancellationId) task.status = event.status
@@ -187,6 +196,7 @@ export function mergeTaskDetail(task, detail) {
 	task.status = detail.status
 	task.executionActive = detail.executionActive
 	task.report = detail.report ?? null
+	task.confirmation = detail.confirmation ?? task.confirmation ?? null
 	if (detail.interval) task.interval = detail.interval
 	for (const phase of task.phases || []) {
 		const fresh = (detail.phases || []).find(item => (phase.id ? item.id === phase.id : item.at === phase.at))
@@ -205,7 +215,11 @@ export function restoreTurns(savedTurns = []) {
 		const turn = createTurn(saved.id, saved.content)
 		// 恢复按 sequence 重放与实时一致的条目序；旧历史事件缺该字段则按数组序。
 		const events = saved.events || []
-		const ordered = events.every(event => typeof event.sequence === 'number') ? [...events].sort((a, b) => a.sequence - b.sequence) : events
+		const ordered = [...events].sort((a, b) => {
+			const left = typeof a.sequence === 'number' ? a.sequence : Number.MAX_SAFE_INTEGER
+			const right = typeof b.sequence === 'number' ? b.sequence : Number.MAX_SAFE_INTEGER
+			return left - right
+		})
 		for (const event of ordered) applyEvent(turn, event, [...turns, turn])
 		turn.draft = saved.draft || null
 		turn.tasks = saved.tasks?.length ? saved.tasks : saved.task ? [saved.task] : turn.tasks
