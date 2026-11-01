@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { listRegions, markRegionSeen } from '@/apis/agent/observations'
-import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
+import { getAgentStorageScope, isAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 
 export const regions = ref([])
 export const focusRegionId = ref('')
@@ -12,18 +12,18 @@ let sequence = 0
 let loadedAt = 0, inFlight = null
 const storageKey = scope => 'agent-focus-region:' + scope
 
-export async function loadRegionFocus() {
+export async function loadRegionFocus(options = {}) {
  await waitForAgentSession()
  const scope = getAgentStorageScope()
  if (scope === owner && regions.value.length && Date.now() - loadedAt < 30000) return
- if (inFlight?.scope === scope) return inFlight.promise
+ if (inFlight?.scope === scope && inFlight.isActive?.() !== false) return inFlight.promise
  const request = ++sequence
  if (scope !== owner) { regions.value = []; focusRegionId.value = ''; owner = scope; loadedAt = 0 }
  regionsLoading.value = true
  regionsError.value = ''
  const promise = (async () => {
   try {
-   const result = await listRegions('directory')
+   const result = await listRegions('directory', { isActive: () => request === sequence && options.isActive?.() !== false })
    if (request !== sequence || scope !== getAgentStorageScope()) return
    regions.value = result.regions || []
    const saved = uni.getStorageSync(storageKey(scope))
@@ -31,20 +31,23 @@ export async function loadRegionFocus() {
    uni.setStorageSync(storageKey(scope), focusRegionId.value)
    loadedAt = Date.now()
    // Names are already usable; device-level attention must not gate selection.
-   listRegions().then(latest => {
+   listRegions(undefined, { isActive: () => request === sequence && options.isActive?.() !== false }).then(latest => {
     if (request !== sequence || scope !== getAgentStorageScope()) return
     const attention = new Map((latest.regions || []).map(region => [region.id, region.attention]))
     regions.value = regions.value.map(region => ({ ...region, attention: attention.get(region.id) }))
    }).catch(() => {})
   } catch (error) {
-   if (request === sequence) { regions.value = []; focusRegionId.value = ''; regionsError.value = error.message || '区域暂不可用' }
+   if (request === sequence) {
+    if (!isAgentStorageScope(scope) || [401, 403].includes(error.status)) { regions.value = []; focusRegionId.value = '' }
+    regionsError.value = error.message || '区域暂不可用'
+   }
    throw error
   } finally {
    if (request === sequence) regionsLoading.value = false
    if (inFlight?.promise === promise) inFlight = null
   }
  })()
- inFlight = { scope, promise }
+ inFlight = { scope, promise, isActive: options.isActive }
  return promise
 }
 

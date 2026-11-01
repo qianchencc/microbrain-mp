@@ -59,19 +59,20 @@
       <text class="cn">{{ cell.label }}</text>
      </button>
     </view>
-    <text v-if="devicesError" class="fineprint dim">{{ devicesError }}</text>
+    <text v-if="devicesNote" class="fineprint dim">设备目录更新未完成 · {{ devicesNote }}</text>
 
     <view class="blk">
      <view class="k"><text>环境传感器</text><button class="more" @tap="openObservation('environment')">趋势 <uni-icons type="right" size="10" color="#176b54" /></button></view>
-     <text class="sensor-name">{{ environment?.name || (loading ? '正在更新环境读数' : loadedSections.includes('environment') ? '暂无环境读数' : '环境读数暂不可用') }}</text>
+     <text class="sensor-name">{{ environment?.name || (loading ? '正在更新环境读数' : envError ? '环境读数暂不可用' : loadedSections.includes('environment') ? '暂无环境读数' : '环境读数暂不可用') }}</text>
      <view class="env"><view v-for="cell in environmentCells" :key="cell.key"><text class="v serif">{{ metricValue(environment?.reading?.[cell.key]) }}<text class="u">{{ cell.unit }}</text></text><text class="ul">{{ cell.label }}</text></view></view>
+     <text v-if="envNote" class="fineprint dim">环境读数更新未完成 · {{ envNote }}</text>
     </view>
 
     <view class="blk">
      <view class="k"><text>能耗统计</text><button class="more" @tap="openEnergy()">全部 <uni-icons type="right" size="10" color="#176b54" /></button></view>
      <CompanyEnergyStrip v-if="energyStrip.length" ref="energyStripRef" :days="energyStrip" :selected="selectedStripDate" pull-enabled @select="openEnergy" @pull-open="openEnergy()" />
-     <EnergySkeleton v-else-if="energyLoading && !energyError" />
-     <text v-if="energyError" class="fineprint dim">逐日能耗暂不可用 · {{ energyError }}</text>
+     <EnergySkeleton v-else-if="energyLoading && !energyNote" />
+     <text v-if="energyNote" class="fineprint dim">逐日能耗更新未完成 · {{ energyNote }}</text>
      <text v-else-if="!energyStrip.length && !energyLoading" class="fineprint">暂无可统计的计量日</text>
      <MonthlyEnergyComparison :active="pageActive && !energyLoading && mode === 'detailed'" :refresh-key="monthlyRefresh" :cutoff="energyReport?.latestSampleTime || ''" />
     </view>
@@ -83,6 +84,7 @@
       <button v-for="record in alertRows" :key="(record.ledger || '') + ':' + (record.eventId || record.occurredAt)" class="row" @tap="openObservation('alerts')"><text class="d alert-time">告警 {{ fmtMDT(record.occurredAt) }}</text><text class="t">设备名称：{{ record.deviceName }}</text><text class="s">{{ subtypeLabel(record.subtype || record.ledger) }}</text></button>
       <text v-if="!alertRows.length" class="sec-empty">{{ alertsLoading ? '正在更新摘要' : '该类型暂无记录' }}</text>
       <button v-if="snapshot?.alerts" class="list-more" @tap="openObservation('alerts')">全部 {{ snapshot.alerts.total ?? alertRows.length }} 条 ›</button>
+      <text v-if="alertsNote" class="fineprint dim">台账更新未完成 · {{ alertsNote }}</text>
      </template>
     </view>
 
@@ -161,6 +163,19 @@ function createTask() { tasksOpen.value = false; openCompanyAgent({ prompt: '帮
 const snapshot = ref(null), loading = ref(false), error = ref(''), observationType = ref('')
 const energyLoading = ref(false), devicesLoading = ref(false)
 const alertsLoading = ref(false), loadedSections = ref([]), sectionErrors = ref({})
+// 各分区独立保留后端 cache 状态与原始 updatedAt：一个分区的新响应不能覆盖另一个
+// 分区的刷新失败，也不把 stale 当成刚更新的 fresh。
+const sectionCache = ref({})
+const backendStale = area => {
+ const cache = sectionCache.value[area]
+ if (!cache) return ''
+ if (cache.lastError?.message) return cache.refreshing ? `${cache.lastError.message}（正在后台重试）` : cache.lastError.message
+ return cache.status === 'stale' ? (cache.refreshing ? '正在后台更新' : '沿用上次完整数据') : ''
+}
+const sectionNote = area => sectionErrors.value[area] || backendStale(area)
+const sectionFailure = area => sectionErrors.value[area] || sectionCache.value[area]?.lastError?.message || ''
+// 与后端 cache.lastError 对齐：通用 body.message 只在没有具体失败原因时兜底。
+const failureMessage = (cause, fallback) => cause?.data?.cache?.lastError?.message || cause?.data?.message || cause?.message || fallback
 const tasksMounted = ref(false), observationMounted = ref(false), energyMounted = ref(false), drawerMounted = ref(false)
 watch(tasksOpen, open => { if (open) tasksMounted.value = true }, { flush: 'sync' })
 watch(observationType, type => { selectedEvent.value = null; if (type) observationMounted.value = true }, { flush: 'sync' })
@@ -180,6 +195,9 @@ const userName = computed(() => {
 
 /* 设备目录计数 + 单类设备抽屉 */
 const catalogDevices = ref([]), devicesLoaded = ref(false), devicesError = ref('')
+// 设备目录同样按分区保留后端 lastError 与原始 updatedAt；失败不清空已加载目录。
+const devicesNote = computed(() => sectionNote('devices') || devicesError.value)
+const devicesFailure = computed(() => sectionFailure('devices') || devicesError.value)
 const drawerKind = ref('')
 const kindCounts = computed(() => {
  const map = {}
@@ -199,6 +217,10 @@ const energyStripRef = ref(null), selectedStripDate = ref('')
 const energyOpen = ref(false), energyFocusDate = ref('')
 watch(energyOpen, open => { if (open) energyMounted.value = true }, { flush: 'sync' })
 const latestCompleteDay = computed(() => energyReport.value?.latestCompleteDay || '')
+// 后端 stale 的 lastError 与本次刷新失败分开保留：两者都不能清掉已有日柱，
+// 也不用前端时间重新标记为 fresh。
+const energyFailure = computed(() => sectionErrors.value.energyDaily || energyError.value || sectionCache.value.energyDaily?.lastError?.message || '')
+const energyNote = computed(() => sectionNote('energyDaily') || energyError.value)
 function mergeDailyReport(next) {
  energyReport.value = next
  energyStrip.value = mergeStripDays(energyStrip.value, next.days || [])
@@ -211,7 +233,9 @@ function openEnergy(date) {
 /* 环境 / 台账 / 自动化 */
 const environment = computed(() => snapshot.value?.environment?.find(row => row.reading) || snapshot.value?.environment?.[0])
 const environmentCells = [{ key: 'temp', label: '温度', unit: '°C' }, { key: 'humidity', label: '湿度', unit: '%' }, { key: 'pm25', label: 'PM2.5', unit: '' }]
-const alertsUnavailable = computed(() => Boolean(sectionErrors.value.alerts) || snapshot.value?.errors?.some(row => row.area === 'alerts'))
+// 有旧数据时刷新失败只提示、不隐藏台账；仅在没有可用台账时才显示不可用。
+const alertsUnavailable = computed(() => !snapshot.value?.alerts && (Boolean(sectionErrors.value.alerts) || Boolean(snapshot.value?.errors?.some(row => row.area === 'alerts'))))
+const alertsNote = computed(() => sectionNote('alerts'))
 const ledgerFilter = ref('')
 const alertRows = computed(() => {
  const records = snapshot.value?.alerts?.records || []
@@ -273,7 +297,9 @@ const ZONE_ICONS = {
  catalog: svgIcon('<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>', '#2e6b52'),
  inbox: svgIcon('<path d="M12 4a5.5 5.5 0 0 1 5.5 5.5c0 3.4.8 4.9 1.7 6.4H4.8c.9-1.5 1.7-3 1.7-6.4A5.5 5.5 0 0 1 12 4z"/><path d="M10 19a2 2 0 0 0 4 0"/>', '#2e6b52')
 }
-const envError = computed(() => Boolean(sectionErrors.value.environment) || snapshot.value?.errors?.some(row => row.area === 'environment'))
+const envNote = computed(() => sectionNote('environment'))
+const envFailure = computed(() => sectionFailure('environment'))
+const envError = computed(() => !environment.value?.reading && Boolean(envFailure.value || snapshot.value?.errors?.some(row => row.area === 'environment')))
 const simpleEnv = computed(() => {
  if (envError.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
  const reading = environment.value?.reading
@@ -284,10 +310,11 @@ const simpleEnv = computed(() => {
  const comfy = pm25 == null || pm25 <= 75
  const parts = [`${metricValue(reading.temp)}°`]
  if (typeof reading.humidity === 'number') parts.push(`湿度 ${reading.humidity}%`)
- return { warn: !comfy, pill: comfy ? '正常' : '注意', status: comfy ? '舒适' : '一般', value: parts.join(' · ') }
+ const stale = Boolean(envFailure.value)
+ return { warn: !comfy || stale, pill: stale ? '沿用' : comfy ? '正常' : '注意', status: comfy ? '舒适' : '一般', value: parts.join(' · ') }
 })
 const simpleEnergy = computed(() => {
- if (energyError.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
+ if (energyError.value && !energyReport.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
  const usable = [...(energyReport.value?.days || [])].reverse().filter(day => day.usage != null)
  const latest = usable.find(day => day.complete) || usable[0]
  if (!latest) return energyLoading.value
@@ -298,16 +325,20 @@ const simpleEnergy = computed(() => {
  const unit = energyReport.value?.basis?.unit === 'kWh' ? ' 度' : ''
  const dayText = latest.date === shiftDate(shanghaiToday(), -1) ? '昨日' : `${Number(latest.date.slice(5, 7))}月${Number(latest.date.slice(8))}日`
  const high = delta != null && delta > 10
- return { warn: high, pill: high ? '注意' : '正常', status: high ? '偏高' : '平稳',
+ const stale = Boolean(energyFailure.value)
+ return { warn: high || stale, pill: stale ? '沿用' : high ? '注意' : '正常', status: high ? '偏高' : '平稳',
   value: `${dayText} ${Math.round(latest.usage).toLocaleString()}${unit}${delta != null ? ` ${delta >= 0 ? '↑' : '↓'}${Math.abs(delta)}%` : ''}` }
 })
 const simpleSafety = computed(() => {
  if (alertsUnavailable.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
  if (!loadedSections.value.includes('alerts')) return { warn: false, pill: '读取中', status: '更新中', value: '—' }
+ const stale = Boolean(sectionFailure('alerts'))
  const latest = snapshot.value?.alerts?.records?.[0]
  if (!latest || Date.parse(latest.occurredAt) < Date.now() - 30 * 864e5)
-  return { warn: false, pill: '正常', status: '无告警', value: '近 30 天' }
- return { warn: true, pill: '注意', status: '有记录', value: `${Number(latest.occurredAt.slice(5, 7))}月${Number(latest.occurredAt.slice(8, 10))}日 · ${subtypeLabel(latest.subtype || latest.ledger) || '告警'}` }
+  return stale
+   ? { warn: true, pill: '沿用', status: '无告警', value: '近 30 天' }
+   : { warn: false, pill: '正常', status: '无告警', value: '近 30 天' }
+ return { warn: true, pill: stale ? '沿用' : '注意', status: '有记录', value: `${Number(latest.occurredAt.slice(5, 7))}月${Number(latest.occurredAt.slice(8, 10))}日 · ${subtypeLabel(latest.subtype || latest.ledger) || '告警'}` }
 })
 const simpleAgenda = computed(() => {
  if (!simpleTasksLoaded.value) return { warn: false, pill: '读取中', status: '更新中', value: '—' }
@@ -330,16 +361,17 @@ const simpleVerdict = computed(() => {
   return { state: 'loading', mark: '…', text: '数据读取中', sub: '正在更新园区概览' }
  if (error.value) return { state: 'warn', mark: '!', text: '数据暂不可用', sub: error.value }
  const issues = []
- if (simpleSafety.value.warn) issues.push('有新的安全记录')
- if (simpleEnergy.value.warn) issues.push('用电较前期偏高')
- if (envError.value || alertsUnavailable.value || energyError.value || devicesError.value) issues.push('部分数据暂不可用')
+ if (simpleSafety.value.warn && simpleSafety.value.pill !== '沿用') issues.push('有新的安全记录')
+ if (simpleEnergy.value.warn && simpleEnergy.value.pill !== '沿用') issues.push('用电较前期偏高')
+ if (envFailure.value || sectionFailure('alerts') || energyFailure.value || devicesFailure.value) issues.push('部分数据未更新')
  if (!issues.length) return { state: 'ok', mark: '✓', text: '园区一切正常', sub: '环境 · 用电 · 安全 均正常' }
  return { state: 'warn', mark: '!', text: issues[0], sub: issues.slice(1).join(' · ') || '点下方区块查看详情' }
 })
 const simpleCatalog = computed(() => {
- if (devicesError.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
+ if (devicesFailure.value && !devicesLoaded.value) return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' }
  if (!devicesLoaded.value) return { warn: false, pill: '读取中', status: '更新中', value: '—' }
- return { warn: false, pill: '正常', status: `${catalogDevices.value.length} 台`, value: `${KIND_CELLS.length} 类设备` }
+ const stale = Boolean(devicesFailure.value)
+ return { warn: stale, pill: stale ? '沿用' : '正常', status: `${catalogDevices.value.length} 台`, value: `${KIND_CELLS.length} 类设备` }
 })
 const simpleInbox = computed(() => {
  if (!simpleUnreadLoaded.value) return { warn: false, pill: '读取中', status: '更新中', value: '任务与报告' }
@@ -368,6 +400,7 @@ function resetForScope() {
  catalogDevices.value = []; devicesLoaded.value = false; devicesError.value = ''
  energyReport.value = null; energyStrip.value = []; selectedStripDate.value = ''
  energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
+ sectionCache.value = {}; sectionErrors.value = {}
  ++agendaRequestId; simpleTasks.value = []; simpleTasksLoaded.value = false; simpleTasksError.value = ''; simpleUnread.value = 0
  simpleUnreadLoaded.value = false; simpleUnreadError.value = ''
 }
@@ -375,7 +408,8 @@ function invalidateCompanyDashboard() { clearCompanyReadCache() }
 function applyCompanyDashboardCache(cached) {
  snapshot.value = cached.snapshot
  loadedSections.value = [...cached.loadedSections]
- sectionErrors.value = { ...cached.sectionErrors }
+ sectionErrors.value = { ...(cached.sectionErrors || {}) }
+ sectionCache.value = { ...(cached.sectionCache || {}) }
  catalogDevices.value = [...cached.catalogDevices]
  devicesLoaded.value = cached.devicesLoaded
  devicesError.value = cached.devicesError
@@ -385,9 +419,16 @@ function applyCompanyDashboardCache(cached) {
  if (!selectedStripDate.value) selectedStripDate.value = cached.selectedStripDate
 }
 function saveCompanyDashboardCache() {
- if (!snapshot.value || snapshot.value.errors?.length || Object.keys(sectionErrors.value).length || !devicesLoaded.value || devicesError.value || !energyReport.value || energyReport.value.truncated || energyError.value) return
+ if (error.value || !snapshot.value || snapshot.value.errors?.length || Object.keys(sectionErrors.value).length || !devicesLoaded.value || devicesError.value || !energyReport.value || energyReport.value.truncated || energyError.value) return
+ // 后端 stale 的分区不阻止占位写入，但整个快照降级为 stale 占位：下次进入仍会
+ // 重新询问后端，而不是按本地写入时刻再复用 60 秒。
+ const stale = ['environment', 'alerts', 'devices', 'energyDaily'].some(area => {
+  const cache = sectionCache.value[area]
+  return Boolean(cache?.lastError) || Boolean(cache?.status && cache.status !== 'fresh')
+ })
  writeCompanyDashboardCache({
   snapshot: snapshot.value, loadedSections: [...loadedSections.value], sectionErrors: { ...sectionErrors.value },
+  sectionCache: { ...sectionCache.value }, cache: { status: stale ? 'stale' : 'fresh' },
   catalogDevices: [...catalogDevices.value], devicesLoaded: devicesLoaded.value, devicesError: devicesError.value,
   energyReport: energyReport.value, energyStrip: [...energyStrip.value], energyError: energyError.value, selectedStripDate: selectedStripDate.value,
  })
@@ -410,7 +451,7 @@ async function load(force = false) {
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
   if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
-  if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleTasksLoaded.value = false; simpleTasksError.value = ''; simpleUnreadLoaded.value = false; simpleUnreadError.value = '' }
+  if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleTasksError.value = ''; simpleUnreadError.value = '' }
   if (mode.value === 'simple' && (!simpleTasksLoaded.value || !simpleUnreadLoaded.value || force === true)) void loadSimpleAgenda(force === true)
   const cached = readCompanyDashboardCache()
   if (!force && cached) {
@@ -419,7 +460,7 @@ async function load(force = false) {
    allLoaded()
    if (cached.fresh) return
   }
-  loading.value = true; energyLoading.value = !energyReport.value; alertsLoading.value = !loadedSections.value.includes('alerts'); devicesLoading.value = !devicesLoaded.value; error.value = ''; sectionErrors.value = {}
+  loading.value = true; energyLoading.value = !energyReport.value; alertsLoading.value = !loadedSections.value.includes('alerts'); devicesLoading.value = !devicesLoaded.value; error.value = ''
   let criticalSectionsRemaining = 3
   await Promise.allSettled(['environment', 'alerts', 'devices', 'energyDaily'].map(async section => {
    const active = () => {
@@ -431,38 +472,47 @@ async function load(force = false) {
    }
    try {
     if (section === 'devices') {
-     const result = await getCompanyDevices()
+     const result = await getCompanyDevices({ force: force === true, isActive: active })
      if (!active()) return
-     catalogDevices.value = result.devices || []
+     const { cache, ...body } = result
+     catalogDevices.value = body.devices || []
      devicesLoaded.value = true; devicesError.value = ''
+     sectionCache.value = { ...sectionCache.value, devices: cache || null }
      return
     }
     if (section === 'energyDaily') {
-     const result = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS })
+     const result = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS }, { force: force === true, isActive: active })
      if (!active()) return
-     if (result?.status === 'preparing') { energyError.value = result.message || '电表数据仍在准备中'; return }
+     const { cache, ...body } = result
      energyStrip.value = []
-     mergeDailyReport(result)
-     selectedStripDate.value = result.latestCompleteDay || result.days?.at(-1)?.date || ''
+     mergeDailyReport(body)
+     selectedStripDate.value = body.latestCompleteDay || body.days?.at(-1)?.date || ''
      energyError.value = ''
+     sectionCache.value = { ...sectionCache.value, energyDaily: cache || null }
      return
     }
-    const result = await getCompanyDashboard(section)
+    const result = await getCompanyDashboard(section, { force: force === true, isActive: active })
     if (!active()) return
+    const { cache, ...body } = result
     const previous = snapshot.value || { devices: [], errors: [] }
+    const previousBody = { ...previous }; delete previousBody.cache
     const kind = section === 'alerts' ? 'safety' : section
-    const devices = [...previous.devices.filter(row => row.kind !== kind), ...result.devices]
-    const errors = [...previous.errors.filter(row => row.area !== section), ...result.errors]
-    for (const [area, message] of Object.entries(sectionErrors.value)) if (!errors.some(row => row.area === area)) errors.push({ area, message })
-    snapshot.value = { ...previous, ...result, devices, [section + 'ObservedAt']: result.observedAt, errors }
+    // 成功分区先移出失败集合，再重建 errors；否则本次成功分区的旧错误会被重新塞回顶部提示。
+    const nextErrors = { ...sectionErrors.value }; delete nextErrors[section]; sectionErrors.value = nextErrors
+    const devices = [...previous.devices.filter(row => row.kind !== kind), ...body.devices]
+    const errors = [...previous.errors.filter(row => row.area !== section), ...body.errors]
+    for (const [area, message] of Object.entries(nextErrors)) if (!errors.some(row => row.area === area)) errors.push({ area, message })
+    snapshot.value = { ...previousBody, ...body, devices, [section + 'ObservedAt']: body.observedAt, errors }
+    sectionCache.value = { ...sectionCache.value, [section]: cache || null }
     if (!loadedSections.value.includes(section)) loadedSections.value.push(section)
    } catch (cause) {
     if (!active()) return
     if ([401, 403].includes(cause.status) || cause.code === 'AGENT_READ_INVALIDATED' || ['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code)) { invalidateCompanyDashboard(); resetForScope(); ++requestId; error.value = cause.message; allLoaded(); return }
-    if (section === 'devices') devicesError.value = '设备目录暂不可用'
-    else if (section === 'energyDaily') energyError.value = cause.message || '暂不可用'
+    if (['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) { error.value = cause.message; return }
+    if (section === 'devices') devicesError.value = failureMessage(cause, '设备目录暂不可用')
+    else if (section === 'energyDaily') energyError.value = failureMessage(cause, '暂不可用')
     else {
-     sectionErrors.value[section] = cause.message || '暂不可用'
+     sectionErrors.value[section] = failureMessage(cause, '暂不可用')
      if (snapshot.value) snapshot.value = { ...snapshot.value, errors: [...snapshot.value.errors.filter(row => row.area !== section), { area: section, message: sectionErrors.value[section] }] }
     }
    } finally {
@@ -473,7 +523,7 @@ async function load(force = false) {
    }
   }))
   if (current === requestId && visible) saveCompanyDashboardCache()
-  if (current === requestId && !snapshot.value) error.value = '公司数据暂不可用，请重试'
+  if (current === requestId && !snapshot.value && !error.value) error.value = '公司数据暂不可用，请重试'
  } catch (cause) {
   if (current === requestId && visible) {
    ++requestId; allLoaded()

@@ -6,9 +6,9 @@
    <view v-if="anyAttention" class="chip-att" aria-hidden="true" />
   </view>
  </view>
- <button v-if="regionsError && !nav" class="region-retry" @tap="loadRegionFocus().catch(() => {})">{{ regionsError }} · 重试</button>
+ <button v-if="regionsError && !nav" class="region-retry" @tap="reloadRegions">{{ regionsError }} · 重试</button>
  <DeviceSheet :open="open" title="关注区域" subtitle="未指明地点时，优先在此区域查找设备" @close="open = false">
-  <view v-if="!regions.length" class="region-empty"><text>{{ regionsLoading ? '正在读取区域…' : regionsError ? regionsError : '暂无可用区域' }}</text><button v-if="regionsError" class="region-retry" @tap="loadRegionFocus().catch(() => {})">重新读取</button></view>
+  <view v-if="!regions.length" class="region-empty"><text>{{ regionsLoading ? '正在读取区域…' : regionsError ? regionsError : '暂无可用区域' }}</text><button v-if="regionsError" class="region-retry" @tap="reloadRegions">重新读取</button></view>
   <scroll-view class="region-options" :style="{ height: (regions.length * 68 + 8) + 'px' }" scroll-y enhanced :show-scrollbar="false">
    <radio-group @change="choose($event.detail.value)">
     <label v-for="region in regions" :key="region.id" class="region-option" :class="{ chosen: region.id === focusRegionId }"><view class="option-copy"><text>{{ region.name }}</text><view v-if="region.attention" class="attention"><view class="attention-dot" /><text>有待查看的异常结果</text></view></view><radio :value="region.id" :checked="region.id === focusRegionId" color="#176b54" /></label>
@@ -18,12 +18,21 @@
  </DeviceSheet>
 </template>
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
+import { onHide, onShow } from '@dcloudio/uni-app'
 import DeviceSheet from '../shared/DeviceSheet.vue'
 import { regions, focusRegion, focusRegionId, regionsLoading, regionsError, selectFocusRegion, loadRegionFocus } from '../../lib/region-focus.mjs'
 defineProps({ workbench: Boolean, nav: Boolean })
 const emit = defineEmits(['open', 'change'])
 const open = ref(false)
+let alive = true, visible = true
+onHide(() => { visible = false })
+onShow(() => { visible = true })
+onBeforeUnmount(() => { alive = false })
+function reloadRegions() {
+ const sheetRead = open.value
+ return loadRegionFocus({ isActive: () => alive && visible && (!sheetRead || open.value) }).catch(() => {})
+}
 const anyAttention = computed(() => regions.value.some(region => region.attention))
 function choose(id) { if (selectFocusRegion(id)) { open.value = false; emit('change', focusRegion.value) } }
 </script>

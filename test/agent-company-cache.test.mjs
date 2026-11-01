@@ -86,3 +86,56 @@ test('历史窗口逐渐增多时缓存数量有界，最早一项会重新读�
  assert.equal(f.cache.peek('window-0'), null)
  assert.ok(f.cache.peek('window-40'))
 })
+
+test('定点失效后的迟到失败或准备中结果不能删除更新的成功快照', async () => {
+ for (const late of [{ value: 'old' }, { status: 'preparing' }, { status: 'unavailable' }, { truncated: true }, { errors: [{ message: 'partial' }] }]) {
+  const f = setup(), pending = deferred()
+  const old = f.cache.read('daily', () => pending.promise)
+  await Promise.resolve()
+  f.cache.drop('daily')
+  await f.cache.read('daily', async () => ({ value: 'new' }))
+  pending.resolve(late)
+  await old
+  assert.deepEqual(f.cache.peek('daily').value, { value: 'new' })
+ }
+})
+
+test('准备中和不可用不能覆盖既有完整结果或延长有效期', async () => {
+ const f = setup()
+ await f.cache.read('daily', f.load)
+ f.time(30_000)
+ await f.cache.read('daily', async () => ({ status: 'preparing' }), { force: true })
+ await f.cache.read('daily', async () => ({ cache: { status: 'unavailable' } }), { force: true })
+ assert.deepEqual(f.cache.peek('daily').value, { count: 1, rows: [] })
+ f.time(60_000)
+ assert.equal(f.cache.peek('daily').fresh, false)
+})
+
+test('后端 stale 结果只作占位：保留数据与原始时间，下次读取重新询问后端', async () => {
+ const f = setup()
+ const stale = { rows: [{ id: 'row-1' }], cache: { status: 'stale', refreshing: false, updatedAt: '2026-11-01T08:00:00Z', lastError: { code: 'UPSTREAM_TIMEOUT', message: '上游读取超时' } } }
+ let backendReads = 0
+ const first = await f.cache.read('daily-stale', async () => { backendReads++; return stale })
+ assert.deepEqual(first, stale)
+ const placeholder = f.cache.peek('daily-stale')
+ assert.equal(placeholder.fresh, false)
+ assert.deepEqual(placeholder.value.rows, [{ id: 'row-1' }])
+ assert.equal(placeholder.value.cache.updatedAt, '2026-11-01T08:00:00Z')
+ assert.equal(placeholder.value.cache.lastError.message, '上游读取超时')
+ f.time(1_000)
+ await f.cache.read('daily-stale', f.load)
+ assert.equal(backendReads, 1)
+ assert.equal(f.calls(), 1)
+})
+
+test('活动周期切换后新读取不并入失活任务，旧结果不写回新快照', async () => {
+ const f = setup(), held = deferred()
+ const old = f.cache.read('daily-activity', () => held.promise, { activity: 'page-a' })
+ await Promise.resolve()
+ const fresh = f.cache.read('daily-activity', async () => ({ count: 7 }), { activity: 'page-b' })
+ assert.deepEqual(await fresh, { count: 7 })
+ held.resolve({ count: 99 })
+ assert.deepEqual(await old, { count: 99 })
+ assert.deepEqual(f.cache.peek('daily-activity').value, { count: 7 })
+ assert.equal(f.cache.peek('daily-activity').fresh, true)
+})

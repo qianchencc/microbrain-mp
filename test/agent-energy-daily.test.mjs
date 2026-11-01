@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeStripDays, padStripDays, markStripFailed, compositionFromUsage, completeDayComparison, comparePct, unitOf, donutImage, shiftDate, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, meterRows, floorComposition } from '../pages/agent/lib/energy.mjs'
+import { mergeStripDays, padStripDays, markStripFailed, compositionFromUsage, completeDayComparison, comparePct, unitOf, donutImage, shiftDate, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, mergeHistoryCache, historyCacheFailure, meterRows, floorComposition } from '../pages/agent/lib/energy.mjs'
 
 test('日期条窗口合并：左端拼接保持升序、同日去重', () => {
  const current = [{ date: '2026-10-01', usage: 10 }, { date: '2026-10-02', usage: 11 }]
@@ -136,6 +136,19 @@ test('单表统计复用抽屉：只投影服务端日分段，保留零、缺�
  assert.equal(view.basis.unit, 'kWh')
  assert.equal(view.aggregation.label, '26楼运营部')
  assert.equal(view.latestSampleTime, '2024-08-14T20:00:00+08:00')
+ const stale = { ...report, cache: { status: 'stale', refreshing: false, updatedAt: '2024-08-14T20:00:00+08:00', lastError: { code: 'UPSTREAM_TIMEOUT', message: '上游读取超时' } } }
+ const cachedView = meterStatisticsDailyView(stale, context)
+ assert.equal(cachedView.cache.status, 'stale')
+ assert.equal(cachedView.cache.lastError.message, '上游读取超时')
+ assert.equal(cachedView.cache.updatedAt, '2024-08-14T20:00:00+08:00')
+ assert.deepEqual(cachedView.days.map(day => day.usage), [1.25, 0, null])
+ // 完整 stale 历史块仍保留用量，但消费端按日期记下更新失败与原 updatedAt。
+ const marked = mergeHistoryCache({}, cachedView.days, cachedView.cache)
+ assert.deepEqual(historyCacheFailure(marked), { from: '2024-08-12', to: '2024-08-14', messages: ['上游读取超时'], updatedAt: '2024-08-14T20:00:00+08:00', refreshing: false })
+ const freshView = meterStatisticsDailyView({ ...report, cache: { status: 'fresh', refreshing: false, updatedAt: '2024-08-15T00:00:00+08:00' } }, context)
+ const partiallyFresh = mergeHistoryCache(marked, freshView.days.slice(0, 1), freshView.cache)
+ assert.deepEqual(historyCacheFailure(partiallyFresh), { from: '2024-08-13', to: '2024-08-14', messages: ['上游读取超时'], updatedAt: '2024-08-14T20:00:00+08:00', refreshing: false })
+ assert.equal(historyCacheFailure(mergeHistoryCache(marked, freshView.days, freshView.cache)), null)
  const noObserved = { ...report, params: { ...report.params, span: { requested: report.params.span.requested } }, coverage: { ...report.coverage, latestSampleAt: '2026-10-10T08:00:00+08:00' } }
  assert.equal(meterStatisticsDailyView(noObserved, context).latestSampleTime, '2024-08-14T20:00:00+08:00')
  assert.equal(meterStatisticsDailyView({ ...noObserved, meters: [{ ...report.meters[0], observed: {} }] }, context).latestSampleTime, null)

@@ -44,6 +44,12 @@ export function getAgentStorageScope() {
 	return SHA256(JSON.stringify([session.tenantCode, session.authorization])).toString()
 }
 
+// Response/error handlers must also work after logout, when reading the scope
+// throws. A failed identity comparison is not a second rejected UI promise.
+export function isAgentStorageScope(scope) {
+ try { return Boolean(scope) && scope === getAgentStorageScope() } catch { return false }
+}
+
 export async function waitForAgentSession(timeout = DEFAULT_TIMEOUT_MS) {
 	const deadline = Date.now() + timeout
 	let lastError

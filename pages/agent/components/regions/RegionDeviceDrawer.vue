@@ -55,7 +55,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { listRegionDevices, listRegionDeviceStates } from '@/apis/agent/observations'
-import { getAgentStorageScope } from '@/utils/agent-session'
+import { getAgentStorageScope, isAgentStorageScope } from '@/utils/agent-session'
 import DeviceSheet from '../shared/DeviceSheet.vue'
 import DeviceTimelineView from './DeviceTimelineView.vue'
 import DeviceObservationView from '../observations/DeviceObservationView.vue'
@@ -71,8 +71,7 @@ const modes = [{ key: 'kind', label: '类型' }, { key: 'location', label: '位�
 const pageVisible = ref(true)
 onHide(() => { pageVisible.value = false; stateRefresh.cancel(); ++stateRequest; ++directoryRequest; loading.value = false })
 onShow(() => { pageVisible.value = true; if (props.open) {
- const scope = getAgentStorageScope()
- loadDirectory(scope === loadedScope)
+ loadDirectory(isAgentStorageScope(loadedScope))
 } })
 const devices = ref([]), readings = ref({}), loading = ref(false), stateLoading = ref(false)
 const error = ref(''), stateError = ref(''), groupBy = ref('kind'), query = ref(''), searching = ref(false), searchFocused = ref(false)
@@ -131,26 +130,34 @@ function resetStack() {
 }
 
 async function loadDirectory(preserveNavigation = false) {
- preserveNavigation = preserveNavigation === true && loadedScope === getAgentStorageScope() && props.regionId === loadedRegionId
+ preserveNavigation = preserveNavigation === true && isAgentStorageScope(loadedScope) && props.regionId === loadedRegionId
  const current = ++directoryRequest, regionId = props.regionId
  if (!preserveNavigation) resetStack()
- const scope = getAgentStorageScope()
+ let scope
+ try { scope = getAgentStorageScope() } catch (cause) {
+  ++stateRequest; devices.value = []; readings.value = {}; loading.value = false; stateLoading.value = false; emit('count', null)
+  error.value = cause.message
+  return
+ }
  if (!preserveNavigation && regionId === loadedRegionId && scope === loadedScope && Date.now() - loadedAt < 30000) {
   if (props.open) stateRefresh.auto()
   return
  }
- ++stateRequest; if (!preserveNavigation) { devices.value = []; readings.value = {} };  stateLoading.value = false; error.value = ''; stateError.value = ''; emit('count', null)
+ ++stateRequest; if (regionId !== loadedRegionId || scope !== loadedScope) { devices.value = []; readings.value = {}; emit('count', null) }; stateLoading.value = false; error.value = ''; stateError.value = ''
  if (!regionId) return
  loading.value = true
  try {
-  const result = await listRegionDevices(regionId)
+  const result = await listRegionDevices(regionId, { isActive: () => current === directoryRequest && props.open && pageVisible.value && regionId === props.regionId })
   if (current !== directoryRequest || regionId !== props.regionId || !pageVisible.value || scope !== getAgentStorageScope()) return
   devices.value = result.devices || []
   if (activeDeviceId.value && !devices.value.some(device => device.id === activeDeviceId.value)) resetStack()
   loadedRegionId = regionId; loadedScope = scope; loadedAt = Date.now()
   emit('count', devices.value.length)
   if (props.open) stateRefresh.auto()
- } catch (cause) { if (current === directoryRequest) error.value = cause.message === 'request:fail' ? '设备目录暂不可用，请重试' : cause.message || '设备目录暂不可用' }
+ } catch (cause) { if (current === directoryRequest) {
+  if (!isAgentStorageScope(scope) || [401, 403].includes(cause.status)) { devices.value = []; readings.value = {}; emit('count', null) }
+  error.value = cause.message === 'request:fail' ? '设备目录暂不可用，请重试' : cause.message || '设备目录暂不可用'
+ } }
  finally { if (current === directoryRequest) loading.value = false }
 }
 
@@ -159,10 +166,13 @@ async function loadStates() {
  if (!props.open || !pageVisible.value || !regionId || !devices.value.length) return
  stateLoading.value = true; stateError.value = ''
  try {
-  const result = await listRegionDeviceStates(regionId)
+  const result = await listRegionDeviceStates(regionId, { isActive: () => current === stateRequest && regionId === props.regionId && props.open && pageVisible.value })
   if (current !== stateRequest || regionId !== props.regionId || !props.open) return
   readings.value = Object.fromEntries((result.states || []).map(item => [item.id, item]))
- } catch (cause) { if (current === stateRequest) { readings.value = {}; stateError.value = cause.message || '设备状态暂不可用' } }
+ } catch (cause) { if (current === stateRequest) {
+  if (!['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) readings.value = {}
+  stateError.value = cause.message || '设备状态暂不可用'
+ } }
  finally { if (current === stateRequest) stateLoading.value = false }
 }
 const stateRefresh = createStateRefresh(loadStates)
@@ -180,7 +190,7 @@ watch(() => props.regionId, () => {
 }, { immediate: true })
 watch(() => props.open, value => {
  if (value) { resetStack(); if (!loading.value) loadDirectory() }
- else { stateRefresh.cancel(); ++stateRequest; stateLoading.value = false; closeSearch(); groupBy.value = 'kind'; collapsedGroups.value = []; resetStack() }
+ else { stateRefresh.cancel(); ++directoryRequest; ++stateRequest; loading.value = false; stateLoading.value = false; closeSearch(); groupBy.value = 'kind'; collapsedGroups.value = []; resetStack() }
 })
 watch(() => props.refreshSignal, () => { if (props.open) stateRefresh.after(1000) })
 onBeforeUnmount(() => { stateRefresh.cancel(); ++directoryRequest; ++stateRequest; clearTimeout(focusTimer); clearPaneTimer('device'); clearPaneTimer('task') })

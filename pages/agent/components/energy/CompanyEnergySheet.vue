@@ -1,8 +1,9 @@
 <template>
  <view class="epanel">
   <scroll-view class="ebody" scroll-y enhanced :show-scrollbar="false">
-   <view v-if="error || preparing" class="estate-msg"><text>{{ error }}</text><button class="eretry" @tap="init">重试</button></view>
-   <template v-else>
+   <view v-if="error && !report" class="estate-msg"><text>{{ error }}</text><button class="eretry" @tap="init(true)">重试</button></view>
+   <view v-if="error && report" class="estale"><text>{{ error }}</text><button class="eretry" @tap="init(true)">重试</button></view>
+   <template v-if="report || !error">
     <view class="calrow">
      <button v-if="!bounded || selected" class="calchip" @tap="calOpen = !calOpen"><uni-icons type="calendar" size="13" color="#37513f" /><text>{{ labelOf(selected) }}</text><uni-icons :type="calOpen ? 'up' : 'down'" size="11" color="#71877a" /></button>
     </view>
@@ -56,15 +57,17 @@
 import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { onHide, onShow } from '@dcloudio/uni-app'
 import { getCompanyEnergyDaily, getCompanyMeterReport } from '@/apis/agent/energy'
-import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
+import { getAgentStorageScope, isAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import RegionCalendar from '../regions/RegionCalendar.vue'
 import CompanyEnergyStrip from './CompanyEnergyStrip.vue'
 import EnergySkeleton from './EnergySkeleton.vue'
-import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView } from '../../lib/energy.mjs'
+import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, mergeHistoryCache, historyCacheFailure } from '../../lib/energy.mjs'
 import { fmtDateTime } from '../../lib/observations.mjs'
 
 const props = defineProps({ active: Boolean, focusDate: String, bounded: Boolean, initialQuery: Object })
 defineEmits(['refresh'])
+// 刷新失败的真实原因在后端 cache.lastError；业务 message 只是通用提示。
+const failureMessage = (cause, fallback) => cause?.data?.cache?.lastError?.message || cause?.data?.message || cause?.message || fallback
 const today = shanghaiToday()
 const report = ref(null)
 const strip = ref([])
@@ -73,12 +76,11 @@ const selected = ref('')
 const latestCompleteDay = ref('')
 const latestSampleTime = ref('')
 const error = ref('')
-const preparing = ref(false)
 const loading = ref(false)
 const calOpen = ref(false)
 const stripRef = ref(null)
 const bounds = ref(null)
-let boundedJob = null
+let boundedJob = null, boundedContextKey = ''
 let sheetVisible = true
 const unit = computed(() => unitOf(report.value))
 const basisNote = computed(() => unitNote(report.value))
@@ -115,6 +117,25 @@ const boundedEmpty = computed(() => Boolean(props.bounded && report.value && bou
 const todaySlice = computed(() => report.value?.comparison?.currentDay?.date === today ? report.value.comparison.currentDay : null)
 const todayUsage = computed(() => todaySlice.value?.usage ?? null)
 const vsToday = computed(() => comparePct(todayUsage.value, selectedDay.value?.elapsedUsage))
+// 后端 stale 只说明这是上次完整结果；原始 updatedAt 不清空、不改写。
+const cacheNote = computed(() => {
+ const cache = report.value?.cache
+ if (!cache || cache.status !== 'stale') return ''
+ if (cache.lastError?.message) return cache.refreshing ? `${cache.lastError.message}（正在后台重试）` : cache.lastError.message
+ if (cache.refreshing) return '正在后台更新'
+ return '沿用最近一次完整数据'
+})
+// 历史补块按日期保留 cache 元数据：完整 stale body 的用量继续显示，但失败与原始
+// updatedAt 要提示；同块 fresh 返回时只清掉该块日期上的旧失败。
+const historyCache = ref({})
+const historyNote = computed(() => {
+ const failure = historyCacheFailure(historyCache.value)
+ if (!failure) return ''
+ const range = failure.from === failure.to ? failure.from : `${failure.from}–${failure.to}`
+ const status = failure.messages.length ? `更新失败：${failure.messages.join('；')}` : failure.refreshing ? '正在后台更新' : '沿用上次完整数据'
+ const time = failure.updatedAt ? ` · 数据截至 ${fmtDateTime(failure.updatedAt)}` : ''
+ return `${range} 历史补块${status}${time}`
+})
 const footnote = computed(() => {
  if (!report.value) return ''
  if (props.bounded) {
@@ -126,13 +147,16 @@ const footnote = computed(() => {
   else if (bounds.value) parts.push(`${bounds.value.min} — ${bounds.value.max}`)
   if (latestSampleTime.value) parts.push(`数据截至 ${fmtDateTime(latestSampleTime.value)}`)
   if (report.value.truncated) parts.push('读取窗口被截断')
+  if (cacheNote.value) parts.push(cacheNote.value)
+  if (historyNote.value) parts.push(historyNote.value)
   parts.push(report.value.basis?.cycle || '')
   return parts.filter(Boolean).join(' · ')
  }
  const parts = [`数据截至 ${fmtDateTime(latestSampleTime.value)}`]
  if (report.value.truncated) parts.push('读取窗口被截断')
  else if (strip.value.some(day => day.failed)) parts.push('部分日期读取未完成')
- if (report.value.cache?.status === 'stale') parts.push(report.value.cache.refreshing ? '正在后台更新' : report.value.cache.refreshError ? '更新失败，沿用上次完整数据' : '沿用最近一次完整数据')
+ if (cacheNote.value) parts.push(cacheNote.value)
+ if (historyNote.value) parts.push(historyNote.value)
  parts.push(report.value.basis?.cycle || '')
  if (report.value.aggregation?.note) parts.push(report.value.aggregation.note)
  return parts.filter(Boolean).join(' · ')
@@ -151,7 +175,9 @@ function mergeReport(next, replace = true) {
   latestCompleteDay.value = next.latestCompleteDay || ''
   latestSampleTime.value = next.latestSampleTime || ''
  } else {
-  // 旧窗口只补 days 与逐表 daily；latestCompleteDay/latestSampleTime/basis 保持最新窗口，左滑历史不冲掉对比。
+  // 旧窗口只补 days 与逐表 daily；latestCompleteDay/latestSampleTime/basis/cache 保持最新窗口，
+  // 左滑历史不冲掉对比，也不让历史块元数据覆盖当前期的 stale/lastError；块失败仍由下面的
+  // truncated 标记落在日柱上，只更新本次实际收到的日期。
   const meters = (report.value.meters || []).map(m => {
    const extra = (next.meters || []).find(x => x.id === m.id)
    return extra ? { ...m, daily: { ...(extra.daily || {}), ...(m.daily || {}) } } : m
@@ -159,6 +185,7 @@ function mergeReport(next, replace = true) {
   report.value = { ...report.value, meters }
  }
  strip.value = mergeStripDays(strip.value, next.days || [])
+ if (!replace) historyCache.value = mergeHistoryCache(historyCache.value, next.days, next.cache)
  if (next.truncated) {
   const missing = new Set((next.days || []).filter(day => day.usage == null).map(day => day.date))
   strip.value = strip.value.map(day => missing.has(day.date) ? { ...day, failed: true } : day)
@@ -179,32 +206,34 @@ function mergeReport(next, replace = true) {
  })
  meterDaily.value = md
 }
-const preparingNote = r => { preparing.value = true; error.value = r.message || '数据准备中，后台正在读取历史电表数据' }
-async function fetchWindow(days, end) {
+async function fetchWindow(days, end, force = false) {
+ const current = requestId
  await waitForAgentSession()
- return getCompanyEnergyDaily({ days, ...(end ? { end } : {}) })
+ return getCompanyEnergyDaily({ days, ...(end ? { end } : {}) }, { force: force === true, isActive: () => current === requestId && props.active && sheetVisible })
 }
-async function fetchMeterReport(request) {
+async function fetchMeterReport(request, force = false) {
+ const current = requestId
  await waitForAgentSession()
- return getCompanyMeterReport(request)
+ return getCompanyMeterReport(request, { force: force === true, isActive: () => current === requestId && props.active && sheetVisible })
 }
-async function init() {
+async function init(force = false) {
  const current = ++requestId
  queue = []; requested = new Set()
- loading.value = true; error.value = ''; preparing.value = false
- if (!props.bounded) {
-  const nextScope = getAgentStorageScope()
-  if (scope.value !== nextScope) selected.value = ''
-  scope.value = nextScope
- }
- const scopeNow = scope.value
+ loading.value = true; error.value = ''
  try {
-  if (props.bounded) { await initBounded(current); return }
+  await waitForAgentSession()
+  if (current !== requestId || !props.active || !sheetVisible) return
+  if (!props.bounded) {
+   const nextScope = getAgentStorageScope()
+   if (scope.value !== nextScope) clearBoundedData()
+   scope.value = nextScope
+  }
+  const scopeNow = scope.value
+  if (props.bounded) { await initBounded(current, force); return }
   // 首块沿用 30 天窗口：命中首屏已暖的报告缓存，面板基本秒开；更早的由补块队列后台填。
-  const next = await fetchWindow(STRIP_PAGE_DAYS)
-  if (next?.status === 'preparing') { preparingNote(next); return }
+  const next = await fetchWindow(STRIP_PAGE_DAYS, undefined, force)
   if (current !== requestId || !props.active || scopeNow !== getAgentStorageScope()) return
-  strip.value = []; meterDaily.value = {}
+  strip.value = []; meterDaily.value = {}; historyCache.value = {}
   mergeReport(next)
   const edge = latestCompleteDay.value || today
   strip.value = padStripDays(strip.value, shiftDate(edge, -(SPAN_DAYS - 1)), edge)
@@ -216,36 +245,39 @@ async function init() {
   }
   needRange(shiftDate(selected.value || edge, -45), shiftDate(selected.value || edge, 15))
  } catch (cause) {
-  if (current === requestId) error.value = cause?.data?.message || cause.message || '逐日能耗暂不可用'
+  if (current === requestId) {
+   if (!isAgentStorageScope(scope.value) || [401, 403].includes(cause.status)) clearBoundedData()
+   error.value = failureMessage(cause, '逐日能耗暂不可用')
+  }
  } finally { if (current === requestId) loading.value = false }
 }
 function clearBoundedData() {
- report.value = null; strip.value = []; meterDaily.value = {}; selected.value = ''; bounds.value = null
+ report.value = null; strip.value = []; meterDaily.value = {}; historyCache.value = {}; selected.value = ''; bounds.value = null
 }
-async function initBounded(current) {
- clearBoundedData()
+async function initBounded(current, force = false) {
  const job = { ctx: null, scope: '', queue: [], requested: new Set(), pumping: false }
  boundedJob = job
  await waitForAgentSession()
  if (current !== requestId || job !== boundedJob || !sheetVisible) return
  job.scope = getAgentStorageScope()
+ const contextKey = JSON.stringify(props.initialQuery || null)
+ if (boundedContextKey !== contextKey || scope.value !== job.scope) clearBoundedData()
+ boundedContextKey = contextKey
  scope.value = job.scope
  if (props.initialQuery) {
   job.ctx = fixedEnergyContext(props.initialQuery)
   if (!job.ctx) { error.value = '该计量对象的统计范围无效'; return }
   bounds.value = { min: job.ctx.minDate, max: job.ctx.maxDate }
-  strip.value = padStripDays([], job.ctx.minDate, job.ctx.maxDate)
+  strip.value = padStripDays(strip.value, job.ctx.minDate, job.ctx.maxDate)
   const span = Math.round((Date.parse(job.ctx.maxDate) - Date.parse(job.ctx.minDate)) / 864e5) + 1
   const request = fixedEnergyWindow(job.ctx, span <= 90 ? span : STRIP_PAGE_DAYS)
-  const raw = await fetchMeterReport(request)
-  if (raw?.status === 'preparing') { preparingNote(raw); return }
+  const raw = await fetchMeterReport(request, force)
   const next = meterStatisticsDailyView(raw, job.ctx)
   if (current !== requestId || job !== boundedJob || !props.active || !sheetVisible || job.scope !== getAgentStorageScope()) return
   mergeReport(next)
   if (span <= 90) resolveBoundedPending(job.ctx.minDate, job.ctx.maxDate)
  } else {
-  const next = await fetchWindow(STRIP_PAGE_DAYS)
-  if (next?.status === 'preparing') { preparingNote(next); return }
+  const next = await fetchWindow(STRIP_PAGE_DAYS, undefined, force)
   if (current !== requestId || job !== boundedJob || !props.active || !sheetVisible || job.scope !== getAgentStorageScope()) return
   bounds.value = { min: next.days?.[0]?.date || '', max: next.days?.at(-1)?.date || '' }
   mergeReport(next)
@@ -285,22 +317,23 @@ async function pumpBounded(job) {
   if (!request) continue
   try {
    const raw = await fetchMeterReport(request)
-   if (raw?.status === 'preparing') { preparingNote(raw); break }
    const next = meterStatisticsDailyView(raw, job.ctx)
    if (current !== requestId || job !== boundedJob || !sheetVisible || job.scope !== getAgentStorageScope()) break
    mergeReport(next, false)
    resolveBoundedPending(boundedChunkFrom(end), end)
+   if (!strip.value.some(day => day.failed)) error.value = ''
   } catch (cause) {
-   if (current !== requestId || job !== boundedJob || !sheetVisible || job.scope !== getAgentStorageScope()) break
-   if (cause?.data) {
-    boundedJob = null
-    clearBoundedData()
-    error.value = cause.data?.message || cause.message || '电表统计暂不可用'
+   if (current !== requestId || job !== boundedJob || !sheetVisible) break
+   if (!isAgentStorageScope(job.scope) || [401, 403].includes(cause.status)) {
+    boundedJob = null; clearBoundedData()
+    error.value = failureMessage(cause, '电表统计暂不可用')
     break
    }
    const from = boundedChunkFrom(end)
    for (let x = from; x <= end; x = shiftDate(x, 1)) job.requested.delete(x)
    strip.value = markStripFailed(strip.value, from, end)
+   error.value = failureMessage(cause, '电表统计暂不可用')
+   if (['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) { job.queue = []; break }
   }
  }
  job.pumping = false
@@ -313,6 +346,7 @@ function selectBounded(date) {
 }
 function resumeBounded() {
  if (!props.active || !sheetVisible || boundedJob) return
+ if (!isAgentStorageScope(scope.value)) { clearBoundedData(); void init(); return }
  const scopeNow = getAgentStorageScope()
  if (report.value && bounds.value && scope.value === scopeNow) {
   boundedJob = { ctx: props.initialQuery ? fixedEnergyContext(props.initialQuery) : null, scope: scopeNow, queue: [], requested: new Set(), pumping: false }
@@ -350,14 +384,16 @@ async function pump() {
   const end = queue.shift()
   try {
    const next = await fetchWindow(CHUNK_DAYS, end)
-   if (next?.status === 'preparing') { preparingNote(next); break }
    if (current !== requestId || scope.value !== getAgentStorageScope()) break
    mergeReport(next, false)
-  } catch {
+   if (!strip.value.some(day => day.failed)) error.value = ''
+  } catch (cause) {
    if (current !== requestId) break
+   if (!isAgentStorageScope(scope.value) || [401, 403].includes(cause.status)) { clearBoundedData(); error.value = failureMessage(cause, '逐日能耗暂不可用'); queue = []; break }
    // 该块标失败：柱变灰、选中该段日期时给重试；不阻塞后续块。
    for (let x = shiftDate(end, -(CHUNK_DAYS - 1)); x <= end; x = shiftDate(x, 1)) requested.delete(x)
    strip.value = markStripFailed(strip.value, shiftDate(end, -(CHUNK_DAYS - 1)), end)
+   if (['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) { error.value = failureMessage(cause, '逐日能耗暂不可用'); queue = []; break }
   }
  }
  if (pumping === current) pumping = 0
@@ -411,14 +447,14 @@ function onCalendar(date) {
  jumpToDate(date)
 }
 watch([() => props.active, () => props.initialQuery], ([active]) => {
- if (!props.bounded) { if (active) init(); return }
+ if (!props.bounded) { if (active && sheetVisible) void init(); else { ++requestId; queue = []; loading.value = false }; return }
  if (active && sheetVisible) { void init(); return }
  requestId++; boundedJob = null; loading.value = false
  if (active) clearBoundedData()
 }, { immediate: true })
-onHide(() => { if (props.bounded) { sheetVisible = false; requestId++; boundedJob = null; loading.value = false } })
-onShow(() => { if (!props.bounded) return; sheetVisible = true; resumeBounded() })
-onBeforeUnmount(() => { if (props.bounded) { requestId++; boundedJob = null } })
+onHide(() => { sheetVisible = false; requestId++; boundedJob = null; queue = []; loading.value = false })
+onShow(() => { sheetVisible = true; if (props.bounded) resumeBounded(); else if (props.active) void init() })
+onBeforeUnmount(() => { sheetVisible = false; requestId++; boundedJob = null; queue = [] })
 watch(() => props.focusDate, date => {
  if (date && !props.bounded) selected.value = date
  if (date && props.active) jumpToDate(date)
@@ -432,6 +468,7 @@ button::after { border:0; }
 .ebody { flex:1; min-height:0; height:0; padding:6px 20px 24px; box-sizing:border-box; }
 .estate-msg { display:flex; flex-direction:column; align-items:center; gap:10px; padding:30px 0; color:#839189; font-size:12px; }
 .eretry { font-size:11px; color:#176b54; border:1px solid #dce4da; border-radius:999px; padding:7px 16px; background:#fcfdf8; }
+.estale { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:10.5px; color:#a27128; }
 .calrow { display:flex; margin:8px 0 2px; }
 .calchip { display:flex; align-items:center; gap:6px; height:30px; padding:0 11px; border-radius:15px; background:linear-gradient(#fefffe,#eef3ef); color:#37513f; font-size:11.5px; font-weight:650; box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 4px 12px rgba(28,57,42,.16); }
 .calchip:active { transform:scale(.95); }

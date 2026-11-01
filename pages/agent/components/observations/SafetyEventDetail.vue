@@ -30,7 +30,7 @@ import VideoPlaybackForm from './VideoPlaybackForm.vue'
 import { openVideoPlayer, videoPlayerReady } from '../../lib/video.mjs'
 import { fmtDateTime, safetySubtypeText, safetyEventReference } from '../../lib/observations.mjs'
 import { getSafetyEvent, getSafetyEventCameras } from '@/apis/agent/observations'
-import { getAgentStorageScope } from '@/utils/agent-session'
+import { getAgentStorageScope, isAgentStorageScope } from '@/utils/agent-session'
 
 const props = defineProps({ snapshot: { type: Object, required: true }, active: Boolean })
 const emit = defineEmits(['reference'])
@@ -64,14 +64,14 @@ async function load() {
  try {
   scope = getAgentStorageScope()
   referenceScope = scope; referenceAllowed.value = true
-  const result = await getSafetyEvent(target)
+  const result = await getSafetyEvent(target, { isActive: () => current === requestId && visible && props.active })
   if (current !== requestId || !visible || !props.active || scope !== getAgentStorageScope()) return
   const next = safetyEventReference(result.record)
   if (!next || next.eventId !== target.eventId || next.ledger !== target.ledger || next.deviceId !== target.deviceId) throw new Error('返回的记录身份不匹配，请重试')
   record.value = result.record; observedAt.value = result.observedAt; verified.value = true
  } catch (cause) {
   if (current === requestId && visible && props.active) {
-   if (scope !== getAgentStorageScope() || ['SAFETY_EVENT_UNAVAILABLE', 'UNAUTHORIZED'].includes(cause.data?.code)) { record.value = {}; referenceAllowed.value = false }
+   if (!isAgentStorageScope(scope) || [401, 403].includes(cause.status) || ['SAFETY_EVENT_UNAVAILABLE', 'UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code)) { record.value = {}; referenceAllowed.value = false }
    error.value = cause.message || '记录暂不可用，请稍后重试'
   }
  } finally { if (current === requestId) loading.value = false }
@@ -79,9 +79,10 @@ async function load() {
 async function findCameras() {
  if (cameraLoading.value || !referenceAllowed.value || referenceScope !== getAgentStorageScope()) return
  const current = ++cameraRequest, scope = getAgentStorageScope(), target = reference.value
- cameraLoading.value = true; cameraError.value = ''; cameraNote.value = ''; cameras.value = []; selectedCamera.value = null
+ cameraLoading.value = true; cameraError.value = ''; cameraNote.value = ''
+ if (cameraScope !== scope) { cameras.value = []; selectedCamera.value = null }
  try {
-  const result = await getSafetyEventCameras(target)
+  const result = await getSafetyEventCameras(target, { isActive: () => current === cameraRequest && visible && props.active })
   if (current !== cameraRequest || !visible || !props.active || scope !== getAgentStorageScope()) return
   const next = safetyEventReference(result.record)
   if (!next || next.eventId !== target.eventId || next.ledger !== target.ledger || next.deviceId !== target.deviceId) throw new Error('返回的记录身份不匹配')
@@ -91,7 +92,7 @@ async function findCameras() {
   if (cameras.value.length) void reveal('event-camera-list')
  } catch (cause) {
   if (current === cameraRequest) {
-   if (['UNAUTHORIZED', 'SAFETY_EVENT_UNAVAILABLE'].includes(cause.data?.code)) { record.value = {}; referenceAllowed.value = false; verified.value = false }
+   if (!isAgentStorageScope(scope) || [401, 403].includes(cause.status) || ['UNAUTHORIZED', 'FORBIDDEN', 'SAFETY_EVENT_UNAVAILABLE'].includes(cause.data?.code)) { record.value = {}; cameras.value = []; selectedCamera.value = null; referenceAllowed.value = false; verified.value = false }
    cameraError.value = cause.message || '候选监控暂不可用，请重试'
   }
  }

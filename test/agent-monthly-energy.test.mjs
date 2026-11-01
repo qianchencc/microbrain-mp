@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView } from '../pages/agent/lib/energy.mjs'
+import { monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView, monthlySnapshotCache } from '../pages/agent/lib/energy.mjs'
+import { createAgentReadCache } from '../apis/agent/agent-read-cache.mjs'
+// @boundary-private-test-seam: verifies monthly aggregate freshness through the cache adapter.
 const now = () => new Date('2026-10-25T18:00:00+08:00')
 const report = (span, value, ids = ['a','b']) => ({
  kind: 'statistics', params: { span: { requested: span, observed: { from: span.from, to: span.to } } },
@@ -268,29 +270,73 @@ test('匹配期间但单位未知的独有电表仍保留，错期响应不能�
  assert.deepEqual(pair.rows.map(r=>r.id),['a'])
 })
 
-test('快照准备中应答不渲染为空数据：轮询到就绪后按真实报告呈现，超时保留准备中文案', async () => {
+test('月度统计接受共享请求的完整结果，准备中超时保留真实原因而不补零', async () => {
  const windows = monthlyEnergyWindows(now())
- const publishes = []
- let clock = 0
- const seen = {}
- await readMonthlyEnergy(windows, async q => {
-  seen[q.from] = (seen[q.from] || 0) + 1
-  if (q.from.startsWith('2026-10') && seen[q.from] <= 2) return { status: 'preparing', message: '电表数据准备中，请稍后重试', retryAfterMs: 2000 }
-  return report(q, 100)
- }, (key, value) => { publishes.push([key, value]) }, { sleep: async () => { clock += 2000 }, now: () => clock, deadlineMs: 120000 })
- const states = Object.fromEntries(publishes)
- const currentKey = windows.current.from + '/' + windows.current.to
- assert.equal(states[currentKey].report.total.value, 100)
- assert.ok(publishes.some(([k, v]) => k === currentKey && v.preparing === true), '准备中状态须先发布，不能直接落在空数据')
- const preparingView = monthlyEnergyView(windows, { [currentKey]: { preparing: true, message: '电表数据准备中' } })
- assert.equal(preparingView.current.pending, true)
- assert.match(preparingView.current.note, /准备中/)
+ const states = await load(windows, async query => report(query, 100))
  assert.equal(monthlyEnergyView(windows, states).current.value, 100)
+ const pending = await load(windows, async () => { throw Object.assign(new Error('电表数据准备中，请稍后重试'), { code: 'AGENT_READ_PREPARING' }) })
+ const view = monthlyEnergyView(windows, pending)
+ assert.equal(view.current.value, null)
+ assert.match(view.current.note, /准备中/)
+ assert.equal(view.pairs[0].pct, '—')
+ assert.match(view.pairs[0].summary, /准备中/)
+})
 
- clock = 0
- const timeoutStates = {}
- await readMonthlyEnergy(windows, async () => ({ status: 'preparing', message: '电表数据准备中，请稍后重试', retryAfterMs: 2000 }),
-  (key, value) => { timeoutStates[key] = value }, { sleep: async () => { clock += 2000 }, now: () => clock, deadlineMs: 6000 })
- assert.match(timeoutStates[currentKey].error, /准备中/)
- assert.equal(monthlyEnergyView(windows, timeoutStates).current.value, null)
+test('同期间旧完整统计在后台准备中错误提示下继续提供原值和对比', async () => {
+ const windows = monthlyEnergyWindows(now())
+ const states = await load(windows, async query => report(query, query.from.startsWith('2026-10') ? 120 : 100))
+ const key = windows.current.from + '/' + windows.current.to
+ states[key] = { ...states[key], refreshError: '数据准备中，请稍后重试' }
+ const view = monthlyEnergyView(windows, states)
+ assert.equal(view.current.value, 120)
+ assert.equal(view.current.pending, false)
+ assert.match(view.current.note, /准备中/)
+ assert.equal(view.pairs[0].pct, '↑ 20%')
+})
+
+test('月度组合缓存任一期 stale 只作占位，并在对应期显示 lastError', async () => {
+ const windows = monthlyEnergyWindows(now())
+ const states = await load(windows, async query => report(query, query.from.startsWith('2026-10') ? 120 : 100))
+ assert.deepEqual(monthlySnapshotCache(states), { status: 'fresh' })
+ const key = windows.current.from + '/' + windows.current.to
+ states[key].report.cache = { status: 'stale', refreshing: false, updatedAt: '2026-10-24T20:00:00+08:00', lastError: { code: 'UPSTREAM_TIMEOUT', message: '上游读取超时' } }
+ const cache = monthlySnapshotCache(states)
+ assert.equal(cache.status, 'stale')
+ assert.equal(cache.refreshing, false)
+ assert.equal(cache.lastError.message, '上游读取超时')
+ const view = monthlyEnergyView(windows, states)
+ assert.equal(view.current.value, 120)
+ assert.match(view.current.note, /上游读取超时/)
+ assert.match(view.pairs[0].a.note, /上游读取超时/)
+ assert.match(view.pairs[0].note, /上游读取超时/)
+ assert.equal(view.pairs[0].pct, '↑ 20%')
+})
+
+test('月度组合含失败/准备/缺报期时不能缓存为成功，下一次读取重新询问后端', async () => {
+ const windows = monthlyEnergyWindows(now())
+ const states = await load(windows, async query => report(query, query.from.startsWith('2026-10') ? 120 : 100))
+ const currentKey = windows.current.from + '/' + windows.current.to
+ const cache = createAgentReadCache(() => 'alice', () => 0), key = 'monthly-snapshot:test'
+ const base = states[currentKey]
+ const cases = [
+  { ...base, refreshError: '数据准备中，请稍后重试' },
+  { ...base, preparing: true },
+  { error: '读取失败' },
+  {},
+  { ...base, report: { ...base.report, coverage: { ...base.report.coverage, truncated: true } } }
+ ]
+ for (const broken of cases) {
+  const combined = { ...states, [currentKey]: broken }
+  cache.put(key, { states: combined, cache: monthlySnapshotCache(combined) })
+  assert.equal(cache.peek(key).fresh, false)
+  let requested = 0
+  await cache.read(key, async () => { requested++; return { states: combined, cache: monthlySnapshotCache(combined) } })
+  assert.equal(requested, 1)
+ }
+ const waiting = Object.fromEntries(Object.keys(states).map(span => [span, { waiting: true }]))
+ cache.put(key, { states: waiting, cache: monthlySnapshotCache(waiting) })
+ assert.equal(cache.peek(key).fresh, true)
+ let requested = 0
+ await cache.read(key, async () => { requested++; return {} })
+ assert.equal(requested, 0)
 })

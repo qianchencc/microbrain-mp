@@ -33,10 +33,7 @@ export function monthlyEnergyWindows(now = new Date(), sampleTime = '') {
  return { current, pairs }
 }
 
-export async function readMonthlyEnergy(windows, request, publish, options = {}) {
- const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)))
- const now = options.now ?? (() => Date.now())
- const deadlineMs = options.deadlineMs ?? 120_000
+export async function readMonthlyEnergy(windows, request, publish) {
  const spans = [windows.current, ...windows.pairs.flatMap(pair => [pair.current, pair.baseline])]
  const unique = [...new Map(spans.map(span => [span.from + '/' + span.to, span])).values()]
  await Promise.all(unique.map(async span => {
@@ -44,15 +41,8 @@ export async function readMonthlyEnergy(windows, request, publish, options = {})
   // 月初 08:00 尚无用电区间，属于等待采样，不是请求错误。
   if (Date.parse(span.to) <= Date.parse(span.from)) { publish(key, { waiting: true }); return }
   try {
-   let report = await request({ kind: 'statistics', scopeLevel: 'all', from: span.from, to: span.to, grain: 'month' })
-   const deadline = now() + deadlineMs
-   while (report?.status === 'preparing' && now() < deadline) {
-    publish(key, { preparing: true, message: report.message || '数据准备中' })
-    await sleep(report.retryAfterMs ?? 2000)
-    report = await request({ kind: 'statistics', scopeLevel: 'all', from: span.from, to: span.to, grain: 'month' })
-   }
-   if (report?.status === 'preparing') publish(key, { error: report.message || '数据准备中，请稍后重试' })
-   else publish(key, { report })
+   const report = await request({ kind: 'statistics', scopeLevel: 'all', from: span.from, to: span.to, grain: 'month' })
+   publish(key, { report })
   }
   catch (error) { publish(key, { error: error.message || '月度统计读取失败', denied: [401, 403].includes(error.statusCode ?? error.status) || ['UNAUTHORIZED', 'FORBIDDEN'].includes(error.data?.code) }) }
  }))
@@ -68,9 +58,16 @@ function periodView(span, states) {
  const complete = boundaryComplete && value !== null && coverage?.meters > 0 && coverage.dataMeters === coverage.meters && !coverage.truncated
   && !coverage.noData?.length && !coverage.partial?.length && meters.length === coverage.meters && meters.every(m => m.status === 'ok')
  const detailLabel = `${monthlyDate(span.from)} ${span.from.slice(11, 16)} → ${monthlyDate(span.to)} ${span.to.slice(11, 16)}`
+ // 后端 stale 的刷新失败以 cache.lastError 为准；数据仍按上次完整快照展示。
+ const cache = report?.cache
+ const cacheNote = cache?.status === 'stale'
+  ? cache.lastError?.message
+   ? (cache.refreshing ? `${cache.lastError.message}（正在后台重试）` : cache.lastError.message)
+   : (cache.refreshing ? '正在后台更新' : '沿用上次完整数据')
+  : ''
  return { span, label: periodLabel(span), detailLabel, value, complete, meters: matching ? meters : [], unitValid: report?.total?.unit === '度', truncated: Boolean(coverage?.truncated), pending: !state || Boolean(state?.preparing),
-  error: state?.error || '', through: shanghaiTime(report?.params?.span?.observed?.to),
-  note: state?.error || (state?.waiting ? '本月用电待首个采样区间完成' : state?.preparing ? (state.message || '数据准备中') : state ? (value === null ? (matching && coverage?.dataMeters > 0 && !insideMonth ? '月初缺少准确边界采样' : '暂无有效用电数据') : !complete ? '数据覆盖不完整，显示已取得用电' : '') : '正在读取月度用电') }
+  error: state?.error || '', through: shanghaiTime(report?.params?.span?.observed?.to), cacheNote,
+  note: state?.refreshError || state?.error || cacheNote || (state?.waiting ? '本月用电待首个采样区间完成' : state?.preparing ? (state.message || '数据准备中') : state ? (value === null ? (matching && coverage?.dataMeters > 0 && !insideMonth ? '月初缺少准确边界采样' : '暂无有效用电数据') : !complete ? '数据覆盖不完整，显示已取得用电' : '') : '正在读取月度用电') }
 }
 // 比较原始采样的相对月初偏移，避免以本月 10 日的旧采样对比基期 25 日。
 function sameSampling(a, b) {
@@ -107,6 +104,19 @@ function meterComparisonRows(a, b) {
  }).sort((x, y) => x.delta === null && y.delta !== null ? 1 : x.delta !== null && y.delta === null ? -1 : (y.delta ?? 0) - (x.delta ?? 0) || x.name.localeCompare(y.name, 'zh-CN') || x.id.localeCompare(y.id))
 }
 
+// 月度组合缓存聚合各期状态：任一期 stale、请求失败、准备中，或没有可用 report
+// （纯 waiting 是正常月初状态，例外）时，整个组合只作非 fresh 占位，下次读取仍问后端；
+// 具体哪期更新失败由该期 lastError/error 提示。
+export function monthlySnapshotCache(states) {
+ const entries = Object.values(states || {})
+ const caches = entries.map(state => state?.report?.cache).filter(cache => cache && typeof cache === 'object')
+ const stale = caches.filter(cache => cache.status === 'stale')
+ const pending = entries.filter(state => state?.error || state?.refreshError || state?.preparing || state?.report?.coverage?.truncated || (!state?.report && !state?.waiting))
+ if (!stale.length && !pending.length) return { status: 'fresh' }
+ const failure = stale.find(cache => cache.lastError?.message)
+ return { status: 'stale', refreshing: stale.some(cache => cache.refreshing) || pending.some(state => state?.preparing), ...(failure ? { lastError: failure.lastError } : {}) }
+}
+
 export function monthlyEnergyView(windows, states = {}) {
  const current = periodView(windows.current, states)
  const pairs = windows.pairs.map(pair => {
@@ -118,10 +128,11 @@ export function monthlyEnergyView(windows, states = {}) {
   const max = Math.max(a.value || 0, b.value || 0)
   const visibleChange = pct ?? delta
   const direction = visibleChange === null || visibleChange === 0 ? '' : visibleChange > 0 ? 'up' : 'down'
+  const cacheNotes = [...new Set([a.cacheNote, b.cacheNote].filter(Boolean))]
   return { ...pair, a, b, rows: meterComparisonRows(a, b), direction, pct: pct === null ? '—' : `${pct > 0 ? '↑ ' : pct < 0 ? '↓ ' : ''}${monthlyNumber(Math.abs(pct))}%`,
    aWidth: max && a.value !== null ? a.value / max * 100 : 0, bWidth: max && b.value !== null ? b.value / max * 100 : 0,
    summary: delta === null ? reason : delta === 0 ? `与${pair.label}持平` : `较${pair.label}${delta > 0 ? '多' : '少'}用 ${monthlyNumber(Math.abs(delta))} 度`,
-   note: delta !== null && b.value === 0 ? reason : pair.shortened ? '短月按两侧相同日期比较' : '' }
+   note: [delta !== null && b.value === 0 ? reason : '', pair.shortened ? '短月按两侧相同日期比较' : '', ...cacheNotes].filter(Boolean).join(' · ') }
  })
  return { current, pairs, title: current.value !== null && !current.complete ? '本月已取得用电' : '本月总用电',
   cutoff: Date.parse(windows.current.to) <= Date.parse(windows.current.from) ? '' : current.through ? `${monthlyDate(current.through)} ${current.through.slice(11, 16)}` : `${monthlyDate(windows.current.to)} ${windows.current.to.slice(11, 16)}` }

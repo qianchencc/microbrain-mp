@@ -115,7 +115,7 @@ async function loadSample() {
  loading.value = true; error.value = ''; sampleTasks.value = []
  try {
   if (!region) return false
-  const result = await listRegionDevices(region)
+  const result = await listRegionDevices(region, { isActive: () => current === requestId && visible && sampleMode.value && region === focusRegionId.value })
   if (current !== requestId || region !== focusRegionId.value || scope !== getAgentStorageScope() || !sampleMode.value) return false
   sampleTasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
   return true
@@ -193,7 +193,7 @@ async function load() {
  loadingDirectory = true; loading.value = !tasks.value.length; error.value = ''; ++requestId
  now.value = new Date().toISOString()
  try {
-  await loadRegionFocus()
+  await loadRegionFocus({ isActive: () => currentLoad === loadId && visible })
   if (currentLoad !== loadId || !visible) return
   if (initialRegion) { if (!selectFocusRegion(initialRegion)) initialTaskId = ''; initialRegion = '' }
   if (initialDate) {

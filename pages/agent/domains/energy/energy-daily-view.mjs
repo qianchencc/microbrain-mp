@@ -221,6 +221,8 @@ export function meterStatisticsDailyView(source, context) {
  })
  return {
   source: 'company', observedAt: source.observedAt, timezone: 'Asia/Shanghai',
+  // 保留后端快照元数据：bounded 面板的 stale/lastError 提示与 updatedAt 不能被视图模型丢掉。
+  cache: source?.cache || null,
   basis: { field: 'epf', boundaryHour: 0, cycle: '请求区间按日分段 · 按实际采样边界计量', unit: 'kWh', nonOverlapping: true },
   window: { ...requested }, latestSampleTime: source.params.span.observed?.to || meter.observed?.toSample?.readTime || null,
   latestCompleteDay: days.filter(day => day.complete).at(-1)?.date || null, truncated: Boolean(source.coverage?.truncated),
@@ -229,4 +231,28 @@ export function meterStatisticsDailyView(source, context) {
   meters: [{ id: meter.id, name: meter.name, location: meter.areaName || '', latest: meter.observed?.toSample?.readTime || null,
    complete: !source.coverage?.truncated, daily }],
  }
+}
+
+// 历史补块的 cache 元数据按日期保留：完整 stale body 仍展示用量，但要让用户看到
+// 该块刷新失败及原始 updatedAt；同块 fresh 返回时只清除该块日期的旧失败。
+export function mergeHistoryCache(state, days, cache) {
+ const next = { ...(state || {}) }
+ if (!cache || (cache.status !== 'fresh' && cache.status !== 'stale')) return next
+ const dates = (days || []).map(day => day?.date).filter(Boolean)
+ if (cache.status === 'fresh') {
+  for (const date of dates) delete next[date]
+  return next
+ }
+ const meta = { lastError: cache.lastError || null, updatedAt: cache.updatedAt || null, refreshing: Boolean(cache.refreshing) }
+ for (const date of dates) next[date] = meta
+ return next
+}
+
+export function historyCacheFailure(state) {
+ const entries = Object.entries(state || {})
+ if (!entries.length) return null
+ const dates = entries.map(([date]) => date).sort()
+ const messages = [...new Set(entries.map(([, meta]) => meta?.lastError?.message).filter(Boolean))]
+ const updatedAt = entries.map(([, meta]) => meta?.updatedAt).filter(Boolean).sort().at(-1) || null
+ return { from: dates[0], to: dates.at(-1), messages, updatedAt, refreshing: entries.some(([, meta]) => Boolean(meta?.refreshing)) }
 }

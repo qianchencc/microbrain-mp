@@ -59,12 +59,12 @@ import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { getCompanyMeterReport, readCompanyMonthlyCache, writeCompanyMonthlyCache } from '@/apis/agent/energy'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { useUserStoreHook } from '@/store/modules/user'
-import { monthlyEnergyWindows, monthlyEnergyView, readMonthlyEnergy, monthlyNumber } from '../../lib/energy.mjs'
+import { monthlyEnergyWindows, monthlyEnergyView, monthlySnapshotCache, readMonthlyEnergy, monthlyNumber } from '../../lib/energy.mjs'
 import DeviceSheet from '../shared/DeviceSheet.vue'
 const props = defineProps({ active: Boolean, refreshKey: Number, cutoff: String })
 const windows = ref(monthlyEnergyWindows()), states = ref({})
 const view = computed(() => monthlyEnergyView(windows.value, states.value))
-const hasError = computed(() => Object.values(states.value).some(state => state.error))
+const hasError = computed(() => Object.values(states.value).some(state => state.error || state.refreshError))
 const detailsMounted = ref(false), detailsOpen = ref(false), detailsKey = ref('')
 const details = computed(() => view.value.pairs.find(pair => pair.key === detailsKey.value))
 const user = useUserStoreHook()
@@ -99,7 +99,7 @@ async function load(force = false) {
   const key = 'monthly-snapshot:' + JSON.stringify(nextWindows)
   const cached = readCompanyMonthlyCache(key)
   if (cached && force !== true) {
-   states.value = cached.value
+   states.value = cached.value?.states || cached.value
    if (cached.fresh) return
   }
   const active = () => {
@@ -109,14 +109,18 @@ async function load(force = false) {
    if (!sameScope) { ++requestId; failAll('登录身份已变化，请重新读取'); return false }
    return true
   }
-  await readMonthlyEnergy(windows.value, query => getCompanyMeterReport(query, { force: force === true }), (key, result) => {
+  await readMonthlyEnergy(windows.value, query => getCompanyMeterReport(query, { force: force === true, isActive: active }), (key, result) => {
    if (!active()) return
    if (result.denied) {
     // 任一期撤权时整组清空，不能继续保留其他请求已取得的总量。
     ++requestId; failAll(result.error)
+   } else if (result.error && states.value[key]?.report) {
+    states.value = { ...states.value, [key]: { ...states.value[key], refreshError: result.error } }
    } else states.value = { ...states.value, [key]: result }
   })
-  if (active() && !hasError.value && !Object.values(states.value).some(state => state.report?.coverage?.truncated)) writeCompanyMonthlyCache(key, states.value)
+  // 失败/准备/无报期也要落一个非 fresh 占位，覆盖此前可能存在的成功组合，避免下次进入
+  // 复用旧 fresh 而看不到本次刷新失败；纯 waiting 组合仍可短暂复用，避免月初无限重试。
+  if (active()) writeCompanyMonthlyCache(key, { states: states.value, cache: monthlySnapshotCache(states.value) })
  } catch (error) {
   if (id === requestId && props.active) failAll(error.message || '月度统计读取失败')
  }

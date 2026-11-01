@@ -13,7 +13,7 @@
     <text v-if="!records.length" class="empty">{{ loading ? '正在读取历史记录' : error ? '本次未取得记录' : cursor ? '这一批没有可核实的匹配记录' : '所选期间没有可核实的记录' }}</text>
    </view>
    <text v-if="error" class="error" aria-live="polite">{{ error }}</text>
-   <button v-if="cursor || error" class="more" :disabled="loading" hover-class="pressed" @tap="load(Boolean(error && !records.length))">{{ loading ? '正在读取…' : error ? '重试读取' : '查看更多记录' }}</button>
+   <button v-if="cursor || error" class="more" :disabled="loading" hover-class="pressed" @tap="load(Boolean(error && !records.length), Boolean(error))">{{ loading ? '正在读取…' : error ? '重试读取' : '查看更多记录' }}</button>
    <text v-else-if="loading" class="loading">正在读取…</text>
   </scroll-view>
  </view>
@@ -22,7 +22,7 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { listSafetyHistory } from '@/apis/agent/observations'
-import { getAgentStorageScope } from '@/utils/agent-session'
+import { getAgentStorageScope, isAgentStorageScope } from '@/utils/agent-session'
 import { fmtDateTime } from '../../lib/observations.mjs'
 
 const props = defineProps({ active: Boolean })
@@ -34,7 +34,7 @@ const records = ref([]), observedAt = ref(''), cursor = ref(null), loading = ref
 let generation = 0, visible = true, scope = '', window = null
 function invalidate() { generation += 1; loading.value = false }
 function reset() { invalidate(); records.value = []; cursor.value = null; observedAt.value = ''; error.value = ''; scrollTop.value = 0; window = null }
-async function load(first = true) {
+async function load(first = true, force = false) {
  if (!props.active || !visible || loading.value) return
  const current = ++generation
  loading.value = true; error.value = ''
@@ -46,11 +46,12 @@ async function load(first = true) {
    from: first || !window ? fromDate.value ? `${fromDate.value}T00:00:00+08:00` : undefined : window.from,
    to: first || !window ? `${endDate.value}T23:59:59.999+08:00` : window.to,
    cursor: first ? undefined : cursor.value }
-  let result = await listSafetyHistory(query)
+  const options = { force: force === true, isActive: () => current === generation && props.active && visible }
+  let result = await listSafetyHistory(query, options)
   const refreshed = [...(result.items || [])]
   while (first && refreshed.length < refreshCount && result.nextCursor) {
    if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope()) return
-   result = await listSafetyHistory({ type: type.value, limit: 20, ...result.window, cursor: result.nextCursor })
+   result = await listSafetyHistory({ type: type.value, limit: 20, ...result.window, cursor: result.nextCursor }, options)
    refreshed.push(...(result.items || []))
   }
   if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope()) return
@@ -60,7 +61,7 @@ async function load(first = true) {
   cursor.value = result.nextCursor; observedAt.value = result.observedAt; window = result.window
  } catch (cause) {
   if (current !== generation || !props.active || !visible) return
-  if (scope !== getAgentStorageScope() || cause.data?.code === 'UNAUTHORIZED') { records.value = []; cursor.value = null; observedAt.value = '' }
+  if (!isAgentStorageScope(scope) || [401, 403].includes(cause.status) || ['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code)) { records.value = []; cursor.value = null; observedAt.value = '' }
   if (cause.data?.code === 'INVALID_SAFETY_CURSOR') { records.value = []; cursor.value = null; window = null; observedAt.value = '' }
   error.value = cause.message || '安全历史暂不可用，请稍后重试'
  } finally { if (current === generation) loading.value = false }

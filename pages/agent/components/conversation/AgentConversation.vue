@@ -3,7 +3,7 @@
   <view class="conversation-shell">
    <scroll-view class="conversation" scroll-y enhanced :show-scrollbar="false" :scroll-into-view="scrollIntoView" :scroll-top="restoredScrollTop" @scroll="handleScroll" @scrolltolower="nearBottom = true">
    <view class="conversation__inner" :class="{ clearing }">
-    <view v-if="!isCompany && regionsError" class="region-notice"><text>{{ regionsError }}</text><button @tap="loadRegionFocus().catch(() => {})">重新读取</button></view>
+   <view v-if="!isCompany && regionsError" class="region-notice"><text>{{ regionsError }}</text><button @tap="reloadRegions">重新读取</button></view>
     <view v-if="!conversationId && !errorMessage" class="welcome connecting"><text>{{ isCompany ? '公司 Agent' : '办公室 Agent' }}</text><view>正在恢复对话…</view></view>
     <view v-else-if="!turns.length && isCompany" class="welcome"><text>公司 Agent</text><view>查询公司环境、能耗和告警，安排定时简报或智慧空调任务。</view>
      <view class="welcome-sugg"><button v-for="s in companySuggestions" :key="s" class="sugg-chip" hover-class="sugg-chip--pressed" @tap="prefill(s)">{{ s }}</button></view></view>
@@ -737,10 +737,11 @@ function clearHistory() {
 }
 // 宿主驱动生命周期：active=true ↔ 页面 onShow / 浮层展开，false ↔ onHide / 收起。
 // 收起只停轮询保草稿，不碰在途流——流继续跑，回开时 restore 对齐。
+function reloadRegions() { return loadRegionFocus({ isActive: () => props.active && visible && !disposed }).catch(() => {}) }
 function activate() {
  visible = true
  openingRegion.value = false
- if (!isCompany.value) loadRegionFocus().catch(() => {})
+ if (!isCompany.value) void reloadRegions()
  if (!activeRequest) restore()
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 会话准备完成后由 restore 重新分区 */ }

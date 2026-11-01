@@ -7,12 +7,14 @@ import { requestJson, httpError, recoverDraftRequest } from './request.mjs'
 import { downloadReportFile } from './report-download.mjs'
 import { conversationSourceBody, withConversationSource } from './conversation-source.mjs'
 import { createAgentReadCache } from './agent-read-cache.mjs'
+import { createPreparedReader, captureActivityToken } from './read-preparation.mjs'
 
 const STREAM_IDLE_TIMEOUT_MS = 60000
 const STREAM_REQUEST_TIMEOUT_MS = 300000
 const CONFIRM_REQUEST_TIMEOUT_MS = 180000
 
 const agentReadCache = createAgentReadCache(getAgentStorageScope)
+const preparedRead = createPreparedReader(getAgentStorageScope)
 export const clearCompanyReadCache = () => agentReadCache.clear()
 export const readCompanyDashboardCache = () => agentReadCache.peek('dashboard-snapshot')
 export const writeCompanyDashboardCache = value => agentReadCache.put('dashboard-snapshot', value)
@@ -20,45 +22,47 @@ export const readCompanyMonthlyCache = key => agentReadCache.peek(key)
 export const writeCompanyMonthlyCache = (key, value) => agentReadCache.put(key, value)
 const isPlansRead = key => key.includes('/agent/task-plans?')
 const isNotificationsRead = key => key.includes('/agent/notifications?')
-const request = async (url, method, data, timeout) => {
+const request = async (url, method, data, timeout, options = {}) => {
  const scope = getAgentStorageScope(), headers = getAgentHeaders()
+ const sameScope = () => { try { return scope === getAgentStorageScope() } catch { return false } }
  const changesDevices = method !== 'GET' && /\/(action-drafts|tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel)(?:\?|$)/.test(url)
  // 周期启停与已读只作废各自列表快照：不清空无关概览/统计，也不等待下一次读才发现新状态。
  const changesPlans = method !== 'GET' && /\/task-plans\/[^/?]+\/status(?:\?|$)/.test(url)
  const changesNotifications = method !== 'GET' && /\/notifications\/(?:seen-all|[^/?]+\/seen)(?:\?|$)/.test(url)
  if (changesDevices) agentReadCache.clear()
  try {
-  const result = await requestJson(globalConfig.agentUrl + url, method, data, headers, timeout)
+  const result = await preparedRead(() => requestJson(globalConfig.agentUrl + url, method, data, headers, timeout), { ...options, snapshot: options.snapshot === true })
   if (changesPlans) agentReadCache.drop(isPlansRead)
   if (changesNotifications) agentReadCache.drop(isNotificationsRead)
   return result
  } catch (error) {
-  if ([401, 403].includes(error.status) || error.code === 'AGENT_SESSION_EXPIRED') agentReadCache.clear()
+  if (sameScope() && ([401, 403].includes(error.status) || error.code === 'AGENT_SESSION_EXPIRED')) agentReadCache.clear()
   if (method !== 'GET' && /\/action-drafts\/[^/?]+\/(confirm|selection|parameters|restore|revalidate|cancel)(?:\?|$)/.test(url)
-   && (error.transport || error.status >= 500) && scope === getAgentStorageScope()) {
-   return recoverDraftRequest(globalConfig.agentUrl + url, method, data, headers, timeout, () => scope === getAgentStorageScope())
+   && error.data?.code !== 'ACCOUNT_IDENTITY_PREPARING' && (error.transport || error.status >= 500) && sameScope()) {
+   return recoverDraftRequest(globalConfig.agentUrl + url, method, data, headers, timeout, sameScope)
   }
   // 仅重放服务端已有幂等保护的确认/管理操作，参数与身份保持原请求。
   const replayable = method === 'POST' && /\/(tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel|status)(?:\?|$)/.test(url)
-  if (replayable && error.data?.recovery?.kind !== 'confirmation_blocked' && (error.transport || error.status >= 500) && scope === getAgentStorageScope()) {
+  if (replayable && error.data?.code !== 'ACCOUNT_IDENTITY_PREPARING' && error.data?.recovery?.kind !== 'confirmation_blocked' && (error.transport || error.status >= 500) && sameScope()) {
    return requestJson(globalConfig.agentUrl + url, method, data, headers, timeout)
   }
   throw error
  } finally {
-  if (changesDevices) agentReadCache.clear()
+  if (changesDevices && sameScope()) agentReadCache.clear()
  }
 }
-const readSnapshot = (url, timeout, options = {}) => agentReadCache.read(options.key || globalConfig.agentUrl + url, () => request(url, 'GET', undefined, timeout), options)
+const ordinaryRead = (url, timeout, options = {}) => request(url, 'GET', undefined, timeout, { ...options, snapshot: true })
+const readSnapshot = (url, timeout, options = {}) => agentReadCache.read(options.key || globalConfig.agentUrl + url, activity => ordinaryRead(url, timeout, { ...options, ...activity }), { ...options, activity: captureActivityToken() })
 const queryString = query => Object.entries(query).filter(([, value]) => value !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&')
 
 export const createConversation = (source = 'office') => request('/agent/conversations', 'POST', conversationSourceBody(source))
 export const getCompanyDashboard = (section, options) => readSnapshot('/agent/dashboard?source=company' + (section ? '&section=' + encodeURIComponent(section) : ''), undefined, options)
-export const getSafetyEvent = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
-export const getSafetyEventCameras = reference => request(`/agent/safety-events/${encodeURIComponent(reference.eventId)}/cameras?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 'GET', undefined, 20000)
-export const listRegions = section => request('/agent/regions' + (section ? '?section=' + encodeURIComponent(section) : ''), 'GET')
+export const getSafetyEvent = (reference, options) => ordinaryRead(`/agent/safety-events/${encodeURIComponent(reference.eventId)}?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 20000, options)
+export const getSafetyEventCameras = (reference, options) => ordinaryRead(`/agent/safety-events/${encodeURIComponent(reference.eventId)}/cameras?source=company&ledger=${encodeURIComponent(reference.ledger)}&deviceId=${encodeURIComponent(reference.deviceId)}`, 20000, options)
+export const listRegions = (section, options) => ordinaryRead('/agent/regions' + (section ? '?section=' + encodeURIComponent(section) : ''), undefined, options)
 export const markRegionSeen = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/seen`, 'POST')
-export const listRegionDevices = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/devices`, 'GET')
-export const listRegionDeviceStates = regionId => request(`/agent/regions/${encodeURIComponent(regionId)}/device-states`, 'GET')
+export const listRegionDevices = (regionId, options) => ordinaryRead(`/agent/regions/${encodeURIComponent(regionId)}/devices`, undefined, options)
+export const listRegionDeviceStates = (regionId, options) => ordinaryRead(`/agent/regions/${encodeURIComponent(regionId)}/device-states`, undefined, options)
 export const listRegionTimeline = (regionId, date) => request(`/agent/regions/${encodeURIComponent(regionId)}/timeline?date=${encodeURIComponent(date)}`, 'GET')
 export const listRegionCalendar = (regionId, from, to) => request(`/agent/regions/${encodeURIComponent(regionId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, 'GET')
 export const getTaskPlan = (planId, source = 'office') => request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}`, source), 'GET')
@@ -109,8 +113,8 @@ export const listSafetyHistory = (query = {}, options) => {
  return readSnapshot(`/agent/safety-events?source=company&${params}`, undefined, options)
 }
 
-export const getEnvironmentHistory = (query) => request('/agent/environment-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')
-export const getEnergyHistory = (query = {}) => request('/agent/energy-history?source=company&' + Object.entries(query).filter(([, value]) => value !== undefined).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'), 'GET')
+export const getEnvironmentHistory = (query, options) => ordinaryRead('/agent/environment-history?source=company&' + queryString(query), undefined, options)
+export const getEnergyHistory = (query = {}, options) => ordinaryRead('/agent/energy-history?source=company&' + queryString(query), undefined, options)
 export const getCompanyDevices = (options) => readSnapshot('/agent/company-devices?source=company', undefined, options)
 export const getCompanyEnergyDaily = (query = {}, options) => readSnapshot('/agent/company-energy-daily?source=company&' + queryString(query), 90000, options)
 // 计量范围×时间统计（meter-report）：scopeLevel all|floor|location|nameMatch + floor/meterId/text，from/to 带时区，grain 可选。

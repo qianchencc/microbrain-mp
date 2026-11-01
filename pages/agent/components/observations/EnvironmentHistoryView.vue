@@ -14,7 +14,7 @@
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { onHide, onShow } from '@dcloudio/uni-app'
 import { getEnvironmentHistory } from '@/apis/agent/observations'
-import { getAgentStorageScope } from '@/utils/agent-session'
+import { getAgentStorageScope, isAgentStorageScope } from '@/utils/agent-session'
 import EnvironmentTrend from './EnvironmentTrend.vue'
 import { fmtDateTime } from '../../lib/observations.mjs'
 const props = defineProps({ active: Boolean })
@@ -28,7 +28,7 @@ async function load(page = 0) {
  const current = ++generation; loading.value = true; error.value = ''
  try {
   const identity = getAgentStorageScope(); scope = identity
-  const value = await getEnvironmentHistory({ from: page ? report.value.window.from : fromDate.value + 'T00:00:00+08:00', to: page ? report.value.window.to : toDate.value + 'T23:59:59.999+08:00', page })
+  const value = await getEnvironmentHistory({ from: page ? report.value.window.from : fromDate.value + 'T00:00:00+08:00', to: page ? report.value.window.to : toDate.value + 'T23:59:59.999+08:00', page }, { isActive: () => current === generation && props.active && visible })
   if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope()) return
   if (page && report.value) {
    const identity = item => item.id + ':' + item.recordedAt + ':' + (item.deviceCode || 'site')
@@ -45,7 +45,7 @@ async function load(page = 0) {
  } catch (cause) {
   if (current !== generation || !props.active || !visible) return
   failedPage.value = page
-  if (['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code) || scope !== getAgentStorageScope()) report.value = null
+  if ([401, 403].includes(cause.status) || ['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code) || !isAgentStorageScope(scope)) report.value = null
   error.value = cause.message || '环境历史暂不可用'
  } finally { if (current === generation) loading.value = false }
 }

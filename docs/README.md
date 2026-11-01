@@ -1,3 +1,5 @@
+- 2026-11-02 缓存整改当前后端为同级`iot-agent-backend`（本地开发3207）；普通页面只读backend已持有结果，后台同步与HTTP分离，手动刷新不强制等待上游。真实30天43表30/30日、三个月129/129及十二个月516/516逐表月数据、43表年度同比已取得有效数值；微信首页与区域设备已查看。最终双轴发现的持久失效屏障、显隐合并及stale元数据仍在原47–50号票内修复，不能据此宣称全量Runtime替代验收完成。见[前端契约与证据入口](../plan/2026-10-20-company-overview-cache-handoff.md#2026-11-02普通读取的后端快照准备中契约)。
+
 - 2026-10-28 Runtime API 契约文档已完成：同级 `iot-agent-runtime` 提交 `cbc5cca` 交付 OpenAPI 3.1 JSON/YAML、NDJSON 事件 schema、Runtime 路由漂移/认证门禁；当前覆盖 66 个路径、69 个 operation。Runtime `npm run api:contract`、452 项测试和 build 通过，typecheck 仍有 4 个现有诊断；小程序和客户上游 Swagger 不在本次范围。见 [Runtime API 契约交接](../plan/2026-10-28-runtime-api-contract-handoff.md)。
 - 2026-10-28 Runtime 客户仓库部署沟通已准备：后端代码已在客户 GitLab `microbrain/iot-agent-backend` `stable`（`b2ca767`），尚未部署；本地 `f007780` 把 deploy 模板参数化但还没推，建议先补推再让客户部署。沟通稿覆盖运行要求（Node 22.19–22.x、回环 3210、SQLite 持久盘）、网关 `/micro-api/api/ai/agent/*` → `/api/agent/*` 的重写/头透传/流式/超时、密钥与管理员归属、部署后验收与“先发布小程序再切正式版 page”的顺序。见[部署沟通与清单](../plan/2026-10-28-runtime-customer-deploy-communication.md)。
 
