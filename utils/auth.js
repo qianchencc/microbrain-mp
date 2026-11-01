@@ -4,7 +4,7 @@ const TokenKey = 'authorized-token'
 const TokenExpiresKey = 'authorized-token-expires-at'
 // 获取token
 export function getToken() {
-	return uni.getStorageSync(TokenKey)
+	return storageGet(TokenKey)
 }
 
 // 设置token以及过期时间（cookies、sessionStorage各一份）
@@ -34,7 +34,7 @@ export function isTokenExpired() {
 }
 
 export function getTokenId() {
-	return uni.getStorageSync(TokenKey).split(' ')[1]
+	return getToken().split(' ')[1]
 }
 
 // 删除token

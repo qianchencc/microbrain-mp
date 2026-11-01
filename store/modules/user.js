@@ -126,7 +126,7 @@ export const useUserStore = defineStore({
 				options.push(item)
 			})
 			this.geospatialInfo = options
-			if (!this.district.id && this.geospatialInfo.length) {
+			if (!currentDistrict.id && this.geospatialInfo.length) {
 				this.SET_DISTRICT(this.geospatialInfo[0])
 			}
 			storageSet('geospatialInfo', this.geospatialInfo)
