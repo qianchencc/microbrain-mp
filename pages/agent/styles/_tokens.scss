@@ -1,9 +1,9 @@
 // 物联助手视觉基础值。编译期展开，不影响客户小程序其他模块。
-// 当前值保持现有界面；G 方案的视觉切换不在本轮范围。
-$agent-color-accent: #176b54;
-$agent-color-text-primary: #24382d;
-$agent-color-text-muted: #839287;
-$agent-color-surface-page: #f4f7f5;
+// 基础色采用 G 方案的浅蓝灰视觉；警告色保留独立语义。
+$agent-color-accent: #466eae;
+$agent-color-text-primary: #263332;
+$agent-color-text-muted: #718496;
+$agent-color-surface-page: #f3f6fa;
 $agent-color-warning: #a27128;
 $agent-font-size-compact: 12px;
 $agent-radius-medium: 12px;
