@@ -120,7 +120,8 @@ function onToggle() {
 }
 onBeforeUnmount(stopHold)
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
@@ -133,7 +134,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .hold-ring { position:absolute; left:calc(50% - 16px); top:8px; width:32px; height:32px; border-radius:50%; background:#ffffffee; z-index:8; display:flex; align-items:center; justify-content:center; }.ring-fill { width:24px; height:24px; border-radius:50%; position:relative; transform:rotate(-90deg); }.ring-fill::after { content:''; position:absolute; inset:3px; background:white; border-radius:50%; }
 .device-card::after { content:''; position:absolute; inset:0; border-radius:6px; box-shadow:inset 0 0 0 1px #1a372b38; pointer-events:none; z-index:6; }.device-card.selected::after { box-shadow:inset 0 0 0 1.5px #1c755a; }
 .visual { position:relative; height:72px; flex-shrink:0; overflow:hidden; background:linear-gradient(155deg,#d9ded9,#f4f3ed 48%,#cbd2cd); }.visual::before { content:''; position:absolute; inset:4px; border:1px solid #ffffff94; border-radius:3px; }.product { position:absolute; left:2%; top:2%; width:96%; height:96%; }.fallback { position:absolute; left:42px; top:19px; }.code { position:absolute; left:8px; top:7px; font-size:7px; font-weight:700; color:#53635a; }
-.selection { position:absolute; top:6px; right:6px; width:17px; height:17px; border:1px solid #899b90; border-radius:4px; background:#fafbf9dd; display:flex; align-items:center; justify-content:center; }.selected .selection { background:#176b54; border-color:#176b54; }.selection-check { width:13px; height:13px; }.state { position:absolute; bottom:6px; left:8px; padding:3px 5px; border-radius:20px; background:#fff8e4dd; font-size:7px; color:#523b13; }
+.selection { position:absolute; top:6px; right:6px; width:17px; height:17px; border:1px solid #899b90; border-radius:4px; background:#fafbf9dd; display:flex; align-items:center; justify-content:center; }.selected .selection { background:$agent-color-accent; border-color:$agent-color-accent; }.selection-check { width:13px; height:13px; }.state { position:absolute; bottom:6px; left:8px; padding:3px 5px; border-radius:20px; background:#fff8e4dd; font-size:7px; color:#523b13; }
 .copy { padding:6px 8px; flex:1; min-height:0; }.type,.name,.location,.outcome { display:block; }.type { color:#8e650f; font-size:8px; line-height:10px; }.name { font-size:11.5px; line-height:14px; font-weight:600; margin:5px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.foot { border-top:1px solid #1d3a2d1f; padding-top:5px; }.location { color:#5f6e66; font-size:9px; line-height:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }/* before→after 纵向两行制：acSummary 复合串在 103px 内宽里单行不可能容纳两段，
    每段独占一行 + nowrap+ellipsis（与 name/location 同一纪律），最坏退化为行尾省略，
    禁止横向 flex-wrap 硬排——flex item 缩到内容宽以下时 CJK 逐字竖排（2026-09-17 根因）。 */

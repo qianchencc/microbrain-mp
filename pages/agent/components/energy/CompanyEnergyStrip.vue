@@ -114,13 +114,14 @@ onMounted(async () => { if (props.selected) await centerOn(props.selected); emit
 onUnmounted(() => { if (vrTimer) clearTimeout(vrTimer) })
 defineExpose({ centerOn, didPrepend })
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; line-height:1.2; }
 button::after { border:0; }
 .strip-wrap { position:relative; margin:10px -20px 0; }
 .pullzone { position:absolute; left:0; top:0; bottom:0; width:0; overflow:hidden; z-index:2; display:flex; align-items:center; }
-.pz { flex:0 0 48px; height:calc(100% - 8px); margin:4px 0 4px 4px; border-radius:12px; background:#e9efe4; display:flex; align-items:center; justify-content:center; }
+.pz { flex:0 0 48px; height:calc(100% - 8px); margin:4px 0 4px 4px; border-radius:$agent-radius-medium; background:#e9efe4; display:flex; align-items:center; justify-content:center; }
 .pz-ring { width:26px; height:26px; }
 .strip { white-space:nowrap; padding:2px 0 0; }
 .eday { display:inline-flex; flex-direction:column; align-items:center; width:21px; padding:0; vertical-align:top; }

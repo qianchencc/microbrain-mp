@@ -45,6 +45,7 @@
 </script>
 
 <style lang="scss" scoped>
+@import "../../styles/tokens";
 
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
@@ -100,8 +101,8 @@ view, text, input { font-size: inherit; line-height: inherit; }
 	&__check {
 		width: 10rpx;
 		height: 6rpx;
-		border-left: 3rpx solid #176b54;
-		border-bottom: 3rpx solid #176b54;
+		border-left: 3rpx solid $agent-color-accent;
+		border-bottom: 3rpx solid $agent-color-accent;
 		transform: translateY(-1rpx) rotate(-45deg);
 	}
 
@@ -129,7 +130,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		width: 14rpx;
 		height: 14rpx;
 		border-radius: 50%;
-		background: #176b54;
+		background: $agent-color-accent;
 		animation: activity-pulse 1.6s ease-in-out infinite;
 	}
 
@@ -182,7 +183,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		font-size: 20rpx;
 		font-weight: 400;
 		letter-spacing: 1rpx;
-		color: #176b54;
+		color: $agent-color-accent;
 
 		&--failed { color: #a2493d; }
 		&--skipped { color: #8a948e; }

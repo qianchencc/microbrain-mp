@@ -84,7 +84,8 @@ function toggle() { if (open.value) collapse(); else openPanel() }
 function onRunning(value) { running.value = value }
 defineExpose({ open: openPanel, close: collapse, toggle, isOpen: open })
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
@@ -107,7 +108,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .panel-id { flex:1; min-width:0; display:flex; flex-direction:column; }
 .panel-name { font-size:14px; font-weight:600; color:#293f31; line-height:1.3; }
 .panel-status { font-size:10.5px; color:#7d8d82; line-height:1.4; }
-.panel-menu { width:36px; height:36px; display:flex; align-items:center; justify-content:center; margin:0; padding:0; background:transparent; border-radius:12px; flex-shrink:0; }
+.panel-menu { width:36px; height:36px; display:flex; align-items:center; justify-content:center; margin:0; padding:0; background:transparent; border-radius:$agent-radius-medium; flex-shrink:0; }
 .panel-menu::after { border:0; }
 .panel-menu--pressed { background:#e7eee8; }
 .panel-conv { flex:1; min-height:0; display:flex; }
@@ -130,9 +131,9 @@ view, text, input { font-size: inherit; line-height: inherit; }
  display:flex; align-items:center; justify-content:center;
  background:linear-gradient(160deg,#c9a55c,#a8843f); color:#fff; font-size:10.5px; font-weight:600;
  box-shadow:0 2px 6px rgba(120,88,30,.35); }
-.orb-hint { position:absolute; right:64px; top:50%; transform:translateY(-50%); padding:7px 12px; border-radius:12px;
+.orb-hint { position:absolute; right:64px; top:50%; transform:translateY(-50%); padding:7px 12px; border-radius:$agent-radius-medium;
  background:linear-gradient(#fefffe,#f3f7f4); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.14), 0 4px 14px rgba(28,57,42,.12); white-space:nowrap; }
 .orb-hint::after { content:''; position:absolute; right:-4px; top:50%; width:9px; height:9px; margin-top:-5px; transform:rotate(45deg); background:#f7faf7; box-shadow:inset -1px 1px 0 rgba(26,55,43,.1); }
-.orb-hint-text { font-size:12px; color:#3d5848; }
+.orb-hint-text { font-size:$agent-font-size-compact; color:#3d5848; }
 @media(prefers-reduced-motion:reduce){ .float-panel,.float-orb{transition:none;} .float-orb.working{animation:none;} }
 </style>

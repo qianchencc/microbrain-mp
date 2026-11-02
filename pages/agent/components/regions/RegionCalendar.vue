@@ -49,7 +49,8 @@ const outOfRange = day => day > props.maxDate || Boolean(props.minDate) && day <
 function select(day) { if (outOfRange(day)) return; month.value = day.slice(0, 7); emit('select', day) }
 function backToToday() { if (!todayInRange.value) return; setExpanded(false); select(props.today) }
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; line-height:1.2; }
 button::after { border:0; }
@@ -64,17 +65,17 @@ button::after { border:0; }
 .today-face { display:flex; align-items:center; justify-content:center; gap:4px; width:56px; height:28px; border-radius:14px; background:#e9f1eb; box-shadow:inset 0 0 0 .5px #29493633,inset 0 1px 0 #fff; }
 .today-btn--pressed { transform:scale(.92); }
 .today-btn.today-dim { opacity:.45; }
-.month-title { min-height:44px; white-space:nowrap; display:flex; align-items:center; gap:7px; color:#455b4d; font-size:12px; font-weight:700; }
+.month-title { min-height:44px; white-space:nowrap; display:flex; align-items:center; gap:7px; color:#455b4d; font-size:$agent-font-size-compact; font-weight:700; }
 .days-wrap { overflow:hidden; transition:max-height 240ms cubic-bezier(.32,.72,0,1); }
 .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; }
 .day { position:relative; min-width:0; height:44px; border-radius:8px; color:#536759; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; transition:box-shadow 150ms ease,color 150ms ease; }
-.day.selected { box-shadow:inset 0 0 0 1.5px #176b54; color:#176b54; font-weight:700; }
-.day.today .day-number { color:#176b54; font-weight:700; }
+.day.selected { box-shadow:inset 0 0 0 1.5px $agent-color-accent; color:$agent-color-accent; font-weight:700; }
+.day.today .day-number { color:$agent-color-accent; font-weight:700; }
 .day.outside { color:#b5c1b8; }
 .day.disabled { opacity:.3; }
 .weekday { color:#9aa99f; font-size:9px; }
 .day-number { font-size:11px; }
-.day-mark { position:absolute; bottom:2px; width:4px; height:4px; border-radius:50%; background:#176b54; }
+.day-mark { position:absolute; bottom:2px; width:4px; height:4px; border-radius:50%; background:$agent-color-accent; }
 .day-mark.abnormal { background:#ad711b; }
 .calendar-error { white-space:normal; word-break:break-word; line-height:1.5; margin:5px auto 0; color:#986b2d; font-size:10px; }
 .calendar.compact { padding:4px 9px 8px; }

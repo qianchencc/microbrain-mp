@@ -574,15 +574,16 @@ watch(() => props.focusDate, date => {
  if (date && props.active) jumpToDate(date)
 })
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; line-height:1.3; }
 button::after { border:0; }
-.epanel { flex:1; min-height:0; display:flex; flex-direction:column; color:#35533f; font-size:12px; }
+.epanel { flex:1; min-height:0; display:flex; flex-direction:column; color:#35533f; font-size:$agent-font-size-compact; }
 .ebody { flex:1; min-height:0; height:0; padding:6px 20px 24px; box-sizing:border-box; }
-.estate-msg { display:flex; flex-direction:column; align-items:center; gap:10px; padding:30px 0; color:#839189; font-size:12px; }
-.eretry { font-size:11px; color:#176b54; border:1px solid #dce4da; border-radius:999px; padding:7px 16px; background:#fcfdf8; }
-.estale { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:10.5px; color:#a27128; }
+.estate-msg { display:flex; flex-direction:column; align-items:center; gap:10px; padding:30px 0; color:#839189; font-size:$agent-font-size-compact; }
+.eretry { font-size:11px; color:$agent-color-accent; border:1px solid #dce4da; border-radius:999px; padding:7px 16px; background:#fcfdf8; }
+.estale { display:flex; align-items:center; flex-wrap:wrap; gap:$agent-space-small; margin-top:8px; font-size:10.5px; color:$agent-color-warning; }
 .calrow { display:flex; margin:8px 0 2px; }
 .calchip { display:flex; align-items:center; gap:6px; height:30px; padding:0 11px; border-radius:15px; background:linear-gradient(#fefffe,#eef3ef); color:#37513f; font-size:11.5px; font-weight:650; box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 4px 12px rgba(28,57,42,.16); }
 .calchip:active { transform:scale(.95); }
@@ -594,16 +595,16 @@ button::after { border:0; }
 .enum { display:block; font-family:Georgia,"Songti SC",serif; font-size:40px; color:#2e4a38; letter-spacing:-.5px; margin-top:2px; }
 .enum .u { font-size:13px; color:#6b8069; }
 .edelta { display:block; font-size:10.5px; color:#8fa08c; margin-top:6px; }
-.edelta .b { color:#176b54; font-weight:600; }
-.edelta.warn { color:#a27128; }
+.edelta .b { color:$agent-color-accent; font-weight:600; }
+.edelta.warn { color:$agent-color-warning; }
 .edelta.muted { color:#a0ab95; }
-.zone-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #ece8d9; font-size:12px; }
+.zone-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #ece8d9; font-size:$agent-font-size-compact; }
 .zn { width:56px; flex-shrink:0; color:#3c4a3e; }
 .ztrack { flex:1; height:3px; border-radius:2px; background:#e9efe4; }
 .zfill { display:block; height:3px; border-radius:2px; }
 .zv { flex-shrink:0; font-size:10.5px; color:#97917e; font-variant-numeric:tabular-nums; }
 .sec-empty { display:block; padding:14px 0; font-size:11px; color:#a0ab95; }
-.mrow { display:flex; align-items:center; gap:10px; width:100%; padding:10px 0; border-bottom:1px solid #ece8d9; font-size:12px; }
+.mrow { display:flex; align-items:center; gap:10px; width:100%; padding:10px 0; border-bottom:1px solid #ece8d9; font-size:$agent-font-size-compact; }
 .mrow:last-of-type { border-bottom:0; }
 .mrow-copy { flex:1; min-width:0; }
 .mrow-name { display:block; color:#3c4a3e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -612,7 +613,7 @@ button::after { border:0; }
 .mrow-share { font-style:normal; font-size:10px; color:#a0ab95; margin-left:6px; }
 .efoot { display:block; font-size:9.5px; color:#a0ab95; line-height:1.8; margin-top:16px; }
 /* 所选日补块中：数值/构成/明细原位骨架；失败给重试（同 EnergySkeleton 的呼吸）。 */
-.efail-row { display:flex; align-items:center; gap:10px; margin-top:8px; font-size:10.5px; color:#a27128; }
+.efail-row { display:flex; align-items:center; gap:10px; margin-top:8px; font-size:10.5px; color:$agent-color-warning; }
 .sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v { background:#e2eadf; border-radius:4px; animation:sk-pulse 1.4s ease-in-out infinite; }
 .sk-num { display:block; width:150px; height:38px; margin-top:4px; border-radius:8px; }
 .sk-delta { display:block; width:220px; max-width:80%; height:10px; margin-top:10px; }

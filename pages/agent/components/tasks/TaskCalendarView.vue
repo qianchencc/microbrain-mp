@@ -102,24 +102,25 @@ onShow(() => { visible = true; today.value = taskToday(); if (props.active) void
 onBeforeUnmount(stop)
 defineExpose({ refresh: () => load(true) })
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.4; }
 button::after { border:0; }
 .task-calendar { flex-shrink:0; }
 .date-summary { padding:10px 16px; display:flex; justify-content:space-between; color:#7b8d80; font-size:11px; border-top:1px solid #e4eae4; }
-.calendar-state { padding:22px 16px; color:#859389; font-size:12px; text-align:center; }
-.calendar-error { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#7b8d80; font-size:12px; }
+.calendar-state { padding:22px 16px; color:#859389; font-size:$agent-font-size-compact; text-align:center; }
+.calendar-error { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#7b8d80; font-size:$agent-font-size-compact; }
 .error-actions { display:flex; align-items:center; gap:12px; flex-shrink:0; }
-.error-actions button { display:flex; align-items:center; justify-content:center; min-height:32px; padding:4px; font-size:12px; }
-.error-detail { color:#7b8d80; }.error-retry { color:#176b54; }
+.error-actions button { display:flex; align-items:center; justify-content:center; min-height:32px; padding:4px; font-size:$agent-font-size-compact; }
+.error-detail { color:#7b8d80; }.error-retry { color:$agent-color-accent; }
 .error-actions button:active { opacity:.65; }
 .calendar-task { width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; text-align:left; border-top:1px solid #e8ede8; }
 .task-clock { width:58px; flex-shrink:0; align-self:flex-start; font-size:11px; color:#466350; display:flex; flex-direction:column; gap:5px; }
 .repeat-tag { color:#8b9c90; font-size:10px; }
 .task-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
 .task-name { white-space:normal; word-break:break-word; font-size:13px; font-weight:600; color:#2b4433; }
-.task-state { font-size:11px; color:#839287; }
-.task-state.abnormal { color:#a16f28; }.task-state.executing { color:#176b54; }
-.all-tasks { padding:12px; text-align:center; color:#176b54; font-size:12px; }
+.task-state { font-size:11px; color:$agent-color-text-muted; }
+.task-state.abnormal { color:#a16f28; }.task-state.executing { color:$agent-color-accent; }
+.all-tasks { padding:12px; text-align:center; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 </style>

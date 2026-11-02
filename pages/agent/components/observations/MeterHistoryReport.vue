@@ -14,15 +14,16 @@ import { fmtShanghaiDateTime as fmtDateTime } from '../../lib/observations.mjs'
 defineProps({ report: { type: Object, required: true } })
 const labels = { epf: '反向累计（epf）', epz: '正向累计（epz）', totalElectric: '平台总示数' }
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view, text, input { font-size: inherit; line-height: inherit; }
-.report { color: #3b5943; font-size: 12px; margin-top: 8px; }
+.report { color: #3b5943; font-size: $agent-font-size-compact; margin-top: 8px; }
 .name, .sub, .time { display: block; }
 .name { font-size: 15px; font-weight: 600; }
 .sub { font-size: 10px; color: #80907f; margin-top: 5px; line-height: 1.6; }
-.sample { margin-top: 10px; padding: 12px 13px; border: 1px solid #e3e9dc; border-radius: 12px; background: linear-gradient(145deg, #fcfdf9, #f5f8f0); }
+.sample { margin-top: 10px; padding: 12px 13px; border: 1px solid #e3e9dc; border-radius: $agent-radius-medium; background: linear-gradient(145deg, #fcfdf9, #f5f8f0); }
 .time { font-size: 11px; color: #6b8069; font-weight: 600; margin-bottom: 9px; }
-.values { display: flex; gap: 8px; }
+.values { display: flex; gap: $agent-space-small; }
 .values > view { flex: 1; min-width: 0; }
 .value { display: block; color: #345641; font-size: 16px; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .flabel { display: block; font-size: 9px; color: #8b9d84; margin-top: 2px; }

@@ -75,14 +75,15 @@ function toggle(label) {
  collapsed.value = next
 }
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; line-height:1.3; }
 button::after { border:0; }
 .cdrawer { flex:1; min-height:0; display:flex; flex-direction:column; color:#274635; font-size:13px; }
-.gmodes { display:flex; align-items:center; gap:8px; padding:10px 16px; border-bottom:1px solid #edf0ed; flex-shrink:0; }
-.gmode { height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:12px; display:flex; align-items:center; justify-content:center; }
-.gmode.active { background:#176b54; color:#fff; }
+.gmodes { display:flex; align-items:center; gap:$agent-space-small; padding:10px 16px; border-bottom:1px solid #edf0ed; flex-shrink:0; }
+.gmode { height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:$agent-font-size-compact; display:flex; align-items:center; justify-content:center; }
+.gmode.active { background:$agent-color-accent; color:#fff; }
 .gcount { margin-left:auto; font-size:11px; color:#89958e; }
 .dscroll { flex:1; min-height:0; height:0; padding:0 16px; box-sizing:border-box; }
 .dgroup { margin-top:14px; }
@@ -101,7 +102,7 @@ button::after { border:0; }
 .lamp { position:absolute; right:8px; top:8px; width:8px; height:8px; border-radius:50%; background:#bbc7be; border:1px solid #fff; box-shadow:0 1px 2px #1f352b33; }
 .lamp.observe { background:#5d9478; }
 .dcopy { padding:7px 9px 9px; min-width:0; }
-.dname { display:block; font-size:12px; font-weight:600; color:#24382d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.dname { display:block; font-size:$agent-font-size-compact; font-weight:600; color:$agent-color-text-primary; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .dloc { display:block; font-size:10px; color:#65786b; margin-top:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .dstate { display:block; font-size:10px; color:#687a6d; margin-top:7px; padding-top:7px; border-top:1px solid #e2e9e2; }
 .dempty { display:block; padding:35px 0; text-align:center; color:#94a193; font-size:11px; }

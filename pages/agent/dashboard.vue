@@ -584,11 +584,12 @@ onShow(() => {
 function hide() { visible = false; pageActive.value = false; ++requestId; allLoaded() }
 onHide(hide); onUnload(hide)
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "./styles/tokens";
 .event-host { flex:1;min-height:0;display:flex;flex-direction:column; }.event-back { display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0; }.event-back--pressed { opacity:.65; }
 
 view,text,input { font-size:inherit; line-height:inherit; }
-.dashboard { height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden; background:#eef2ee; color:#293f31; font-size:12px; line-height:1.45; }
+.dashboard { height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden; background:#eef2ee; color:#293f31; font-size:$agent-font-size-compact; line-height:1.45; }
 button { margin:0; padding:0; background:transparent; font-size:inherit; line-height:inherit; } button::after { border:0; }
 .serif { font-family:Georgia,"Songti SC",serif; }
 
@@ -601,16 +602,16 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .head-actions .refresh { margin-top:0; }
 .mode-seg { display:flex; background:#e2eae2; border-radius:16px; padding:2px; }
 .mode-seg button { font-size:11.5px; color:#5f7060; padding:6px 11px; border-radius:14px; }
-.mode-seg button.on { background:linear-gradient(#fbfcfb,#eef3ee); color:#176b54; box-shadow:inset 0 1px 0 #fff, 0 1px 3px rgba(28,57,42,.15); }
+.mode-seg button.on { background:linear-gradient(#fbfcfb,#eef3ee); color:$agent-color-accent; box-shadow:inset 0 1px 0 #fff, 0 1px 3px rgba(28,57,42,.15); }
 
 /* 精简模式：状态灯 + 2×2 状态块（沿用 orb/面板的渐变 + 发丝内描边材质） */
 .lamp-hero { text-align:center; padding:18px 0 20px; border-bottom:1px solid #dce4da; }
 .lamp { width:82px; height:82px; border-radius:50%; margin:0 auto; padding:7px; display:flex; background:linear-gradient(160deg,#fefefb,#eef3ef); box-shadow:0 6px 20px rgba(24,60,40,.22), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(26,55,43,.12); }
-.lamp-disc { flex:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; color:#fff; background:radial-gradient(circle at 35% 28%, #58b48c, #176b54 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(18,80,60,.5), 0 2px 8px rgba(23,107,84,.3); }
-.lamp.warn .lamp-disc { background:radial-gradient(circle at 35% 28%, #e0a862, #a27128 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(140,95,35,.5), 0 2px 8px rgba(162,113,40,.3); }
+.lamp-disc { flex:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; color:#fff; background:radial-gradient(circle at 35% 28%, #58b48c, $agent-color-accent 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(18,80,60,.5), 0 2px 8px rgba(23,107,84,.3); }
+.lamp.warn .lamp-disc { background:radial-gradient(circle at 35% 28%, #e0a862, $agent-color-warning 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(140,95,35,.5), 0 2px 8px rgba(162,113,40,.3); }
 .lamp.loading .lamp-disc { background:radial-gradient(circle at 35% 28%, #c2cec4, #94a08b 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 .5px rgba(110,122,108,.5), 0 2px 8px rgba(110,122,108,.3); }
 .verdict { display:block; margin-top:13px; font-size:22px; font-weight:600; letter-spacing:1px; color:#293f31; }
-.verdict-sub { display:block; margin-top:5px; font-size:11.5px; letter-spacing:1px; color:#839287; }
+.verdict-sub { display:block; margin-top:5px; font-size:11.5px; letter-spacing:1px; color:$agent-color-text-muted; }
 .zones { margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:11px; }
 .zone { border-radius:16px; padding:13px 14px 12px; min-height:112px; text-align:left; background:linear-gradient(180deg,#fbfcfb,#f1f5f1); box-shadow:0 4px 14px rgba(28,57,42,.09), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(26,55,43,.11); }
 .zone--pressed { opacity:.72; }
@@ -625,18 +626,18 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .zvalue { display:block; margin-top:3px; font-family:Georgia,"Songti SC",serif; font-size:14.5px; color:#5f7060; font-variant-numeric:tabular-nums; }
 
 .agent-cta { margin-top:14px; display:flex; align-items:center; gap:12px; width:100%; padding:13px 16px; border-radius:18px; background:linear-gradient(180deg,#fbfcfb,#f1f5f1); box-shadow:0 6px 18px rgba(28,57,42,.12), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(26,55,43,.12); text-align:left; }
-.cta-orb { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 35% 28%, #58b48c, #176b54 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 3px 9px rgba(23,107,84,.32); }
-.cta-t { display:block; font-size:16px; font-weight:650; color:#176b54; }
-.cta-s { display:block; font-size:11.5px; color:#839287; margin-top:1px; }
+.cta-orb { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 35% 28%, #58b48c, $agent-color-accent 78%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 3px 9px rgba(23,107,84,.32); }
+.cta-t { display:block; font-size:16px; font-weight:650; color:$agent-color-accent; }
+.cta-s { display:block; font-size:11.5px; color:$agent-color-text-muted; margin-top:1px; }
 
 .counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
 .crow { display:block; padding:11px 0 9px; border-bottom:1px solid #ece8d9; text-align:left; }
 .cc { display:block; font-family:Georgia,"Songti SC",serif; font-size:23px; color:#2e4a38; font-variant-numeric:tabular-nums; letter-spacing:-.5px; }
-.cn { display:block; margin-top:2px; font-size:10px; color:#839287; }
+.cn { display:block; margin-top:2px; font-size:10px; color:$agent-color-text-muted; }
 
 .blk { margin-top:26px; }
-.k { display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:10px; letter-spacing:2px; color:#94a08b; padding-bottom:9px; border-bottom:1px solid #dce4da; }
-.more { display:flex; align-items:center; gap:3px; color:#176b54; font-size:10px; letter-spacing:0; min-height:24px; }
+.k { display:flex; align-items:baseline; justify-content:space-between; gap:$agent-space-small; font-size:10px; letter-spacing:2px; color:#94a08b; padding-bottom:9px; border-bottom:1px solid #dce4da; }
+.more { display:flex; align-items:center; gap:3px; color:$agent-color-accent; font-size:10px; letter-spacing:0; min-height:24px; }
 .sensor-name { display:block; margin-top:8px; color:#91a08f; font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fineprint { display:block; font-size:9px; line-height:1.5; color:#869780; margin-top:8px; }
 .fineprint.dim { color:#a08a58; }
@@ -647,7 +648,7 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .env .ul { display:block; margin-top:3px; font-size:9.5px; color:#97917e; }
 
 
-.row { display:flex; align-items:baseline; gap:10px; width:100%; padding:9px 0; border-bottom:1px solid #ece8d9; text-align:left; font-size:12px; color:#3c4a3e; }
+.row { display:flex; align-items:baseline; gap:10px; width:100%; padding:9px 0; border-bottom:1px solid #ece8d9; text-align:left; font-size:$agent-font-size-compact; color:#3c4a3e; }
 .row .d { font-size:10.5px; color:#97917e; font-variant-numeric:tabular-nums; flex-shrink:0; width:78px; }
 .row .alert-time { width:auto; white-space:nowrap; }
 .row .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -655,8 +656,8 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .sec-empty { display:block; padding:14px 0; font-size:11px; color:#a0ab95; }
 .lchips { display:flex; gap:4px; }
 .lchips button { font-size:9.5px; letter-spacing:0; padding:3px 8px; border-radius:8px; color:#809181; background:#edf3e8; }
-.lchips button.on { background:#176b54; color:#fff; }
-.list-more { display:block; width:100%; padding:10px 0 2px; text-align:left; font-size:10.5px; color:#176b54; }
+.lchips button.on { background:$agent-color-accent; color:#fff; }
+.list-more { display:block; width:100%; padding:10px 0 2px; text-align:left; font-size:10.5px; color:$agent-color-accent; }
 
 /* 标题旁办公室入口：细分隔线 + 次要色文字链接（AssistantNav #title 插槽内容用本文件样式）。
    具名插槽会被 uni-app 包一层 <view slot="title">（普通块级、无 data-v，

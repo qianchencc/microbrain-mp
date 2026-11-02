@@ -81,14 +81,15 @@ function metaNote(week) {
 const historyQuery = computed(() => ({ equipmentId: props.report.meter.id, ...props.report.window }))
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view, text, input { font-size: inherit; line-height: inherit; }
 button { margin: 0; padding: 0; background: transparent; line-height: 1.4; }
 button::after { border: 0; }
-.comparison { color: #35533f; font-size: 12px; margin-top: 10px; }
+.comparison { color: #35533f; font-size: $agent-font-size-compact; margin-top: 10px; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.kind { font-size: 12px; font-weight: 600; color: #6b8069; }
-.badge { font-size: 10px; white-space: nowrap; padding: 3px 8px; border-radius: 9px; background: #e4efdf; color: #176b54; }
+.kind { font-size: $agent-font-size-compact; font-weight: 600; color: #6b8069; }
+.badge { font-size: 10px; white-space: nowrap; padding: 3px 8px; border-radius: 9px; background: #e4efdf; color: $agent-color-accent; }
 .badge.warn { background: #f6efe1; color: #a77c37; }
 .scope { display: block; font-size: 16px; font-weight: 600; line-height: 1.4; margin-top: 10px; }
 .sub { display: block; font-size: 11px; color: #80907f; line-height: 1.7; margin-top: 4px; }
@@ -100,11 +101,11 @@ button::after { border: 0; }
 .selected .ml { color: #286f4e; font-weight: 600; }
 .chip { font-size: 10px; border-radius: 8px; padding: 2px 7px; font-variant-numeric: tabular-nums; white-space: nowrap; background: #edf0e8; color: #81927f; }
 .chip.up { background: #f6efe0; color: #9a7b2d; }
-.chip.down { background: #e6f0ea; color: #176b54; }
+.chip.down { background: #e6f0ea; color: $agent-color-accent; }
 .ml { font-size: 10px; color: #72876f; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mn { font-size: 9px; color: #a27128; white-space: nowrap; }
-.actions { display: flex; gap: 8px; margin-top: 12px; }
-.actions button { flex: 1; min-height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid #dce7d4; background: #eaf1e4; border-radius: 12px; color: #4a7751; font-size: 11px; font-weight: 600; transition: transform 130ms cubic-bezier(.23, 1, .32, 1); }
+.mn { font-size: 9px; color: $agent-color-warning; white-space: nowrap; }
+.actions { display: flex; gap: $agent-space-small; margin-top: 12px; }
+.actions button { flex: 1; min-height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid #dce7d4; background: #eaf1e4; border-radius: $agent-radius-medium; color: #4a7751; font-size: 11px; font-weight: 600; transition: transform 130ms cubic-bezier(.23, 1, .32, 1); }
 .pressed { transform: scale(.97); }
 .evidence-scroll { height: 0; flex: 1; min-height: 0; }
 .evidence-content { padding: 4px 20px 24px; }
@@ -112,7 +113,7 @@ button::after { border: 0; }
 .evidence-tab { min-height: 36px; padding: 0 12px; display: flex; align-items: center; justify-content: center; border: 1px solid #dce5d8; border-radius: 10px; background: #f5f8f0; color: #72876f; font-size: 11px; }
 .evidence-tab.active { border-color: #8cb8a0; color: #267451; background: #e8f2e8; font-weight: 600; }
 .evidence { padding: 16px; background: linear-gradient(145deg, #fcfdf8, #f4f8f0); border: 1px solid #dce5d8; border-radius: 14px; }
-.evidence > text { display: block; font-size: 12px; line-height: 1.9; overflow-wrap: anywhere; }
+.evidence > text { display: block; font-size: $agent-font-size-compact; line-height: 1.9; overflow-wrap: anywhere; }
 .evidence .evidence-heading { margin-bottom: 10px; font-size: 13px; font-weight: 600; }
 .evidence .warning { color: #96733c; }
 .proof { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; margin: 12px 0; padding: 13px 0; border-top: 1px solid #e2e9dd; border-bottom: 1px solid #e2e9dd; }

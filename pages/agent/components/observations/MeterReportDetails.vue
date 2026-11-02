@@ -56,7 +56,8 @@ function reset() { pane.value = 'meters'; selectedId.value = ''; stack.value = [
 defineExpose({ back, reset })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view, text, input { font-size: inherit; line-height: inherit; }
 button { margin: 0; padding: 0; background: transparent; line-height: 1.4; }
 button::after { border: 0; }
@@ -71,7 +72,7 @@ button::after { border: 0; }
 .sheet-tag { display: block; font-size: 10px; color: #7d8f75; font-weight: 600; margin: 10px 0 0; }
 .mrow { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid #e3e9dc; text-align: left; }
 .mrow-main { flex: 1; min-width: 0; }
-.mrow-name { display: block; font-size: 12px; font-weight: 600; line-height: 1.5; }
+.mrow-name { display: block; font-size: $agent-font-size-compact; font-weight: 600; line-height: 1.5; }
 .mrow-sub { display: block; font-size: 10px; color: #80907f; margin-top: 3px; overflow-wrap: anywhere; }
 .mrow-value { flex-shrink: 0; text-align: right; }
 .mrow-value .v { display: block; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }

@@ -106,21 +106,22 @@ onHide(() => { visible = false; stop() })
 onShow(() => { visible = true; today.value = taskToday(); if (props.active) void load() })
 onBeforeUnmount(stop)
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.4; }
 button::after { border:0; }
 .overview { padding:5px 0 0; }
 .overview-head { display:flex; align-items:center; justify-content:space-between; padding:0 4px 6px; }
-.overview-title { font-size:12px; font-weight:600; color:#6e8375; }
-.inbox-link { min-height:36px; display:flex; align-items:center; gap:5px; color:#176b54; font-size:12px; }
-.unread { min-width:17px; padding:2px 4px; border-radius:10px; background:#176b54; color:#fff; font-size:10px; }
-.agenda-state { padding:20px 4px 12px; text-align:center; color:#839389; font-size:12px; }
-.agenda-error { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 4px; color:#7b8d80; font-size:12px; }
+.overview-title { font-size:$agent-font-size-compact; font-weight:600; color:#6e8375; }
+.inbox-link { min-height:36px; display:flex; align-items:center; gap:5px; color:$agent-color-accent; font-size:$agent-font-size-compact; }
+.unread { min-width:17px; padding:2px 4px; border-radius:10px; background:$agent-color-accent; color:#fff; font-size:10px; }
+.agenda-state { padding:20px 4px 12px; text-align:center; color:#839389; font-size:$agent-font-size-compact; }
+.agenda-error { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 4px; color:#7b8d80; font-size:$agent-font-size-compact; }
 .agenda-error--stale { border-top:1px solid #e4eae4; padding-bottom:4px; }
 .error-actions { display:flex; align-items:center; gap:12px; flex-shrink:0; }
-.error-actions button { display:flex; align-items:center; justify-content:center; min-height:32px; padding:4px; font-size:12px; }
-.error-detail { color:#7b8d80; }.error-retry { color:#176b54; }
+.error-actions button { display:flex; align-items:center; justify-content:center; min-height:32px; padding:4px; font-size:$agent-font-size-compact; }
+.error-detail { color:#7b8d80; }.error-retry { color:$agent-color-accent; }
 .error-actions button:active { opacity:.65; }
 .agenda-day { display:flex; gap:10px; padding:10px 0 0; }
 .agenda-rail { width:30px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding-top:2px; }
@@ -133,8 +134,8 @@ button::after { border:0; }
 .row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
 .row-name { white-space:normal; word-break:break-word; font-size:13px; font-weight:600; color:#2b4433; }
 .row-rule { font-size:10px; color:#8b9c90; }
-.row-state { flex-shrink:0; font-size:11px; color:#839287; }
-.row-state--active { color:#176b54; }.row-state--warn { color:#a16f28; }
+.row-state { flex-shrink:0; font-size:11px; color:$agent-color-text-muted; }
+.row-state--active { color:$agent-color-accent; }.row-state--warn { color:#a16f28; }
 .row-more { padding:5px 0 3px; color:#99a59d; font-size:10px; }
-.overview-foot { min-height:44px; margin-top:8px; display:flex; align-items:center; justify-content:center; border-top:1px solid #e0e8e0; color:#176b54; font-size:12px; }
+.overview-foot { min-height:44px; margin-top:8px; display:flex; align-items:center; justify-content:center; border-top:1px solid #e0e8e0; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 </style>

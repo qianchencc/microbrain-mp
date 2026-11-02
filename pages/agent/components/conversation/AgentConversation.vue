@@ -777,16 +777,17 @@ function openMenu() {
 }
 defineExpose({ openMenu, openInbox, clearHistory, openRegion, setReference, prefill, openTasks: () => { tasksOpen.value = true } })
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 .event-host { flex:1;min-height:0;display:flex;flex-direction:column; }.event-back { display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0; }
 
-.region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:12px; padding:8px 0; }.region-notice text { flex:1; min-width:0; word-break:break-word; }.region-notice button { flex-shrink:0; min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:12px; }.region-notice button::after { border:0; }
+.region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:$agent-font-size-compact; padding:8px 0; }.region-notice text { flex:1; min-width:0; word-break:break-word; }.region-notice button { flex-shrink:0; min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:$agent-font-size-compact; }.region-notice button::after { border:0; }
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
-.conv-root { flex:1; min-width:0; min-height:0; height:100%; display:flex; flex-direction:column; color:#24382d; }
+.conv-root { flex:1; min-width:0; min-height:0; height:100%; display:flex; flex-direction:column; color:$agent-color-text-primary; }
 /* scroll-view 禁止直接用 flex:1/height:0 撑高（微信 webview 已知塌陷：盒子 0 高、
    内容被 enhanced 层画出但命中盒全灭——2026-09-17 预览"看得见点不中"根因）。
    确定性高度链：flex 包裹层 min-height:0 + 内层 scroll-view height:100%。 */
@@ -797,8 +798,8 @@ view, text, input { font-size: inherit; line-height: inherit; }
 @keyframes clearing-hint-in { from { opacity:0 } to { opacity:1 } }
 .welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
 /* 推荐入口复用 region-chip 纸材；.welcome view 会命中容器，需提高优先级覆盖其行距/字号。 */
-.welcome .welcome-sugg { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
-.sugg-chip { display:flex; align-items:center; height:32px; margin:0; padding:0 14px; border-radius:16px; background:linear-gradient(#fefffe,#edf2ec); box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px rgba(41,73,54,.14),0 3px 8px -6px rgba(35,58,45,.4); font-size:12px; line-height:1; color:#3d5947; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.welcome .welcome-sugg { display:flex; flex-wrap:wrap; gap:$agent-space-small; margin-top:16px; }
+.sugg-chip { display:flex; align-items:center; height:32px; margin:0; padding:0 14px; border-radius:16px; background:linear-gradient(#fefffe,#edf2ec); box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px rgba(41,73,54,.14),0 3px 8px -6px rgba(35,58,45,.4); font-size:$agent-font-size-compact; line-height:1; color:#3d5947; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
 .sugg-chip::after { border:0; }
 .sugg-chip--pressed { transform:scale(.96); opacity:.85; }
 .region-divider { margin:12px 0 22px; text-align:center; font-size:11px; color:#839186; }

@@ -131,10 +131,11 @@ watch([() => props.active, () => props.refreshKey, () => props.cutoff], ([active
 }, { immediate: true })
 onBeforeUnmount(() => { ++requestId })
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view, text, input { font-size:inherit; line-height:inherit; }
 .monthly { margin-top:20px; color:#293f31; }
-.month-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:12px; font-weight:500; }
+.month-head { display:flex; align-items:baseline; justify-content:space-between; gap:$agent-space-small; font-size:$agent-font-size-compact; font-weight:500; }
 .cutoff { font-size:9px; color:#7d8d78; font-weight:400; text-align:right; }
 .hero { display:block; margin-top:7px; font:34px/1.2 Georgia,"Songti SC",serif; letter-spacing:-1px; font-variant-numeric:tabular-nums; }
 .unit { font:11px sans-serif; letter-spacing:0; }
@@ -147,7 +148,7 @@ view, text, input { font-size:inherit; line-height:inherit; }
 .compare-heading { display:flex; align-items:center; justify-content:space-between; gap:4px; }
 .title { display:block; font-size:10px; color:#6e816d; }
 .pct { display:block; margin:7px 0 13px; font:28px/1.2 Georgia,serif; color:#6e816d; letter-spacing:-.8px; }
-.up .pct { color:#9c742d; }.down .pct { color:#176b54; }
+.up .pct { color:#9c742d; }.down .pct { color:$agent-color-accent; }
 .bar-row { margin-top:10px; }
 .bar-values { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:2px 4px; min-height:15px; margin-bottom:5px; font-size:9px; color:#7d8d78; }
 .amount { font-size:10px; color:#3a533e; font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -156,7 +157,7 @@ view, text, input { font-size:inherit; line-height:inherit; }
 .summary { display:block; min-height:32px; font-size:10px; color:#687b68; line-height:1.6; margin-top:12px; overflow-wrap:anywhere; }
 .periods { margin-top:10px; font-size:9px; color:#7d8d78; line-height:1.8; }.periods text { display:block; }
 .data-note { display:block; font-size:10px; color:#8c774d; margin-top:7px; line-height:1.5; overflow-wrap:anywhere; }
-.retry { display:block; margin:12px 0 0; padding:5px 0; font-size:11px; color:#176b54; background:transparent; line-height:1.6; }.retry::after { border:0; }
+.retry { display:block; margin:12px 0 0; padding:5px 0; font-size:11px; color:$agent-color-accent; background:transparent; line-height:1.6; }.retry::after { border:0; }
 .skeleton { position:relative; overflow:hidden; background:#dfe6da; border-radius:3px; }
 .skeleton::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); transform:translateX(-100%); animation:monthly-shimmer 1.6s linear infinite; }
 .hero-placeholder { height:41px; margin-top:7px; display:flex; align-items:center; }.hero-skeleton { width:138px; height:28px; }
@@ -171,13 +172,13 @@ view, text, input { font-size:inherit; line-height:inherit; }
 .detail-totals { display:flex; gap:16px; margin-top:16px; }.detail-totals > view { flex:1; min-width:0; }
 .total-label { display:block; color:#7d8d78; font-size:10px; }
 .total-number { display:block; font:25px/1.4 Georgia,"Songti SC",serif; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-.detail-summary { display:block; margin-top:8px; color:#687b68; font-size:11px; line-height:1.7; overflow-wrap:anywhere; }.detail-summary.up,.meter-value.up { color:#9c742d; }.detail-summary.down,.meter-value.down { color:#176b54; }
+.detail-summary { display:block; margin-top:8px; color:#687b68; font-size:11px; line-height:1.7; overflow-wrap:anywhere; }.detail-summary.up,.meter-value.up { color:#9c742d; }.detail-summary.down,.meter-value.down { color:$agent-color-accent; }
 .list-heading { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px; margin-top:22px; padding-bottom:10px; border-bottom:1px solid #dce4d9; color:#7d8d78; font-size:10px; }
 .meter-row { padding:14px 0; border-bottom:1px solid #e5eae1; }
-.meter-name { display:block; font-size:12px; font-weight:500; line-height:1.5; overflow-wrap:anywhere; }
+.meter-name { display:block; font-size:$agent-font-size-compact; font-weight:500; line-height:1.5; overflow-wrap:anywhere; }
 .meter-location { display:block; margin-top:2px; font-size:10px; color:#7d8d78; line-height:1.5; }
-.meter-values { display:flex; gap:8px; margin-top:10px; }.meter-values > view { flex:1; min-width:0; }
+.meter-values { display:flex; gap:$agent-space-small; margin-top:10px; }.meter-values > view { flex:1; min-width:0; }
 .value-label { display:block; font-size:9px; line-height:1.6; color:#7d8d78; }
-.meter-value { display:block; font-size:12px; line-height:1.6; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.meter-value { display:block; font-size:$agent-font-size-compact; line-height:1.6; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .row-note,.details-empty { display:block; margin-top:7px; color:#8c774d; font-size:10px; line-height:1.6; overflow-wrap:anywhere; }
 </style>

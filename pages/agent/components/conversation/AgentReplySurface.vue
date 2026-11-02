@@ -60,7 +60,8 @@ defineProps({ turn: { type: Object, required: true }, source: { type: String, de
 defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updated', 'editing', 'retry-answer', 'configure', 'browse', 'confirm-task', 'discard-task', 'open-task', 'select-alert', 'browse-alerts', 'open-report', 'issue'])
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
@@ -68,13 +69,13 @@ defineEmits(['toggle-trace', 'select', 'confirm', 'cancel', 'revalidate', 'updat
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
 .reply-surface { width:100%; min-width:0; }
-.reply-identity { display:flex; align-items:center; gap:8px; min-height:30px; }
-.reply-identity__meta { display:flex; align-items:center; gap:8px; min-width:0; }
+.reply-identity { display:flex; align-items:center; gap:$agent-space-small; min-height:30px; }
+.reply-identity__meta { display:flex; align-items:center; gap:$agent-space-small; min-width:0; }
 .reply-identity__name { flex-shrink:0; color:#21382c; font-size:14px; font-weight:650; letter-spacing:-.1px; }
 .reply-content { min-width:0; margin-top:8px; }
-.trace { margin:0 0 8px; border-radius:12px; background:rgba(232,239,234,.58); transition:background-color 180ms ease; }
+.trace { margin:0 0 8px; border-radius:$agent-radius-medium; background:rgba(232,239,234,.58); transition:background-color 180ms ease; }
 .trace--open { background:rgba(235,241,237,.88); }
-.trace__toggle { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:40px; margin:0; padding:0 11px; border-radius:12px; background:transparent; color:#67776d; font-size:12px; line-height:1; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
+.trace__toggle { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:40px; margin:0; padding:0 11px; border-radius:$agent-radius-medium; background:transparent; color:#67776d; font-size:$agent-font-size-compact; line-height:1; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
 .trace__toggle::after,.execution-retry::after { border:0; }
 .trace__toggle--pressed { transform:scale(.985); opacity:.72; }
 .trace__label { display:flex; align-items:center; gap:7px; }
@@ -90,13 +91,13 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .reply-draft { color:#66776d; transition:color .45s ease; }
 .reply-draft--settled { color:#253b30; }
 .execution-summary { margin-top:16px; }
-.read-only-boundary { margin-top:12px; padding:8px 10px; border-left:2px solid #b58c4b; background:#f8f4eb; color:#806338; font-size:12px; line-height:1.55; }
+.read-only-boundary { margin-top:12px; padding:8px 10px; border-left:2px solid #b58c4b; background:#f8f4eb; color:#806338; font-size:$agent-font-size-compact; line-height:1.55; }
 .execution-answer { display:block; color:#253b30; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
-.execution-progress,.execution-retry { display:flex; align-items:center; gap:8px; color:#738177; font-size:12px; }
+.execution-progress,.execution-retry { display:flex; align-items:center; gap:$agent-space-small; color:#738177; font-size:$agent-font-size-compact; }
 .execution-retry { min-height:40px; margin:0; padding:0 8px; border-radius:10px; background:transparent; transition:transform 140ms cubic-bezier(.23,1,.32,1),background-color 140ms ease; }
 .execution-retry--pressed { transform:scale(.97); background:#e8eeea; }
 .execution-spinner { width:14px; height:14px; box-sizing:border-box; flex-shrink:0; border:1.5px solid #ccd6d0; border-top-color:#738177; border-radius:50%; animation:execution-spin .8s linear infinite; }
-.reply-error { display:inline-block; margin-top:12px; padding:7px 10px; border-radius:10px; background:#f4ece1; color:#99651e; font-size:12px; line-height:1.5; }
+.reply-error { display:inline-block; margin-top:12px; padding:7px 10px; border-radius:10px; background:#f4ece1; color:#99651e; font-size:$agent-font-size-compact; line-height:1.5; }
 @keyframes execution-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .trace,.trace__toggle,.trace__expand,.trace__chevron,.execution-retry { transition:none; }.execution-spinner { animation:none; } }
 </style>

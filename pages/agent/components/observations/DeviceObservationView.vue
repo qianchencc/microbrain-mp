@@ -85,7 +85,8 @@ const isStale = computed(() => energyStale(energyReading.value))
 const subtypeText = computed(() => safetySubtypeText(safetySubtypeOfName(props.device?.name)))
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; }
 button::after { border:0; }
@@ -103,24 +104,24 @@ button::after { border:0; }
 .obs-head { display:flex; align-items:center; gap:7px; font-size:11px; font-weight:600; color:#5f6e66; }
 .src { padding:2px 7px; border-radius:8px; background:#e4f2ea; color:#1d6b4e; font-size:9px; font-weight:600; }
 .src.shadow { background:#f1ead7; color:#8a6a24; }
-.obs-line { display:flex; align-items:center; gap:8px; margin-top:10px; color:#3a5148; font-size:12px; }
+.obs-line { display:flex; align-items:center; gap:$agent-space-small; margin-top:10px; color:#3a5148; font-size:$agent-font-size-compact; }
 .dot { width:9px; height:9px; flex-shrink:0; border-radius:50%; }
 .dot.on { background:#3f9d74; box-shadow:0 0 0 3px #3f9d7422; }
 .dot.off { background:#b9b2a4; }
-.dot.warn { background:#a27128; }
+.dot.warn { background:$agent-color-warning; }
 .view-btn { margin-top:12px; width:100%; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;
  background:linear-gradient(155deg,#2a876c,#145c46); color:#fff; font-size:13px; font-weight:600;
  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 4px 12px -5px rgba(20,90,66,.55); transition:transform 130ms cubic-bezier(.23,1,.32,1); }
 .view-btn[disabled] { background:linear-gradient(155deg,#e3e9e4,#d5dcd6); color:#93a19a; font-weight:500; box-shadow:none; }
 .view-btn--pressed:not([disabled]) { transform:scale(.97); }
-.metric-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
+.metric-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:$agent-space-small; margin-top:10px; }
 .metric { padding:9px 10px 8px; border-radius:8px; background:#f4f7f4; box-shadow:inset 0 0 0 .5px #dfe6e0; }
 .metric-value { display:block; color:#234434; font-size:15px; font-weight:700; }
 .metric-key { display:block; margin-top:2px; color:#7d8d83; font-size:9px; }
 .energy-power { display:block; margin-top:10px; color:#234434; font-size:20px; font-weight:700; }
 .energy-detail { display:flex; gap:10px; margin-top:6px; color:#5f7468; font-size:10px; }
 .obs-meta { display:block; margin-top:8px; color:#7d8d83; font-size:10px; }
-.obs-meta.stale { color:#a27128; }
+.obs-meta.stale { color:$agent-color-warning; }
 .obs-tail { height:24px; }
 .art-cam { width:46px; height:28px; position:relative; border-radius:7px; background:linear-gradient(160deg,#33493e,#17271f); box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 5px 12px -6px rgba(20,40,32,.65); }
 .art-cam::before { content:''; position:absolute; right:-6px; top:9px; width:7px; height:10px; border-radius:1px 3px 3px 1px; background:linear-gradient(90deg,#1c3026,#28473a); }

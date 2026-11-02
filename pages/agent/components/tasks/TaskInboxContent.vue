@@ -199,7 +199,8 @@ watch(() => [props.open, props.source], ([value, source], previous) => {
 }, { immediate: true })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 .outcome-link { min-height:44px; margin:0; padding:0; display:flex; align-items:center; color:#806f50; background:transparent; }
 .outcome-link::after { border:0; }
 view,text,input { font-size:inherit; line-height:inherit; }
@@ -216,24 +217,24 @@ button::after { border:0; }
 .notification-title { min-width:0; overflow:hidden; white-space:normal; word-break:break-word; color:#304739; font-size:13px; font-weight:600; }
 .notification-outcome { grid-column:1; font-size:11px; }
 .notification-time { grid-column:2; grid-row:1 / span 3; color:#87958c; font-size:10px; white-space:nowrap; }
-.notification-reason { grid-column:1; color:#a27128; font-size:10px; line-height:1.35; }.tone-ok { color:#397b61; }.tone-warn { color:#a27128; }.tone-fail { color:#a15343; }.tone-muted { color:#7e8982; }
+.notification-reason { grid-column:1; color:$agent-color-warning; font-size:10px; line-height:1.35; }.tone-ok { color:#397b61; }.tone-warn { color:$agent-color-warning; }.tone-fail { color:#a15343; }.tone-muted { color:#7e8982; }
 .notification-facts { grid-column:1; color:#6d7f73; font-size:10px; line-height:1.35; }
 .state-message { padding:48px 16px; text-align:center; color:#839189; font-size:13px; }
 .state-message text { display:block; }
-.state-message button,.list-footer button,.mark-error button { margin:10px auto 0; color:#176b54; font-size:12px; }
+.state-message button,.list-footer button,.mark-error button { margin:10px auto 0; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 .list-footer { padding:16px 0 22px; text-align:center; color:#99a39d; font-size:11px; }
 .list-error { color:#a15343; }
 .mark-error { flex-shrink:0; padding:7px 16px; display:flex; align-items:center; gap:10px; background:#fbf2e6; color:#936827; font-size:11px; }
 .mark-error button { margin:0 0 0 auto; flex-shrink:0; }
-.markall-status { color:#176b54; }
+.markall-status { color:$agent-color-accent; }
 .markall-error { padding:4px 2px 8px; display:flex; align-items:center; gap:10px; color:#a15343; font-size:11px; }
-.markall-error button { margin:0 0 0 auto; flex-shrink:0; color:#176b54; font-size:12px; }
+.markall-error button { margin:0 0 0 auto; flex-shrink:0; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 .task-content-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
-.inbox-filters { display:flex; gap:8px; padding:6px 0 12px; }
+.inbox-filters { display:flex; gap:$agent-space-small; padding:6px 0 12px; }
 .inbox-filters button { padding:7px 12px; border-radius:16px; font-size:11px; color:#7e9083; }
-.inbox-filters .chosen { background:#e7f0e9; color:#176b54; }
+.inbox-filters .chosen { background:#e7f0e9; color:$agent-color-accent; }
 .inbox-filters .inbox-refresh { margin-left:auto; }
-.inbox-filters .inbox-markall { margin-left:auto; color:#176b54; }
+.inbox-filters .inbox-markall { margin-left:auto; color:$agent-color-accent; }
 .inbox-filters .inbox-markall + .inbox-refresh { margin-left:0; }
-.load-more { margin:12px auto; padding:10px; color:#176b54; font-size:12px; }
+.load-more { margin:12px auto; padding:10px; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 </style>

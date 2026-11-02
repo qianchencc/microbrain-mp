@@ -44,12 +44,13 @@ onShow(() => { pageActive.value = true; uni.setNavigationBarTitle({ title: '办�
 onHide(() => { pageActive.value = false })
 function returnToOffice() { backToParent() }
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "./styles/tokens";
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
-.agent-page { height:100vh; display:flex; flex-direction:column; background:#f4f7f5; color:#24382d; }
+.agent-page { height:100vh; display:flex; flex-direction:column; background:$agent-color-surface-page; color:$agent-color-text-primary; }
 .agent-conv { flex:1; min-height:0; display:flex; }
 </style>

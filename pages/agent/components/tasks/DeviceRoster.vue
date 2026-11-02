@@ -63,7 +63,8 @@ watch(() => props.active, value => { if (value) nextTick(measure) })
 watch(() => props.entries, () => nextTick(measure))
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
@@ -82,10 +83,10 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .roster-tail { height:6px; }
 .roster-group { overflow:hidden; border-radius:14px; background:linear-gradient(#fff,#fbfcfa); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.10),inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.06),0 8px 20px rgba(28,57,42,.05); }
 .roster-group + .roster-group { margin-top:10px; }
-.roster-group__head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:8px 14px 6px; }
+.roster-group__head { display:flex; align-items:baseline; justify-content:space-between; gap:$agent-space-small; padding:8px 14px 6px; }
 .roster-group__name { color:#5f6e66; font-size:11px; font-weight:600; letter-spacing:.4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .roster-group__meta { flex-shrink:0; color:#8b9991; font-size:11px; }
-.roster-row { position:relative; display:flex; align-items:center; gap:8px; min-height:38px; padding:9px 14px; }
+.roster-row { position:relative; display:flex; align-items:center; gap:$agent-space-small; min-height:38px; padding:9px 14px; }
 .roster-row + .roster-row::before { content:''; position:absolute; left:14px; right:0; top:0; height:.5px; background:#e7ebe7; }
 /* 行首标记：真实插画裸放（24px 高、宽自适应、无框无底色），无图时退回 code 徽章。 */
 .roster-thumb { flex-shrink:0; width:auto; max-width:38px; height:24px; filter:drop-shadow(0 1px 1px rgba(28,57,42,.18)); }
@@ -102,12 +103,12 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .roster-dot--on { background:#c08c1d; }
 .roster-dot--off { background:#a9b4ad; }
 .roster-state__text { color:#67736b; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.roster-act { flex-shrink:0; max-width:38%; color:#176b54; font-size:11.5px; font-weight:650; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.roster-act { flex-shrink:0; max-width:38%; color:$agent-color-accent; font-size:11.5px; font-weight:650; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .roster-act--quiet { color:#a8b3ac; font-weight:400; }
 .roster-row--quiet .roster-name { color:#7d8a82; }
 .roster-row--quiet .roster-state__text { color:#a8b3ac; }
 .roster-row--quiet .roster-thumb { opacity:.55; }
-.roster-cue { position:absolute; z-index:15; left:50%; bottom:8px; width:30px; height:22px; display:flex; align-items:center; justify-content:center; border:1px solid #dbe3dd; border-radius:12px; background:rgba(252,253,252,.95); box-shadow:0 3px 12px rgba(28,57,42,.12),inset 0 1px 0 #fff; transform:translateX(-50%); transition:opacity .22s ease,transform .22s cubic-bezier(.23,1,.32,1); }
+.roster-cue { position:absolute; z-index:15; left:50%; bottom:8px; width:30px; height:22px; display:flex; align-items:center; justify-content:center; border:1px solid #dbe3dd; border-radius:$agent-radius-medium; background:rgba(252,253,252,.95); box-shadow:0 3px 12px rgba(28,57,42,.12),inset 0 1px 0 #fff; transform:translateX(-50%); transition:opacity .22s ease,transform .22s cubic-bezier(.23,1,.32,1); }
 .roster-cue.off { opacity:0; transform:translateX(-50%) translateY(6px); pointer-events:none; }
 .roster-cue--pressed { transform:translateX(-50%) scale(.94); }
 .roster-cue__icon { display:block; width:11px; height:11px; }

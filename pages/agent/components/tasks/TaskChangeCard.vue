@@ -95,14 +95,15 @@ function targetSummary(template) {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; }
 button::after { border:0; }
 .change-card { box-sizing:border-box; width:100%; margin-top:14px; padding:12px; border-radius:14px; background:linear-gradient(#fdfefd,#f6f8f5); box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(26,55,43,.10),0 1px 2px rgba(28,57,42,.07),0 8px 20px rgba(28,57,42,.06); color:#2f4838; }
 .change-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.change-heading { display:flex; align-items:center; gap:8px; min-width:0; }
-.change-kicker { color:#536e5c; font-size:12px; font-weight:650; }
+.change-heading { display:flex; align-items:center; gap:$agent-space-small; min-width:0; }
+.change-kicker { color:#536e5c; font-size:$agent-font-size-compact; font-weight:650; }
 .change-scope { flex-shrink:0; padding:3px 7px; border-radius:8px; background:#f3ead8; color:#87662c; font-size:10px; }
 .change-status { flex-shrink:0; color:#9a7135; font-size:10px; font-weight:600; }
 .change-status.confirmed { color:#397b61; }.change-status.cancelled,.change-status.expired { color:#87938b; }
@@ -111,19 +112,19 @@ button::after { border:0; }
 .change-version { padding:10px 4px 8px; }
 .change-version--after { border-left:2px solid #4a9272; padding-left:9px; }
 .version-label { display:block; color:#87948b; font-size:10px; font-weight:600; }
-.version-title { display:block; margin-top:3px; color:#344a3b; font-size:12px; font-weight:650; overflow-wrap:anywhere; }
+.version-title { display:block; margin-top:3px; color:#344a3b; font-size:$agent-font-size-compact; font-weight:650; overflow-wrap:anywhere; }
 .version-line { display:block; margin-top:4px; color:#748379; font-size:10px; line-height:1.5; overflow-wrap:anywhere; }
 .target-list { display:flex; flex-direction:column; gap:3px; margin-top:6px; }
 .target-item,.target-more { color:#526b5a; font-size:10px; line-height:1.45; overflow-wrap:anywhere; }
 .target-more { color:#919d95; }
 .change-arrow { height:14px; display:flex; align-items:center; justify-content:center; }
 .change-note { display:block; padding:8px 9px; border-left:2px solid #b58c4b; background:#f8f4eb; color:#806338; font-size:10px; line-height:1.5; }
-.change-effect { display:block; padding:10px; border-left:2px solid #4a9272; background:#edf5ef; color:#436850; font-size:12px; line-height:1.5; }
+.change-effect { display:block; padding:10px; border-left:2px solid #4a9272; background:#edf5ef; color:#436850; font-size:$agent-font-size-compact; line-height:1.5; }
 .change-receipt { display:block; padding:9px 3px 1px; border-top:1px solid #e0e8e1; color:#718176; font-size:11px; }
-.change-actions { display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:7px; padding:11px 3px 1px; border-top:1px solid #dfe7e1; }
-.change-actions button { min-height:42px; padding:0 12px; border-radius:9px; font-size:12px; line-height:42px; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 150ms ease,opacity 150ms ease; }
+.change-actions { display:flex; justify-content:flex-end; align-items:center; gap:$agent-space-small; margin-top:7px; padding:11px 3px 1px; border-top:1px solid #dfe7e1; }
+.change-actions button { min-height:42px; padding:0 12px; border-radius:9px; font-size:$agent-font-size-compact; line-height:42px; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 150ms ease,opacity 150ms ease; }
 .change-discard { color:#6e7d73; }
-.change-confirm { min-width:100px; border:1px solid #176b54; background:#176b54; color:#fff; box-shadow:0 3px 8px #176b5422; }
+.change-confirm { min-width:100px; border:1px solid $agent-color-accent; background:$agent-color-accent; color:#fff; box-shadow:0 3px 8px #176b5422; }
 .change-confirm.destructive { border-color:#a15343; background:#a15343; box-shadow:0 3px 8px #a1534322; }
 .change-discard--pressed,.change-confirm--pressed { transform:scale(.975); }
 .change-discard--pressed { background:#eef3ef; }

@@ -107,7 +107,8 @@ watch(() => props.disabled || props.running, value => { if (value) interrupt() }
 onBeforeUnmount(() => voice.dispose())
 defineExpose({ interrupt })
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
@@ -136,14 +137,14 @@ view, text, input { font-size: inherit; line-height: inherit; }
 /* 编辑态上下文静带：贴着胶囊上沿常驻，✕ 是唯一退出编辑的出口（不放 disabled） */
 .edit-strip { display:flex; align-items:center; gap:6px; margin:0 6px 6px; padding:6px 8px 6px 12px; border:1px solid #dfe8e1; border-radius:14px; background:#f4f8f4; box-shadow:0 1px 3px rgba(28,57,42,.06); animation:message-in 160ms cubic-bezier(.23,1,.32,1); }
 .edit-strip__icon { width:13px; height:13px; opacity:.55; }
-.edit-strip__label { flex:1; font-size:12px; color:#55705f; }
+.edit-strip__label { flex:1; font-size:$agent-font-size-compact; color:#55705f; }
 .edit-strip__cancel { display:flex; align-items:center; justify-content:center; width:26px; height:26px; margin:0; padding:0; border-radius:7px; background:transparent; }
 .edit-strip__cancel::after { border:0; }
 .edit-strip__cancel-icon { width:12px; height:12px; opacity:.6; }
 @keyframes message-in { from { opacity:0; transform:translateY(3px); } }
 .composer.held { border-color:#94b4a0; background:#e5eee7; box-shadow:inset 0 2px 5px rgba(30,69,44,.07); }
 .composer.cancel { border-color:#c6b1a6; background:#f4ede8; }.composer.cancel .hold-input { color:#9b6251; }
-.voice-feedback { position:absolute; bottom:calc(100% + 12px); left:50%; transform:translate(-50%,5px); opacity:0; pointer-events:none; display:flex; align-items:center; gap:8px; white-space:nowrap; padding:11px 16px; border:1px solid #dce5dd; border-radius:18px; background:#fafcf9; box-shadow:0 6px 24px rgba(30,59,40,.08),inset 0 1px 0 white; font-size:12px; color:#456350; transition:opacity 160ms ease,transform 180ms cubic-bezier(.23,1,.32,1); }
+.voice-feedback { position:absolute; bottom:calc(100% + 12px); left:50%; transform:translate(-50%,5px); opacity:0; pointer-events:none; display:flex; align-items:center; gap:$agent-space-small; white-space:nowrap; padding:11px 16px; border:1px solid #dce5dd; border-radius:18px; background:#fafcf9; box-shadow:0 6px 24px rgba(30,59,40,.08),inset 0 1px 0 white; font-size:$agent-font-size-compact; color:#456350; transition:opacity 160ms ease,transform 180ms cubic-bezier(.23,1,.32,1); }
 .voice-feedback.visible { opacity:1; transform:translate(-50%,0); }.voice-feedback.cancel { color:#9b6251; }
 .voice-light { width:6px; height:6px; border-radius:50%; background:currentColor; }.voice-light.pulsing { animation:record-pulse 1s ease-in-out infinite alternate; }
 @keyframes record-pulse { to { opacity:.35; } }

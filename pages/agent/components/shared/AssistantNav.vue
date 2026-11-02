@@ -14,9 +14,10 @@ defineProps({ title: String, backLabel: { type: String, default: '上一页' }, 
 defineEmits(['back'])
 const { top, barHeight, rightInset } = navMetrics()
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
-.assistant-nav { flex-shrink:0; background:linear-gradient(180deg,#fcfdfc,#f4f7f5); border-bottom:1px solid #2c4b3a0d; }
+.assistant-nav { flex-shrink:0; background:linear-gradient(180deg,#fcfdfc,$agent-color-surface-page); border-bottom:1px solid #2c4b3a0d; }
 .nav-line { display:flex; align-items:center; padding-left:8px; box-sizing:border-box; min-height:44px; }
 .nav-back { width:44px; height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin:0; padding:0; background:transparent; border-radius:14px; }
 .nav-back::after { border:0; }.nav-pressed { background:#e7eee8; }

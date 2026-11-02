@@ -167,7 +167,8 @@ function blockMaskMove() { return false }
 
 onBeforeUnmount(clearPhaseTimer)
 </script>
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 
 /* Keep Agent components neutral to the host app's element-level font rules. */
 view, text, input { font-size: inherit; line-height: inherit; }
@@ -190,9 +191,9 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .header-top { display:flex; align-items:center; padding:2px 20px 8px; }
 .sheet-close { width:44px; height:44px; flex-shrink:0; margin:0 -8px 0 4px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:14px; background:transparent; }.sheet-close::after { border:0; }.sheet-close--pressed { background:#e7eee8; }
 .header-copy { flex:1; min-width:0; overflow:hidden; }
-.title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
-.title { display:block; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:19px; font-weight:600; color:#24382d; }
-.meta { display:block; font-size:12px; color:#78877e; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.subtitle { display:block; font-size:12px; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.title-row { display:flex; align-items:baseline; gap:$agent-space-small; min-width:0; }
+.title { display:block; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:19px; font-weight:600; color:$agent-color-text-primary; }
+.meta { display:block; font-size:$agent-font-size-compact; color:#78877e; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.subtitle { display:block; font-size:$agent-font-size-compact; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media(prefers-reduced-motion:reduce) { .sheet-mask,.sheet-motion { transition:none!important; } }
 </style>

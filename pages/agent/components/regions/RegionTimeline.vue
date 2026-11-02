@@ -132,7 +132,8 @@ watch(windowStart, (next, previous) => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import "../../styles/tokens";
 view, text, input { font-size: inherit; line-height: inherit; }
 .timeline-scroll { height:0; width:100%; position:relative; overflow:hidden; }
 .timeline-shell { height:100%; min-height:0; display:flex; flex-direction:column; position:relative; }
@@ -154,7 +155,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .time-label.now { color:#99651b; }
 .now text { display:block; }
 .now text:first-child { font-size:9.5px; font-weight:650; margin-bottom:2px; }
-.now text:last-child { font-size:12px; font-weight:750; }
+.now text:last-child { font-size:$agent-font-size-compact; font-weight:750; }
 .date-label { position:absolute; left:80px; right:14px; color:#a9b6ae; font-size:10px; text-align:center; transform:translateY(-50%); }
 .card-target { position:absolute; left:84px; right:14px; padding:6px 0; }
 @keyframes cardIn { from { opacity:0; transform:translateY(8px) scale(.98); } }
@@ -162,7 +163,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .timeline-card--pressed { transform:scale(.985); }
 .timeline-card.faded { opacity:.6; }
 .timeline-card.executing { box-shadow:inset 0 0 0 1px #176b5452, inset 0 1px 0 #fff, 0 6px 16px -10px #176b5473; }
-.timeline-card.executing::before { content:""; position:absolute; left:4px; top:9px; bottom:9px; width:2.5px; border-radius:2px; background:#176b54; }
+.timeline-card.executing::before { content:""; position:absolute; left:4px; top:9px; bottom:9px; width:2.5px; border-radius:2px; background:$agent-color-accent; }
 .card-label { display:block; font-size:12.5px; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .render-error { position:absolute; top:470px; left:90px; color:#a34036; font-size:13px; }
 @media (prefers-reduced-motion:reduce) { .timeline-card,.datefloat,.cal-float { transition:none; animation:none; } }
