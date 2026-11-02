@@ -137,7 +137,7 @@ export const discardTurn = (conversationId, turnId, source = 'office') => reques
 export const confirmAction = (draftId, revision, source = 'office') => request(withConversationSource(`/agent/action-drafts/${draftId}/confirm`, source), 'POST', { revision }, CONFIRM_REQUEST_TIMEOUT_MS)
 export const updateSelection = (draftId, revision, selectedActionIds, source = 'office') => request(withConversationSource(`/agent/action-drafts/${draftId}/selection`, source), 'PATCH', { revision, selectedActionIds })
 export const retrySummary = (draftId, source = 'office') => request(withConversationSource(`/agent/action-drafts/${draftId}/summary`, source), 'POST')
-export const readDeviceStates = (draftId, source = 'office') => request(withConversationSource(`/agent/action-drafts/${draftId}/device-states`, source), 'GET')
+export const readDeviceStates = (draftId, source = 'office', options) => ordinaryRead(withConversationSource(`/agent/action-drafts/${draftId}/device-states`, source), undefined, options)
 export const updateParameters = (draftId, revision, changes, source = 'office') => request(withConversationSource(`/agent/action-drafts/${draftId}/parameters`, source), 'PATCH', { revision, changes })
 export const revalidateAction = (draftId, revision, source = 'office') => request(withConversationSource(`/agent/action-drafts/${draftId}/revalidate`, source), 'POST', { revision })
 export const restoreAction = (draftId, revision, source = 'office') => request(withConversationSource(`/agent/action-drafts/${draftId}/restore`, source), 'POST', { revision })

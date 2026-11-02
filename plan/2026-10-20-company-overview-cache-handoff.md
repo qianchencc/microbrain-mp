@@ -47,3 +47,10 @@
 - 有限日期报告的原区间约束继续生效；历史基础读数复用、上游分页及边界处理集中在backend，不由页面承担。
 - 前端259项回归、157源文件边界检查及微信开发编译通过。用户已明确此后的真实页面浏览由其验收，后端HTTP和回归结果不替代这项验收。
 - 实施与后端真实证据见[51号票](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/issues/51-energy-history-range-reuse.md)及[验证记录](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/evidence/energy-history-range-reuse-2026-11-02.md)。
+
+## 52：草案当前设备状态与执行回读分离
+
+- backend的草案device-states接口改读当前平台状态快照，不再把尚未产生的执行回读当作设备未知；summary继续只展示持久执行证据。
+- 前端草案卡片和明细接入既有ordinaryRead准备协议；只向backend请求，在关闭/切换草案后取消旧等待，不把preparing当空状态交付。
+- 后端真实只读样本为3盏灯开/关/开，以及2台空调关机、温度25/26℃；普通状态有既有CURRENT快照，后台刷新时仍返回已持有值。没有确认下发控制。
+- 前端259项、157源文件边界及开发编译通过；真实草案页面由用户验收。见[52号票及证据](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/issues/52-draft-current-device-states.md)。
