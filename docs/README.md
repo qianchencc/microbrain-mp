@@ -1,5 +1,7 @@
 - 2026-11-02 缓存整改47–50号票完成，当前后端为同级`iot-agent-backend`（本地开发3207）；普通页面只读backend已持有结果，后台同步与HTTP分离，手动刷新不强制等待上游。真实30天43表30/30日、三个月129/129及十二个月516/516逐表月数据、43表年度同比有效；微信首页、区域设备及环境/能耗/安全子页已查看。两组gpt-6.1-terra双轴发现已修复，最终九项故障HTTP、245项前端回归、边界与构建通过。首次长报表仍需后台准备约25–40秒，不宣称全量Runtime替代或物理控制验收。见[前端契约与证据入口](../plan/2026-10-20-company-overview-cache-handoff.md#2026-11-02普通读取的后端快照准备中契约)。
 
+- 2026-10-29 物联 Agent 软件操作说明书合同条款版 V1.0 已定稿结构：章节按合同功能域划分（设备检索与控制/能耗/视频与安全/自动化任务/权限与交付），面向使用人员的正式陈述语言、无技术术语、不引用条款编号；如实标注待确认项——人员统计、水表接入、急停/整体开关管理端操作、AI 门户收录地址。与既有细节版（按产品结构组织）并存，按用途选用。见 [合同条款版](acceptance/物联Agent软件操作说明书（合同条款版 V1.0）.md)。
+- 2026-10-29 物联 Agent 软件操作说明书骨架与细节版已完成：范围只含物联 Agent 子系统（仪表盘/办公室 Agent/区域工作台，用户确认其他平台模块与说明书无关），按「基础能力指引 → 页面与组件说明 → 按端分章的业务能力指引 → 附录」组织；细节版每节补真实 UI 文案、操作步骤、状态取值与边界（取自 `pages/agent/` 源码与维护说明、Runtime 双端工具集、验收文档 V1.2），留截图与待补占位。见 [骨架 V0.1](acceptance/物联Agent软件操作说明书（骨架 V0.1）.md) 与 [V0.2 细节版](acceptance/物联Agent软件操作说明书（V0.2 细节版）.md)。
 - 2026-10-28 Runtime API 契约文档已完成：同级 `iot-agent-runtime` 提交 `cbc5cca` 交付 OpenAPI 3.1 JSON/YAML、NDJSON 事件 schema、Runtime 路由漂移/认证门禁；当前覆盖 66 个路径、69 个 operation。Runtime `npm run api:contract`、452 项测试和 build 通过，typecheck 仍有 4 个现有诊断；小程序和客户上游 Swagger 不在本次范围。见 [Runtime API 契约交接](../plan/2026-10-28-runtime-api-contract-handoff.md)。
 - 2026-10-28 Runtime 客户仓库部署沟通已准备：后端代码已在客户 GitLab `microbrain/iot-agent-backend` `stable`（`b2ca767`），尚未部署；本地 `f007780` 把 deploy 模板参数化但还没推，建议先补推再让客户部署。沟通稿覆盖运行要求（Node 22.19–22.x、回环 3210、SQLite 持久盘）、网关 `/micro-api/api/ai/agent/*` → `/api/agent/*` 的重写/头透传/流式/超时、密钥与管理员归属、部署后验收与“先发布小程序再切正式版 page”的顺序。见[部署沟通与清单](../plan/2026-10-28-runtime-customer-deploy-communication.md)。
 
@@ -199,7 +201,7 @@
 - 2026-09-23 已完成 `.scratch/customer-agent-migration/issues/03-local-real-gateway-acceptance.md`：唯一 `3200` 真实网关上的只读查询完整收尾，低风险照明操作完成草案→确认→受理→回读闭环，重复 confirm 只回放结果不重复执行（审计仅一次 `ACTION_DRAFT_ACCEPTED`）；票 04 随之关闭，独立 miniapp 正式定位为回归壳。
 - 一次性 Task 已具备本地代码闭环；体验版/正式版 HTTPS 网关、更多设备、记忆、重复计划和告警仍未进入完成状态。账户来源 `account/me.id` 已核验；“Token 频繁过期”是用户纠正的误记录，不再列作自动化前置阻塞。
 
-- 2026-10-02 用户基本认可仪表盘 A，并指定 `pages/agent/proto-observation-surface.html` 为前端重要参考。业务范围、验收与长期推进纪律见[完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)；Office 历史恢复与 Company 只读对话已完成源码实施；按票长期推进中；10-04 本地真实网关服务已启动，正式部署仍后置。
+- 2026-10-02 用户基本认可仪表盘 A，并指定 `pages/agent/prototypes/proto-observation-surface.html` 为前端重要参考。业务范围、验收与长期推进纪律见[完整业务交付交接](../plan/2026-10-02-full-business-completion-handoff.md)；Office 历史恢复与 Company 只读对话已完成源码实施；按票长期推进中；10-04 本地真实网关服务已启动，正式部署仍后置。
 
 ## 按任务进入
 

@@ -156,7 +156,7 @@ async function refresh() {
  stateLoading.value = true
  try {
   const snapshot = await readDeviceStates(draftId, props.source)
-  if (current === stateRequest && props.draft?.draftId === draftId && open.value) states.value = snapshot.states || {}
+  if (current === stateRequest && props.draft?.draftId === draftId && open.value) states.value = snapshot.deviceStates || (!Array.isArray(snapshot.states) ? snapshot.states : {}) || {}
  } catch { if (current === stateRequest) states.value = {} }
  finally { if (current === stateRequest) stateLoading.value = false }
 }

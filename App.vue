@@ -22,8 +22,8 @@
 				currentPath: currentRoute(),
 				launch: launch && shouldHandleLaunch(launch) ? launch : null
 			})
-			if (action === 'login-restore') {
-				savePendingAgentLaunch(launch)
+			if (!getToken()) {
+				if (action === 'login-restore') savePendingAgentLaunch(launch)
 				wx.login({
 					provider: 'weixin',
 					success: async res => {

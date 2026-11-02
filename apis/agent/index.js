@@ -96,7 +96,7 @@ export const peekAgentNotifications = ({ source = 'company', limit = AGENT_NOTIF
 export const getTaskDetail = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}`, source), 'GET')
 export const markNotificationSeen = (id, source = 'office') => request(withConversationSource(`/agent/notifications/${encodeURIComponent(id)}/seen`, source), 'POST')
 export const markAllNotificationsSeen = (source = 'office') => request(withConversationSource('/agent/notifications/seen-all', source), 'POST')
-export const getTaskLightingStates = taskId => request(`/agent/tasks/${encodeURIComponent(taskId)}/lighting-states`, 'GET')
+export const getTaskLightingStates = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/lighting-states`, source), 'GET')
 export const cancelTask = (taskId, version, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/cancel`, source), 'POST', { version })
 export const confirmTask = (taskId, version, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/confirm`, source), 'POST', { version })
 export const discardTask = (taskId, source = 'office') => request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/discard`, source), 'POST')

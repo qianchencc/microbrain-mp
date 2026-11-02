@@ -29,7 +29,7 @@ export const ENDPOINTS = {
 	// their existing develop origins; only Agent requests use loopback.
 	'develop.local': {
 		gatewayOrigin: 'https://ncim.577119.com',
-		agentBaseUrl: 'http://127.0.0.1:3205/api',
+		agentBaseUrl: 'http://127.0.0.1:3207/api',
 		videoPlayerUrl: 'https://mp-video.qianc.ltd/player.html',
 		videoApiBaseUrl: 'https://mp-video.qianc.ltd/api'
 	}

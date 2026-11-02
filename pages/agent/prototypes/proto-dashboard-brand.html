@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>物联助手仪表盘 · 自定义设计语言（原型）</title>
+<style>
+  /* ============ 原型外壳（非产品 UI） ============ */
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif; background:#f3f4f6; color:#1e2a38; padding:28px 20px 120px;
+         -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+  .wrap { max-width:880px; margin:0 auto; }
+  h1 { font-size:19px; font-weight:650; }
+  .q { margin-top:8px; font-size:13px; line-height:1.7; color:#4a5665; }
+  .q code { background:#e8eaee; padding:1px 5px; border-radius:4px; font-size:12px; }
+  .stage { display:flex; gap:22px; flex-wrap:wrap; margin-top:20px; }
+  .dir-col { width:375px; }
+  .dir-tag { font-size:12px; font-weight:650; margin-bottom:8px; }
+  .dir-tag small { font-weight:400; color:#8a94a0; margin-left:6px; }
+  .phone { position:relative; width:375px; border-radius:36px; border:10px solid #23282e; overflow:hidden; box-shadow:0 18px 50px -18px rgba(20,30,45,.35); }
+  .notch { height:26px; display:flex; align-items:center; justify-content:center; }
+  .notch::after { content:''; width:110px; height:8px; border-radius:5px; background:#23282e; }
+  .screen { height:640px; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; }
+  .screen::-webkit-scrollbar { display:none; }
+  button { font:inherit; border:0; background:none; cursor:pointer; text-align:left; padding:0; }
+
+  /* ============ 设计系统（原型自定义） ============
+     纸面 → 层级（玻璃/白卡）→ 墨石文字 → 深石蓝强调 → 语义仅告警琥珀 */
+  :root {
+    --acc:#2f4ea0; --acc-deep:#24407f; --solid:#3b5fd9;
+    --nav:#31405c;
+    --tint:#eef1f7; --tint2:#f5f7fb;
+    --ink:#20242b; --ink2:#4e5566; --mut:#8a93a6; --line:#eceff4;
+    --ok:#23a06f; --warn:#a86e18; --red:#c24f43;
+    --sh:0 1px 4px rgba(30,38,60,.05), 0 0 0 .5px rgba(30,38,60,.04);
+    --amb1:#c3cdda; --amb2:#dde3ec; --amb3:#f0f3f6;
+    --glass:rgba(255,255,255,.42); --glass-line:rgba(255,255,255,.6);
+  }
+
+  /* ============ 一级页骨架 ============ */
+  .pg { position:relative; min-height:100%; display:flex; flex-direction:column;
+        background:linear-gradient(180deg,var(--amb1) 0,var(--amb2) 150px,var(--amb3) 300px,var(--amb3) 100%);
+        color:var(--ink); font-size:12.5px; line-height:1.5; }
+  .pg-scroll { flex:1; }
+  .pg-body { padding:0 14px 96px; }
+  /* 顶栏：返回 + 通知铃铛 + 办公室 Agent 入口 */
+  .anav { padding-top:2px; }
+  .anav-line { display:flex; align-items:center; gap:2px; min-height:38px; padding:0 4px; }
+  .anav-back { width:42px; height:42px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .anav-back svg { width:20px; height:20px; }
+  .anav-bell { position:relative; width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .anav-bell svg { width:18px; height:18px; color:var(--nav); }
+  .anav-bell .nbadge { position:absolute; top:4px; right:3px; min-width:15px; height:15px; padding:0 3px; border-radius:8px; box-sizing:border-box;
+    background:linear-gradient(160deg,#c9a55c,#a8843f); color:#fff; font-size:9px; font-weight:700; font-style:normal;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 1.5px rgba(246,244,239,.95),0 2px 5px rgba(120,88,30,.3); }
+  .anav-agent { margin-left:auto; display:flex; align-items:center; gap:4px; padding:6px 11px; border-radius:15px;
+    font-size:12px; font-weight:600; color:var(--nav); background:var(--glass); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+  .anav-agent svg { width:14px; height:14px; color:var(--nav); }
+
+  .mhead { display:flex; align-items:flex-end; justify-content:space-between; padding:4px 4px 0; }
+  .mhead .place { font-size:22px; font-weight:700; letter-spacing:-.2px; }
+  .mhead .date-chip { font-size:11px; color:var(--nav); padding:5px 11px; border-radius:14px;
+    background:var(--glass); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+
+  .pills { display:flex; gap:8px; margin-top:12px; }
+  .pill { flex:1; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:9px 9px 8px;
+    border-radius:14px; background:var(--glass);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+  .pill .pi { display:flex; align-items:center; gap:4px; font-size:9.5px; color:#5a6a84; white-space:nowrap; }
+  .pill .pi svg { width:11px; height:11px; flex-shrink:0; }
+  .pill .pv { font-size:16px; font-weight:650; font-variant-numeric:tabular-nums; color:#2c3547; white-space:nowrap; }
+  .pill .pv small { font-size:9.5px; font-weight:400; color:#6b7a94; margin-left:2px; }
+  .pill.warn .pi { color:#a86e18; }
+  .pill.warn .pv { color:#a86e18; }
+  .pill.warn .pv small { color:#b98a2f; }
+
+  .sec { margin-top:18px; }
+  .sec-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:11px; padding:0 2px; }
+  .sec-t { font-size:14px; font-weight:550; color:var(--ink); }
+  .scenes { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .scard { background:rgba(255,255,255,.92); border-radius:16px; padding:13px 13px 12px;
+    box-shadow:var(--sh); display:flex; align-items:center; gap:11px; }
+  .scard .sic { width:34px; height:34px; border-radius:10px; background:var(--tint); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .scard .sic svg { width:18px; height:18px; }
+  .scard.warn .sic { background:#fbf0dd; }
+  .scard .stx { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .scard .sname { font-size:12.5px; font-weight:550; color:var(--ink); display:flex; align-items:center; gap:5px; }
+  .scard .sname .dot { width:5px; height:5px; border-radius:50%; background:var(--red); }
+  .scard .sstate { font-size:9.5px; color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .scard .sstate.warn { color:var(--warn); }
+
+  .block { margin-top:20px; }
+  .block-head { display:flex; align-items:baseline; justify-content:space-between; padding:0 2px; margin-bottom:3px; }
+  .block-t { font-size:14.5px; font-weight:600; }
+  .block-sub { font-size:10px; color:var(--mut); }
+  .block-card { margin-top:9px; background:rgba(255,255,255,.94); border-radius:16px; box-shadow:var(--sh); padding:5px 14px; }
+  .nrow { display:flex; align-items:center; gap:11px; padding:12px 0; }
+  .nrow + .nrow { border-top:1px solid var(--line); }
+  .nrow .nic { width:32px; height:32px; border-radius:10px; background:var(--tint2); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .nrow .nic svg { width:16px; height:16px; }
+  .nrow .nbody { flex:1; min-width:0; }
+  .nrow .nname { font-size:13px; font-weight:600; }
+  .nrow .nsub { font-size:10px; color:var(--mut); margin-top:1px; display:block; }
+  .nrow .nstate { flex-shrink:0; font-size:9.5px; padding:3px 8px; border-radius:8px; }
+  .nstate.go { color:var(--acc-deep); background:var(--tint); }
+  .nstate.wait { color:var(--mut); background:#eff2f7; }
+  .nfoot { display:block; width:100%; padding:10px 0 11px; border-top:1px solid var(--line); font-size:11px; color:var(--acc); text-align:center; }
+
+  /* 悬浮 Agent orb（还原 CompanyAgentFloat：纸面圆 + 描边影 + 未读角标） */
+  .agent-orb { position:sticky; right:auto; margin-left:auto; bottom:18px; z-index:15; flex-shrink:0;
+    width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(160deg,#fefefd,#eef1f6);
+    box-shadow:0 6px 20px rgba(30,38,60,.2), inset 0 1px 0 rgba(255,255,255,.95), inset 0 0 0 .5px rgba(30,38,60,.1); }
+  .agent-orb:active { transform:scale(.94); }
+  .orb-av { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#7a8fe4,#2f4ea0);
+    display:flex; align-items:center; justify-content:center; }
+  .orb-av svg { width:15px; height:15px; }
+  .orb-badge { position:absolute; top:-2px; right:-2px; min-width:19px; height:19px; padding:0 5px; border-radius:10px; box-sizing:border-box;
+    display:flex; align-items:center; justify-content:center; font-style:normal;
+    background:linear-gradient(160deg,#c9a55c,#a8843f); color:#fff; font-size:10.5px; font-weight:600;
+    box-shadow:0 2px 6px rgba(120,88,30,.35); }
+
+  /* ============ 变体 B · 家庭AI管家语言（长虹参考） ============
+     粉青柔彩纸面 · 我的园区+区域页签 · 环境中枢大卡 · 设备式域网格 · 发光小暖球 dock */
+  .vb { background:linear-gradient(160deg,#ffe4e7 0%,#ffeef0 90px,#eef2fb 200px,#e9f6f1 320px,#f6f8f7 520px,#f6f8f7 100%);
+        color:#3a3226; font-size:12.5px; }
+  .vb .anav-back svg { width:20px; height:20px; }
+  .vb .anav-bell svg { color:#5a5245; }
+  .vb .anav-agent { color:#8a4d17; background:rgba(255,255,255,.55); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+  .vb .anav-agent svg { color:#8a4d17; }
+  /* 我的公司 + AI 问候 */
+  .vb .mhead .place { color:#3a3226; }
+  .vb .mhead .date-chip { color:#8a6f52; background:rgba(255,255,255,.5); }
+  /* AI 管家问候条（=参考图1 暖球形象+Hi气泡） */
+  .vgreet { display:flex; align-items:center; gap:10px; margin-top:12px; padding:0 2px; }
+  .vgreet .gball { position:relative; width:40px; height:40px; border-radius:50%; flex-shrink:0;
+    background:radial-gradient(circle at 34% 30%,#ffd9a8 0%,#ffab5e 42%,#ff7a3c 78%,#f05a28 100%);
+    box-shadow:0 3px 12px rgba(255,110,40,.4), inset 0 2px 4px rgba(255,255,255,.7), inset 0 -3px 6px rgba(200,60,10,.22); }
+  .vgreet .gball::after { content:''; position:absolute; left:50%; top:37%; transform:translateX(-50%); width:16px; height:5px;
+    background:radial-gradient(circle at 3px 50%,rgba(255,255,255,.95) 0 1.8px,transparent 2.3px),radial-gradient(circle at 13px 50%,rgba(255,255,255,.95) 0 1.8px,transparent 2.3px); }
+  .vgreet .gsmile { position:absolute; left:50%; top:52%; transform:translateX(-50%); width:12px; height:6px;
+    border-bottom:2.5px solid rgba(255,255,255,.95); border-radius:0 0 10px 10px; }
+  .vgreet .gbub { position:relative; flex:1; min-width:0; padding:8px 12px; border-radius:4px 14px 14px 14px;
+    background:rgba(255,255,255,.72); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 1px 5px rgba(210,120,90,.1); font-size:11px; color:#6b5d49; line-height:1.45; }
+  .vgreet .gbub b { color:#3a3226; font-weight:600; }
+  .vgreet .gbub .gsub { display:block; font-size:9.5px; color:#a39684; margin-top:1px; }
+  /* AI 建议问句胶囊（=参考图1 功能条） */
+  .vasks { display:flex; gap:7px; margin-top:10px; padding:0 2px; }
+  .vask { flex:1; min-width:0; padding:8px 6px; border-radius:12px; text-align:center;
+    font-size:9.8px; line-height:1.35; color:#7a6a52;
+    background:rgba(255,255,255,.55); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    box-shadow:inset 0 0 0 .5px rgba(255,255,255,.7); }
+  /* 环境中枢大卡（=参考图天气卡） */
+  .vhero { margin-top:12px; border-radius:20px; padding:16px 16px 14px; position:relative; overflow:hidden;
+    background:linear-gradient(150deg,rgba(255,255,255,.75),rgba(255,255,255,.5));
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 2px 10px rgba(210,120,90,.08), inset 0 0 0 .5px rgba(255,255,255,.8); }
+  .vhero .hrow1 { display:flex; align-items:flex-end; gap:10px; }
+  .vhero .hmain { font-size:34px; font-weight:750; letter-spacing:-.5px; color:#3a3226; font-variant-numeric:tabular-nums; line-height:1; }
+  .vhero .hmain small { font-size:15px; font-weight:600; }
+  .vhero .hside { padding-bottom:3px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .vhero .hside .hk { font-size:11.5px; font-weight:600; color:#3a3226; white-space:nowrap; }
+  .vhero .hside .hv { font-size:10px; color:#9a8f7d; white-space:nowrap; }
+  .vhero .hw { margin-left:auto; width:70px; height:70px; flex-shrink:0; align-self:flex-start; margin-top:-6px; }
+  .vhero .hstats { display:flex; margin-top:14px; }
+  .vhero .hstat { flex:1; min-width:0; }
+  .vhero .hstat .sv { font-size:15px; font-weight:700; color:#3a3226; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .vhero .hstat .sv small { font-size:9px; font-weight:400; color:#a39684; margin-left:1px; }
+  .vhero .hstat .sk { display:block; font-size:9.5px; color:#a39684; margin-top:2px; white-space:nowrap; }
+  .vhero .hstat.warn .sv { color:#d06a1f; }
+  .vhero .hdots { position:absolute; left:50%; transform:translateX(-50%); bottom:5px; display:flex; gap:3px; }
+  .vhero .hdots i { width:3.5px; height:3.5px; border-radius:50%; background:#d8d0c2; }
+  .vhero .hdots i.on { background:#8a6f52; }
+  /* 公司设备横滑条（=参考图2 产品图设备卡） */
+  .vb .sec-t { color:#3a3226; }
+  .vb .sec-all { font-size:10px; color:#a39684; }
+  .vstrip { display:flex; gap:9px; overflow-x:auto; scrollbar-width:none; margin:0 -14px; padding:2px 14px 4px; }
+  .vstrip::-webkit-scrollbar { display:none; }
+  .vitem { flex:0 0 auto; width:96px; background:rgba(255,255,255,.92); border-radius:18px; padding:12px 11px 11px;
+    box-shadow:0 1px 5px rgba(150,110,80,.06); display:flex; flex-direction:column; align-items:flex-start; }
+  .vitem .vart { width:44px; height:44px; object-fit:contain; margin-bottom:8px; }
+  .vitem .vname { font-size:12.5px; font-weight:650; color:#3a3226; }
+  .vitem .vsub { font-size:9.5px; color:#a39684; margin-top:2px; }
+  .vitem .vstate { margin-top:6px; font-size:9.5px; color:#8d8676; display:flex; align-items:center; gap:4px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .vitem .vstate i { width:5px; height:5px; border-radius:50%; background:#3fae7c; flex-shrink:0; }
+  .vitem .vstx { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .vitem.warn .vname { color:#d06a1f; }
+  .vitem.warn .vstate { color:#d06a1f; }
+  .vitem.warn .vstate i { background:#e8933c; }
+  /* 接下来（日程行） */
+  .vb .block-t { color:#3a3226; }
+  .vb .block-sub { color:#a39684; }
+  .vb .block-card { background:rgba(255,255,255,.92); box-shadow:0 1px 5px rgba(150,110,80,.06); border-radius:18px; }
+  .vb .nrow .nic { background:#fdf0e2; }
+  .vb .nrow .nic svg { color:#c97a2e; }
+  .vb .nrow .nname { color:#3a3226; }
+  .vb .nrow .nsub { color:#a39684; }
+  .vb .nstate.go { color:#c97a2e; background:#fdf0e2; }
+  .vb .nstate.wait { color:#a39684; background:#f2efe9; }
+  .vb .nfoot { color:#c97a2e; border-top-color:#f0ebe2; }
+  /* 底部 dock：白底 + 中央发光小暖球（=参考图底栏中央 AI 入口） */
+  .vdock { position:absolute; left:0; right:0; bottom:0; z-index:15; height:64px; padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));
+    display:flex; align-items:center; justify-content:space-around;
+    background:rgba(255,255,255,.94); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    box-shadow:0 -1px 0 rgba(150,110,80,.08); }
+  .vdock .di { display:flex; flex-direction:column; align-items:center; gap:3px; width:52px; color:#a89e8c; font-size:9px; }
+  .vdock .di svg { width:20px; height:20px; }
+  .vdock .di.on { color:#e8793a; }
+  .vdock .di.on span { font-weight:600; }
+  .vdock .dball { position:relative; width:46px; height:46px; border-radius:50%; flex-shrink:0; margin-bottom:14px;
+    background:radial-gradient(circle at 34% 30%,#ffd9a8 0%,#ffab5e 42%,#ff7a3c 78%,#f05a28 100%);
+    box-shadow:0 4px 14px rgba(255,110,40,.5), inset 0 2px 5px rgba(255,255,255,.75), inset 0 -4px 8px rgba(200,60,10,.25); }
+  .vdock .dball svg { width:20px; height:20px; position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); }
+  .vdock .dball .dbadge { position:absolute; top:-3px; right:-3px; min-width:16px; height:16px; padding:0 4px; border-radius:9px; box-sizing:border-box;
+    background:#e0513c; color:#fff; font-size:9.5px; font-weight:700; font-style:normal;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 2px rgba(255,255,255,.95); }
+  /* 变体 B 页脚留 dock 高 */
+  .vb .pg-body { padding-bottom:86px; }
+  /* 两个浅色仪表盘：设备面板 / 环境与能源。 */
+  .pg { min-height:100%; color:#263332; font-size:12px; line-height:1.5; background:#eef4f0; }
+  .pg-scroll { padding:0 15px 38px; }
+  .dash-nav { display:flex; align-items:center; padding:7px 0; gap:8px; }
+  .dash-nav button { display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.72); position:relative; }
+  .dash-nav svg { width:19px; height:19px; }
+  .dash-nav .spacer { flex:1; }
+  .dash-nav .badge { position:absolute; top:0; right:0; min-width:16px; height:16px; border-radius:9px; background:#cc6946; color:white; font-size:10px; text-align:center; }
+  .dash-title { padding:5px 3px 13px; display:flex; align-items:end; justify-content:space-between; }
+  .dash-title h2 { font-size:24px; letter-spacing:-.5px; }
+  .dash-title small { display:block; color:#788d84; margin-top:2px; font-size:10px; }
+  .dash-title .readonly { color:#64877b; font-size:10px; }
+  .dashboard-f { background:linear-gradient(#dcefe7,#eff6f1 290px,#f4f7f5); }
+  .f-status { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:1px; border-radius:20px; overflow:hidden; background:#d9e8df; }
+  .f-status button { background:rgba(255,255,255,.88); padding:13px 12px; min-height:82px; }
+  .f-status small,.f-status b { display:block; }
+  .f-status small { font-size:10px; color:#758e82; }
+  .f-status b { font-size:20px; margin-top:3px; color:#31574a; }
+  .f-status b i { font-style:normal; font-size:10px; font-weight:400; }
+  .dash-section { display:flex; justify-content:space-between; align-items:center; margin:19px 2px 9px; }
+  .dash-section b { font-size:15px; }
+  .dash-section button,.dash-section span { color:#789083; font-size:10px; }
+  .f-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .f-device { position:relative; min-height:133px; border-radius:19px; padding:13px; background:#fff; overflow:hidden; }
+  .f-device img { position:absolute; width:75px; height:75px; right:7px; top:9px; object-fit:contain; }
+  .f-device .tag { display:block; color:#6f9a86; font-size:10px; }
+  .f-device b { display:block; margin-top:51px; font-size:13px; }
+  .f-device small { display:block; margin-top:3px; color:#889c90; font-size:10px; }
+  .f-device.warn { background:#fff7e9; }
+  .f-device.warn .tag { color:#b57626; }
+  .dash-alert { width:100%; margin-top:10px; border-radius:15px; padding:12px 14px; background:#fff3df; color:#94611f; font-size:11px; }
+  .dash-task { width:100%; display:flex; align-items:center; justify-content:space-between; padding:13px 15px; border-radius:16px; background:#fff; }
+  .dash-task b,.dash-task small { display:block; }
+  .dash-task small { color:#87988f; margin-top:3px; }
+  .dash-task span { font-size:10px; color:#638573; }
+  .dash-agent { display:flex; justify-content:space-between; width:100%; margin-top:17px; padding:14px 16px; background:#dfeee5; border-radius:16px; color:#386b55; font-weight:600; }
+  .dashboard-g { background:#f3f6fa; }
+  .g-hero { position:relative; border-radius:22px; padding:19px; min-height:178px; overflow:hidden; background:linear-gradient(130deg,#e1edf9,#f9fcff); }
+  .g-hero .g-label { font-size:11px; color:#617f9e; }
+  .g-hero .g-temp { font-size:45px; letter-spacing:-2px; line-height:1.2; font-weight:700; color:#315a80; margin-top:14px; }
+  .g-hero .g-temp small { font-size:16px; letter-spacing:0; }
+  .g-hero .g-sub { color:#6786a3; font-size:11px; }
+  .g-hero img { position:absolute; width:116px; height:116px; object-fit:contain; right:9px; top:31px; }
+  .g-hero button { position:absolute; inset:0; width:100%; }
+  .g-stats { display:flex; gap:8px; margin-top:10px; }
+  .g-stats button { flex:1; min-width:0; padding:12px; border-radius:15px; background:white; }
+  .g-stats small,.g-stats b { display:block; }
+  .g-stats small { color:#8393a2; font-size:10px; }
+  .g-stats b { font-size:16px; margin-top:4px; color:#425c78; }
+  .g-ribbon { display:flex; gap:9px; overflow-x:auto; margin:0 -15px; padding:1px 15px 6px; scrollbar-width:none; }
+  .g-ribbon button { flex:0 0 112px; border-radius:18px; background:white; padding:11px; }
+  .g-ribbon img { display:block; height:64px; width:100%; object-fit:contain; }
+  .g-ribbon b,.g-ribbon small { display:block; }
+  .g-ribbon b { font-size:12px; margin-top:7px; }
+  .g-ribbon small { color:#8b9ba8; font-size:10px; margin-top:3px; }
+  .g-energy { display:flex; align-items:end; gap:15px; width:100%; padding:15px; background:#eaf1fc; border-radius:18px; }
+  .g-energy strong,.g-energy small { display:block; }
+  .g-energy strong { font-size:23px; color:#466eae; }
+  .g-energy small { font-size:10px; color:#8197b4; }
+  .g-bars { height:38px; display:flex; gap:5px; align-items:end; margin-left:auto; }
+  .g-bars i { width:8px; background:#a8c4e8; border-radius:4px 4px 0 0; }
+  .g-bars i:last-child { background:#719ed8; }
+  .g-actions { display:flex; gap:8px; }
+  .g-actions button { flex:1; border-radius:15px; padding:12px; background:white; color:#516b85; font-size:11px; }
+  .g-actions b { display:block; font-size:14px; margin-bottom:3px; color:#344b65; }
+  .pg.va { background:linear-gradient(180deg,var(--amb1) 0,var(--amb2) 150px,var(--amb3) 300px,var(--amb3) 100%); color:var(--ink); font-size:12.5px; }
+  .pg.vb { background:linear-gradient(160deg,#ffe4e7 0%,#ffeef0 90px,#eef2fb 200px,#e9f6f1 320px,#f6f8f7 520px,#f6f8f7 100%); color:#3a3226; font-size:12.5px; }
+  .va .pg-scroll, .vb .pg-scroll { padding:0; }
+
+  /* H：G 的业务对齐稿；状态切换条属于原型，不属于产品。 */
+  .preview-states { display:flex; flex-wrap:wrap; gap:7px; margin-top:15px; align-items:center; font-size:12px; color:#526b7b; }
+  .preview-states[hidden] { display:none; }
+  .preview-states button { border:1px solid #cad8e5; border-radius:16px; padding:7px 11px; background:white; color:#46627c; }
+  .preview-states button[aria-pressed="true"] { background:#dfeefa; border-color:#8aadc9; color:#224f74; font-weight:600; }
+  .design-notes { margin-top:26px; color:#344b5c; line-height:1.7; font-size:13px; }
+  .design-notes h2 { margin:20px 0 7px; font-size:16px; }
+  .design-notes p { margin:5px 0; }
+  .design-notes table { width:100%; border-collapse:collapse; background:white; }
+  .design-notes th,.design-notes td { padding:9px 10px; border-bottom:1px solid #e3e9ef; text-align:left; vertical-align:top; }
+  .design-notes th { color:#476276; }
+  .dashboard-h { background:#f3f7fa; color:#223c50; }
+  .dashboard-h .pg-scroll { padding:0 16px 36px; }
+  .h-nav { display:flex; align-items:center; min-height:52px; gap:8px; }
+  .h-nav button { min-height:44px; display:flex; align-items:center; justify-content:center; color:#345c79; }
+  .h-nav .h-back { width:40px; }
+  .h-nav svg { width:19px; height:19px; }
+  .h-nav strong { flex:1; font-size:15px; }
+  .h-nav .h-office { padding:0 9px; font-size:12px; }
+  .h-nav .h-notice { position:relative; width:40px; }
+  .h-notice i { position:absolute; top:1px; right:0; font-style:normal; font-size:10px; color:white; background:#ad573c; min-width:17px; height:17px; border-radius:10px; text-align:center; }
+  .h-head { display:flex; align-items:end; justify-content:space-between; padding:8px 2px 14px; }
+  .h-head h2 { font-size:23px; letter-spacing:-.4px; }
+  .h-head small { display:block; color:#526f84; font-size:11px; margin-top:3px; }
+  .h-head button { min-height:44px; color:#365f80; font-size:12px; }
+  .h-hero { position:relative; background:linear-gradient(125deg,#e0effb,#f8fcff); border:1px solid #d9e9f5; border-radius:22px; padding:17px 16px; min-height:172px; }
+  .h-hero button { position:absolute; inset:0; width:100%; border-radius:22px; }
+  .h-hero .h-eyebrow { color:#416985; font-size:11px; }
+  .h-hero .h-name { display:block; color:#466b84; font-size:11px; margin-top:3px; }
+  .h-hero strong { display:block; color:#254f70; font-size:39px; line-height:1.15; margin-top:13px; font-variant-numeric:tabular-nums; }
+  .h-hero strong small { font-size:15px; }
+  .h-hero .h-meta { color:#476c84; font-size:11px; margin-top:5px; display:block; }
+  .h-hero img { position:absolute; right:10px; top:43px; width:105px; height:105px; object-fit:contain; }
+  .h-hero .h-state { display:block; color:#815a27; font-size:11px; margin-top:7px; max-width:68%; }
+  .h-mini { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:9px; }
+  .h-mini button { min-width:0; min-height:72px; border-radius:16px; padding:10px; background:white; color:#31516b; }
+  .h-mini small,.h-mini b { display:block; }
+  .h-mini small { color:#597587; font-size:10px; }
+  .h-mini b { font-size:14px; margin-top:5px; }
+  .h-section { display:flex; justify-content:space-between; align-items:center; margin:18px 2px 8px; }
+  .h-section h3 { font-size:15px; }
+  .h-section button { min-height:36px; color:#315f83; font-size:11px; }
+  .h-energy { width:100%; display:flex; justify-content:space-between; align-items:center; gap:12px; border-radius:18px; padding:14px; background:#e8f1fc; color:#31567a; }
+  .h-energy strong,.h-energy small { display:block; }
+  .h-energy strong { font-size:24px; line-height:1.25; margin:4px 0; }
+  .h-energy strong span { font-size:12px; }
+  .h-energy small { font-size:10px; color:#536f8a; }
+  .h-energy .h-note { color:#805b27; margin-top:4px; }
+  .h-bars { display:flex; height:42px; flex-shrink:0; align-items:end; gap:4px; }
+  .h-bars i { width:7px; border-radius:4px 4px 0 0; background:#9fbfe0; }
+  .h-bars i:last-child { background:#5b8fc0; }
+  .h-strip { display:flex; gap:8px; overflow-x:auto; margin:0 -16px; padding:0 16px 6px; scrollbar-width:none; }
+  .h-strip button { flex:0 0 108px; background:#fff; border-radius:16px; padding:10px; color:#29475e; }
+  .h-strip img { display:block; width:100%; height:57px; object-fit:contain; }
+  .h-strip b,.h-strip small { display:block; }
+  .h-strip b { margin-top:5px; font-size:12px; }
+  .h-strip small { margin-top:3px; color:#597587; font-size:10px; }
+  .h-task { width:100%; padding:12px 13px; background:#fff; color:#2b4c65; border-radius:15px; display:flex; align-items:center; gap:10px; margin-top:7px; }
+  .h-task time { font-weight:700; color:#315f83; }
+  .h-task .h-task-copy { flex:1; min-width:0; }
+  .h-task b,.h-task small { display:block; }
+  .h-task small { color:#607c8b; font-size:10px; margin-top:2px; }
+  .h-task .h-task-state { font-size:10px; color:#4d718b; }
+  .h-agent { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:52px; border-radius:16px; padding:12px 14px; background:#e3f0f7; color:#285a77; margin-top:17px; font-weight:600; }
+  .dashboard-h button:focus-visible { outline:2px solid #315f83; outline-offset:2px; }
+
+
+
+  /* ============ 变体切换悬浮条（原型装置，非产品 UI） ============ */
+  .vbar { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:99;
+    display:flex; align-items:center; gap:2px; padding:5px; border-radius:22px;
+    background:#fff; color:#304a40; box-shadow:0 5px 24px rgba(50,75,60,.18); border:1px solid #dce7e0; font-size:12px; }
+  .vbar button { width:30px; height:30px; border-radius:16px; display:flex; align-items:center; justify-content:center; color:#304a40; text-align:center; }
+  .vbar button:hover { background:#edf4ef; }
+  .vbar button svg { width:14px; height:14px; }
+  .vbar .vlabel { min-width:120px; text-align:center; font-weight:600; padding:0 6px; }
+  .vbar .vlabel small { font-weight:400; color:#6b8278; margin-left:4px; }
+
+  /* ============ Sheet 壳（还原 DeviceSheet：handle-zone + header-top） ============ */
+  .sheet-scrim { position:absolute; inset:0; background:rgba(20,30,50,.38); opacity:0; pointer-events:none; transition:opacity .22s ease; z-index:20; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:36px; background:#f5f7f9; border-radius:16px 16px 0 0; transform:translateY(102%); transition:transform .26s cubic-bezier(.23,1,.32,1); z-index:21; display:flex; flex-direction:column; box-shadow:0 -8px 32px rgba(22,34,60,.14); }
+  .phone.sheet-open .sheet-scrim { opacity:1; pointer-events:auto; }
+  .phone.sheet-open .sheet { transform:translateY(0); }
+  .sheet-handle { height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .sheet-handle::before { content:''; width:36px; height:4px; border-radius:4px; background:#c7cdd6; }
+  .sheet-head { display:flex; align-items:flex-start; padding:0 20px 10px; flex-shrink:0; }
+  .sheet-head .hc { flex:1; min-width:0; }
+  .sheet-head .t { font-size:19px; font-weight:600; color:#20242b; }
+  .sheet-head .m { display:block; font-size:12px; color:#7c8598; margin-top:3px; }
+  .sheet-close { width:40px; height:40px; margin:-8px -8px 0 6px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .sheet-close svg { width:20px; height:20px; }
+  .sheet-body { flex:1; min-height:0; overflow-y:auto; padding:0 18px 20px; scrollbar-width:none; }
+  .sheet-body::-webkit-scrollbar { display:none; }
+
+  /* ============ 还原 SafetyHistoryList（类型胶囊 + 日期行 + 纸面记录卡） ============ */
+  .led-types { display:flex; gap:6px; padding:3px; border-radius:12px; background:#eceff4; }
+  .led-types button { flex:1; min-height:36px; display:flex; align-items:center; justify-content:center; color:#7b8496; border-radius:9px; font-size:13px; }
+  .led-types .on { background:#fff; color:var(--acc-deep); font-weight:600; box-shadow:0 1px 4px rgba(30,38,60,.08); }
+  .led-dates { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:11px; color:#7b8496; flex-wrap:wrap; }
+  .led-dates .dbtn { display:flex; align-items:center; gap:5px; min-height:30px; padding:0 8px; border:1px solid #dfe4ec; border-radius:7px; color:#5d6776; }
+  .led-dates .dbtn svg { width:9px; height:9px; }
+  .led-dates .reset { color:var(--acc); min-height:30px; padding:0 6px; font-size:11px; }
+  .led-paper { margin-top:12px; padding:0 14px; background:#fff; border:1px solid #e3e8ef; border-radius:14px; box-shadow:var(--sh); }
+  .led-rec { display:flex; align-items:center; gap:10px; width:100%; min-height:66px; padding:12px 0; border-bottom:1px solid #eceff4; }
+  .led-rec:last-child { border-bottom:0; }
+  .led-rec .rc { flex:1; min-width:0; }
+  .led-rec .nm { display:block; font-size:13px; font-weight:600; color:#2c3547; }
+  .led-rec .tm, .led-rec .loc { display:block; margin-top:3px; font-size:11px; color:#8a93a6; }
+  .led-rec .go svg { width:11px; height:11px; }
+  .led-more { margin:12px 0 4px; width:100%; min-height:38px; display:flex; align-items:center; justify-content:center; color:var(--acc); background:var(--tint); border-radius:10px; font-size:12px; }
+
+  /* ============ 还原 CompanyEnergyStrip（细柱 + 斜标签） ============ */
+  .estrip { margin-top:14px; display:flex; align-items:flex-end; justify-content:space-between; }
+  .estrip .eday { display:flex; flex-direction:column; align-items:center; width:22px; }
+  .estrip .ebar { width:100%; height:64px; display:flex; align-items:flex-end; justify-content:center; }
+  .estrip .bar { display:block; width:8px; border-radius:2.5px; background:#d4dbe8; }
+  .estrip .bar.sel { background:var(--acc); }
+  .estrip .elab { position:relative; width:100%; height:34px; }
+  .estrip .lab { position:absolute; right:11px; top:1px; font-size:7.5px; color:#8a93a6; white-space:nowrap; transform:rotate(-60deg); transform-origin:top right; }
+  .estrip .lab.sel { color:var(--acc); font-weight:700; }
+
+  /* ============ 还原 EnergyComparisonReport（月度对比卡） ============ */
+  .dcard { background:#fff; border-radius:16px; padding:14px; box-shadow:var(--sh); }
+  .dcard + .dcard { margin-top:10px; }
+  .dcard .blk-k { display:flex; align-items:baseline; justify-content:space-between; font-size:13.5px; font-weight:600; }
+  .month-head { display:flex; justify-content:space-between; font-size:11px; color:var(--ink2); }
+  .month-head .cutoff { color:var(--mut); font-size:10px; }
+  .hero-num { display:block; margin-top:8px; font-size:28px; font-weight:600; color:var(--acc-deep); font-variant-numeric:tabular-nums; }
+  .hero-num .unit { font-size:12px; font-weight:400; color:var(--mut); }
+  .window { display:block; font-size:10px; color:var(--mut); margin-top:3px; }
+  .comparisons { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .compare { background:var(--tint2); border-radius:13px; padding:11px; }
+  .compare-heading { display:flex; justify-content:space-between; font-size:10.5px; color:var(--ink2); }
+  .compare-heading svg { width:10px; height:10px; color:var(--mut); }
+  .pct { display:block; margin-top:7px; font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .pct.down { color:var(--ok); } .pct.up { color:var(--warn); }
+  .bar-row { margin-top:7px; }
+  .bar-values { display:flex; justify-content:space-between; font-size:9.5px; color:var(--mut); }
+  .bar-values .amount { color:var(--ink2); font-variant-numeric:tabular-nums; }
+  .track { height:5px; border-radius:3px; background:#e5e9f2; margin-top:3px; overflow:hidden; }
+  .track .fill { display:block; height:100%; border-radius:3px; background:var(--acc); }
+  .track.base .fill { background:#b6c0d6; }
+  .summary { display:block; margin-top:7px; font-size:9.5px; color:var(--mut); line-height:1.5; }
+  .periods { display:flex; justify-content:space-between; margin-top:5px; font-size:9px; color:var(--mut); }
+
+  /* ============ 还原 TaskCalendar（日期轨 + 议程行） ============ */
+  .agenda-day { display:flex; gap:10px; margin-top:12px; }
+  .agenda-rail { width:32px; flex-shrink:0; text-align:center; }
+  .rail-num { display:block; font-size:18px; font-weight:600; color:var(--acc-deep); font-variant-numeric:tabular-nums; }
+  .rail-wd { display:block; font-size:9.5px; color:var(--mut); }
+  .agenda-rows { flex:1; min-width:0; }
+  .agenda-row { display:flex; align-items:center; gap:9px; width:100%; padding:9px 11px; border-radius:12px; background:var(--tint2); }
+  .agenda-row + .agenda-row { margin-top:7px; }
+  .row-clock { font-size:11px; color:var(--ink2); font-variant-numeric:tabular-nums; flex-shrink:0; }
+  .row-copy { flex:1; min-width:0; }
+  .row-name { display:block; font-size:12px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row-rule { display:block; font-size:9.5px; color:var(--mut); margin-top:1px; }
+  .row-state { flex-shrink:0; font-size:9.5px; padding:2px 7px; border-radius:8px; }
+  .row-state--go { color:var(--acc-deep); background:var(--tint); }
+  .row-state--wait { color:var(--mut); background:#eff2f7; }
+  .row-more { display:block; font-size:10px; color:var(--mut); margin-top:6px; padding-left:2px; }
+  .task-foot { display:block; width:100%; margin-top:12px; font-size:11px; color:var(--acc); }
+
+  /* ============ 设备目录（一级类型卡 → 二级实例列表） ============ */
+  .tgrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tcard { position:relative; background:#fff; border-radius:16px; padding:12px 12px 11px; box-shadow:var(--sh);
+    display:flex; flex-direction:column; min-height:104px; }
+  .tcard .tart { flex:1; display:flex; align-items:center; justify-content:center; margin:2px 0 4px; min-height:42px; }
+  .tcard .tart img { max-width:60px; max-height:46px; object-fit:contain; }
+  .tcard .tcopy { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .tcard .tname { font-size:12.5px; font-weight:600; }
+  .tcard .tcnt { font-size:10px; color:var(--acc-deep); font-weight:600; font-variant-numeric:tabular-nums; }
+  .tcard .tstate { display:flex; align-items:center; gap:5px; margin-top:3px; font-size:9.5px; color:var(--mut); }
+  .tcard .tstate .dot { width:5px; height:5px; border-radius:50%; background:var(--ok); flex-shrink:0; }
+  .tcard .tstate.warn .dot { background:var(--warn); }
+  .tcard .tstate.warn { color:var(--warn); }
+  /* 末行单卡通栏横排，不留半空位 */
+  .tcard:last-child:nth-child(odd) { grid-column:1/-1; flex-direction:row; align-items:center; gap:12px; min-height:0; padding:11px 14px; }
+  .tcard:last-child:nth-child(odd) .tart { flex:0 0 auto; margin:0; min-height:34px; }
+  .tcard:last-child:nth-child(odd) .tart img { max-width:44px; max-height:34px; }
+  .tcard:last-child:nth-child(odd) .tcopy { flex:1; flex-direction:column; align-items:flex-start; gap:1px; }
+  .tcard:last-child:nth-child(odd) .tstate { margin-left:auto; }
+  /* 二级：实例列表（drow 行复用 roster/drawer 行语言） */
+  .dlist { background:#fff; border-radius:14px; box-shadow:var(--sh); padding:3px 14px; }
+  .drow { display:flex; align-items:center; gap:11px; padding:11px 0; width:100%; }
+  .drow + .drow { border-top:1px solid var(--line); }
+  .drow .dart { width:36px; height:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .drow .dart img { max-width:36px; max-height:34px; object-fit:contain; }
+  .drow .dcopy { flex:1; min-width:0; }
+  .drow .dname { font-size:12.5px; font-weight:600; }
+  .drow .dloc { font-size:10px; color:var(--mut); margin-top:2px; display:block; }
+  .drow .dstate { flex-shrink:0; display:flex; align-items:center; gap:5px; font-size:10px; color:var(--mut); }
+  .drow .dstate .dot { width:6px; height:6px; border-radius:50%; background:var(--ok); }
+  .drow .dstate.warn .dot { background:var(--warn); }
+  .drow .dstate.warn { color:var(--warn); }
+  .sheet-back { width:34px; height:34px; margin:4px 8px 0 -8px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .sheet-back svg { width:16px; height:16px; }
+
+  /* ============ 还原 TaskInboxContent（通知行） ============ */
+  .inrow { display:flex; align-items:flex-start; gap:9px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .inrow:last-child { border-bottom:0; }
+  .inrow .udot { width:7px; height:7px; border-radius:50%; margin-top:6px; flex-shrink:0; background:transparent; }
+  .inrow .udot.on { background:#b0833c; box-shadow:0 0 0 3px #f5eddf; }
+  .inrow .ib { flex:1; min-width:0; }
+  .inrow .it { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .inrow .iname { font-size:13px; font-weight:600; color:#2c3547; }
+  .inrow .itime { font-size:9.5px; color:var(--mut); flex-shrink:0; }
+  .inrow .isub { font-size:10.5px; color:var(--mut); margin-top:3px; line-height:1.55; display:block; }
+  .inrow .itag { font-size:9.5px; margin-top:4px; display:block; }
+  .itag.ok { color:var(--ok); } .itag.warn { color:var(--warn); } .itag.mut { color:var(--mut); }
+  .ibox { background:#fff; border-radius:14px; box-shadow:var(--sh); padding:3px 14px; }
+
+  /* ============ 还原 ObservationCard（环境块 + 指标格） ============ */
+  .oblock { background:#fff; border-radius:14px; box-shadow:var(--sh); padding:12px 13px; }
+  .oblock + .oblock { margin-top:10px; }
+  .oblock-head { display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:700; color:#4e5566; }
+  .oblock-head .count { color:var(--mut); font-weight:500; }
+  .egrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:10px; }
+  .ecell { padding:8px 7px 7px; border-radius:8px; background:var(--tint2); box-shadow:inset 0 0 0 .5px #e4e9f2; }
+  .ev { display:block; font-size:13px; font-weight:700; color:#2c3547; font-variant-numeric:tabular-nums; }
+  .ek { display:block; margin-top:2px; font-size:9px; color:var(--mut); }
+  .orow { display:flex; align-items:center; gap:7px; margin-top:10px; }
+  .orow .dot { width:7px; height:7px; border-radius:50%; background:var(--ok); flex-shrink:0; }
+  .orow .nm { max-width:48%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:12px; font-weight:600; color:#2c3547; }
+  .orow .loc { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:10px; color:var(--mut); }
+  .orow .vbtn { flex-shrink:0; height:26px; padding:0 11px; border-radius:13px; display:flex; align-items:center; font-size:10px; font-weight:600; color:#fff; background:var(--solid); }
+  .omet { display:block; margin-top:7px; font-size:10px; color:var(--mut); }
+
+  /* 办公室入口卡 */
+  .office-cta { display:flex; align-items:center; gap:12px; background:#fff; border-radius:15px; padding:14px; box-shadow:var(--sh); }
+  .office-cta .of-ic { width:40px; height:40px; border-radius:12px; background:var(--tint); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .office-cta .of-ic svg { width:20px; height:20px; }
+  .office-cta .t { font-size:14px; font-weight:600; }
+  .office-cta .s { font-size:10.5px; color:var(--mut); margin-top:2px; display:block; }
+  .office-cta .go { margin-left:auto; padding:7px 14px; border-radius:14px; background:var(--solid); color:#fff; font-size:12px; font-weight:600; flex-shrink:0; }
+  .office-list { margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>物联助手仪表盘 · 自定义设计语言（proto-dashboard-brand）</h1>
+  <p class="q">原方案保留：A、B、F、G。<code>?variant=H</code> 为客户选定的 G 方案精细化与业务对齐稿。数值、任务和二级内容仅为示例；不连接真实设备。</p>
+  <div class="preview-states" id="preview-states" hidden aria-label="原型状态预览"><span>状态预览（非产品控件）：</span><button data-preview="ready">正常</button><button data-preview="preparing">能耗准备中</button><button data-preview="stale">能耗沿用</button><button data-preview="error">环境不可用</button></div>
+  <div class="stage" id="stage"></div>
+  <section class="design-notes" id="design-notes" hidden>
+   <h2>G 方向 · 设计语言</h2>
+   <p>浅蓝灰底与白色卡片；环境使用浅蓝渐变作为首屏视觉锚点。主文字深蓝灰，蓝色用于可操作入口，琥珀色只提示历史记录或更新问题；设备图是类别识别，不代表设备在线状态。</p>
+   <p>页面标题 23px，环境主值 39px，区块标题 15px；间距以 8px 为基本节奏，页面左右 16px，主卡圆角 22px、普通卡 15–18px。状态不只靠颜色表达。以上为原型 CSS 像素，落地时换算并适配小程序。</p>
+   <h2>组件改进建议与业务映射</h2>
+   <table><thead><tr><th>组件</th><th>本稿决策 / 生产接入建议</th></tr></thead><tbody>
+    <tr><td>环境主卡</td><td>显示当前选取的传感器名称、温湿度与 PM2.5；缺值显示“—”，不称公司平均值。沿用 dashboard.vue 的 environment 与 EnvironmentHistoryView。</td></tr>
+    <tr><td>用电卡</td><td>标明计量日、单位和数据范围；只在完整可比时展示对比。沿用 CompanyEnergyStrip / CompanyEnergySheet 和既有日柱口径。</td></tr>
+    <tr><td>安全、设备、通知</td><td>历史台账不冒充实时告警；目录数量不等于在线数量；未读读取失败不显示 0。各区独立加载与报错。</td></tr>
+    <tr><td>设备条与抽屉</td><td>保留七类目录和只读入口，横滑露出下一卡；落地复用 CompanyDeviceDrawer，按授权目录和实际数据展示，不在首页提供控制开关。</td></tr>
+    <tr><td>任务与 Agent</td><td>任务与通知复用 TaskListSheet / CompanyTaskOverview；公司助手复用 CompanyAgentFloat，办公室为独立入口。提案仍需确认，不从首页直接执行。</td></tr>
+    <tr><td>加载与异常</td><td>准备中不是空数据；同身份旧数据沿用时标示更新未完成；无旧数据才显示暂不可用并提供重试。身份变化须清除旧数据。</td></tr>
+   </tbody></table>
+   <p>此稿仅展示前端设计与示例状态；现有 Sheet 为原型示意，并非真实生产组件或客户验收证据。</p>
+  </section>
+</div>
+<div class="vbar"><button id="vprev" aria-label="上一个方案"><svg viewBox="0 0 24 24"><use href="#ic-back"/></svg></button><span class="vlabel" id="vlabel"></span><button id="vnext" aria-label="下一个方案"><svg viewBox="0 0 24 24"><use href="#ic-right"/></svg></button></div>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <g id="ic-back"><path d="M15 4 7 12l8 8" fill="none" stroke="#4a5568" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="ic-right"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="ic-fwd"><path d="M5 12h13m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="ic-chev"><path d="M8 5l6 7-6 7" fill="none" stroke="#3d4a60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="ic-down"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="ic-close"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="#42506b" stroke-width="2" stroke-linecap="round"/></g>
+    <g id="ic-send"><path d="M4 12 20 5l-6 7 6 7-16-7z" fill="#fff" transform="rotate(8 12 12) scale(.9) translate(1 1)"/></g>
+    <g id="ic-mic"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z" fill="none" stroke="#42506b" stroke-width="1.7"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4" fill="none" stroke="#42506b" stroke-width="1.7" stroke-linecap="round"/></g>
+    <g id="ic-spark"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" fill="#fff"/></g>
+    <g id="ic-warn"><circle cx="12" cy="12" r="8.4" fill="none" stroke="#a86e18" stroke-width="1.7"/><path d="M12 8v4.5" stroke="#a86e18" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="15.8" r=".9" fill="#a86e18"/></g>
+    <g id="ic-sun"><circle cx="12" cy="12" r="4" fill="none" stroke="#3d4a60" stroke-width="1.7"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" stroke="#3d4a60" stroke-width="1.7" stroke-linecap="round"/></g>
+    <g id="ic-clock"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.6V12l3 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="ic-grid"><rect x="4" y="4" width="7" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="4" width="7" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="13" width="7" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="13" width="7" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.7"/></g>
+    <g id="ic-mail"><rect x="3.5" y="5.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m4.5 7 7.5 6 7.5-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="ic-loc"><path d="M12 21c4-4.5 6.5-8 6.5-11A6.5 6.5 0 0 0 12 3.5 6.5 6.5 0 0 0 5.5 10c0 3 2.5 6.5 6.5 11z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.7"/></g>
+    <g id="d-sensor"><rect x="7" y="4" width="10" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 16.5h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></g>
+    <g id="d-meter"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="16.5" cy="15.5" r="1" fill="currentColor"/></g>
+    <g id="d-alarm"><path d="M12 4c3 0 5 2.2 5 5.2V14l1.5 3h-13L7 14V9.2C7 6.2 9 4 12 4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10.5 19.5a1.5 1.5 0 0 0 3 0" fill="none" stroke="currentColor" stroke-width="1.7"/></g>
+    <g id="d-bell"><path d="M12 4c3 0 5 2.2 5 5.2V14l1.5 3h-13L7 14V9.2C7 6.2 9 4 12 4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10.5 19.5a1.5 1.5 0 0 0 3 0" fill="none" stroke="currentColor" stroke-width="1.7"/></g>
+    <g id="d-chat"><path d="M12 4c-4.7 0-8.5 3.1-8.5 7 0 2.2 1.2 4.2 3.1 5.5L6 20l3.7-1.9c.7.2 1.5.3 2.3.3 4.7 0 8.5-3.1 8.5-7S16.7 4 12 4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></g>
+    <g id="d-light"><path d="M9 3.5h6l2 6.5H7l2-6.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 10v4M9.5 17h5M10.5 20h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></g>
+    <g id="ic-add"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></g>
+    <g id="ic-chat"><path d="M12 4c-4.7 0-8.5 3.1-8.5 7 0 2.2 1.2 4.2 3.1 5.5L6 20l3.7-1.9c.7.2 1.5.3 2.3.3 4.7 0 8.5-3.1 8.5-7S16.7 4 12 4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></g>
+  </defs>
+</svg>
+
+<script>
+/* —— 数据：来自 dashboard.vue 的真实投影口径 —— */
+const LEDGERS = [
+ ['三层烟感探测器','告警 · 10-21 14:32','当前位置：三层走廊'],
+ ['厨房燃气报警器','告警 · 09-18 09:05','当前位置：厨房'],
+ ['水泵房水浸探头','告警 · 08-02 22:41','当前位置：地下水泵房'],
+ ['一层烟感探测器','告警 · 07-14 11:20','当前位置：一层大厅'],
+ ['车库水浸探头','告警 · 06-30 16:08','当前位置：车库'],
+ ['厨房燃气报警器','告警 · 05-19 03:52','当前位置：厨房'],
+ ['二层烟感探测器','告警 · 04-02 20:15','当前位置：二层办公区'],
+]
+const AGENDA = [
+ { num:'01', wd:'六', rows:[ ['14:00','空调巡检','每两周 · 5 台','待执行','go'], ['18:30','照明定时关闭','每日','已排期','wait'] ] },
+ { num:'03', wd:'一', rows:[ ['09:00','月度能耗报表','每月','已排期','wait'], ['','还有 1 项','','','more'] ] },
+]
+const DAYS = [ ['10-25',46],['10-26',52],['10-27',40],['10-28',58],['10-29',63],['10-30',55],['10-31',72] ]
+const ART = '../../../static/device-art/'
+const ART_ = {
+ env: ART+'environment-air-quality-sensor.png', energy: ART+'energy-digital-meter.png',
+ safety: ART+'safety-smoke-detector.png', ac: ART+'central-ac-cassette.png',
+ lighting: ART+'lighting-grille-luminaire.png', access: ART+'access-sliding-door.png', video: ART+'video-dome-camera.png' }
+/* 设备目录一级 = 类型卡（对齐设备域 kind 分区，不按位置）；二级 = 该类型设备实例列表 */
+const DEVTYPES = [
+ ['energy','energy','电表','43','昨日 1,286 度',0],
+ ['ac','ac','智慧空调','5','制冷 26° 巡检中',0],
+ ['safety','safety','消防安全','3','10-21 有告警',1],
+ ['environment','env','环境传感器','2','24.6° · 52% · 优',0],
+ ['lighting','lighting','照明','2','定时 18:30 关',0],
+ ['access','access','门禁','1','在线',0],
+ ['video','video','视频监控','1','在线',0],
+]
+const DEVLIST = {
+ environment: [['env','空气质量传感器','一楼大厅','正常'],['env','温湿度传感器','二层办公区','正常']],
+ energy: [['energy','配电间总表','配电间','正常'],['energy','一层分表','一层','正常'],['energy','二层分表','二层','正常'],['energy','空调专线表','设备间','正常'],['energy','照明回路表','设备间','正常']],
+ safety: [['safety','烟感探测器','一层','正常'],['safety','烟感探测器','三层','10-21 告警'],['safety','燃气报警器','厨房','正常'],['safety','水浸探头','水泵房','正常']],
+ ac: [['ac','智慧空调 A','二层办公区','制冷 26°'],['ac','智慧空调 B','二层办公区','待机'],['ac','智慧空调 C','一层','关闭'],['ac','智慧空调 D','三层','巡检中'],['ac','智慧空调 E','机房','在线']],
+ lighting: [['lighting','一层照明回路','一层','定时 18:30'],['lighting','二层照明回路','二层','定时 18:30']],
+ access: [['access','大厅门禁','大厅入口','在线']],
+ video: [['video','大厅监控','大厅入口','在线']],
+}
+const TYPENAME = { environment:'环境传感器', energy:'电表', safety:'消防安全', ac:'智慧空调', lighting:'照明', access:'门禁', video:'视频监控' }
+const INBOX = [
+ ['任务完成','空调巡检 · 5 台已下发，4 台已回执','执行成功','ok','09:41',1],
+ ['报告就绪','10 月能耗月报已生成，可查看逐表对比','月报','mut','昨天',1],
+ ['系统通知','本周巡检计划已同步至任务中心','','mut','周四',0],
+ ['任务提醒','照明定时关闭 18:30 执行','已排期','ok','周三',0],
+]
+const NEUT='#42506b', ACC='var(--acc)', WARM='#a86e18'
+const icon = (id, color=NEUT) => `<svg viewBox="0 0 24 24" style="color:${color}" aria-hidden="true"><use href="#${id}"/></svg>`
+
+const monthlyHTML = () => `<div class="dcard" style="margin-top:10px">
+  <div class="month-head"><span>本月用电</span><span class="cutoff">统计截至 10-30 20:00</span></div>
+  <span class="hero-num">38,412<span class="unit"> 度</span></span>
+  <span class="window">10月1日 08:00 起 · 全部授权电表合计</span>
+  <span class="window">每月 1 日 08:00 起算 · 每日 08:00 / 20:00 更新</span>
+  <div class="comparisons">
+   <button class="compare"><div class="compare-heading"><span>环比上月 · 同期</span>${icon('ic-right','#8a93a6')}</div><span class="pct down">−6.2%</span>
+    <div class="bar-row"><div class="bar-values"><span>本月</span><span class="amount">38,412 度</span></div><div class="track"><span class="fill" style="width:94%"></span></div></div>
+    <div class="bar-row"><div class="bar-values"><span>上月同期</span><span class="amount">40,951 度</span></div><div class="track base"><span class="fill" style="width:100%"></span></div></div>
+    <span class="summary">少 2,539 度 · 同期日均低 6.2%</span><div class="periods"><span>本期 10.01–10.30</span><span>对照 09.01–09.30</span></div></button>
+   <button class="compare"><div class="compare-heading"><span>同比去年 · 同期</span>${icon('ic-right','#8a93a6')}</div><span class="pct up">+3.8%</span>
+    <div class="bar-row"><div class="bar-values"><span>本月</span><span class="amount">38,412 度</span></div><div class="track"><span class="fill" style="width:100%"></span></div></div>
+    <div class="bar-row"><div class="bar-values"><span>去年同期</span><span class="amount">37,006 度</span></div><div class="track base"><span class="fill" style="width:96%"></span></div></div>
+    <span class="summary">多 1,406 度 · 同期日均高 3.8%</span><div class="periods"><span>本期 10.01–10.30</span><span>对照 24.10.01–30</span></div></button>
+  </div></div>`
+
+/* —— Sheet 内容：逐件还原生产组件 —— */
+const SHEETS = {
+ env: { t:'环境传感器', m:'2 台 · 只读观察', body: () =>
+   `<div class="oblock"><div class="oblock-head"><span>一楼大厅</span><span class="count">1 台</span></div>
+     <div class="egrid"><div class="ecell"><span class="ev">24.6°</span><span class="ek">温度</span></div>
+      <div class="ecell"><span class="ev">52%</span><span class="ek">湿度</span></div>
+      <div class="ecell"><span class="ev">18</span><span class="ek">PM2.5</span></div></div>
+     <div class="orow"><i class="dot"></i><span class="nm">空气质量传感器</span><span class="loc">大厅北侧</span><button class="vbtn">查看趋势</button></div>
+     <span class="omet">今日 20:00 更新 · 数据源：环境台账</span></div>
+   <div class="oblock"><div class="oblock-head"><span>二层办公区</span><span class="count">1 台</span></div>
+     <div class="egrid"><div class="ecell"><span class="ev">23.9°</span><span class="ek">温度</span></div>
+      <div class="ecell"><span class="ev">48%</span><span class="ek">湿度</span></div>
+      <div class="ecell"><span class="ev">22</span><span class="ek">PM2.5</span></div></div>
+     <div class="orow"><i class="dot"></i><span class="nm">温湿度传感器</span><span class="loc">办公区东侧</span><button class="vbtn">查看趋势</button></div>
+     <span class="omet">今日 20:00 更新 · 数据源：环境台账</span></div>` },
+ energy: { t:'能耗统计', m:'43 台电表 · 逐日 + 月度对比', body: () =>
+   `<div class="dcard"><div class="blk-k"><span>逐日用电</span><button class="blk-more" style="color:var(--acc);font-size:11px">全部 ›</button></div>
+     <div class="estrip">${DAYS.map(([d,h],i)=>`<button class="eday"><span class="ebar"><span class="bar${i===DAYS.length-1?' sel':''}" style="height:${h}%"></span></span><span class="elab"><span class="lab${i===DAYS.length-1?' sel':''}">${d}</span></span></button>`).join('')}</div></div>`
+   + monthlyHTML() },
+ safety: { t:'安全台账', m:'历史记录 · 不代表实时报警', body: () =>
+   `<div class="led-types"><button>燃气</button><button class="on">烟感</button><button>水浸</button></div>
+    <div class="led-dates"><span class="dbtn">不限开始日期 ${icon('ic-down','#8a93a6')}</span><span>至</span><span class="dbtn">2026-11-01 ${icon('ic-down','#8a93a6')}</span><button class="reset">重置</button></div>
+    <div class="led-paper">${LEDGERS.map(r=>`<button class="led-rec"><span class="rc"><span class="nm">${r[0]}</span><span class="tm">${r[1]}</span><span class="loc">${r[2]}</span></span><span class="go">${icon('ic-right','#9aa4b8')}</span></button>`).join('')}</div>
+    <button class="led-more">查看更多记录</button>` },
+ task: { t:'任务管理', m:'待执行 3 项', body: () =>
+   `<div class="dcard"><div class="blk-k"><span>近期安排</span><button class="blk-more" data-sheet="inbox" style="color:var(--acc);font-size:11px">通知中心 2 ›</button></div>
+    ${AGENDA.map(d=>`<div class="agenda-day"><div class="agenda-rail"><span class="rail-num">${d.num}</span><span class="rail-wd">周${d.wd}</span></div>
+     <div class="agenda-rows">${d.rows.map(r=> r[4]==='more' ? `<span class="row-more">${r[1]}</span>`
+      : `<button class="agenda-row"><span class="row-clock">${r[0]}</span><span class="row-copy"><span class="row-name">${r[1]}</span><span class="row-rule">${r[2]}</span></span><span class="row-state row-state--${r[4]}">${r[3]}</span></button>`).join('')}</div></div>`).join('')}
+    <button class="task-foot">查看所有任务 ›</button></div>` },
+ device: { t:'设备目录', m:'57 台 · 只读观察', body: () =>
+   `<div class="tgrid">${DEVTYPES.map(d=>`<button class="tcard" data-dtype="${d[0]}"><span class="tart"><img src="${ART_[d[1]]}" alt="${d[2]}"></span><span class="tcopy"><span class="tname">${d[2]}</span><span class="tcnt">${d[3]} 台</span></span><span class="tstate${d[5]?' warn':''}"><i class="dot"></i>${d[4]}</span></button>`).join('')}</div>` },
+ inbox: { t:'通知中心', m:'任务与报告', body: () =>
+   `<div class="ibox">${INBOX.map(n=>`<button class="inrow"><i class="udot${n[5]?' on':''}"></i><span class="ib"><span class="it"><span class="iname">${n[0]}</span><span class="itime">${n[4]}</span></span><span class="isub">${n[1]}</span>${n[2]?`<span class="itag ${n[3]}">${n[2]}</span>`:''}</span></button>`).join('')}</div>` },
+ office: { t:'办公室 Agent', m:'区域工作台会话', body: () =>
+   `<button class="office-cta"><span class="of-ic">${icon('d-chat',ACC)}</span><span><span class="t">办公室 Agent</span><span class="s">区域设备 · 定时任务 · 语音会话</span></span><span class="go">进入会话</span></button>
+    <div class="office-list"><div class="oblock"><div class="oblock-head"><span>可做的事</span></div><div class="orow" style="margin-top:8px"><i class="dot"></i><span class="isub" style="font-size:11px;color:var(--ink2);line-height:1.6">按区域查设备状态、安排定时/周期任务、语音下达空调照明指令</span></div></div></div>` },
+ company: { t:'公司 Agent', m:'原型示意 · 公司范围会话', body: () =>
+   `<div class="oblock"><div class="oblock-head"><span>公司助手</span></div><p style="font-size:13px;line-height:1.7;color:#506878;margin-top:10px">生产页面在此打开公司 Agent 浮层。可询问公司环境、能耗与任务；涉及控制时仍需确认。</p></div>` },
+}
+const sheetHTML = (key, dtype) => {
+ const s = SHEETS[key]; if (!s) return ''
+ const isDevList = key === 'device' && dtype
+ const t = isDevList ? TYPENAME[dtype] : s.t
+ const m = isDevList ? `${DEVLIST[dtype].length} 台 · 只读观察` : s.m
+ const back = isDevList ? `<button class="sheet-back" data-dback>${icon('ic-back')}</button>` : ''
+ return `<div class="sheet-handle"></div><div class="sheet-head">${back}<div class="hc"><span class="t">${t}</span><span class="m">${m}</span></div><button class="sheet-close" data-close>${icon('ic-close')}</button></div><div class="sheet-body">${isDevList ? devListHTML(dtype) : s.body()}</div>`
+}
+const devListHTML = dtype => `<div class="dlist">${(DEVLIST[dtype]||[]).map(d=>`<button class="drow"><span class="dart"><img src="${ART_[d[0]]}" alt=""></span><span class="dcopy"><span class="dname">${d[1]}</span><span class="dloc">${d[2]}</span></span><span class="dstate${/告警|巡检/.test(d[3])?' warn':''}"><i class="dot"></i>${d[3]}</span></button>`).join('')}</div>`
+
+function navHTML() {
+ return `<div class="anav"><div class="anav-line">
+   <button class="anav-back">${icon('ic-back')}</button>
+   <button class="anav-bell" data-sheet="inbox">${icon('d-bell')}<i class="nbadge">2</i></button>
+   <button class="anav-agent" data-sheet="office">${icon('ic-chat','#31405c')} 办公室 Agent</button>
+ </div></div>`
+}
+/* —— 一级页 —— */
+function renderHome() {
+ const pills = [
+  ['d-sensor','环境','24.6°','舒适',''],
+  ['d-meter','用电 · 昨日','1,286','度',''],
+  ['ic-grid','设备','57','台',''],
+  ['d-alarm','安全','1','条新记录','warn'],
+ ]
+ const scenes = [
+  ['d-sensor','环境','24.6° · 52% · 优',0,0],
+  ['d-meter','用电','今日较昨日 ↓4%',0,0],
+  ['d-alarm','安全','10-21 有告警记录',1,0],
+  ['ic-clock','任务','3 项待办 · 今日 2 项',0,0],
+  ['ic-grid','设备','57 台 · 7 类',0,0],
+  ['d-bell','通知','任务与报告',0,1],
+ ]
+ const SCKEY = ['env','energy','safety','task','device','inbox']
+ return `${navHTML()}<div class="pg-scroll"><div class="pg-body">
+  <div class="mhead"><span class="place">公司总览</span><span class="date-chip">11月1日 · 周六</span></div>
+  <div class="pills">${pills.map(p=>`<button class="pill ${p[4]}" data-sheet="${({环境:'env','用电 · 昨日':'energy',设备:'device',安全:'safety'})[p[1]]}"><span class="pi">${icon(p[0],'#5a6a84')} ${p[1]}</span><span class="pv">${p[2]}<small> ${p[3]}</small></span></button>`).join('')}</div>
+  <div class="sec"><div class="sec-head"><span class="sec-t">常用功能</span></div>
+   <div class="scenes">${scenes.map((s,i)=>`<button class="scard${s[3]?' warn':''}" data-sheet="${SCKEY[i]}"><span class="sic">${icon(s[0], s[3]?WARM:ACC)}</span><span class="stx"><span class="sname">${s[1]}${s[4]?'<i class="dot"></i>':''}</span><span class="sstate${s[3]?' warn':''}">${s[2]}</span></span></button>`).join('')}</div></div>
+  <div class="block"><div class="block-head"><span class="block-t">接下来</span><span class="block-sub">今日 2 项 · 共 3 项</span></div>
+   <div class="block-card">
+    <button class="nrow" data-sheet="task"><span class="nic">${icon('ic-clock','#31405c')}</span><span class="nbody"><span class="nname">14:00 空调巡检</span><span class="nsub">每两周 · 5 台</span></span><span class="nstate go">待执行</span></button>
+    <button class="nrow" data-sheet="task"><span class="nic">${icon('d-light','#31405c')}</span><span class="nbody"><span class="nname">18:30 照明定时关闭</span><span class="nsub">每日</span></span><span class="nstate wait">已排期</span></button>
+    <button class="nfoot" data-sheet="task">查看所有任务 ›</button>
+   </div></div>
+  <button class="agent-orb" aria-label="打开 Agent"><span class="orb-av">${icon('ic-spark')}</span><i class="orb-badge">2</i></button>
+ </div></div>`
+}
+
+/* —— 变体 B：家庭AI管家 × 全屋智控（长虹参考语言） —— */
+const SUN = `<svg viewBox="0 0 64 64"><circle cx="42" cy="22" r="11" fill="#ffc35c"/><circle cx="42" cy="22" r="15" fill="#ffc35c" opacity=".22"/><path d="M14 44a11 11 0 0 1 2.2-21.7A14 14 0 0 1 43 26a9.5 9.5 0 0 1 7.5 15.3c-.9 1.8-2.7 2.7-5 2.7z" fill="#fff" opacity=".96"/><path d="M18 44a9 9 0 0 1 1.8-17.8" fill="none" stroke="#f0d9b8" stroke-width="1.6" stroke-linecap="round"/></svg>`
+function navHTMLB() {
+ return `<div class="anav"><div class="anav-line">
+  <button class="anav-back">${icon('ic-back','#5a5245')}</button>
+  <button class="anav-bell" data-sheet="inbox">${icon('d-bell','#5a5245')}<i class="nbadge">2</i></button>
+  <button class="anav-agent" data-sheet="office">${icon('ic-chat','#8a4d17')} 办公室 Agent</button>
+ </div></div>`
+}
+function renderHomeB() {
+ const stats = [
+  ['52','%','室内湿度',0],
+  ['1,286','度','昨日用电',0],
+  ['57','台','设备在线',0],
+  ['1','条','安全新记录',1],
+ ]
+ const STATKEY = ['env','energy','device','safety']
+ const asks = [
+  ['昨日用电为什么下降 4%？','energy'],
+  ['10-21 安全告警是什么？','safety'],
+  ['今天有哪些任务安排？','task'],
+ ]
+ const DEVSTRIP = DEVTYPES.map(d=>({art:ART_[d[1]], name:d[2], num:d[3], state:d[4], warn:d[5], key:d[0]}))
+ return `${navHTMLB()}<div class="pg-scroll"><div class="pg-body">
+  <div class="mhead"><span class="place">我的公司</span><span class="date-chip">11月1日 · 周六</span></div>
+  <div class="vgreet"><button class="gball" data-sheet="office" aria-label="打开 Agent"><i class="gsmile"></i></button><button class="gbub" data-sheet="safety"><b>Hi~ 我是办公小白</b><span class="gsub">公司 10-21 有 1 条安全告警记录，需要我帮你看看吗？</span></button></div>
+  <div class="vasks">${asks.map(a=>`<button class="vask" data-sheet="${a[1]}">${a[0]}</button>`).join('')}</div>
+  <div class="vhero">
+   <div class="hrow1"><span class="hmain">24.6<small>°C</small></span><span class="hside"><span class="hk">环境中枢</span><span class="hv">舒适 · 公司全域</span></span><span class="hw">${SUN}</span></div>
+   <div class="hstats">${stats.map((s,i)=>`<button class="hstat${s[3]?' warn':''}" data-sheet="${STATKEY[i]}"><span class="sv">${s[0]}<small>${s[1]}</small></span><span class="sk">${s[2]}</span></button>`).join('')}</div>
+  </div>
+  <div class="sec"><div class="sec-head"><span class="sec-t">公司设备</span><span class="sec-all" data-sheet="device">57 台 · 全部 ›</span></div>
+   <div class="vstrip">${DEVSTRIP.map(d=>`<button class="vitem${d.warn?' warn':''}" data-sheet="device" data-dtype="${d.key}"><img class="vart" src="${d.art}" alt=""><span class="vname">${d.name}</span><span class="vsub">${d.num} 台</span><span class="vstate"><i></i><span class="vstx">${d.state}</span></span></button>`).join('')}</div></div>
+  <div class="block"><div class="block-head"><span class="block-t">接下来</span><span class="block-sub">今日 2 项 · 共 3 项</span></div>
+   <div class="block-card">
+    <button class="nrow" data-sheet="task"><span class="nic">${icon('ic-clock','#c97a2e')}</span><span class="nbody"><span class="nname">14:00 空调巡检</span><span class="nsub">每两周 · 5 台</span></span><span class="nstate go">待执行</span></button>
+    <button class="nrow" data-sheet="task"><span class="nic">${icon('d-light','#c97a2e')}</span><span class="nbody"><span class="nname">18:30 照明定时关闭</span><span class="nsub">每日</span></span><span class="nstate wait">已排期</span></button>
+    <button class="nfoot" data-sheet="task">查看所有任务 ›</button>
+   </div></div>
+ </div></div>
+ <div class="vdock">
+  <button class="di on">${icon('ic-grid','#e8793a')}<span>总览</span></button>
+  <button class="di" data-sheet="task">${icon('ic-clock','#a89e8c')}<span>任务</span></button>
+  <button class="dball" data-sheet="office" aria-label="打开 Agent"><svg viewBox="0 0 24 24"><use href="#ic-spark"/></svg><i class="dbadge">2</i></button>
+  <button class="di" data-sheet="device">${icon('d-sensor','#a89e8c')}<span>设备</span></button>
+  <button class="di" data-sheet="inbox">${icon('d-bell','#a89e8c')}<span>通知</span></button>
+ </div>`
+}
+/* 设备面板：状态概览 + 产品图设备卡，点击只查看。 */
+const dashNav = () => `<div class="dash-nav"><button aria-label="返回">${icon('ic-back')}</button><span class="spacer"></span><button data-sheet="office" aria-label="办公室 Agent">${icon('ic-chat','#4f806b')}</button><button data-sheet="inbox" aria-label="通知，2 条未读">${icon('d-bell','#4f806b')}<span class="badge">2</span></button></div>`
+const dashTitle = () => `<div class="dash-title"><div><h2>公司总览</h2><small>11月1日 · 公司设备与环境</small></div><span class="readonly">只读观察</span></div>`
+const featured = ['ac','energy','safety','environment'].map(k=>DEVTYPES.find(d=>d[0]===k))
+function renderDevices() {
+ return `<div class="pg-scroll">${dashNav()}${dashTitle()}
+  <div class="f-status">
+   <button data-sheet="env"><small>室内环境</small><b>24.6<i> °C</i></b></button>
+   <button data-sheet="energy"><small>昨日用电</small><b>1,286<i> 度</i></b></button>
+   <button data-sheet="device"><small>设备</small><b>57<i> 台</i></b></button>
+  </div>
+  <div class="dash-section"><b>公司设备</b><button data-sheet="device">全部 7 类 ›</button></div>
+  <div class="f-grid">${featured.map(d=>`<button class="f-device${d[5]?' warn':''}" data-sheet="device" data-dtype="${d[0]}"><span class="tag">${d[3]} 台 · 查看</span><img src="${ART_[d[1]]}" alt=""><b>${d[2]}</b><small>${d[4]}</small></button>`).join('')}</div>
+  <button class="dash-alert" data-sheet="safety">安全台账 · 10-21 三层烟感有告警记录 ›</button>
+  <div class="dash-section"><b>近期任务</b><button data-sheet="task">全部 3 项 ›</button></div>
+  ${AGENDA[0].rows.map(r=>`<button class="dash-task" data-sheet="task"><div><b>${r[0]} ${r[1]}</b><small>${r[2]}</small></div><span>${r[3]} ›</span></button>`).join('')}
+  <button class="dash-agent" data-sheet="office"><span>✦ 办公室 Agent</span><span>问问助手 ›</span></button>
+ </div>`
+}
+/* 环境与能耗：重点读数 + 设备横向浏览。 */
+function renderLiving() {
+ return `<div class="pg-scroll">${dashNav()}${dashTitle()}
+  <div class="g-hero"><span class="g-label">室内环境 · 环境传感器</span><div class="g-temp">24.6<small> °C</small></div><span class="g-sub">湿度 52% · 空气质量优</span><img src="${ART_.env}" alt=""><button data-sheet="env" aria-label="查看环境详情"></button></div>
+  <div class="g-stats"><button data-sheet="device"><small>公司设备</small><b>57 台</b></button><button data-sheet="safety"><small>安全台账</small><b>1 条记录</b></button><button data-sheet="inbox"><small>通知</small><b>2 条未读</b></button></div>
+  <div class="dash-section"><b>用电观察</b><button data-sheet="energy">查看详情 ›</button></div>
+  <button class="g-energy" data-sheet="energy"><div><small>昨日用电 · 43 台电表</small><strong>1,286 <small style="display:inline">度</small></strong><small>今日较昨日 ↓4%</small></div><span class="g-bars">${DAYS.map(d=>`<i style="height:${d[1]/2}px"></i>`).join('')}</span></button>
+  <div class="dash-section"><b>设备</b><button data-sheet="device">全部 7 类 ›</button></div>
+  <div class="g-ribbon">${DEVTYPES.map(d=>`<button data-sheet="device" data-dtype="${d[0]}"><img src="${ART_[d[1]]}" alt=""><b>${d[2]}</b><small>${d[3]} 台 · ${d[5]?'10-21 有告警':'查看'}</small></button>`).join('')}</div>
+  <div class="dash-section"><b>近期任务</b><button data-sheet="task">全部 3 项 ›</button></div>
+  <div class="g-actions">${AGENDA[0].rows.map(r=>`<button data-sheet="task"><b>${r[0]}</b>${r[1]}<br>${r[3]}</button>`).join('')}</div>
+  <button class="dash-agent" data-sheet="office"><span>✦ 办公室 Agent</span><span>问问助手 ›</span></button>
+ </div>`
+}
+
+/* H 保留 G 的环境主卡、能耗卡和产品图设备条；状态为隔离的示例数据。 */
+let previewState = 'ready'
+function renderRefined() {
+ const noEnvironment = previewState === 'error'
+ const energyWaiting = previewState === 'preparing'
+ const energyStale = previewState === 'stale'
+ return `<div class="pg-scroll">
+  <div class="h-nav"><button class="h-back" aria-label="返回服务首页">${icon('ic-back')}</button><strong>物联助手</strong><button class="h-office" data-sheet="office">办公室 ›</button><button class="h-notice" data-sheet="inbox" aria-label="通知，2 条未读">${icon('d-bell','#345c79')}<i>2</i></button></div>
+  <div class="h-head"><div><h2>公司总览</h2><small>公司设备与环境 · 示例数据</small></div><span class="readonly">只读观察</span></div>
+  <div class="h-hero"><span class="h-eyebrow">环境传感器 · 查看趋势 ›</span><span class="h-name">${noEnvironment?'环境读数暂不可用':'空气质量传感器 · 一楼大厅'}</span>
+   <strong>${noEnvironment?'—':'24.6'}<small> °C</small></strong><span class="h-meta">${noEnvironment?'湿度 — · PM2.5 —':'湿度 52% · PM2.5 18'}</span>${noEnvironment?'<span class="h-state">读取失败，请重试</span>':''}<img src="${ART_.env}" alt=""><button data-sheet="env" aria-label="查看环境历史趋势"></button>
+  </div>
+  ${noEnvironment?'<button data-preview="ready" style="min-height:40px;color:#315f83;font-size:12px">重试环境读取（模拟）</button>':''}
+  <div class="h-mini"><button data-sheet="device"><small>设备目录</small><b>57 台 ›</b></button><button data-sheet="safety"><small>安全台账</small><b>10-21 记录 ›</b></button><button data-sheet="inbox"><small>通知中心</small><b>2 条未读 ›</b></button></div>
+  <div class="h-section"><h3>用电观察</h3><button data-sheet="energy">能耗统计 ›</button></div>
+  <button class="h-energy" data-sheet="energy"><div><small>${energyWaiting?'计量日数据准备中':'10-31 计量日 · 43 台电表'}</small><strong>${energyWaiting?'—':'1,286'} <span>${energyWaiting?'':'度'}</span></strong><small>${energyWaiting?'正在准备数据，不代表零用电':'完整计量日 · 点击查看统计'}</small>${energyStale?'<small class="h-note">沿用上次完整数据 · 更新未完成</small>':''}</div>${energyWaiting?'':`<span class="h-bars" aria-hidden="true">${DAYS.map(d=>`<i style="height:${d[1]/2}px"></i>`).join('')}</span>`}</button>
+  <div class="h-section"><h3>设备目录</h3><button data-sheet="device">全部 7 类 ›</button></div>
+  <div class="h-strip">${DEVTYPES.map(d=>`<button data-sheet="device" data-dtype="${d[0]}"><img src="${ART_[d[1]]}" alt=""><b>${d[2]}</b><small>${d[3]} 台 · 只读目录</small></button>`).join('')}</div>
+  <div class="h-section"><h3>近期任务</h3><button data-sheet="task">查看全部 ›</button></div>
+  ${AGENDA[0].rows.map(r=>`<button class="h-task" data-sheet="task"><time>${r[0]}</time><span class="h-task-copy"><b>${r[1]}</b><small>${r[2]}</small></span><span class="h-task-state">${r[3]} ›</span></button>`).join('')}
+  <button class="h-agent" data-sheet="company"><span>✦ 公司 Agent</span><span>问问助手 ›</span></button>
+ </div>`
+}
+/* 原有方案及 G 的业务对齐稿，URL 和悬浮条切换。 */
+const VARIANTS = [
+ { key:'A', name:'石蓝墨石', note:'氛围页首·白卡', cls:'va', render:renderHome },
+ { key:'B', name:'家庭AI管家', note:'柔彩纸面·暖球', cls:'vb', render:renderHomeB },
+ { key:'F', name:'设备面板', note:'产品与状态', cls:'dashboard-f', render:renderDevices },
+ { key:'G', name:'环境能源', note:'环境与能耗', cls:'dashboard-g', render:renderLiving },
+ { key:'H', name:'G · 精细化', note:'业务对齐与状态', cls:'dashboard-h', render:renderRefined },
+]
+const params = new URLSearchParams(location.search)
+let vi = Math.max(0, VARIANTS.findIndex(v => v.key === (params.get('variant')||'A').toUpperCase()))
+if (vi < 0) vi = 0
+
+function mountPhone(v, sheetKey) {
+ const col = document.createElement('div'); col.className = 'dir-col'
+ col.innerHTML = `<div class="dir-tag">${v.key} · ${v.name}${sheetKey ? ' · 二级 Sheet' : ' · 一级入口'}<small>${sheetKey ? '遮罩或 ✕ 收起' : '点胶囊/卡片展开 Sheet'}</small></div>
+  <div class="phone"><div class="notch"></div><div class="screen"><div class="pg ${v.cls}">${v.render()}</div></div></div>`
+ const phone = col.querySelector('.phone')
+ const pg = col.querySelector('.pg')
+ const dock = pg.querySelector('.vdock')
+ if (dock) phone.appendChild(dock)
+ phone.insertAdjacentHTML('beforeend', `<div class="sheet-scrim" data-close></div><div class="sheet"></div>`)
+ const sheet = phone.querySelector('.sheet')
+ const open = key => { if (SHEETS[key]) { sheet.innerHTML = sheetHTML(key); phone.classList.add('sheet-open') } }
+ const close = () => phone.classList.remove('sheet-open')
+ phone.addEventListener('click', e => { const t = e.target.closest('[data-sheet]'); if (!t) return; if (t.dataset.dtype) { sheet.innerHTML = sheetHTML('device', t.dataset.dtype); phone.classList.add('sheet-open') } else open(t.dataset.sheet) })
+ sheet.addEventListener('click', e => {
+  const t = e.target.closest('[data-sheet]')
+  if (t) { open(t.dataset.sheet); return }
+  const d = e.target.closest('[data-dtype]')
+  if (d) { sheet.innerHTML = sheetHTML('device', d.dataset.dtype); return }
+  if (e.target.closest('[data-dback]')) sheet.innerHTML = sheetHTML('device')
+ })
+ phone.addEventListener('click', e => { if (e.target.closest('[data-close]')) close() })
+ if (sheetKey) open(sheetKey)
+ return col
+}
+function mount(v) {
+ const stage = document.getElementById('stage')
+ stage.innerHTML = ''
+ stage.appendChild(mountPhone(v))
+ stage.appendChild(mountPhone(v, 'device'))
+ document.getElementById('preview-states').hidden = v.key !== 'H'
+ document.getElementById('design-notes').hidden = v.key !== 'H'
+ document.querySelectorAll('#preview-states [data-preview]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.preview === previewState)))
+ document.getElementById('vlabel').innerHTML = `${v.key} · ${v.name}<small>${v.note}</small>`
+}
+function go(i) {
+ vi = (i + VARIANTS.length) % VARIANTS.length
+ params.set('variant', VARIANTS[vi].key)
+ history.replaceState(null, '', location.pathname + '?' + params.toString())
+ mount(VARIANTS[vi])
+}
+mount(VARIANTS[vi])
+document.addEventListener('click', e => {
+ const button = e.target.closest('[data-preview]')
+ if (!button) return
+ previewState = button.dataset.preview
+ mount(VARIANTS[vi])
+})
+document.getElementById('vprev').onclick = () => go(vi - 1)
+document.getElementById('vnext').onclick = () => go(vi + 1)
+document.addEventListener('keydown', e => {
+ const t = e.target
+ if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+ if (e.key === 'ArrowLeft') go(vi - 1)
+ if (e.key === 'ArrowRight') go(vi + 1)
+})
+</script>
+</body>
+</html>

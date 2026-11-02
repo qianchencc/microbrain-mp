@@ -73,7 +73,8 @@
 		},
 		methods: {
 			init() {
-				this.initBlueTooth()
+				// 首页不主动开启蓝牙：openBluetoothAdapter 会触发系统授权弹窗并阻塞页面，
+				// 蓝牙广播仅由用户页开关显式启用。
 				this.$refs.indexCon.initData()
 			},
 			// 发送消息

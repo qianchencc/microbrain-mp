@@ -1,0 +1,5 @@
+{"id":"session-a","version":1,"sequence":1,"payload":{"kind":"conversation","owner":"local-user","value":"first"}}
+{"id":"session-a","version":2,"sequence":2,"payload":{"kind":"conversation","owner":"local-user","value":"second"}}
+{"id":"session-b","version":1,"sequence":3,"payload":{"kind":"observation","owner":"local-user","value":"read-only"}}
+{"id":"session-b","version":1,"sequence":4,"payload":{"kind":"observation","owner":"local-user","value":"duplicate-retry"}}
+{"id":"session-c","version":1,"sequence":5,"payload":{"kind":"control","owner":"local-user","value":"must-stop"}}

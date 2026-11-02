@@ -316,7 +316,7 @@ async function loadCurrentStates(taskId = activeTaskId.value) {
  if (!pageVisible || !props.active || !taskId || props.sampleTask || props.source !== 'office') return
  currentLoading.value = true
  try {
-  const result = await getTaskLightingStates(taskId)
+  const result = await getTaskLightingStates(taskId, props.source)
   if (current === currentRequestId && pageVisible && props.active && activeTaskId.value === taskId) {
    currentStates.value = Object.fromEntries((result.states || []).map(state => [state.id, state]))
   }
