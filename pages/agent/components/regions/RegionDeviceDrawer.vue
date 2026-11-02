@@ -1,7 +1,7 @@
 <template>
  <DeviceSheet :open="open" expanded compact-header :title="sheetTitle" :back="backWithinDrawer" @close="$emit('close')">
-  <template v-if="depth > 0" #header-left><button class="back-button" aria-label="返回上一级" @tap="backWithinDrawer"><uni-icons type="left" size="17" color="#315846" /></button></template>
-  <template #header-right><view class="header-actions"><text v-if="depth === 0" class="sheet-meta">{{ regionName }} · {{ devices.length }} 台</text><button class="state-refresh" aria-label="刷新设备状态" :disabled="stateLoading || !devices.length" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="#315846" /></button></view></template>
+  <template v-if="depth > 0" #header-left><button class="back-button" aria-label="返回上一级" @tap="backWithinDrawer"><uni-icons type="left" size="17" color="var(--agent-text-secondary)" /></button></template>
+  <template #header-right><view class="header-actions"><text v-if="depth === 0" class="sheet-meta">{{ regionName }} · {{ devices.length }} 台</text><button class="state-refresh" aria-label="刷新设备状态" :disabled="stateLoading || !devices.length" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="var(--agent-text-secondary)" /></button></view></template>
   <template #header>
    <view v-if="depth === 0" class="filter-header" :class="{ searching }">
     <view class="group-controls">
@@ -12,7 +12,7 @@
     </view>
     <view class="search-controls" :class="{ searching }">
      <button class="icon-button" aria-label="返回全部设备" hover-class="icon-button--pressed" @tap="closeSearch"><image src="/static/back.svg" /></button>
-     <view class="search-field"><image src="/static/search.svg" /><input v-model="query" placeholder="搜索名称、位置或状态" placeholder-style="color:#8a978f" confirm-type="search" :focus="searchFocused" :adjust-position="false" /></view>
+     <view class="search-field"><image src="/static/search.svg" /><input v-model="query" placeholder="搜索名称、位置或状态" placeholder-style="color:var(--agent-text-muted)" confirm-type="search" :focus="searchFocused" :adjust-position="false" /></view>
     </view>
    </view>
   </template>
@@ -29,11 +29,11 @@
      <view v-for="group in groups" :key="group.label" class="group">
       <button class="group-head" :aria-expanded="!isCollapsed(group)" :aria-label="`${group.label} ${group.items.length} 台`" hover-class="group-head--pressed" @tap="toggleGroup(group)">
        <text class="group-title">{{ group.label }} · {{ group.items.length }}</text>
-       <uni-icons :type="isCollapsed(group) ? 'right' : 'down'" size="11" color="#5f6e66" />
+       <uni-icons :type="isCollapsed(group) ? 'right' : 'down'" size="11" color="var(--agent-text-secondary)" />
       </button>
       <view v-if="!isCollapsed(group)" class="device-grid">
        <view v-for="device in group.items" :key="device.id" class="device-card" role="button" hover-class="device-card--pressed" @tap="openDevice(device.id)">
-        <view class="device-art"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><view v-else-if="device.artVariant === 'video'" class="art-cam"><view class="art-cam__lens" /></view><view v-else-if="device.artVariant === 'observe'" class="art-sensor" /><uni-icons v-else type="gear" size="28" color="#8b9a91" /><view class="state-lamp" :class="device.status" /></view>
+        <view class="device-art"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><view v-else-if="device.artVariant === 'video'" class="art-cam"><view class="art-cam__lens" /></view><view v-else-if="device.artVariant === 'observe'" class="art-sensor" /><uni-icons v-else type="gear" size="28" color="var(--agent-text-faint)" /><view class="state-lamp" :class="device.status" /></view>
         <view class="device-copy">
          <text class="device-name"><text v-for="(part, index) in device.nameParts" :key="index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
          <text class="device-location"><text v-for="(part, index) in device.kindParts" :key="'kind-' + index" :class="{ hit: part.hit }">{{ part.text }}</text><text> · </text><text v-for="(part, index) in device.locationParts" :key="'location-' + index" :class="{ hit: part.hit }">{{ part.text }}</text></text>
@@ -201,67 +201,67 @@ onBeforeUnmount(() => { stateRefresh.cancel(); ++directoryRequest; ++stateReques
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.2; min-width:0; min-height:0; }
 button::after { border:0; }
-.filter-header { position:relative; height:50px; padding:0 16px; display:flex; align-items:center; border-top:1px solid #edf0ed; border-bottom:1px solid #edf0ed; overflow:hidden; }
+.filter-header { position:relative; height:50px; padding:0 16px; display:flex; align-items:center; border-top:1px solid var(--agent-line); border-bottom:1px solid var(--agent-line); overflow:hidden; }
 .header-actions { display:flex; align-items:center; gap:6px; min-width:0; }
-.sheet-meta { max-width:100px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#78877e; font-size:11px; }
+.sheet-meta { max-width:100px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--agent-text-muted); font-size:11px; }
 .state-refresh { width:44px; height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
 .state-refresh[disabled] { opacity:.5; }
 .spinning { animation:state-spin 900ms linear infinite; }
 @keyframes state-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce){.spinning{animation:none}}
-.back-button { width:44px; height:44px; margin-right:8px; border-radius:15px; background:#eef2ef; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.back-button { width:44px; height:44px; margin-right:8px; border-radius:15px; background:var(--agent-tint); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .group-controls { width:100%; min-width:0; display:flex; align-items:center; gap:$agent-space-small; transition:transform 200ms cubic-bezier(.32,.72,0,1),opacity 140ms ease-out; }
 .search-controls { position:absolute; top:0; right:0; bottom:0; left:0; padding:0 16px; display:flex; align-items:center; gap:$agent-space-small; opacity:0; transform:translateX(22px); pointer-events:none; transition:transform 200ms cubic-bezier(.32,.72,0,1),opacity 140ms ease-out; }
 .filter-header.searching .group-controls { opacity:0; transform:translateX(-22px); pointer-events:none; }
 .filter-header.searching .search-controls { opacity:1; transform:none; pointer-events:auto; }
-.group-mode { width:auto; flex-shrink:0; height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:#eff2ee; color:#45564d; font-size:$agent-font-size-compact; display:flex; align-items:center; justify-content:center; transition:background-color 180ms ease,color 180ms ease,transform 130ms cubic-bezier(.23,1,.32,1); }
+.group-mode { width:auto; flex-shrink:0; height:32px; min-width:44px; padding:0 13px; border-radius:16px; background:var(--agent-tint); color:var(--agent-text-secondary); font-size:$agent-font-size-compact; display:flex; align-items:center; justify-content:center; transition:background-color 180ms ease,color 180ms ease,transform 130ms cubic-bezier(.23,1,.32,1); }
 .group-mode.active { background:$agent-color-accent; color:#fff; }
 .group-mode--pressed,.icon-button--pressed { transform:scale(.95); }
-.icon-button { width:44px; height:44px; border:1px solid #d8e1dc; border-radius:22px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.icon-button { width:44px; height:44px; border:1px solid var(--agent-line); border-radius:22px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .icon-button image { width:14px; height:14px; }
 .controls-spacer { flex:1; min-width:0; }
-.count { flex-shrink:0; white-space:nowrap; font-size:11px; color:#89958e; }
-.search-field { min-width:0; flex:1; height:36px; padding:0 12px; border:1px solid #d8e1dc; border-radius:18px; display:flex; align-items:center; gap:$agent-space-small; background:$agent-color-surface-page; }
+.count { flex-shrink:0; white-space:nowrap; font-size:11px; color:var(--agent-text-muted); }
+.search-field { min-width:0; flex:1; height:36px; padding:0 12px; border:1px solid var(--agent-line); border-radius:18px; display:flex; align-items:center; gap:$agent-space-small; background:$agent-color-surface-page; }
 .search-field image { width:14px; height:14px; flex-shrink:0; }
 .search-field input { flex:1; min-width:0; height:100%; font-size:13px; color:$agent-color-text-primary; }
 .drawer-content { min-height:0; flex:1; display:flex; flex-direction:column; position:relative; overflow:hidden; }
-.nav-pane { position:absolute; top:0; right:0; bottom:0; left:0; display:flex; flex-direction:column; background:#fcfdfc; transition:transform 200ms cubic-bezier(.32,.72,0,1),opacity 200ms cubic-bezier(.32,.72,0,1); will-change:transform; }
+.nav-pane { position:absolute; top:0; right:0; bottom:0; left:0; display:flex; flex-direction:column; background:var(--agent-surface); transition:transform 200ms cubic-bezier(.32,.72,0,1),opacity 200ms cubic-bezier(.32,.72,0,1); will-change:transform; }
 .nav-pane.pane-before { transform:translateX(-12%); opacity:.8; pointer-events:none; }
 .nav-pane.pane-after { transform:translateX(26%); opacity:0; pointer-events:none; }
 .device-timeline-host { height:0; min-height:0; flex:1; overflow:hidden; }
 .task-content-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
 .state-warning { margin:6px 16px 0; color:$agent-color-warning; font-size:11px; }
 .device-scroll { flex:1; min-height:0; height:0; box-sizing:border-box; padding:0 16px; }
-.empty { padding:45px 8px; text-align:center; color:#89958e; font-size:13px; animation:fadeIn 160ms ease-out backwards; }
+.empty { padding:45px 8px; text-align:center; color:var(--agent-text-muted); font-size:13px; animation:fadeIn 160ms ease-out backwards; }
 @keyframes fadeIn { from { opacity:0; } }
 .empty text { display:block; }
 .empty button { margin:14px auto 0; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 .group { margin-top:14px; }
 .group-head { width:100%; margin:0 0 8px; padding:4px 2px; display:flex; align-items:center; gap:6px; text-align:left; border-radius:8px; }
-.group-head--pressed { background:#eef2ef; }
-.group-title { font-size:11px; font-weight:600; color:#5f6e66; }
+.group-head--pressed { background:var(--agent-tint); }
+.group-title { font-size:11px; font-weight:600; color:var(--agent-text-secondary); }
 .device-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-.device-card { min-width:0; background:#f8faf7; border:1px solid #dae3dc; border-radius:8px; overflow:hidden; transition:transform 130ms cubic-bezier(.23,1,.32,1); animation:cardIn 200ms cubic-bezier(.23,1,.32,1) backwards; }
+.device-card { min-width:0; background:var(--agent-surface-page); border:1px solid var(--agent-line); border-radius:8px; overflow:hidden; transition:transform 130ms cubic-bezier(.23,1,.32,1); animation:cardIn 200ms cubic-bezier(.23,1,.32,1) backwards; }
 .device-card--pressed { transform:scale(.97); }
 @keyframes cardIn { from { opacity:0; transform:translateY(8px) scale(.98); } }
-.device-art { height:76px; position:relative; display:flex; align-items:center; justify-content:center; background:linear-gradient(155deg,#dfe4de,#f4f5ef 52%,#d4ddd6); }
+.device-art { height:76px; position:relative; display:flex; align-items:center; justify-content:center; background:linear-gradient(155deg,var(--agent-tint),var(--agent-surface-page) 52%,var(--agent-tint)); }
 .device-art image { width:92%; height:92%; }
-.state-lamp { position:absolute; right:9px; top:9px; width:8px; height:8px; border-radius:50%; background:#bbc7be; border:1px solid white; box-shadow:0 1px 2px #1f352b33; transition:background-color 200ms ease,box-shadow 200ms ease,border-color 200ms ease; }
-.state-lamp.on { background:#e4ae37; box-shadow:0 0 6px #e7b94c99; }
-.state-lamp.unknown { background:#fff; border-color:#ad711b; }
-.state-lamp.observe { background:#5d9478; box-shadow:0 0 4px #5d947866; }
-.art-cam { width:44px; height:26px; position:relative; border-radius:7px; background:linear-gradient(160deg,#33493e,#17271f); box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 5px 12px -6px rgba(20,40,32,.65); }
-.art-cam::before { content:''; position:absolute; right:-6px; top:8px; width:7px; height:10px; border-radius:1px 3px 3px 1px; background:linear-gradient(90deg,#1c3026,#28473a); }
-.art-cam__lens { position:absolute; left:8px; top:7px; width:12px; height:12px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#9fd7b9,#1e6647 55%,#0d3b28); box-shadow:inset 0 0 0 1px rgba(255,255,255,.3); }
-.art-sensor { width:28px; height:28px; position:relative; border-radius:50%; background:linear-gradient(160deg,#f2f4ef,#cfd8d1); box-shadow:inset 0 1px 0 #fff,inset 0 -3px 6px rgba(48,70,58,.18),0 4px 10px -5px rgba(30,50,40,.5); }
-.art-sensor::before { content:''; position:absolute; left:10px; top:10px; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 32%,#8fd0ae,#26714f 70%); box-shadow:0 0 4px #3f9d7455; }
-.art-sensor::after { content:''; position:absolute; left:5px; top:19px; right:5px; height:1px; background:rgba(38,64,50,.25); }
+.state-lamp { position:absolute; right:9px; top:9px; width:8px; height:8px; border-radius:50%; background:var(--agent-text-faint); border:1px solid white; box-shadow:0 1px 2px rgba(var(--agent-shadow-rgb),.2); transition:background-color 200ms ease,box-shadow 200ms ease,border-color 200ms ease; }
+.state-lamp.on { background:var(--agent-warning); box-shadow:0 0 6px var(--agent-warning); }
+.state-lamp.unknown { background:#fff; border-color:var(--agent-warning); }
+.state-lamp.observe { background:var(--agent-success); box-shadow:0 0 4px var(--agent-success); }
+.art-cam { width:44px; height:26px; position:relative; border-radius:7px; background:linear-gradient(160deg,var(--agent-accent-deep),var(--agent-text-primary)); box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 5px 12px -6px rgba(var(--agent-ink-rgb),.65); }
+.art-cam::before { content:''; position:absolute; right:-6px; top:8px; width:7px; height:10px; border-radius:1px 3px 3px 1px; background:linear-gradient(90deg,var(--agent-text-primary),var(--agent-accent-deep)); }
+.art-cam__lens { position:absolute; left:8px; top:7px; width:12px; height:12px; border-radius:50%; background:radial-gradient(circle at 35% 32%,var(--agent-chart),var(--agent-accent-deep) 55%,var(--agent-text-primary)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.3); }
+.art-sensor { width:28px; height:28px; position:relative; border-radius:50%; background:linear-gradient(160deg,var(--agent-surface-page),var(--agent-tint)); box-shadow:inset 0 1px 0 #fff,inset 0 -3px 6px rgba(var(--agent-shadow-rgb),.18),0 4px 10px -5px rgba(var(--agent-ink-rgb),.5); }
+.art-sensor::before { content:''; position:absolute; left:10px; top:10px; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 32%,var(--agent-chart),var(--agent-accent-deep) 70%); box-shadow:0 0 4px rgba(var(--agent-shadow-rgb),.33); }
+.art-sensor::after { content:''; position:absolute; left:5px; top:19px; right:5px; height:1px; background:rgba(var(--agent-shadow-rgb),.25); }
 .device-copy { padding:8px 9px 10px; min-width:0; }
 .device-name,.device-location,.device-state { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .device-name { font-size:$agent-font-size-compact; font-weight:600; color:$agent-color-text-primary; }
-.device-location { margin-top:3px; font-size:10px; color:#65786b; }
-.device-state { margin-top:7px; padding-top:7px; border-top:1px solid #e2e9e2; font-size:10px; color:#687a6d; }
-.hit { background:#f6dda4; border-radius:2px; }
+.device-location { margin-top:3px; font-size:10px; color:var(--agent-text-muted); }
+.device-state { margin-top:7px; padding-top:7px; border-top:1px solid var(--agent-line); font-size:10px; color:var(--agent-text-muted); }
+.hit { background:var(--agent-warning-faint); border-radius:2px; }
 .list-tail { height:28px; }
 @media(prefers-reduced-motion:reduce) { .group-controls,.search-controls,.device-card,.nav-pane,.group-mode,.state-lamp,.empty { transition:none; animation:none; } }
 </style>

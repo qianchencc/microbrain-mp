@@ -1,7 +1,7 @@
 <template>
  <view class="timeline-shell">
  <template v-if="calendar && compactCalendar">
-  <button class="datefloat" hover-class="datefloat--pressed" :aria-label="calShown ? '收起设备日历' : '展开设备日历'" :aria-expanded="calShown" @tap="calShown ? closeCalendar() : openCalendar()"><uni-icons type="calendar" size="12" color="#5b7a68" /><text>{{ Number(date.slice(5, 7)) }}月{{ Number(date.slice(8)) }}日</text></button>
+  <button class="datefloat" hover-class="datefloat--pressed" :aria-label="calShown ? '收起设备日历' : '展开设备日历'" :aria-expanded="calShown" @tap="calShown ? closeCalendar() : openCalendar()"><uni-icons type="calendar" size="12" color="var(--agent-text-secondary)" /><text>{{ Number(date.slice(5, 7)) }}月{{ Number(date.slice(8)) }}日</text></button>
   <view v-if="calMounted" class="cal-scrim" @tap="closeCalendar" />
   <view v-if="calMounted" class="cal-float" :class="{ 'cal-out': !calShown }"><RegionCalendar :date="date" :today="localDate(now)" :max-date="maxDate" :marks="calendarMarks" :error="calendarError" compact @select="selectDate" @month-change="$emit('calendar-month', $event)" /></view>
  </template>
@@ -137,11 +137,11 @@ watch(windowStart, (next, previous) => {
 view, text, input { font-size: inherit; line-height: inherit; }
 .timeline-scroll { height:0; width:100%; position:relative; overflow:hidden; }
 .timeline-shell { height:100%; min-height:0; display:flex; flex-direction:column; position:relative; }
-.datefloat { position:absolute; top:8px; left:14px; z-index:8; margin:0; padding:0 11px; height:30px; border:0; border-radius:15px; display:flex; align-items:center; gap:6px; background:linear-gradient(#fefffe,#eef3ef); color:#37513f; font-size:11.5px; font-weight:650; line-height:1; box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 4px 12px rgba(28,57,42,.16); transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.datefloat { position:absolute; top:8px; left:14px; z-index:8; margin:0; padding:0 11px; height:30px; border:0; border-radius:15px; display:flex; align-items:center; gap:6px; background:linear-gradient(var(--agent-surface),var(--agent-tint)); color:var(--agent-text-secondary); font-size:11.5px; font-weight:650; line-height:1; box-shadow:inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.16),inset 0 1px 0 #fff,0 4px 12px rgba(var(--agent-shadow-rgb),.16); transition:transform 140ms cubic-bezier(.23,1,.32,1); }
 .datefloat::after { border:0; }
 .datefloat--pressed { transform:scale(.95); }
 .cal-scrim { position:absolute; top:0; right:0; bottom:0; left:0; z-index:7; }
-.cal-float { position:absolute; top:42px; left:12px; right:12px; z-index:8; border-radius:14px; background:linear-gradient(#fefffe,#f7f9f7); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),0 12px 30px rgba(28,57,42,.18); overflow:hidden; transition:opacity 190ms cubic-bezier(.23,1,.32,1),transform 190ms cubic-bezier(.23,1,.32,1); }
+.cal-float { position:absolute; top:42px; left:12px; right:12px; z-index:8; border-radius:14px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); box-shadow:inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.16),0 12px 30px rgba(var(--agent-shadow-rgb),.18); overflow:hidden; transition:opacity 190ms cubic-bezier(.23,1,.32,1),transform 190ms cubic-bezier(.23,1,.32,1); }
 .cal-float.cal-out { opacity:0; transform:translateY(-6px) scale(.97); pointer-events:none; }
 .timeline-stage { flex:1; min-height:0; position:relative; display:flex; flex-direction:column; }
 .timeline-scroll { flex:1; min-height:0; }
@@ -149,22 +149,22 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .timeline-empty :deep(button) { pointer-events:auto; }
 .timeline { position:relative; }
 .timeline-art { position:absolute; left:0; top:0; pointer-events:none; }
-.time-label { position:absolute; left:0; width:36px; text-align:right; font-size:9px; font-weight:600; color:#aab7ae; transform:translateY(-50%); line-height:1.2; font-variant-numeric:tabular-nums; }
-.time-label.event { color:#45564d; font-size:11px; }
-.time-label.past { color:#bcc8bf; }
-.time-label.now { color:#99651b; }
+.time-label { position:absolute; left:0; width:36px; text-align:right; font-size:9px; font-weight:600; color:var(--agent-text-faint); transform:translateY(-50%); line-height:1.2; font-variant-numeric:tabular-nums; }
+.time-label.event { color:var(--agent-text-secondary); font-size:11px; }
+.time-label.past { color:var(--agent-text-faint); }
+.time-label.now { color:var(--agent-warning-deep); }
 .now text { display:block; }
 .now text:first-child { font-size:9.5px; font-weight:650; margin-bottom:2px; }
 .now text:last-child { font-size:$agent-font-size-compact; font-weight:750; }
-.date-label { position:absolute; left:80px; right:14px; color:#a9b6ae; font-size:10px; text-align:center; transform:translateY(-50%); }
+.date-label { position:absolute; left:80px; right:14px; color:var(--agent-text-faint); font-size:10px; text-align:center; transform:translateY(-50%); }
 .card-target { position:absolute; left:84px; right:14px; padding:6px 0; }
 @keyframes cardIn { from { opacity:0; transform:translateY(8px) scale(.98); } }
-.timeline-card { position:relative; height:32px; padding:0 7px 0 11px; border-radius:10px; display:block; line-height:32px; background:linear-gradient(#fefffe,#f9fbf9); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.13), inset 0 1px 0 #fff, 0 1px 2px rgba(28,57,42,.05), 0 6px 14px -10px rgba(28,57,42,.2); transition:transform 140ms cubic-bezier(.23,1,.32,1); animation:cardIn 200ms cubic-bezier(.23,1,.32,1) backwards; }
+.timeline-card { position:relative; height:32px; padding:0 7px 0 11px; border-radius:10px; display:block; line-height:32px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); box-shadow:inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.13), inset 0 1px 0 #fff, 0 1px 2px rgba(var(--agent-shadow-rgb),.05), 0 6px 14px -10px rgba(var(--agent-shadow-rgb),.2); transition:transform 140ms cubic-bezier(.23,1,.32,1); animation:cardIn 200ms cubic-bezier(.23,1,.32,1) backwards; }
 .timeline-card--pressed { transform:scale(.985); }
 .timeline-card.faded { opacity:.6; }
-.timeline-card.executing { box-shadow:inset 0 0 0 1px #176b5452, inset 0 1px 0 #fff, 0 6px 16px -10px #176b5473; }
+.timeline-card.executing { box-shadow:inset 0 0 0 1px rgba(var(--agent-shadow-rgb),.32), inset 0 1px 0 #fff, 0 6px 16px -10px rgba(var(--agent-shadow-rgb),.45); }
 .timeline-card.executing::before { content:""; position:absolute; left:4px; top:9px; bottom:9px; width:2.5px; border-radius:2px; background:$agent-color-accent; }
-.card-label { display:block; font-size:12.5px; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.render-error { position:absolute; top:470px; left:90px; color:#a34036; font-size:13px; }
+.card-label { display:block; font-size:12.5px; font-weight:600; color:var(--agent-text-secondary); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.render-error { position:absolute; top:470px; left:90px; color:var(--agent-error); font-size:13px; }
 @media (prefers-reduced-motion:reduce) { .timeline-card,.datefloat,.cal-float { transition:none; animation:none; } }
 </style>

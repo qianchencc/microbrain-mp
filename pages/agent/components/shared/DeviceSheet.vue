@@ -5,7 +5,7 @@
   <view class="sheet-motion" :style="motionStyle">
    <view class="sheet-surface" :class="{ tall, expanded, 'compact-header': compactHeader }">
     <view class="handle-zone" hover-class="handle-zone--pressed" :hover-stay-time="80" @touchstart.stop="onTouchStart" @touchmove.stop.prevent="onTouchMove" @touchend.stop="onTouchEnd" @touchcancel.stop="onTouchCancel"><view class="handle" /></view>
-    <view class="header-top"><slot name="header-left" /><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /><button class="sheet-close" :aria-label="'关闭' + (title || '面板')" hover-class="sheet-close--pressed" @tap="requestClose"><uni-icons type="closeempty" size="22" color="#62766a" /></button></view>
+    <view class="header-top"><slot name="header-left" /><view class="header-copy"><view class="title-row"><text class="title">{{ title }}</text></view><text v-if="meta" class="meta">{{ meta }}</text><text v-if="subtitle" class="subtitle">{{ subtitle }}</text></view><slot name="header-right" /><button class="sheet-close" :aria-label="'关闭' + (title || '面板')" hover-class="sheet-close--pressed" @tap="requestClose"><uni-icons type="closeempty" size="22" color="var(--agent-text-secondary)" /></button></view>
     <view class="header-slot"><slot name="header" /></view>
     <view class="sheet-body"><slot /></view>
    </view>
@@ -174,26 +174,26 @@ onBeforeUnmount(clearPhaseTimer)
 view, text, input { font-size: inherit; line-height: inherit; }
 .sheet-root { position:fixed; z-index:99; inset:0; pointer-events:none; }
 .sheet-root--open { pointer-events:auto; }
-.sheet-mask { position:absolute; z-index:0; inset:0; opacity:0; background:rgba(20,35,28,.32); pointer-events:none; will-change:opacity; }
+.sheet-mask { position:absolute; z-index:0; inset:0; opacity:0; background:var(--agent-mask); pointer-events:none; will-change:opacity; }
 .sheet-root--open .sheet-mask { opacity:1; pointer-events:auto; }
 .sheet-motion { position:absolute; z-index:1; left:0; right:0; bottom:0; display:flex; flex-direction:column; pointer-events:none; will-change:transform; }
 .sheet-root--open .sheet-motion { pointer-events:auto; }
-.sheet-surface { width:100vw; max-height:92vh; display:flex; flex-direction:column; background:#fcfdfc; border-radius:16px 16px 0 0; overflow:hidden; padding-bottom:env(safe-area-inset-bottom); box-shadow:0 -8px 32px #16372814; }
+.sheet-surface { width:100vw; max-height:92vh; display:flex; flex-direction:column; background:var(--agent-surface); border-radius:16px 16px 0 0; overflow:hidden; padding-bottom:env(safe-area-inset-bottom); box-shadow:0 -8px 32px rgba(var(--agent-shadow-rgb),.08); }
 .sheet-surface.tall { height:78vh; }
 .sheet-surface.expanded { height:90vh; }
 .sheet-surface.compact-header .title { font-size:15px; }
 .sheet-body { display:flex; flex-direction:column; min-height:0; flex:1; overflow:hidden; }
 .handle-zone { height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 120ms ease; }
-.handle-zone--pressed { background:rgba(23,107,84,.04); }
-.handle { width:36px; height:4px; background:#c4cbc6; border-radius:4px; transition:width 140ms cubic-bezier(.23,1,.32,1),background 140ms ease,transform 140ms ease; }
-.handle-zone--pressed .handle { width:44px; background:#9eafa5; transform:scaleY(1.15); }
+.handle-zone--pressed { background:rgba(var(--agent-shadow-rgb),.04); }
+.handle { width:36px; height:4px; background:var(--agent-text-faint); border-radius:4px; transition:width 140ms cubic-bezier(.23,1,.32,1),background 140ms ease,transform 140ms ease; }
+.handle-zone--pressed .handle { width:44px; background:var(--agent-text-faint); transform:scaleY(1.15); }
 .header-slot { position:relative; z-index:2; overflow:visible; }
 .header-top { display:flex; align-items:center; padding:2px 20px 8px; }
-.sheet-close { width:44px; height:44px; flex-shrink:0; margin:0 -8px 0 4px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:14px; background:transparent; }.sheet-close::after { border:0; }.sheet-close--pressed { background:#e7eee8; }
+.sheet-close { width:44px; height:44px; flex-shrink:0; margin:0 -8px 0 4px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:14px; background:transparent; }.sheet-close::after { border:0; }.sheet-close--pressed { background:var(--agent-tint); }
 .header-copy { flex:1; min-width:0; overflow:hidden; }
 .title-row { display:flex; align-items:baseline; gap:$agent-space-small; min-width:0; }
 .title { display:block; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:19px; font-weight:600; color:$agent-color-text-primary; }
-.meta { display:block; font-size:$agent-font-size-compact; color:#78877e; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.subtitle { display:block; font-size:$agent-font-size-compact; color:#78877e; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.meta { display:block; font-size:$agent-font-size-compact; color:var(--agent-text-muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.subtitle { display:block; font-size:$agent-font-size-compact; color:var(--agent-text-muted); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media(prefers-reduced-motion:reduce) { .sheet-mask,.sheet-motion { transition:none!important; } }
 </style>

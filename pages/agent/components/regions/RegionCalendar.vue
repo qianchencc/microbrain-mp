@@ -1,11 +1,11 @@
 <template>
  <view class="calendar" :class="{ compact, expanded }">
   <view class="calendar-head">
-   <view class="head-zone"><button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" :disabled="Boolean(minDate) && month <= minDate.slice(0, 7)" aria-label="上个月" title="上个月" @tap="moveMonth(-1)"><uni-icons type="left" size="14" color="#586d60" /></button></view>
-   <button class="month-title" :aria-expanded="expanded" @tap="setExpanded(!expanded)"><text>{{ month.slice(0, 4) }} 年 {{ Number(month.slice(5)) }} 月</text><uni-icons :type="expanded ? 'up' : 'down'" size="12" color="#71877a" /></button>
+   <view class="head-zone"><button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" :disabled="Boolean(minDate) && month <= minDate.slice(0, 7)" aria-label="上个月" title="上个月" @tap="moveMonth(-1)"><uni-icons type="left" size="14" color="var(--agent-text-secondary)" /></button></view>
+   <button class="month-title" :aria-expanded="expanded" @tap="setExpanded(!expanded)"><text>{{ month.slice(0, 4) }} 年 {{ Number(month.slice(5)) }} 月</text><uni-icons :type="expanded ? 'up' : 'down'" size="12" color="var(--agent-text-muted)" /></button>
    <view class="head-zone head-right">
-    <button class="today-btn" :class="{ 'today-dim': !showToday || !todayInRange }" :disabled="!todayInRange" hover-class="today-btn--pressed" aria-label="回到现在" title="回到现在" @tap="backToToday"><view class="today-face"><uni-icons type="location" size="12" color="#2f5a47" /><text>现在</text></view></button>
-    <button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" :disabled="month >= maxDate.slice(0, 7)" aria-label="下个月" title="下个月" @tap="moveMonth(1)"><uni-icons type="right" size="14" color="#586d60" /></button>
+    <button class="today-btn" :class="{ 'today-dim': !showToday || !todayInRange }" :disabled="!todayInRange" hover-class="today-btn--pressed" aria-label="回到现在" title="回到现在" @tap="backToToday"><view class="today-face"><uni-icons type="location" size="12" color="var(--agent-accent-deep)" /><text>现在</text></view></button>
+    <button class="month-arrow" :class="{ 'arrow-hidden': !expanded }" :disabled="month >= maxDate.slice(0, 7)" aria-label="下个月" title="下个月" @tap="moveMonth(1)"><uni-icons type="right" size="14" color="var(--agent-text-secondary)" /></button>
    </view>
   </view>
   <view class="days-wrap" :style="{ maxHeight: (expanded ? Math.ceil(days.length / 7) : 1) * (compact ? 40 : 46) + 'px' }">
@@ -62,22 +62,22 @@ button::after { border:0; }
 .month-arrow.arrow-hidden { opacity:0; pointer-events:none; }
 .month-arrow[disabled] { opacity:.25; }
 .today-btn { width:60px; height:44px; font-size:11px; margin:0; background:transparent; display:flex; align-items:center; justify-content:center; transition:transform 130ms cubic-bezier(.23,1,.32,1),opacity 180ms ease; }
-.today-face { display:flex; align-items:center; justify-content:center; gap:4px; width:56px; height:28px; border-radius:14px; background:#e9f1eb; box-shadow:inset 0 0 0 .5px #29493633,inset 0 1px 0 #fff; }
+.today-face { display:flex; align-items:center; justify-content:center; gap:4px; width:56px; height:28px; border-radius:14px; background:var(--agent-tint); box-shadow:inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.2),inset 0 1px 0 #fff; }
 .today-btn--pressed { transform:scale(.92); }
 .today-btn.today-dim { opacity:.45; }
-.month-title { min-height:44px; white-space:nowrap; display:flex; align-items:center; gap:7px; color:#455b4d; font-size:$agent-font-size-compact; font-weight:700; }
+.month-title { min-height:44px; white-space:nowrap; display:flex; align-items:center; gap:7px; color:var(--agent-text-secondary); font-size:$agent-font-size-compact; font-weight:700; }
 .days-wrap { overflow:hidden; transition:max-height 240ms cubic-bezier(.32,.72,0,1); }
 .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; }
-.day { position:relative; min-width:0; height:44px; border-radius:8px; color:#536759; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; transition:box-shadow 150ms ease,color 150ms ease; }
+.day { position:relative; min-width:0; height:44px; border-radius:8px; color:var(--agent-text-secondary); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; transition:box-shadow 150ms ease,color 150ms ease; }
 .day.selected { box-shadow:inset 0 0 0 1.5px $agent-color-accent; color:$agent-color-accent; font-weight:700; }
 .day.today .day-number { color:$agent-color-accent; font-weight:700; }
-.day.outside { color:#b5c1b8; }
+.day.outside { color:var(--agent-text-faint); }
 .day.disabled { opacity:.3; }
-.weekday { color:#9aa99f; font-size:9px; }
+.weekday { color:var(--agent-text-muted); font-size:9px; }
 .day-number { font-size:11px; }
 .day-mark { position:absolute; bottom:2px; width:4px; height:4px; border-radius:50%; background:$agent-color-accent; }
-.day-mark.abnormal { background:#ad711b; }
-.calendar-error { white-space:normal; word-break:break-word; line-height:1.5; margin:5px auto 0; color:#986b2d; font-size:10px; }
+.day-mark.abnormal { background:var(--agent-warning); }
+.calendar-error { white-space:normal; word-break:break-word; line-height:1.5; margin:5px auto 0; color:var(--agent-error); font-size:10px; }
 .calendar.compact { padding:4px 9px 8px; }
 .calendar.compact .day { height:38px; }
 @media(prefers-reduced-motion:reduce){.days-wrap,.month-arrow,.day{transition:none}}

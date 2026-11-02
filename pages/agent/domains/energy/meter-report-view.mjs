@@ -5,6 +5,7 @@
 import { meterBarChart, meterRankingChart, loadShapeChart, floorSplitChart, contributionChart } from './energy-chart.mjs'
 import { comparisonDate } from './energy-comparison-view.mjs'
 import { fmtShanghaiDateTime } from '../observations/observation-view.mjs'
+import { AGENT_COLORS } from '../../styles/colors.js'
 
 const finite = value => typeof value === 'number' && Number.isFinite(value)
 export const meterReportIsComparison = report => report?.kind === 'comparison'
@@ -238,7 +239,7 @@ export function meterReportMetricHeads(report) {
 }
 
 // 对比指标表：指标 / 两侧月份 / 变化 四列；两侧数值带单位小字，峰值日的 sub 是日期、峰值小时是时刻；
-// 变化只给带符号数值（单位与该行一致），正→up（玉绿）、负→down（黄铜）、null→—。
+// 变化只给带符号数值（单位与该行一致），正→up（蓝）、负→down（琥珀）、null→—。
 export function meterReportMetricTable(report) {
  return (report?.metrics || []).map(metric => {
   const unit = metric.unit ? ` ${metric.unit}` : ''
@@ -274,7 +275,7 @@ export function meterReportLoadCurve(report) {
    : Object.values(meterReportPeriodLabels(report))
   const chart = loadShapeChart(Array.isArray(a) ? a : [], {
    peer: Array.isArray(b) ? b : [], legend, nightWindow,
-   ...(region ? { peerColor: '#b89443', peerDash: '' } : {}),
+   ...(region ? { peerColor: AGENT_COLORS.warning, peerDash: '' } : {}),
   })
   const hasData = (Array.isArray(a) && a.some(v => finite(v))) || (Array.isArray(b) && b.some(v => finite(v)))
   if (!hasData) return null
@@ -324,15 +325,15 @@ export function meterReportBarLegend(report) {
  if (!meterReportIsComparison(report)) return []
  if (meterReportAxis(report) === 'region') {
   return [
-   { label: report?.params?.scope?.label || 'A', color: '#3d8a68' },
-   { label: report?.params?.other?.label || 'B', color: '#bfd2b9' },
+   { label: report?.params?.scope?.label || 'A', color: AGENT_COLORS.accentDeep },
+   { label: report?.params?.other?.label || 'B', color: AGENT_COLORS.chart },
   ]
  }
  const labels = meterReportPeriodLabels(report)
- return [{ label: labels.a, color: '#3d8a68' }, { label: labels.b, color: '#bfd2b9' }]
+ return [{ label: labels.a, color: AGENT_COLORS.accentDeep }, { label: labels.b, color: AGENT_COLORS.chart }]
 }
 
-// 对比分段：两期同粒度双柱（基期灰绿、本期玉绿），按下标配对；不同长度时多余侧照常画、对侧为 null。
+// 对比分段：两期同粒度双柱（基期浅蓝、本期蓝），按下标配对；不同长度时多余侧照常画、对侧为 null。
 export function meterReportCompareBuckets(report) {
  const a = report?.sides?.a?.buckets || {}, b = report?.sides?.b?.buckets || {}
  const grain = a.grain === 'hour' ? 'hour' : 'day'
@@ -410,7 +411,7 @@ export function meterReportRegionRankings(report) {
  const titleB = `${report?.params?.other?.label || 'B'} · ${report?.params?.other?.meterCount ?? report?.sides?.b?.coverage?.meters ?? 0}台`
  return [
   { title: titleA, ...meterRankingChart(a.rows), excluded: a.excluded, rows: a.rows },
-  { title: titleB, ...meterRankingChart(b.rows, { color: '#b89443' }), excluded: b.excluded, rows: b.rows },
+  { title: titleB, ...meterRankingChart(b.rows, { color: AGENT_COLORS.warning }), excluded: b.excluded, rows: b.rows },
  ]
 }
 

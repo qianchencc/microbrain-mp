@@ -1,3 +1,5 @@
+import { AGENT_COLORS } from '../../styles/colors.js'
+
 export const HOUR_PX = 34
 export const TOP_PAD = 44
 const DAY_MS = 86400000
@@ -36,8 +38,8 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
   return ys
  }
  const rail = sampled(0, height).map((y, i) => [i ? 'L' : 'M', round(xOf(y)), y])
- path(rail, { stroke: '#b9c8be', lineWidth: 1.6 })
- path(rail, { stroke: '#81958a', lineWidth: 1.6, clipY: Math.max(0, nowY) })
+ path(rail, { stroke: AGENT_COLORS.line, lineWidth: 1.6 })
+ path(rail, { stroke: AGENT_COLORS.chart, lineWidth: 1.6, clipY: Math.max(0, nowY) })
 
  const events = items.map(item => {
   const rawY = yOf(item.at), rawEndY = item.endAt ? yOf(item.endAt) : null
@@ -58,7 +60,7 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
   if (intervals.some(item => y >= item.y && y <= item.endY) || anchors.some(anchor => Math.abs(anchor - y) < 18) || Math.abs(nowY - y) < 14) continue
   ticks.push({ y, text: `${String(hour).padStart(2, '0')}:00`, kind: y < nowY ? 'tick past' : 'tick' })
   rect(xOf(y) - 5, y - 3.2, 10, 6.4, 3.2, '#fff')
-  rect(xOf(y) - 3.2, y - 1.7, 6.4, 3.4, 1.7, y < nowY ? '#a5bbae' : '#bfcec4')
+  rect(xOf(y) - 3.2, y - 1.7, 6.4, 3.4, 1.7, y < nowY ? AGENT_COLORS.chart : AGENT_COLORS.line)
  }
  const exact = events.flatMap(item => [
   ...(item.startVisible ? [{ y: item.y, text: localTime(item.at), kind: 'event' }] : []),
@@ -70,7 +72,7 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
   if (overlap > 0) { a.displayY -= overlap / 2; b.displayY += overlap / 2 }
  }
  labels.forEach(label => {
-  if (Math.abs(label.y - label.displayY) > 2) path([['M', 38, round(label.displayY)], ['L', round(xOf(label.y) - 8), label.y]], { stroke: '#a9b9ae', lineWidth: .9 })
+  if (Math.abs(label.y - label.displayY) > 2) path([['M', 38, round(label.displayY)], ['L', round(xOf(label.y) - 8), label.y]], { stroke: AGENT_COLORS.line, lineWidth: .9 })
  })
  const ribbonPoint = (y, from, to) => {
   const slope = (xOf(y + 1) - xOf(y - 1)) / 2, nx = 1 / Math.hypot(1, slope), ny = -slope * nx
@@ -90,23 +92,23 @@ export function createTimeline({ date, items = [], now = new Date().toISOString(
   previousBottom = top + 40
   const anchorY = item.endY === null ? item.y : (item.y + item.endY) / 2
   const x1 = Math.min(xOf(anchorY) + (item.endY === null ? 5 : 13), 78)
-  path([['M', round(x1), anchorY], ['C', round(x1 + 12), anchorY, 70, top + 16, 82, top + 16]], { stroke: item.faded ? '#dde4df' : '#c3cfc8', lineWidth: 1 })
+  path([['M', round(x1), anchorY], ['C', round(x1 + 12), anchorY, 70, top + 16, 82, top + 16]], { stroke: item.faded ? AGENT_COLORS.tint : AGENT_COLORS.line, lineWidth: 1 })
   return { ...item, top }
  })
  const nowVisible = nowY >= TOP_PAD && nowY < height - TOP_PAD
  if (nowVisible) {
   const edges = intervals.filter(item => item.y <= nowY && nowY < item.endY).map(item => ribbonPoint(nowY, item.y, item.endY).right[0] + 4)
   const start = Math.max(xOf(nowY) + 9, ...edges)
-  path([['M', round(start), nowY], ['L', width - 14, nowY]], { stroke: '#b9862b', lineWidth: 1, dash: [4, 5], opacity: .68 })
+  path([['M', round(start), nowY], ['L', width - 14, nowY]], { stroke: AGENT_COLORS.warning, lineWidth: 1, dash: [4, 5], opacity: .68 })
  }
  const starts = new Set(events.filter(item => item.interval && item.startVisible).map(item => item.y))
  events.filter(item => item.endY === null && !starts.has(item.y)).forEach(item => {
-  if (item.y <= nowY) disk(xOf(item.y), item.y, 5.8, 3.9, '#83958a')
-  else ring(xOf(item.y), item.y, '#87998e', 5.8, 3.9, 1.6)
+  if (item.y <= nowY) disk(xOf(item.y), item.y, 5.8, 3.9, AGENT_COLORS.chart)
+  else ring(xOf(item.y), item.y, AGENT_COLORS.textFaint, 5.8, 3.9, 1.6)
  })
- events.filter(item => item.interval && item.startVisible).forEach(item => disk(xOf(item.y), item.y, 7.1, 5.2, item.y <= nowY ? '#176b54' : '#a6c9b3'))
- events.filter(item => item.interval && item.endVisible).forEach(item => ring(xOf(item.endY), item.endY, item.endY <= nowY ? '#176b54' : '#98b9a5'))
- if (nowVisible) disk(xOf(nowY), nowY, 7.5, 5.2, '#ad711b')
+events.filter(item => item.interval && item.startVisible).forEach(item => disk(xOf(item.y), item.y, 7.1, 5.2, item.y <= nowY ? AGENT_COLORS.accentDeep : AGENT_COLORS.chart))
+events.filter(item => item.interval && item.endVisible).forEach(item => ring(xOf(item.endY), item.endY, item.endY <= nowY ? AGENT_COLORS.accentDeep : AGENT_COLORS.chart))
+ if (nowVisible) disk(xOf(nowY), nowY, 7.5, 5.2, AGENT_COLORS.warningDeep)
  const showNowLabel = nowVisible && labels.every(label => Math.abs(label.displayY - nowY) >= 25)
  const dates = Array.from({ length: days }, (_, day) => ({ date: localDate(midnight(date) + day * DAY_MS), y: TOP_PAD + day * 24 * HOUR_PX }))
  return { width, height: Math.max(height, previousBottom + TOP_PAD), shapes, labels, cards, dates, nowY, nowVisible, nowText: localTime(now), showNowLabel }

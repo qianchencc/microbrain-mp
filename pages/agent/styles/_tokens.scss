@@ -2,6 +2,8 @@
 // 基准：方案 G 浅蓝灰色卡（公司总览：浅蓝环境卡 + 白卡 + 石蓝数据）。
 // 三个来源必须保持一致：本文件（SCSS 变量）、tokens.css（CSS 变量）、colors.js（JS 字面量）。
 // 一致性由 test/agent-tokens.test.mjs 校验。
+// 注意：三元组变量仅供 rgba(var(--agent-*-rgb), α) 使用；
+// dart-sass 不支持 rgba($list, α)，SCSS 里禁止直接 rgba($agent-*-rgb, …)。
 
 /* ── 品牌与强调 ─────────────────────────────── */
 $agent-color-accent: #466eae;        // 强调蓝：主读数、链接、激活态、主要按钮
@@ -36,12 +38,14 @@ $agent-color-badge: #b4553f;         // 未读角标
 $agent-color-chart: #a8c4e8;
 $agent-color-chart-deep: #719ed8;
 
-/* ── 阴影与遮罩（rgb 三元组供 rgba() 内插） ── */
+/* ── 阴影与遮罩（rgb 三元组供 rgba(var(--x), α) 内插） ── */
 $agent-shadow-rgb: 49, 90, 128;
 $agent-ink-rgb: 38, 51, 50;
+$agent-accent-rgb: 70, 110, 174;
+$agent-surface-rgb: 243, 246, 250;
 $agent-color-mask: rgba(0, 0, 0, 0.4);
-$agent-shadow-card: 0 1px 4px rgba($agent-shadow-rgb, 0.05), 0 0 0 0.5px rgba($agent-shadow-rgb, 0.04);
-$agent-shadow-float: 0 6px 16px rgba($agent-shadow-rgb, 0.12);
+$agent-shadow-card: 0 1px 4px rgba(49, 90, 128, 0.05), 0 0 0 0.5px rgba(49, 90, 128, 0.04);
+$agent-shadow-float: 0 6px 16px rgba(49, 90, 128, 0.12);
 
 /* ── 尺寸 ──────────────────────────────────── */
 $agent-font-size-compact: 12px;

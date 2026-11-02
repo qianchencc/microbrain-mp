@@ -11,8 +11,8 @@
   <view class="reply-content">
    <view v-if="turn.activities.length" class="trace" :class="{ 'trace--open': turn.traceOpen }">
     <button class="trace__toggle" hover-class="trace__toggle--pressed" @tap="$emit('toggle-trace')">
-     <view class="trace__label"><uni-icons type="list" size="14" color="#6c7d73" /><text>处理记录</text></view>
-     <uni-icons class="trace__chevron" :class="{ 'trace__chevron--open': turn.traceOpen }" type="down" size="13" color="#7f8d85" />
+     <view class="trace__label"><uni-icons type="list" size="14" color="var(--agent-text-secondary)" /><text>处理记录</text></view>
+     <uni-icons class="trace__chevron" :class="{ 'trace__chevron--open': turn.traceOpen }" type="down" size="13" color="var(--agent-text-muted)" />
     </button>
     <view class="trace__expand"><view class="trace__clip"><ToolActivity :items="turn.activities" /></view></view>
    </view>
@@ -38,7 +38,7 @@
    <view v-if="!readOnly && turn.result && turn.result.summary" class="execution-summary" aria-live="polite">
     <text v-if="turn.result.summary.status === 'completed'" class="execution-answer">{{ turn.result.summary.text }}</text>
     <view v-else-if="turn.result.summary.status === 'running'" class="execution-progress"><view class="execution-spinner" /><text>正在整理执行结果</text></view>
-    <view v-else-if="turn.result.summary.status === 'failed'"><text class="reply-error">{{ turn.result.summary.reason || '执行总结未完成：未取得具体原因' }}</text><button class="execution-retry" :disabled="busy" hover-class="execution-retry--pressed" @tap="$emit('retry-answer')"><uni-icons type="refreshempty" size="14" color="#738177" /><text>重试回答</text></button></view>
+    <view v-else-if="turn.result.summary.status === 'failed'"><text class="reply-error">{{ turn.result.summary.reason || '执行总结未完成：未取得具体原因' }}</text><button class="execution-retry" :disabled="busy" hover-class="execution-retry--pressed" @tap="$emit('retry-answer')"><uni-icons type="refreshempty" size="14" color="var(--agent-text-muted)" /><text>重试回答</text></button></view>
    </view>
    <TaskErrorNotice v-if="turn.error && turn.items.some(item => item.kind === 'task')" :message="turn.error" summary="这次暂未完成" @details="$emit('issue', $event)" /><text v-else-if="turn.error" class="reply-error">{{ turn.error }}</text>
   </view>
@@ -71,11 +71,11 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .reply-surface { width:100%; min-width:0; }
 .reply-identity { display:flex; align-items:center; gap:$agent-space-small; min-height:30px; }
 .reply-identity__meta { display:flex; align-items:center; gap:$agent-space-small; min-width:0; }
-.reply-identity__name { flex-shrink:0; color:#21382c; font-size:14px; font-weight:650; letter-spacing:-.1px; }
+.reply-identity__name { flex-shrink:0; color:$agent-color-text-primary; font-size:14px; font-weight:650; letter-spacing:-.1px; }
 .reply-content { min-width:0; margin-top:8px; }
-.trace { margin:0 0 8px; border-radius:$agent-radius-medium; background:rgba(232,239,234,.58); transition:background-color 180ms ease; }
-.trace--open { background:rgba(235,241,237,.88); }
-.trace__toggle { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:40px; margin:0; padding:0 11px; border-radius:$agent-radius-medium; background:transparent; color:#67776d; font-size:$agent-font-size-compact; line-height:1; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
+.trace { margin:0 0 8px; border-radius:$agent-radius-medium; background:$agent-color-accent-faint; transition:background-color 180ms ease; }
+.trace--open { background:$agent-color-tint; }
+.trace__toggle { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:40px; margin:0; padding:0 11px; border-radius:$agent-radius-medium; background:transparent; color:$agent-color-text-secondary; font-size:$agent-font-size-compact; line-height:1; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
 .trace__toggle::after,.execution-retry::after { border:0; }
 .trace__toggle--pressed { transform:scale(.985); opacity:.72; }
 .trace__label { display:flex; align-items:center; gap:7px; }
@@ -88,16 +88,16 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .trace__clip { padding:0 11px; }
 .trace :deep(.activity) { margin:2px 0 10px; }
 /* 未定稿正文：与答复同位、以过程权重呈现；reclassified 折叠进处理记录，completed 原地沉淀为终稿色（同一元素过渡，不换节点）。 */
-.reply-draft { color:#66776d; transition:color .45s ease; }
-.reply-draft--settled { color:#253b30; }
+.reply-draft { color:$agent-color-text-secondary; transition:color .45s ease; }
+.reply-draft--settled { color:$agent-color-text-primary; }
 .execution-summary { margin-top:16px; }
-.read-only-boundary { margin-top:12px; padding:8px 10px; border-left:2px solid #b58c4b; background:#f8f4eb; color:#806338; font-size:$agent-font-size-compact; line-height:1.55; }
-.execution-answer { display:block; color:#253b30; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
-.execution-progress,.execution-retry { display:flex; align-items:center; gap:$agent-space-small; color:#738177; font-size:$agent-font-size-compact; }
+.read-only-boundary { margin-top:12px; padding:8px 10px; border-left:2px solid $agent-color-warning-deep; background:$agent-color-warning-faint; color:$agent-color-warning-deep; font-size:$agent-font-size-compact; line-height:1.55; }
+.execution-answer { display:block; color:$agent-color-text-primary; font-size:15px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
+.execution-progress,.execution-retry { display:flex; align-items:center; gap:$agent-space-small; color:$agent-color-text-muted; font-size:$agent-font-size-compact; }
 .execution-retry { min-height:40px; margin:0; padding:0 8px; border-radius:10px; background:transparent; transition:transform 140ms cubic-bezier(.23,1,.32,1),background-color 140ms ease; }
-.execution-retry--pressed { transform:scale(.97); background:#e8eeea; }
-.execution-spinner { width:14px; height:14px; box-sizing:border-box; flex-shrink:0; border:1.5px solid #ccd6d0; border-top-color:#738177; border-radius:50%; animation:execution-spin .8s linear infinite; }
-.reply-error { display:inline-block; margin-top:12px; padding:7px 10px; border-radius:10px; background:#f4ece1; color:#99651e; font-size:$agent-font-size-compact; line-height:1.5; }
+.execution-retry--pressed { transform:scale(.97); background:$agent-color-tint; }
+.execution-spinner { width:14px; height:14px; box-sizing:border-box; flex-shrink:0; border:1.5px solid $agent-color-line; border-top-color:$agent-color-text-muted; border-radius:50%; animation:execution-spin .8s linear infinite; }
+.reply-error { display:inline-block; margin-top:12px; padding:7px 10px; border-radius:10px; background:$agent-color-error-faint; color:$agent-color-error; font-size:$agent-font-size-compact; line-height:1.5; }
 @keyframes execution-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .trace,.trace__toggle,.trace__expand,.trace__chevron,.execution-retry { transition:none; }.execution-spinner { animation:none; } }
 </style>

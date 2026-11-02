@@ -4,7 +4,7 @@
   <view v-if="mounted" class="float-panel" :class="{ open }" :style="{ top: panelTop + 'px' }">
    <view class="panel-head">
     <view class="panel-id"><text class="panel-name">公司 Agent</text><text class="panel-status">{{ status }}</text></view>
-    <button class="panel-menu" aria-label="会话菜单" hover-class="panel-menu--pressed" @tap="conv?.openMenu()"><uni-icons type="more-filled" size="17" color="#536b5c" /></button>
+    <button class="panel-menu" aria-label="会话菜单" hover-class="panel-menu--pressed" @tap="conv?.openMenu()"><uni-icons type="more-filled" size="17" color="var(--agent-text-secondary)" /></button>
    </view>
    <AgentConversation ref="conv" class="panel-conv" source="company" :active="open && pageActive"
     @status="value => status = value" @running="onRunning" @connected="value => connected = value"
@@ -94,23 +94,23 @@ view, text, input { font-size: inherit; line-height: inherit; }
 
 /* 层级约定：浮层 40~46，全部低于 DeviceSheet 根（z99）——从面板内打开的
    安全台账/任务详情等 Sheet 以视口 fixed 盖在浮层之上。 */
-.float-scrim { position:fixed; inset:0; z-index:40; background:rgba(22,38,30,.34); opacity:0; pointer-events:none; transition:opacity .3s ease; }
+.float-scrim { position:fixed; inset:0; z-index:40; background:var(--agent-mask); opacity:0; pointer-events:none; transition:opacity .3s ease; }
 .float-scrim.on { opacity:1; pointer-events:auto; }
 
 .float-panel { position:fixed; z-index:45; left:0; right:0; bottom:0; display:flex; flex-direction:column;
- border-radius:18px 18px 0 0; background:linear-gradient(180deg,#fbfcfb,#f2f6f3);
- box-shadow:0 -14px 44px rgba(26,55,43,.26); overflow:hidden;
+ border-radius:18px 18px 0 0; background:linear-gradient(180deg,var(--agent-surface),var(--agent-surface-page));
+ box-shadow:0 -14px 44px rgba(var(--agent-shadow-rgb),.26); overflow:hidden;
  transform:translate(30%,30%) scale(.52); transform-origin:92% 100%; opacity:0; pointer-events:none;
  transition:transform .42s cubic-bezier(.2,.9,.25,1), opacity .3s ease; }
 .float-panel.open { transform:none; opacity:1; pointer-events:auto; }
 
-.panel-head { display:flex; align-items:center; gap:9px; padding:12px 46px 11px 14px; flex-shrink:0; border-bottom:1px solid #e4eae4; }
+.panel-head { display:flex; align-items:center; gap:9px; padding:12px 46px 11px 14px; flex-shrink:0; border-bottom:1px solid var(--agent-line); }
 .panel-id { flex:1; min-width:0; display:flex; flex-direction:column; }
-.panel-name { font-size:14px; font-weight:600; color:#293f31; line-height:1.3; }
-.panel-status { font-size:10.5px; color:#7d8d82; line-height:1.4; }
+.panel-name { font-size:14px; font-weight:600; color:var(--agent-text-primary); line-height:1.3; }
+.panel-status { font-size:10.5px; color:var(--agent-text-muted); line-height:1.4; }
 .panel-menu { width:36px; height:36px; display:flex; align-items:center; justify-content:center; margin:0; padding:0; background:transparent; border-radius:$agent-radius-medium; flex-shrink:0; }
 .panel-menu::after { border:0; }
-.panel-menu--pressed { background:#e7eee8; }
+.panel-menu--pressed { background:var(--agent-tint); }
 .panel-conv { flex:1; min-height:0; display:flex; }
 
 /* orb 用 view 不用 button：微信 button 默认 overflow:hidden 会把子元素裁进
@@ -118,22 +118,22 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .float-orb { position:fixed; z-index:46; right:14px; bottom:calc(16px + env(safe-area-inset-bottom));
  width:56px; height:56px; margin:0; padding:5px; border-radius:50%;
  display:flex; align-items:center; justify-content:center;
- background:linear-gradient(160deg,#fff,#eef3f9);
- box-shadow:0 6px 20px rgba(40,63,91,.20), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(49,80,112,.12);
+ background:linear-gradient(160deg,#fff,var(--agent-accent-faint));
+ box-shadow:0 6px 20px rgba(var(--agent-shadow-rgb),.20), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.12);
  transition:transform .44s cubic-bezier(.2,.9,.25,1), box-shadow .3s ease; }
 .float-orb--pressed { transform:scale(.94); }
-.float-orb.docked { box-shadow:0 4px 14px rgba(40,63,91,.18), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(49,80,112,.12); }
+.float-orb.docked { box-shadow:0 4px 14px rgba(var(--agent-shadow-rgb),.18), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.12); }
 .orb-avatar { transform:scale(1.4); }
 /* 运行中：蓝色呼吸环 */
-.float-orb.working { box-shadow:0 6px 20px rgba(40,63,91,.20), 0 0 0 0 rgba(70,110,174,.4); animation:orb-breathe 1.9s ease-in-out infinite; }
-@keyframes orb-breathe { 50% { box-shadow:0 6px 20px rgba(40,63,91,.20), 0 0 0 5px rgba(70,110,174,0); } }
+.float-orb.working { box-shadow:0 6px 20px rgba(var(--agent-shadow-rgb),.20), 0 0 0 0 rgba(var(--agent-accent-rgb),.4); animation:orb-breathe 1.9s ease-in-out infinite; }
+@keyframes orb-breathe { 50% { box-shadow:0 6px 20px rgba(var(--agent-shadow-rgb),.20), 0 0 0 5px rgba(var(--agent-accent-rgb),0); } }
 .orb-badge { position:absolute; top:-2px; right:-2px; min-width:19px; height:19px; padding:0 5px; border-radius:10px; box-sizing:border-box;
  display:flex; align-items:center; justify-content:center;
- background:linear-gradient(160deg,#c9a55c,#a8843f); color:#fff; font-size:10.5px; font-weight:600;
- box-shadow:0 2px 6px rgba(120,88,30,.35); }
+ background:var(--agent-badge); color:#fff; font-size:10.5px; font-weight:600;
+ box-shadow:0 2px 6px rgba(var(--agent-shadow-rgb),.35); }
 .orb-hint { position:absolute; right:64px; top:50%; transform:translateY(-50%); padding:7px 12px; border-radius:$agent-radius-medium;
- background:linear-gradient(#fff,#f3f7fb); box-shadow:inset 0 0 0 .5px rgba(49,80,112,.14), 0 4px 14px rgba(40,63,91,.12); white-space:nowrap; }
-.orb-hint::after { content:''; position:absolute; right:-4px; top:50%; width:9px; height:9px; margin-top:-5px; transform:rotate(45deg); background:#f7faff; box-shadow:inset -1px 1px 0 rgba(49,80,112,.1); }
-.orb-hint-text { font-size:$agent-font-size-compact; color:#516b85; }
+ background:linear-gradient(#fff,var(--agent-accent-faint)); box-shadow:inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.14), 0 4px 14px rgba(var(--agent-shadow-rgb),.12); white-space:nowrap; }
+.orb-hint::after { content:''; position:absolute; right:-4px; top:50%; width:9px; height:9px; margin-top:-5px; transform:rotate(45deg); background:var(--agent-accent-faint); box-shadow:inset -1px 1px 0 rgba(var(--agent-shadow-rgb),.1); }
+.orb-hint-text { font-size:$agent-font-size-compact; color:var(--agent-text-secondary); }
 @media(prefers-reduced-motion:reduce){ .float-panel,.float-orb{transition:none;} .float-orb.working{animation:none;} }
 </style>

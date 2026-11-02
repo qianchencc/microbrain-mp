@@ -9,7 +9,7 @@
      <view class="task-row" :class="{ cancelled: item.status === 'cancelled' }">
      <text class="task-label"><text v-if="item.warning || item.failure" class="warning-dot" />{{ item.label }}</text>
      <text v-if="item.status === 'cancelled'" class="cancelled-status">已取消</text>
-     <view class="avatars"><view v-for="avatar in item.avatars" :key="avatar.id" class="device-avatar"><image v-if="avatar.src" :src="avatar.src" mode="aspectFit" /><uni-icons v-else type="gear" size="13" color="#7c8d82" /></view><text v-if="item.more" class="more">+{{ item.more }}</text></view>
+     <view class="avatars"><view v-for="avatar in item.avatars" :key="avatar.id" class="device-avatar"><image v-if="avatar.src" :src="avatar.src" mode="aspectFit" /><uni-icons v-else type="gear" size="13" color="var(--agent-text-muted)" /></view><text v-if="item.more" class="more">+{{ item.more }}</text></view>
      <view class="task-separator" />
      <view class="owner-mark" :class="'cv-' + item.creatorVariant" :aria-label="item.creatorName">{{ item.creatorMark }}</view>
      </view>
@@ -18,7 +18,7 @@
    <view v-if="loading || error" class="notice-layer"><view class="notice"><view v-if="loading" class="loading-status"><view class="loading-spinner" /><text>正在加载任务…</text></view><TaskErrorNotice v-else :message="error" @details="issue = $event" /><button v-if="error" @tap="load">重新加载</button></view></view>
   </view>
   <DeviceSheet :open="Boolean(issue)" title="查看原因" tall compact-header @close="issue = null"><TaskIssueDetails style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" /></DeviceSheet>
- <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="#315846" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
+ <view class="device-dock"><view class="dock-bar"><button class="dock-seg" hover-class="dock-seg--pressed" @tap="deviceDrawerOpen = true"><uni-icons type="list" size="17" color="var(--agent-text-secondary)" /><text>设备</text><text v-if="deviceCount !== null" class="device-count">{{ deviceCount }}</text></button><button class="dock-seg primary" hover-class="dock-seg--pressed" aria-label="回到对话创建任务" @tap="composeTask"><text class="primary-plus">＋</text><text>新建任务</text></button></view></view>
   <RegionDeviceDrawer v-if="deviceDrawerMounted" @reference="referenceTask" :open="deviceDrawerOpen" :region-id="focusRegionId" :region-name="focusRegion?.name || ''" :region-error="error" :date="date" :now="now" :refresh-signal="deviceRefreshSignal" :sample-mode="sampleMode" :sample-date="sampleDate" :sample-tasks="sampleMode ? tasks : emptySampleTasks" @close="deviceDrawerOpen = false" @count="deviceCount = $event" @cancelled="reloadWindow(); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
   <TaskDetailSheet v-if="taskDetailMounted" @reference="referenceTask" :open="Boolean(selectedTaskId)" :task-id="selectedTaskId" :sample-task="sampleDetail" :region-name="focusRegion?.name || ''" @close="selectedTaskId = ''" @cancelled="reloadWindow(); loadCalendar(calendarMonth || date.slice(0, 7), true)" />
  </view>
@@ -254,46 +254,46 @@ onUnload(() => { visible = false; clearTimeout(refreshTimer); deviceDrawerOpen.v
 <style scoped lang="scss">
 @import "./styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
-.region-page { height:100vh; box-sizing:border-box; background:$agent-color-surface-page; color:#526759; display:flex; flex-direction:column; position:relative; }
+.region-page { height:100vh; box-sizing:border-box; background:$agent-color-surface-page; color:$agent-color-text-secondary; display:flex; flex-direction:column; position:relative; }
 
-.day-heading { padding:14px 23px 12px; display:flex; align-items:baseline; flex-wrap:wrap; gap:9px; color:#89958e; font-size:11px; }
-.day-title { color:#45564d; font-size:20px; font-weight:600; }
+.day-heading { padding:14px 23px 12px; display:flex; align-items:baseline; flex-wrap:wrap; gap:9px; color:$agent-color-text-muted; font-size:11px; }
+.day-title { color:$agent-color-text-secondary; font-size:20px; font-weight:600; }
 .sample-toggle { margin:0 0 0 auto; padding:0; background:transparent; color:$agent-color-accent; font-size:11px; line-height:1.4; }
 .sample-toggle::after { border:0; }
-.sample-notice { margin:0 23px 6px; color:#ad711b; font-size:11px; }
+.sample-notice { margin:0 23px 6px; color:$agent-color-warning; font-size:11px; }
 .timeline-body { position:relative; flex:1; min-height:0; margin:0 16px; overflow:hidden; }
 @keyframes fadeIn { from { opacity:0; } }
 .notice-layer { position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; }
 .notice-layer button { pointer-events:auto; }
-.notice { margin:130px auto 0; width:fit-content; max-width:calc(100% - 48px); box-sizing:border-box; padding:12px 18px; border-radius:18px; background:rgba(250,252,250,.96); box-shadow:0 3px 14px rgba(31,52,42,.07); text-align:center; font-size:13px; color:#89958e; animation:fadeIn 160ms ease-out backwards; }
+.notice { margin:130px auto 0; width:fit-content; max-width:calc(100% - 48px); box-sizing:border-box; padding:12px 18px; border-radius:18px; background:rgba(255,255,255,.96); box-shadow:0 3px 14px rgba(var(--agent-shadow-rgb),.07); text-align:center; font-size:13px; color:$agent-color-text-muted; animation:fadeIn 160ms ease-out backwards; }
 .loading-status { display:flex; align-items:center; gap:$agent-space-small; }
-.loading-spinner { width:12px; height:12px; border:2px solid #dce8e1; border-top-color:#26745b; border-radius:50%; animation:loadingSpin 800ms linear infinite; }
+.loading-spinner { width:12px; height:12px; border:2px solid $agent-color-line; border-top-color:$agent-color-accent-deep; border-radius:50%; animation:loadingSpin 800ms linear infinite; }
 @keyframes loadingSpin { to { transform:rotate(360deg); } }
 .notice button { margin-top:18px; background:transparent; font-size:13px; color:$agent-color-accent; }
 .notice button::after { border:0; }
 .task-row { display:flex; align-items:center; gap:7px; height:32px; min-width:0; }
 .avatars { display:flex; align-items:center; flex-shrink:0; }
-.device-avatar { width:21px; height:21px; margin-left:-7px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffffff,#dfe7e1 72%); box-shadow:0 0 0 1.5px #fff,0 2px 5px rgba(31,52,42,.12); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.device-avatar { width:21px; height:21px; margin-left:-7px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffffff,$agent-color-tint 72%); box-shadow:0 0 0 1.5px #fff,0 2px 5px rgba(var(--agent-shadow-rgb),.12); display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .device-avatar image { width:21px; height:21px; }
 .device-avatar:first-child { margin-left:0; }
-.more { font-size:8px; margin-left:2px; color:#7a8d80; }
-.task-label { flex:1; min-width:0; font-size:$agent-font-size-compact; font-weight:600; color:#45564d; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.warning-dot { display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:#ad711b; box-shadow:0 0 0 2px #f7ecd8; vertical-align:1px; }
-.failure-mark { margin-right:6px; color:#a15343; font-size:13px; font-weight:700; }
-.cancelled-status { flex-shrink:0; color:#7a8b80; font-size:9px; }
-.task-separator { width:1px; height:14px; flex-shrink:0; background:#e1e8e2; }
-.owner-mark { width:22px; height:22px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#3a9478,#11553f); color:#fff; font-size:9px; font-weight:700; }
-.owner-mark.cv-brass { background:linear-gradient(145deg,#d9b06c,#a87c33); }
-.owner-mark.cv-slate { background:linear-gradient(145deg,#8fa7b8,#5d7484); }
-.owner-mark.cv-grey { background:linear-gradient(145deg,#a9b0aa,#7a817b); }
-.task-row.cancelled .task-label { text-decoration:line-through; text-decoration-color:#9caaa0; }
-.device-dock { position:absolute; left:0; right:0; bottom:0; z-index:6; box-sizing:border-box; padding-top:30px; padding-bottom:calc(10px + env(safe-area-inset-bottom)); display:flex; justify-content:center; background:linear-gradient(#f4f7f500,$agent-color-surface-page 55%); pointer-events:none; }
-.dock-bar { pointer-events:auto; height:44px; padding:4px; border-radius:22px; display:flex; align-items:center; background:linear-gradient(#fefffe,#f1f5f2); box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 10px 26px rgba(28,57,42,.18); }
-.dock-seg { height:36px; margin:0; padding:0 16px; border-radius:18px; display:flex; align-items:center; justify-content:center; gap:6px; background:transparent; color:#315846; font-size:12.5px; font-weight:650; line-height:1; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.more { font-size:8px; margin-left:2px; color:$agent-color-text-muted; }
+.task-label { flex:1; min-width:0; font-size:$agent-font-size-compact; font-weight:600; color:$agent-color-text-secondary; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.warning-dot { display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:$agent-color-warning; box-shadow:0 0 0 2px $agent-color-warning-faint; vertical-align:1px; }
+.failure-mark { margin-right:6px; color:$agent-color-error; font-size:13px; font-weight:700; }
+.cancelled-status { flex-shrink:0; color:$agent-color-text-muted; font-size:9px; }
+.task-separator { width:1px; height:14px; flex-shrink:0; background:$agent-color-line; }
+.owner-mark { width:22px; height:22px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,$agent-color-accent,$agent-color-accent-deep); color:#fff; font-size:9px; font-weight:700; }
+.owner-mark.cv-brass { background:linear-gradient(145deg,$agent-color-warning,$agent-color-warning-deep); }
+.owner-mark.cv-slate { background:linear-gradient(145deg,$agent-color-chart-deep,$agent-color-text-secondary); }
+.owner-mark.cv-grey { background:linear-gradient(145deg,$agent-color-text-faint,$agent-color-text-muted); }
+.task-row.cancelled .task-label { text-decoration:line-through; text-decoration-color:$agent-color-text-faint; }
+.device-dock { position:absolute; left:0; right:0; bottom:0; z-index:6; box-sizing:border-box; padding-top:30px; padding-bottom:calc(10px + env(safe-area-inset-bottom)); display:flex; justify-content:center; background:linear-gradient(rgba(var(--agent-surface-rgb),0),$agent-color-surface-page 55%); pointer-events:none; }
+.dock-bar { pointer-events:auto; height:44px; padding:4px; border-radius:22px; display:flex; align-items:center; background:linear-gradient($agent-color-surface,$agent-color-surface-page); box-shadow:inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.16),inset 0 1px 0 #fff,0 10px 26px rgba(var(--agent-shadow-rgb),.18); }
+.dock-seg { height:36px; margin:0; padding:0 16px; border-radius:18px; display:flex; align-items:center; justify-content:center; gap:6px; background:transparent; color:$agent-color-text-secondary; font-size:12.5px; font-weight:650; line-height:1; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
 .dock-seg::after { border:0; }
-.dock-seg.primary { background:linear-gradient(145deg,#308b70,#1d5c45); color:#fff; box-shadow:0 3px 9px rgba(23,74,55,.25),inset 0 1px 0 rgba(255,255,255,.18); }
+.dock-seg.primary { background:linear-gradient(145deg,$agent-color-accent,$agent-color-accent-deep); color:#fff; box-shadow:0 3px 9px rgba(var(--agent-shadow-rgb),.25),inset 0 1px 0 rgba(255,255,255,.18); }
 .dock-seg--pressed { transform:scale(.96); }
 .primary-plus { font-size:15px; font-weight:500; line-height:1; }
-.device-count { font-size:11px; color:#7b8d80; font-weight:600; }
+.device-count { font-size:11px; color:$agent-color-text-muted; font-weight:600; }
 @media (prefers-reduced-motion:reduce) { .loading-spinner,.notice,.nav-back,.dock-seg { transition:none; animation:none; } }
 </style>

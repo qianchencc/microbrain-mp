@@ -32,7 +32,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
    嵌套 intrinsic sizing 塌成一列（2026-09-16 三次实测根因）；font-size:0 消行盒
    基线空隙，文字自行声明字号。 */
 .user-message-wrap { display:block; width:100%; text-align:right; font-size:0; }
-.user-message { display:inline-block; text-align:left; max-width:88%; box-sizing:border-box; padding:12px 15px; border-radius:15px 15px 4px 15px; background:linear-gradient(155deg,#247b62,#145b46); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 2px 5px rgba(19,73,49,.10); animation:message-in 180ms cubic-bezier(.23,1,.32,1); transition:opacity 160ms ease; }
+.user-message { display:inline-block; text-align:left; max-width:88%; box-sizing:border-box; padding:12px 15px; border-radius:15px 15px 4px 15px; background:linear-gradient(155deg,var(--agent-accent),var(--agent-accent-deep)); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 2px 5px rgba(var(--agent-shadow-rgb),.1); animation:message-in 180ms cubic-bezier(.23,1,.32,1); transition:opacity 160ms ease; }
 .user-message__text { display:block; color:#fff; font-size:15px; line-height:1.6; overflow-wrap:anywhere; word-break:break-all; }
 .user-message--editing { opacity:.55; }
 @keyframes message-in { from { opacity:0; transform:translateY(4px); } }
@@ -43,6 +43,6 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .message-action--pressed { background:rgba(0,0,0,.04); transform:scale(.92); }
 .message-action[disabled] { opacity:.4; }
 .message-action__icon { width:14px; height:14px; opacity:.45; }
-.editing-note { font-size:11px; color:#8b9991; }
+.editing-note { font-size:11px; color:var(--agent-text-muted); }
 @media(prefers-reduced-motion:reduce) { .message-action { transition:none; }.user-message,.message-actions { animation:none; } }
 </style>

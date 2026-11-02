@@ -5,7 +5,7 @@
    <view v-if="error && report" class="estale"><text>{{ error }}</text><button class="eretry" @tap="init(true)">重试</button></view>
    <template v-if="report || !error">
     <view class="calrow">
-     <button v-if="!bounded || selected" class="calchip" @tap="calOpen = !calOpen"><uni-icons type="calendar" size="13" color="#37513f" /><text>{{ labelOf(selected) }}</text><uni-icons :type="calOpen ? 'up' : 'down'" size="11" color="#71877a" /></button>
+   <button v-if="!bounded || selected" class="calchip" @tap="calOpen = !calOpen"><uni-icons type="calendar" size="13" color="var(--agent-text-secondary)" /><text>{{ labelOf(selected) }}</text><uni-icons :type="calOpen ? 'up' : 'down'" size="11" color="var(--agent-text-muted)" /></button>
     </view>
     <RegionCalendar v-if="calOpen && selected && (!bounded || bounds)" class="ecal" :date="selected" :today="today" :min-date="bounded ? bounds?.min : undefined" :max-date="bounded ? (bounds?.max || today) : today" compact @select="onCalendar" />
     <view class="esec"><text>每日用电</text><text v-if="basisNote">{{ basisNote }}</text></view>
@@ -581,46 +581,46 @@ watch(() => props.focusDate, date => {
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; line-height:1.3; }
 button::after { border:0; }
-.epanel { flex:1; min-height:0; display:flex; flex-direction:column; color:#35533f; font-size:$agent-font-size-compact; }
+.epanel { flex:1; min-height:0; display:flex; flex-direction:column; color:$agent-color-text-secondary; font-size:$agent-font-size-compact; }
 .ebody { flex:1; min-height:0; height:0; padding:6px 20px 24px; box-sizing:border-box; }
-.estate-msg { display:flex; flex-direction:column; align-items:center; gap:10px; padding:30px 0; color:#839189; font-size:$agent-font-size-compact; }
-.eretry { font-size:11px; color:$agent-color-accent; border:1px solid #dce4da; border-radius:999px; padding:7px 16px; background:#fcfdf8; }
+.estate-msg { display:flex; flex-direction:column; align-items:center; gap:10px; padding:30px 0; color:$agent-color-text-muted; font-size:$agent-font-size-compact; }
+.eretry { font-size:11px; color:$agent-color-accent; border:1px solid $agent-color-line; border-radius:999px; padding:7px 16px; background:$agent-color-surface; }
 .estale { display:flex; align-items:center; flex-wrap:wrap; gap:$agent-space-small; margin-top:8px; font-size:10.5px; color:$agent-color-warning; }
 .calrow { display:flex; margin:8px 0 2px; }
-.calchip { display:flex; align-items:center; gap:6px; height:30px; padding:0 11px; border-radius:15px; background:linear-gradient(#fefffe,#eef3ef); color:#37513f; font-size:11.5px; font-weight:650; box-shadow:inset 0 0 0 .5px rgba(26,55,43,.16),inset 0 1px 0 #fff,0 4px 12px rgba(28,57,42,.16); }
+.calchip { display:flex; align-items:center; gap:6px; height:30px; padding:0 11px; border-radius:15px; background:linear-gradient($agent-color-surface,$agent-color-tint); color:$agent-color-text-secondary; font-size:11.5px; font-weight:650; box-shadow:inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.16),inset 0 1px 0 #fff,0 4px 12px rgba(var(--agent-shadow-rgb),.16); }
 .calchip:active { transform:scale(.95); }
 .ecal { margin:8px -8px 4px; }
-.esec { display:flex; align-items:baseline; justify-content:space-between; font-size:10px; letter-spacing:2px; color:#94a08b; padding-bottom:8px; border-bottom:1px solid #e0e8db; margin-top:24px; }
+.esec { display:flex; align-items:baseline; justify-content:space-between; font-size:10px; letter-spacing:2px; color:$agent-color-text-muted; padding-bottom:8px; border-bottom:1px solid $agent-color-line; margin-top:24px; }
 .esec > text:last-child { letter-spacing:0; font-size:9px; }
 .ehero { margin-top:14px; }
-.elabel { display:block; font-size:10px; letter-spacing:2px; color:#94a08b; }
-.enum { display:block; font-family:Georgia,"Songti SC",serif; font-size:40px; color:#2e4a38; letter-spacing:-.5px; margin-top:2px; }
-.enum .u { font-size:13px; color:#6b8069; }
-.edelta { display:block; font-size:10.5px; color:#8fa08c; margin-top:6px; }
+.elabel { display:block; font-size:10px; letter-spacing:2px; color:$agent-color-text-muted; }
+.enum { display:block; font-family:Georgia,"Songti SC",serif; font-size:40px; color:$agent-color-accent-deep; letter-spacing:-.5px; margin-top:2px; }
+.enum .u { font-size:13px; color:$agent-color-text-muted; }
+.edelta { display:block; font-size:10.5px; color:$agent-color-text-muted; margin-top:6px; }
 .edelta .b { color:$agent-color-accent; font-weight:600; }
 .edelta.warn { color:$agent-color-warning; }
-.edelta.muted { color:#a0ab95; }
-.zone-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #ece8d9; font-size:$agent-font-size-compact; }
-.zn { width:56px; flex-shrink:0; color:#3c4a3e; }
-.ztrack { flex:1; height:3px; border-radius:2px; background:#e9efe4; }
+.edelta.muted { color:$agent-color-text-muted; }
+.zone-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid $agent-color-line; font-size:$agent-font-size-compact; }
+.zn { width:56px; flex-shrink:0; color:$agent-color-text-secondary; }
+.ztrack { flex:1; height:3px; border-radius:2px; background:$agent-color-tint; }
 .zfill { display:block; height:3px; border-radius:2px; }
-.zv { flex-shrink:0; font-size:10.5px; color:#97917e; font-variant-numeric:tabular-nums; }
-.sec-empty { display:block; padding:14px 0; font-size:11px; color:#a0ab95; }
-.mrow { display:flex; align-items:center; gap:10px; width:100%; padding:10px 0; border-bottom:1px solid #ece8d9; font-size:$agent-font-size-compact; }
+.zv { flex-shrink:0; font-size:10.5px; color:$agent-color-text-muted; font-variant-numeric:tabular-nums; }
+.sec-empty { display:block; padding:14px 0; font-size:11px; color:$agent-color-text-muted; }
+.mrow { display:flex; align-items:center; gap:10px; width:100%; padding:10px 0; border-bottom:1px solid $agent-color-line; font-size:$agent-font-size-compact; }
 .mrow:last-of-type { border-bottom:0; }
 .mrow-copy { flex:1; min-width:0; }
-.mrow-name { display:block; color:#3c4a3e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.mrow-loc { display:block; font-size:10px; color:#8fa08c; margin-top:2px; }
-.mrow-v { flex-shrink:0; font-variant-numeric:tabular-nums; color:#345640; font-size:11.5px; }
-.mrow-share { font-style:normal; font-size:10px; color:#a0ab95; margin-left:6px; }
-.efoot { display:block; font-size:9.5px; color:#a0ab95; line-height:1.8; margin-top:16px; }
+.mrow-name { display:block; color:$agent-color-text-secondary; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mrow-loc { display:block; font-size:10px; color:$agent-color-text-muted; margin-top:2px; }
+.mrow-v { flex-shrink:0; font-variant-numeric:tabular-nums; color:$agent-color-text-secondary; font-size:11.5px; }
+.mrow-share { font-style:normal; font-size:10px; color:$agent-color-text-muted; margin-left:6px; }
+.efoot { display:block; font-size:9.5px; color:$agent-color-text-muted; line-height:1.8; margin-top:16px; }
 /* 所选日补块中：数值/构成/明细原位骨架；失败给重试（同 EnergySkeleton 的呼吸）。 */
 .efail-row { display:flex; align-items:center; gap:10px; margin-top:8px; font-size:10.5px; color:$agent-color-warning; }
-.sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v { background:#e2eadf; border-radius:4px; animation:sk-pulse 1.4s ease-in-out infinite; }
+.sk-num,.sk-delta,.sk-zn,.sk-fill,.sk-name,.sk-loc,.sk-v { background:$agent-color-tint; border-radius:4px; animation:sk-pulse 1.4s ease-in-out infinite; }
 .sk-num { display:block; width:150px; height:38px; margin-top:4px; border-radius:8px; }
 .sk-delta { display:block; width:220px; max-width:80%; height:10px; margin-top:10px; }
 .sk-zn { width:56px; height:12px; flex-shrink:0; }
-.sk-fill { background:#e2eadf; }
+.sk-fill { background:$agent-color-tint; }
 .sk-name { display:block; width:62%; height:12px; }
 .sk-loc { display:block; width:38%; height:9px; margin-top:6px; }
 .sk-v { width:64px; height:12px; flex-shrink:0; }

@@ -38,10 +38,10 @@ function selectPoint(event) {
 <style scoped lang="scss">
 @import "../../styles/tokens";
 view, text, input { font-size:inherit;line-height:inherit; }
-.trend { color:#35533f;font-size:$agent-font-size-compact; }.scope,.window { display:block;font-size:11px;color:#859683;line-height:1.6; }.window { margin-top:3px; }
+.trend { color:var(--agent-text-secondary);font-size:$agent-font-size-compact; }.scope,.window { display:block;font-size:11px;color:var(--agent-text-muted);line-height:1.6; }.window { margin-top:3px; }
 button { margin:0;padding:0;background:transparent;line-height:1.3; }button::after { border:0; }
-.metrics { display:flex;gap:5px;flex-wrap:wrap;margin:16px 0; }.metrics button { flex:1;min-width:45px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;color:#809181;font-size:11px;background:#edf3e8; }.metrics .selected { color:#21684d;background:#fcfdf8;box-shadow:0 1px 5px #274b3328;font-weight:600; }
-.summary { display:flex;justify-content:space-between;align-items:center;margin:5px 0 12px; }.summary>view>text { display:block;color:#8a9c87;font-size:11px; }.summary .number { color:#345640;font-size:32px;line-height:1.3; }.unit { font-size:13px;margin-left:4px; }.peak { text-align:right; }
-.plot { position:relative;height:154px; }.chart { width:100%;height:100%; }.axis-time { display:flex;justify-content:space-between;padding-left:32px;color:#8b9e85;font-size:10px; }
-.readout { display:flex;justify-content:space-between;gap:$agent-space-small;margin:14px 0;padding:11px 0;border-top:1px solid #e0e8db;border-bottom:1px solid #e0e8db;color:#647f68;font-size:11px; }.pressed { opacity:.7; }
+.metrics { display:flex;gap:5px;flex-wrap:wrap;margin:16px 0; }.metrics button { flex:1;min-width:45px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;color:var(--agent-text-muted);font-size:11px;background:var(--agent-tint); }.metrics .selected { color:var(--agent-accent-deep);background:var(--agent-surface);box-shadow:0 1px 5px rgba(var(--agent-shadow-rgb),.16);font-weight:600; }
+.summary { display:flex;justify-content:space-between;align-items:center;margin:5px 0 12px; }.summary>view>text { display:block;color:var(--agent-text-muted);font-size:11px; }.summary .number { color:var(--agent-accent-deep);font-size:32px;line-height:1.3; }.unit { font-size:13px;margin-left:4px; }.peak { text-align:right; }
+.plot { position:relative;height:154px; }.chart { width:100%;height:100%; }.axis-time { display:flex;justify-content:space-between;padding-left:32px;color:var(--agent-text-muted);font-size:10px; }
+.readout { display:flex;justify-content:space-between;gap:$agent-space-small;margin:14px 0;padding:11px 0;border-top:1px solid var(--agent-line);border-bottom:1px solid var(--agent-line);color:var(--agent-text-secondary);font-size:11px; }.pressed { opacity:.7; }
 </style>

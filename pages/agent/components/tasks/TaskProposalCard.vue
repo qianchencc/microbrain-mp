@@ -38,7 +38,7 @@
     </view>
     <button v-if="phaseRest(phase, index) || isExpanded(index)" class="phase-more" hover-class="phase-more--pressed" :aria-expanded="isExpanded(index)" @tap="togglePhase(index)">
      <text>{{ isExpanded(index) ? '收起' : `还有 ${phaseRest(phase, index)} 项 · 展开` }}</text>
-     <uni-icons type="down" size="11" color="#176b54" :class="{ 'caret-up': isExpanded(index) }" />
+     <uni-icons type="down" size="11" color="var(--agent-accent-deep)" :class="{ 'caret-up': isExpanded(index) }" />
     </button>
    </view>
   </view>
@@ -48,8 +48,8 @@
    <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy || isConfirming || needsDecision" :loading="isConfirming" @tap="$emit('confirm')">{{ needsDecision ? '等待补充' : task.confirmation?.status === 'recovering' ? '正在核实' : isConfirming ? '正在创建' : isCancellation ? '确认取消' : task.repeat ? '创建重复安排' : '创建任务' }}</button>
   </view>
   <view v-else-if="isCreated" class="task-created">
-   <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看重复安排' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="#176b54" /></button>
-   <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="#176b54" /></button>
+   <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看重复安排' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="var(--agent-accent-deep)" /></button>
+   <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="var(--agent-accent-deep)" /></button>
   </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>
   <text v-if="isConfirming && state === 'pending_confirmation'" class="task-wait" role="status" aria-live="polite">{{ task.confirmation?.message || '正在核验设备范围并保存安排，请稍候。' }}</text>
@@ -125,47 +125,47 @@ function phaseTitle(index) {
 <style scoped lang="scss">
 @import "../../styles/tokens";
 view,text,input { font-size:inherit; line-height:inherit; }
-.task-card { width:100%; box-sizing:border-box; margin-top:14px; padding:12px; border-radius:16px; background:linear-gradient(#fdfefd,#f6f8f5); box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(26,55,43,.10),0 1px 2px rgba(28,57,42,.07),0 10px 24px rgba(28,57,42,.07); overflow:hidden; color:#2f4838; }
+.task-card { width:100%; box-sizing:border-box; margin-top:14px; padding:12px; border-radius:16px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.10),0 1px 2px rgba(var(--agent-shadow-rgb),.07),0 10px 24px rgba(var(--agent-shadow-rgb),.07); overflow:hidden; color:$agent-color-text-secondary; }
 .task-head { display:flex; justify-content:space-between; align-items:center; padding:3px 3px 0; }
-.task-kicker { color:#63756b; font-size:$agent-font-size-compact; font-weight:600; }
+.task-kicker { color:$agent-color-text-muted; font-size:$agent-font-size-compact; font-weight:600; }
 .task-state { color:$agent-color-accent; font-size:11px; font-weight:600; }
-.task-wait { display:block; margin:8px 3px 0; color:#63756b; font-size:$agent-font-size-compact; line-height:1.5; }
-.task-state.partial,.task-state.unconfirmed,.task-state.expired,.task-state.cancelled,.task-state.failed { color:#9c7040; }
+.task-wait { display:block; margin:8px 3px 0; color:$agent-color-text-muted; font-size:$agent-font-size-compact; line-height:1.5; }
+.task-state.partial,.task-state.unconfirmed,.task-state.expired,.task-state.cancelled,.task-state.failed { color:$agent-color-warning-deep; }
 .task-name { display:block; margin:5px 3px 0; font-size:16px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
-.task-repeat { display:block; margin:7px 3px 0; color:#536e5c; font-size:$agent-font-size-compact; line-height:1.5; }
-.task-interval { display:block; margin:6px 3px 10px; color:#8b9991; font-size:11px; }
+.task-repeat { display:block; margin:7px 3px 0; color:$agent-color-text-secondary; font-size:$agent-font-size-compact; line-height:1.5; }
+.task-interval { display:block; margin:6px 3px 10px; color:$agent-color-text-muted; font-size:11px; }
 .task-name + .task-phases,.task-interval + .task-phases { margin-top:10px; }
-.task-phases { border-top:.5px solid #dbe3dd; }
+.task-phases { border-top:.5px solid $agent-color-line; }
 .task-phase { padding:11px 3px 9px; }
-.task-phase + .task-phase { border-top:.5px solid #dbe3dd; }
-.phase-time { display:flex; align-items:center; gap:7px; margin-bottom:7px; color:#536e5c; font-size:11px; font-weight:600; }
-.phase-node { width:9px; height:9px; box-sizing:border-box; flex-shrink:0; border-radius:50%; background:#267b60; }
-.phase-node.ending { border:2px solid #267b60; background:#fff; }
+.task-phase + .task-phase { border-top:.5px solid $agent-color-line; }
+.phase-time { display:flex; align-items:center; gap:7px; margin-bottom:7px; color:$agent-color-text-secondary; font-size:11px; font-weight:600; }
+.phase-node { width:9px; height:9px; box-sizing:border-box; flex-shrink:0; border-radius:50%; background:$agent-color-accent-deep; }
+.phase-node.ending { border:2px solid $agent-color-accent-deep; background:#fff; }
 .task-device { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:4px 0 4px 16px; font-size:$agent-font-size-compact; line-height:1.4; }
 .device-cell { display:flex; align-items:center; gap:6px; flex:1; min-width:0; }
 .device-art { width:18px; height:18px; flex-shrink:0; }
 .device-name { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.device-target { flex-shrink:0; max-width:100%; color:#5c7865; }
-.read-window { display:block; margin:2px 0 3px 16px; color:#917044; font-size:10px; }
-.device-location { width:100%; margin-left:16px; color:#8b9991; font-size:10px; }
+.device-target { flex-shrink:0; max-width:100%; color:$agent-color-text-secondary; }
+.read-window { display:block; margin:2px 0 3px 16px; color:$agent-color-warning-deep; font-size:10px; }
+.device-location { width:100%; margin-left:16px; color:$agent-color-text-muted; font-size:10px; }
 .preflight-line { display:block; width:auto; margin:3px 0 3px 16px; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
 .preflight-counts { display:flex; flex-wrap:wrap; gap:2px 10px; }
 .preflight-counts text { white-space:nowrap; }
 .phase-more { width:100%; min-height:34px; margin-top:5px; display:flex; align-items:center; justify-content:center; gap:5px; color:$agent-color-accent; font-size:11px; font-weight:600; border-radius:0; }
-.phase-more--pressed { background:#eef3ef; }
+.phase-more--pressed { background:$agent-color-tint; }
 .caret-up { transform:rotate(180deg); }
-.task-note { display:block; padding:0 3px 10px; color:#8b796c; font-size:11px; }
-.task-actions { display:flex; align-items:center; justify-content:flex-end; gap:$agent-space-small; padding:13px 3px 3px; border-top:.5px solid #dbe3dd; }
+.task-note { display:block; padding:0 3px 10px; color:$agent-color-warning-deep; font-size:11px; }
+.task-actions { display:flex; align-items:center; justify-content:flex-end; gap:$agent-space-small; padding:13px 3px 3px; border-top:.5px solid $agent-color-line; }
 .task-actions button { display:flex; align-items:center; justify-content:center; min-width:0; min-height:44px; margin:0; padding:0 12px; border-radius:10px; font-size:$agent-font-size-compact; line-height:44px; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 160ms ease,box-shadow 160ms ease,opacity 160ms ease; }
 .task-actions button::after,.task-link::after { border:0; }
-.task-secondary { min-width:48px; border:0; background:transparent; color:#718078; }
-.task-primary { min-width:112px; border:1px solid $agent-color-accent; background:$agent-color-accent; color:#fff; box-shadow:0 4px 10px #176b5422; }
-.task-primary.destructive { border-color:#a15343; background:#a15343; box-shadow:0 4px 10px #a1534322; }
-.task-quiet--pressed { transform:scale(.975); background:#eef3ef; }
-.task-primary--pressed { transform:scale(.975); background:#126149; box-shadow:0 2px 6px #176b541c; }
-.task-primary.destructive.task-primary--pressed { background:#8c463a; }
+.task-secondary { min-width:48px; border:0; background:transparent; color:$agent-color-text-muted; }
+.task-primary { min-width:112px; border:1px solid $agent-color-accent; background:$agent-color-accent; color:#fff; box-shadow:0 4px 10px rgba(var(--agent-shadow-rgb),.13); }
+.task-primary.destructive { border-color:$agent-color-error; background:$agent-color-error; box-shadow:0 4px 10px rgba(var(--agent-shadow-rgb),.13); }
+.task-quiet--pressed { transform:scale(.975); background:$agent-color-tint; }
+.task-primary--pressed { transform:scale(.975); background:$agent-color-accent-deep; box-shadow:0 2px 6px rgba(var(--agent-shadow-rgb),.11); }
+.task-primary.destructive.task-primary--pressed { background:$agent-color-error; }
 .task-actions button[disabled] { opacity:.52; box-shadow:none; }
-.task-link { display:flex; align-items:center; justify-content:center; gap:4px; min-height:43px; margin:10px 0 0; border-top:.5px solid #dbe3dd; border-radius:0; background:transparent; color:$agent-color-accent; font-size:$agent-font-size-compact; }
-.task-ended { display:block; padding:12px 3px 2px; border-top:.5px solid #dbe3dd; color:#89978b; font-size:11px; }
+.task-link { display:flex; align-items:center; justify-content:center; gap:4px; min-height:43px; margin:10px 0 0; border-top:.5px solid $agent-color-line; border-radius:0; background:transparent; color:$agent-color-accent; font-size:$agent-font-size-compact; }
+.task-ended { display:block; padding:12px 3px 2px; border-top:.5px solid $agent-color-line; color:$agent-color-text-muted; font-size:11px; }
 @media(prefers-reduced-motion:reduce){.task-actions button{transition:none}}
 </style>

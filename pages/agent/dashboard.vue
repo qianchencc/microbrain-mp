@@ -7,7 +7,7 @@
    <view class="title-row">
     <text class="nav-title-text">物联助手</text>
     <view class="nav-sep" />
-    <button class="office-entry" :disabled="Boolean(openingAgent)" hover-class="office-entry--pressed" aria-label="打开办公室 Agent" @tap="openAgent('office')"><text class="office-entry-text">办公室</text><uni-icons type="forward" size="10" color="#7d8d82" /></button>
+    <button class="office-entry" :disabled="Boolean(openingAgent)" hover-class="office-entry--pressed" aria-label="打开办公室 Agent" @tap="openAgent('office')"><text class="office-entry-text">办公室</text><uni-icons type="forward" size="10" color="var(--agent-text-muted)" /></button>
    </view>
   </template>
  </AssistantNav>
@@ -15,7 +15,7 @@
    <view class="content">
     <view class="headline">
      <view><text class="page-title">公司总览</text><text class="date">{{ dateLine }} · 公司设备与环境</text></view>
-     <button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="#516b85" /></button>
+     <button class="refresh" :disabled="loading" aria-label="刷新公司概览" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="19" color="var(--agent-text-secondary)" /></button>
     </view>
     <view v-if="error" class="notice"><text>{{ error }}</text><button @tap="load(true)">重试</button></view>
     <view v-else-if="snapshot?.errors?.length" class="notice"><text>部分观测暂不可用</text><button @tap="showErrors">查看</button></view>
@@ -61,7 +61,7 @@
   </scroll-view>
   <TaskListSheet v-if="tasksMounted" :open="tasksOpen" source="company" :initial-view="taskEntry.view" :date="taskEntry.date" :initial-task="taskEntry.task" :refresh-key="taskRevision" @close="tasksOpen = false" @reference="referenceTask" @changed="tasksChanged" @create="createTask" />
   <DeviceSheet v-if="observationMounted" :open="Boolean(observationType)" :back="observationBack" tall compact-header :title="selectedEvent ? '安全台账详情' : observationTitle" @close="observationType = ''">
-   <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" hover-class="event-back--pressed" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
+   <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" hover-class="event-back--pressed" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="var(--agent-text-muted)" /></button></template>
    <SafetyHistoryList v-if="observationType === 'alerts'" class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="observationType === 'alerts' && !selectedEvent" @select="selectedEvent = $event" />
    <EnvironmentHistoryView v-else-if="observationType === 'environment'" class="event-host" :active="observationType === 'environment'" @question="openEnvironmentAgent" />
    <MeterHistoryView v-else-if="observationType === 'energy'" class="event-host" :active="observationType === 'energy'" @question="openMeterAgent" />
@@ -454,39 +454,39 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .dashboard-scroll { flex:1; height:0; min-height:0; }.content { padding:15px 15px calc(40px + env(safe-area-inset-bottom)); }
 .headline { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
 .page-title { display:block; font-size:24px; font-weight:700; letter-spacing:-.5px; }
-.date { display:block; margin-top:2px; color:#788d9e; font-size:11px; }
+.date { display:block; margin-top:2px; color:$agent-color-text-muted; font-size:11px; }
 .refresh { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; flex-shrink:0; }.refresh[disabled] { opacity:.6; }
-.hero { position:relative; display:block; width:100%; min-height:178px; box-sizing:border-box; padding:19px; text-align:left; border-radius:22px; overflow:hidden; background:linear-gradient(130deg,#e1edf9,#f9fcff); }
+.hero { position:relative; display:block; width:100%; min-height:178px; box-sizing:border-box; padding:19px; text-align:left; border-radius:22px; overflow:hidden; background:linear-gradient(130deg,$agent-color-tint,$agent-color-surface); }
 .hero-label,.hero-name,.hero-temperature,.hero-meta,.hero-note { display:block; position:relative; z-index:1; max-width:66%; }
-.hero-label { color:#617f9e; font-size:11px; }.hero-name { margin-top:5px; color:#617f9e; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.hero-temperature { margin-top:10px; color:#315a80; font-size:45px; line-height:1.2; font-weight:700; letter-spacing:-2px; }.hero-unit { font-size:16px; letter-spacing:0; }
-.hero-meta,.hero-note { color:#6786a3; font-size:11px; }.hero-note { margin-top:4px; color:$agent-color-warning; }
+.hero-label { color:$agent-color-text-secondary; font-size:11px; }.hero-name { margin-top:5px; color:$agent-color-text-secondary; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hero-temperature { margin-top:10px; color:$agent-color-accent-deep; font-size:45px; line-height:1.2; font-weight:700; letter-spacing:-2px; }.hero-unit { font-size:16px; letter-spacing:0; }
+.hero-meta,.hero-note { color:$agent-color-text-muted; font-size:11px; }.hero-note { margin-top:4px; color:$agent-color-warning; }
 .hero-image { position:absolute; width:116px; height:116px; right:9px; top:31px; }
 .summary { display:flex; gap:8px; margin-top:10px; }.summary button { flex:1; min-width:0; padding:12px; text-align:left; background:#fff; border-radius:15px; }
-.summary button text { display:block; color:#718496; font-size:10px; }.summary button .summary-value { margin-top:4px; color:#425c78; font-size:15px; font-weight:700; }
-.section { display:flex; justify-content:space-between; align-items:center; margin:19px 2px 9px; font-size:15px; font-weight:700; }.section button { min-height:36px; color:#667f96; font-size:11px; font-weight:400; }
-.energy-card { display:flex; align-items:flex-end; gap:15px; width:100%; box-sizing:border-box; padding:15px; text-align:left; background:#eaf1fc; border-radius:18px; }.energy-heading { flex:1; min-width:0; color:#637d9e; font-size:11px; }.energy-heading text { display:block; }.energy-heading .energy-value { color:$agent-color-accent; font-size:21px; font-weight:700; margin:4px 0; }
-.energy-bars { flex-shrink:0; display:flex; align-items:flex-end; gap:5px; height:38px; }.energy-bar { width:8px; border-radius:4px 4px 0 0; background:#a8c4e8; }.energy-bar.latest { background:#719ed8; }.energy-bar.missing { background:#c4d0de; }
+.summary button text { display:block; color:$agent-color-text-muted; font-size:10px; }.summary button .summary-value { margin-top:4px; color:$agent-color-text-secondary; font-size:15px; font-weight:700; }
+.section { display:flex; justify-content:space-between; align-items:center; margin:19px 2px 9px; font-size:15px; font-weight:700; }.section button { min-height:36px; color:$agent-color-text-secondary; font-size:11px; font-weight:400; }
+.energy-card { display:flex; align-items:flex-end; gap:15px; width:100%; box-sizing:border-box; padding:15px; text-align:left; background:$agent-color-accent-faint; border-radius:18px; }.energy-heading { flex:1; min-width:0; color:$agent-color-text-muted; font-size:11px; }.energy-heading text { display:block; }.energy-heading .energy-value { color:$agent-color-accent; font-size:21px; font-weight:700; margin:4px 0; }
+.energy-bars { flex-shrink:0; display:flex; align-items:flex-end; gap:5px; height:38px; }.energy-bar { width:8px; border-radius:4px 4px 0 0; background:$agent-color-chart; }.energy-bar.latest { background:$agent-color-chart-deep; }.energy-bar.missing { background:$agent-color-tint; }
 .fineprint { display:block; margin-top:8px; color:$agent-color-warning; font-size:11px; line-height:1.5; }
-.device-scroll { width:100%; white-space:nowrap; }.device-ribbon { display:flex; gap:9px; padding:1px 0 6px; }.device-card { flex:0 0 112px; box-sizing:border-box; padding:11px; text-align:left; background:#fff; border-radius:18px; }.device-card image { display:block; width:100%; height:64px; }.device-name,.device-count { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.device-name { margin-top:7px; font-weight:600; }.device-count { margin-top:3px; color:#718496; font-size:10px; }
+.device-scroll { width:100%; white-space:nowrap; }.device-ribbon { display:flex; gap:9px; padding:1px 0 6px; }.device-card { flex:0 0 112px; box-sizing:border-box; padding:11px; text-align:left; background:#fff; border-radius:18px; }.device-card image { display:block; width:100%; height:64px; }.device-name,.device-count { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.device-name { margin-top:7px; font-weight:600; }.device-count { margin-top:3px; color:$agent-color-text-muted; font-size:10px; }
 .task-card { padding:14px; background:#fff; border-radius:18px; }
-.agent-entry { display:flex; justify-content:space-between; width:100%; margin-top:17px; padding:14px 16px; box-sizing:border-box; background:#e6eef8; border-radius:16px; color:#315f83; font-weight:600; }
+.agent-entry { display:flex; justify-content:space-between; width:100%; margin-top:17px; padding:14px 16px; box-sizing:border-box; background:$agent-color-tint; border-radius:16px; color:$agent-color-accent-deep; font-weight:600; }
 
 /* 标题旁办公室入口：细分隔线 + 次要色文字链接（AssistantNav #title 插槽内容用本文件样式）。
    具名插槽会被 uni-app 包一层 <view slot="title">（普通块级、无 data-v，
    scoped 命中不到它）——内容必须收进单一 flex 行容器自保横排。 */
 .title-row { display:flex; align-items:center; }
-.nav-title-text { font-size:15px; font-weight:600; color:#293f31; }
-.nav-sep { width:1px; height:13px; margin:0 11px; flex-shrink:0; background:rgba(41,63,49,.16); }
+.nav-title-text { font-size:15px; font-weight:600; color:$agent-color-text-primary; }
+.nav-sep { width:1px; height:13px; margin:0 11px; flex-shrink:0; background:rgba(var(--agent-shadow-rgb),.16); }
 .office-entry { display:flex; align-items:center; gap:1px; padding:8px 0; }
 .office-entry::after { border:0; }
 .office-entry[disabled] { opacity:.6; }
 .office-entry--pressed { opacity:.65; }
-.office-entry-text { font-size:12.5px; color:#7d8d82; }
+.office-entry-text { font-size:12.5px; color:$agent-color-text-muted; }
 .pressed { opacity:.65; }
 
-.notice { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; color:#9a784a; font-size:10px; }.notice button { min-height:30px; color:#8b693c; text-decoration:underline; flex-shrink:0; }
-.observation-scroll { flex:1; height:0; min-height:0; padding:5px 18px 25px; box-sizing:border-box; }.sheet-empty { display:block; margin:45px 0; text-align:center; color:#839189; font-size:13px; }
+.notice { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; color:$agent-color-warning-deep; font-size:10px; }.notice button { min-height:30px; color:$agent-color-warning-deep; text-decoration:underline; flex-shrink:0; }
+.observation-scroll { flex:1; height:0; min-height:0; padding:5px 18px 25px; box-sizing:border-box; }.sheet-empty { display:block; margin:45px 0; text-align:center; color:$agent-color-text-muted; font-size:13px; }
 .spinning { animation:spin 900ms linear infinite; }@keyframes spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .spinning { animation:none; } }
 </style>

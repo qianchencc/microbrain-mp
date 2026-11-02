@@ -116,36 +116,36 @@ defineExpose({ interrupt })
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
 .composer-wrap { position:relative; width:100%; max-width:480px; margin:0 auto; }
-.reference-strip { border-left:2px solid #b69655; }
-.reference-label { flex:1; min-width:0; margin:0; padding:0; background:transparent; text-align:left; color:#64746a; font-size:11px; line-height:20px; }
+.reference-strip { border-left:2px solid $agent-color-warning-deep; }
+.reference-label { flex:1; min-width:0; margin:0; padding:0; background:transparent; text-align:left; color:$agent-color-text-secondary; font-size:11px; line-height:20px; }
 .reference-label::after { border:0; }.reference-label text { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.composer { display:flex; align-items:flex-end; gap:3px; padding:5px; min-height:46px; box-sizing:border-box; border:1px solid #cbd9d0; border-radius:24px; background:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(28,57,42,.10),0 7px 22px rgba(28,57,42,.12); transition:border-color 160ms ease,box-shadow 160ms ease,transform 160ms cubic-bezier(.23,1,.32,1); }
-.composer.focused { border-color:#78a28b; box-shadow:0 0 0 2px rgba(56,117,84,.07),0 2px 4px rgba(28,57,42,.10),0 9px 26px rgba(28,57,42,.14); transform:translateY(-1px); }
+.composer { display:flex; align-items:flex-end; gap:3px; padding:5px; min-height:46px; box-sizing:border-box; border:1px solid $agent-color-line; border-radius:24px; background:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(var(--agent-shadow-rgb),.10),0 7px 22px rgba(var(--agent-shadow-rgb),.12); transition:border-color 160ms ease,box-shadow 160ms ease,transform 160ms cubic-bezier(.23,1,.32,1); }
+.composer.focused { border-color:$agent-color-accent; box-shadow:0 0 0 2px rgba(var(--agent-shadow-rgb),.07),0 2px 4px rgba(var(--agent-shadow-rgb),.10),0 9px 26px rgba(var(--agent-shadow-rgb),.14); transform:translateY(-1px); }
 .mode-button,.send-button { display:flex; align-items:center; justify-content:center; margin:0; padding:0; width:36px; height:36px; flex:0 0 36px; line-height:36px; border-radius:50%; transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms ease; }
 .mode-button { background:transparent; }.mode-button[disabled] { opacity:.45; }.mode-button::after,.send-button::after { border:0; }.pressed { transform:scale(.94); opacity:.8; }
 .mode-icon,.send-icon { width:19px; height:19px; opacity:.72; }.send-button.ready .send-icon { filter:brightness(0) invert(1); opacity:1; }
 .input-area { flex:1; min-width:0; }
-.composer-input { width:100%; min-height:36px; max-height:108px; box-sizing:border-box; padding:7px 3px; font-size:14px; line-height:22px; color:#263d30; }
-.composer-placeholder { color:#8b9991; font-size:14px; line-height:22px; }
-.send-button { background:#edf2ee; box-shadow:inset 0 1px 1px rgba(38,64,46,.04); }
-.send-button.ready { background:linear-gradient(155deg,#2a876c,#145c46); box-shadow:inset 0 1px 0 rgba(255,255,255,.23),0 2px 4px rgba(20,76,50,.15); }
-.send-button[disabled] { background:#edf2ee; box-shadow:none; }
+.composer-input { width:100%; min-height:36px; max-height:108px; box-sizing:border-box; padding:7px 3px; font-size:14px; line-height:22px; color:$agent-color-text-primary; }
+.composer-placeholder { color:$agent-color-text-muted; font-size:14px; line-height:22px; }
+.send-button { background:$agent-color-tint; box-shadow:inset 0 1px 1px rgba(var(--agent-shadow-rgb),.04); }
+.send-button.ready { background:linear-gradient(155deg,$agent-color-accent,$agent-color-accent-deep); box-shadow:inset 0 1px 0 rgba(255,255,255,.23),0 2px 4px rgba(var(--agent-shadow-rgb),.15); }
+.send-button[disabled] { background:$agent-color-tint; box-shadow:none; }
 .stop-mark { width:12px; height:12px; border-radius:3px; background:#fff; }
-.hold-input { height:36px; display:flex; align-items:center; justify-content:center; padding-right:36px; font-size:13px; font-weight:500; color:#486555; user-select:none; }
-.composer.editing { border-color:#78a28b; }
-.composer.voice { background:linear-gradient(160deg,#f9fbf9,#eaf1eb); }
+.hold-input { height:36px; display:flex; align-items:center; justify-content:center; padding-right:36px; font-size:13px; font-weight:500; color:$agent-color-text-secondary; user-select:none; }
+.composer.editing { border-color:$agent-color-accent; }
+.composer.voice { background:linear-gradient(160deg,$agent-color-surface,$agent-color-tint); }
 /* 编辑态上下文静带：贴着胶囊上沿常驻，✕ 是唯一退出编辑的出口（不放 disabled） */
-.edit-strip { display:flex; align-items:center; gap:6px; margin:0 6px 6px; padding:6px 8px 6px 12px; border:1px solid #dfe8e1; border-radius:14px; background:#f4f8f4; box-shadow:0 1px 3px rgba(28,57,42,.06); animation:message-in 160ms cubic-bezier(.23,1,.32,1); }
+.edit-strip { display:flex; align-items:center; gap:6px; margin:0 6px 6px; padding:6px 8px 6px 12px; border:1px solid $agent-color-line; border-radius:14px; background:$agent-color-surface; box-shadow:0 1px 3px rgba(var(--agent-shadow-rgb),.06); animation:message-in 160ms cubic-bezier(.23,1,.32,1); }
 .edit-strip__icon { width:13px; height:13px; opacity:.55; }
-.edit-strip__label { flex:1; font-size:$agent-font-size-compact; color:#55705f; }
+.edit-strip__label { flex:1; font-size:$agent-font-size-compact; color:$agent-color-text-secondary; }
 .edit-strip__cancel { display:flex; align-items:center; justify-content:center; width:26px; height:26px; margin:0; padding:0; border-radius:7px; background:transparent; }
 .edit-strip__cancel::after { border:0; }
 .edit-strip__cancel-icon { width:12px; height:12px; opacity:.6; }
 @keyframes message-in { from { opacity:0; transform:translateY(3px); } }
-.composer.held { border-color:#94b4a0; background:#e5eee7; box-shadow:inset 0 2px 5px rgba(30,69,44,.07); }
-.composer.cancel { border-color:#c6b1a6; background:#f4ede8; }.composer.cancel .hold-input { color:#9b6251; }
-.voice-feedback { position:absolute; bottom:calc(100% + 12px); left:50%; transform:translate(-50%,5px); opacity:0; pointer-events:none; display:flex; align-items:center; gap:$agent-space-small; white-space:nowrap; padding:11px 16px; border:1px solid #dce5dd; border-radius:18px; background:#fafcf9; box-shadow:0 6px 24px rgba(30,59,40,.08),inset 0 1px 0 white; font-size:$agent-font-size-compact; color:#456350; transition:opacity 160ms ease,transform 180ms cubic-bezier(.23,1,.32,1); }
-.voice-feedback.visible { opacity:1; transform:translate(-50%,0); }.voice-feedback.cancel { color:#9b6251; }
+.composer.held { border-color:$agent-color-text-muted; background:$agent-color-tint; box-shadow:inset 0 2px 5px rgba(var(--agent-shadow-rgb),.07); }
+.composer.cancel { border-color:$agent-color-error-faint; background:$agent-color-error-faint; }.composer.cancel .hold-input { color:$agent-color-error; }
+.voice-feedback { position:absolute; bottom:calc(100% + 12px); left:50%; transform:translate(-50%,5px); opacity:0; pointer-events:none; display:flex; align-items:center; gap:$agent-space-small; white-space:nowrap; padding:11px 16px; border:1px solid $agent-color-line; border-radius:18px; background:$agent-color-surface; box-shadow:0 6px 24px rgba(var(--agent-shadow-rgb),.08),inset 0 1px 0 white; font-size:$agent-font-size-compact; color:$agent-color-text-secondary; transition:opacity 160ms ease,transform 180ms cubic-bezier(.23,1,.32,1); }
+.voice-feedback.visible { opacity:1; transform:translate(-50%,0); }.voice-feedback.cancel { color:$agent-color-error; }
 .voice-light { width:6px; height:6px; border-radius:50%; background:currentColor; }.voice-light.pulsing { animation:record-pulse 1s ease-in-out infinite alternate; }
 @keyframes record-pulse { to { opacity:.35; } }
 @media(prefers-reduced-motion:reduce) { .composer,.voice-feedback,.mode-button,.send-button { transition:none; }.edit-strip { animation:none; }.voice-light.pulsing { animation:none; } }

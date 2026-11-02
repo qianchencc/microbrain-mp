@@ -7,13 +7,13 @@
   <button v-for="task in visibleTasks" :key="task.taskId || task.id" class="calendar-task" @tap="$emit('select-task', task)">
    <view class="task-clock"><text>{{ clock(task) }}</text><text v-if="task.occurrence || task.repeat" class="repeat-tag">周期</text></view>
    <view class="task-copy"><text class="task-name">{{ task.label || '设备任务' }}</text><text class="task-state" :class="{ abnormal: taskAbnormal(task), executing: task.status === 'executing' }">{{ taskLabel(task.status) }}</text></view>
-   <uni-icons type="right" size="12" color="#8a9c90" />
+   <uni-icons type="right" size="12" color="var(--agent-text-muted)" />
   </button>
   <view v-if="error" class="calendar-error" role="status">
    <text>{{ loaded ? '任务暂未更新' : '任务暂未加载' }}</text>
    <view class="error-actions"><button class="error-detail" @tap="showError">查看原因</button><button class="error-retry" @tap="load(true)">重试</button></view>
   </view>
-  <button v-if="compact && loaded && dayTasks.length > 2" class="all-tasks" @tap="$emit('open-date', selected)">全部 {{ dayTasks.length }} 项 <uni-icons type="right" size="11" color="#176b54" /></button>
+  <button v-if="compact && loaded && dayTasks.length > 2" class="all-tasks" @tap="$emit('open-date', selected)">全部 {{ dayTasks.length }} 项 <uni-icons type="right" size="11" color="var(--agent-accent)" /></button>
  </view>
 </template>
 <script setup>
@@ -108,19 +108,19 @@ view,text { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.4; }
 button::after { border:0; }
 .task-calendar { flex-shrink:0; }
-.date-summary { padding:10px 16px; display:flex; justify-content:space-between; color:#7b8d80; font-size:11px; border-top:1px solid #e4eae4; }
-.calendar-state { padding:22px 16px; color:#859389; font-size:$agent-font-size-compact; text-align:center; }
-.calendar-error { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#7b8d80; font-size:$agent-font-size-compact; }
+.date-summary { padding:10px 16px; display:flex; justify-content:space-between; color:$agent-color-text-muted; font-size:11px; border-top:1px solid $agent-color-line; }
+.calendar-state { padding:22px 16px; color:$agent-color-text-muted; font-size:$agent-font-size-compact; text-align:center; }
+.calendar-error { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:$agent-color-text-muted; font-size:$agent-font-size-compact; }
 .error-actions { display:flex; align-items:center; gap:12px; flex-shrink:0; }
 .error-actions button { display:flex; align-items:center; justify-content:center; min-height:32px; padding:4px; font-size:$agent-font-size-compact; }
-.error-detail { color:#7b8d80; }.error-retry { color:$agent-color-accent; }
+.error-detail { color:$agent-color-text-muted; }.error-retry { color:$agent-color-accent; }
 .error-actions button:active { opacity:.65; }
-.calendar-task { width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; text-align:left; border-top:1px solid #e8ede8; }
-.task-clock { width:58px; flex-shrink:0; align-self:flex-start; font-size:11px; color:#466350; display:flex; flex-direction:column; gap:5px; }
-.repeat-tag { color:#8b9c90; font-size:10px; }
+.calendar-task { width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; text-align:left; border-top:1px solid $agent-color-line; }
+.task-clock { width:58px; flex-shrink:0; align-self:flex-start; font-size:11px; color:$agent-color-text-secondary; display:flex; flex-direction:column; gap:5px; }
+.repeat-tag { color:$agent-color-text-muted; font-size:10px; }
 .task-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
-.task-name { white-space:normal; word-break:break-word; font-size:13px; font-weight:600; color:#2b4433; }
+.task-name { white-space:normal; word-break:break-word; font-size:13px; font-weight:600; color:$agent-color-text-primary; }
 .task-state { font-size:11px; color:$agent-color-text-muted; }
-.task-state.abnormal { color:#a16f28; }.task-state.executing { color:$agent-color-accent; }
+.task-state.abnormal { color:$agent-color-warning-deep; }.task-state.executing { color:$agent-color-accent; }
 .all-tasks { padding:12px; text-align:center; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 </style>

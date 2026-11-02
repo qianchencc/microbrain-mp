@@ -35,7 +35,7 @@
    @updated="sheetTurn && Object.assign(sheetTurn.draft, $event)" @editing="mutating = $event"
    @revalidate="sheetTurn && revalidateDraft(sheetTurn)" />
   <DeviceSheet v-if="eventMounted" :open="eventOpen" :back="eventBack" tall compact-header :title="selectedEvent ? '安全台账详情' : '安全事件台账'" @close="eventOpen = false">
-   <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="#62766a" /></button></template>
+   <template #header-left><button v-if="selectedEvent" class="event-back" aria-label="返回安全台账" @tap="selectedEvent = null"><uni-icons type="back" size="16" color="var(--agent-text-secondary)" /></button></template>
    <SafetyHistoryList class="event-host" :style="{ display: selectedEvent ? 'none' : 'flex' }" :active="eventOpen && !selectedEvent" @select="openSafetyEvent" />
    <SafetyEventDetail v-if="selectedEvent" class="event-host" :snapshot="selectedEvent" :active="eventOpen" @reference="referenceEvent" />
   </DeviceSheet>
@@ -44,7 +44,7 @@
   <TaskInboxSheet v-if="inboxMounted" @reference="referenceTask" :open="inboxOpen" :source="source" @close="inboxOpen = false" @unread-count="setInboxUnreadCount" />
   <TaskDetailSheet v-if="companyTaskMounted" @reference="referenceTask" :open="Boolean(companyTaskId || companyPlanId)" :task-id="companyTaskId" :plan-id="companyPlanId" :source="source" @close="closeCompanyTask" @changed="tasksChanged" />
   <DeviceSheet v-if="reportMounted" :open="reportOpen" :back="reportBack" tall compact-header :title="reportNav.title || reportTitle" @close="closeReport">
-   <template #header-left><button v-if="reportNav.canBack" class="event-back" aria-label="返回报告" @tap="reportPreview?.back()"><uni-icons type="back" size="16" color="#62766a" /></button></template>
+   <template #header-left><button v-if="reportNav.canBack" class="event-back" aria-label="返回报告" @tap="reportPreview?.back()"><uni-icons type="back" size="16" color="var(--agent-text-secondary)" /></button></template>
    <ReportPreviewContent v-if="selectedReportId" ref="reportPreview" class="event-host" :report-id="selectedReportId" :active="active && reportOpen" :source="source"
     @loaded="reportTitle = $event?.title || reportTitle" @navigation="reportNav = $event" @reference="referenceReport" />
   </DeviceSheet>
@@ -833,7 +833,7 @@ defineExpose({ openMenu, openInbox, clearHistory, openRegion, setReference, pref
 @import "../../styles/tokens";
 .event-host { flex:1;min-height:0;display:flex;flex-direction:column; }.event-back { display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0; }
 
-.region-notice { display:flex; align-items:center; justify-content:space-between; color:#986b2d; font-size:$agent-font-size-compact; padding:8px 0; }.region-notice text { flex:1; min-width:0; word-break:break-word; }.region-notice button { flex-shrink:0; min-height:44px; padding:0 12px; margin:0; background:transparent; color:#536b5c; font-size:$agent-font-size-compact; }.region-notice button::after { border:0; }
+.region-notice { display:flex; align-items:center; justify-content:space-between; color:$agent-color-warning-deep; font-size:$agent-font-size-compact; padding:8px 0; }.region-notice text { flex:1; min-width:0; word-break:break-word; }.region-notice button { flex-shrink:0; min-height:44px; padding:0 12px; margin:0; background:transparent; color:$agent-color-text-secondary; font-size:$agent-font-size-compact; }.region-notice button::after { border:0; }
 /* 宿主环境屏蔽：客户小程序全局 app.wxss 带 uni-app 模板元素级规则
    view{font-size:28rpx;line-height:1.8} / input,text{font-size:30rpx}，
    元素自身命中的规则优先于继承——会把所有不带字号类的 text/input 撑成 15px。
@@ -846,22 +846,22 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .conversation-shell { flex:1; min-height:0; overflow:hidden; position:relative; }
 .conversation { height:100%; }.conversation__inner { padding:24px 16px 32px; transition:opacity .22s ease, transform .22s ease; }
 .conversation__inner.clearing { opacity:0; transform:translateY(16rpx); pointer-events:none; }
-.clearing-hint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#839186; font-size:24rpx; animation:clearing-hint-in .24s ease .1s backwards; }
+.clearing-hint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:$agent-color-text-muted; font-size:24rpx; animation:clearing-hint-in .24s ease .1s backwards; }
 @keyframes clearing-hint-in { from { opacity:0 } to { opacity:1 } }
-.welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:#738278; }
+.welcome { margin:80rpx 0; font-size:36rpx; font-weight:600; }.welcome view { margin-top:20rpx; font-size:26rpx; font-weight:400; color:$agent-color-text-muted; }
 /* 推荐入口复用 region-chip 纸材；.welcome view 会命中容器，需提高优先级覆盖其行距/字号。 */
 .welcome .welcome-sugg { display:flex; flex-wrap:wrap; gap:$agent-space-small; margin-top:16px; }
-.sugg-chip { display:flex; align-items:center; height:32px; margin:0; padding:0 14px; border-radius:16px; background:linear-gradient(#fefffe,#edf2ec); box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px rgba(41,73,54,.14),0 3px 8px -6px rgba(35,58,45,.4); font-size:$agent-font-size-compact; line-height:1; color:#3d5947; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+.sugg-chip { display:flex; align-items:center; height:32px; margin:0; padding:0 14px; border-radius:16px; background:linear-gradient($agent-color-surface,$agent-color-tint); box-shadow:inset 0 1px 0 #fff,inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.14),0 3px 8px -6px rgba(var(--agent-ink-rgb),.4); font-size:$agent-font-size-compact; line-height:1; color:$agent-color-text-secondary; white-space:nowrap; transition:transform 140ms cubic-bezier(.23,1,.32,1); }
 .sugg-chip::after { border:0; }
 .sugg-chip--pressed { transform:scale(.96); opacity:.85; }
-.region-divider { margin:12px 0 22px; text-align:center; font-size:11px; color:#839186; }
-.turn-reference { margin-bottom:8px; padding:6px 10px; border-left:2px solid #b69655; background:#f6f4ee; color:#758176; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.region-divider { margin:12px 0 22px; text-align:center; font-size:11px; color:$agent-color-text-muted; }
+.turn-reference { margin-bottom:8px; padding:6px 10px; border-left:2px solid $agent-color-warning-deep; background:$agent-color-warning-faint; color:$agent-color-text-muted; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
 .turn { margin-bottom:42px; }.user-row { display:flex; justify-content:flex-end; margin-bottom:22px; }
 /* 宿主必须定宽：组件宿主是 flex item、宽度靠内容反推，会让整条 fit-content 链塌到
    min-content（短消息每行一字）；定宽后气泡用 inline-block 收缩即可安全测量。 */
 .user-row .um-host { width:100%; }
-.trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:#738278; font-size:24rpx; }.trace-toggle::after { border:0; }
-.error { display:block; margin-top:20rpx; color:#ad711b; font-size:25rpx; }
+.trace-toggle { display:flex; align-items:center; gap:12rpx; padding:0; margin:12rpx 0; min-height:56rpx; line-height:56rpx; background:transparent; color:$agent-color-text-muted; font-size:24rpx; }.trace-toggle::after { border:0; }
+.error { display:block; margin-top:20rpx; color:$agent-color-error; font-size:25rpx; }
 .composer-shell { position:relative; z-index:4; padding:8px 18px calc(14px + env(safe-area-inset-bottom)); background:transparent; flex-shrink:0; transition:padding-bottom .25s ease; }.anchor { height:2rpx; }
 @media(prefers-reduced-motion:reduce){.composer-shell{transition:none;}.conversation__inner{transition:none;}.clearing-hint{animation:none;}}
 </style>

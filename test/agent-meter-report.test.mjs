@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { meterReportParamLine, meterReportHero, meterReportContext, meterReportMetrics, meterReportMetricTable, meterReportMetricHeads, meterReportLoadCurve, meterReportBuckets, meterReportCompareBuckets, meterReportCompareView, meterReportCompareViews, meterReportBarLegend, meterReportGrainOptions, meterReportRankingTitle, meterReportRanking, meterReportRegionRankings, meterReportContribution, meterReportEvidence, meterReportEvidenceSections, meterReportHistoryQuery, meterReportIsComparison, meterReportSpan, meterReportSpanText, meterReportPowerFactor, meterReportHasData, meterReportPeriodLabels, loadShapeChart, contributionChart, meterBarChart } from '../pages/agent/lib/energy.mjs'
+import { AGENT_COLORS } from '../pages/agent/styles/colors.js'
 
 // 对应 runtime 夹具：m-c 数据不全（停报 10-04）、m-d 无数据。
 const report = {
@@ -132,7 +133,7 @@ test('24小时负荷：rates 为 null 时整节隐藏，有数据时输出曲线
  // null 时段断段：hour 3 为 null 时折线分成两段。
  const gapped = rates.slice(); gapped[3] = null
  const svg2 = decodeURIComponent(loadShapeChart(gapped).src.slice('data:image/svg+xml;utf8,'.length))
- assert.ok((svg2.match(/stroke="#2e7d5c"/g) || []).length === 2)
+ assert.ok((svg2.match(new RegExp(`stroke="${AGENT_COLORS.accentDeep}"`, 'g')) || []).length === 2)
 })
 
 // 小数值定标：max < 1 时纵轴刻度保留小数（0.1/0.2/0.3），不塌成全 0。
@@ -175,7 +176,7 @@ test('单台范围：同层对照曲线带图例与虚线，排行标题为本�
  assert.equal(meterReportRankingTitle(location), '26楼 构成 · 度')
  const ranking = meterReportRanking(location)
  assert.equal(ranking.rows[0].highlight, true)
- assert.match(decodeURIComponent(ranking.src.slice('data:image/svg+xml;utf8,'.length)), /#b89443/) // 高亮行黄铜色
+ assert.match(decodeURIComponent(ranking.src.slice('data:image/svg+xml;utf8,'.length)), new RegExp(AGENT_COLORS.warning)) // 高亮行警示色
  assert.equal(meterReportRankingTitle(report), '位置构成 · 度')
 })
 
@@ -460,9 +461,9 @@ test('贡献涨跌条：|Δ| 排序 + 前3占比行 + 零线两侧玉绿/黄铜'
  assert.equal(c.shareDef, '前 3 项变化量绝对值之和 ÷ 全部变化量绝对值之和')
  assert.deepEqual(c.rows.map(r => [r.label, r.delta]), [['26楼办公室', -70], ['26楼运营部', 35]])
  const svg = decodeURIComponent(c.src.slice('data:image/svg+xml;utf8,'.length))
- assert.match(svg, /stroke="#c9cfc0" stroke-width="1\.5"/) // 零线
- assert.match(svg, /#3d8a68/) // +Δ 玉绿
- assert.match(svg, /#b89443/) // −Δ 黄铜
+ assert.match(svg, new RegExp(`stroke="${AGENT_COLORS.line}" stroke-width="1\\.5"`)) // 零线
+ assert.match(svg, new RegExp(AGENT_COLORS.accentDeep)) // +Δ 主色
+ assert.match(svg, new RegExp(AGENT_COLORS.warning)) // −Δ 警示
  assert.match(svg, /−70/)
  assert.match(svg, /\+35/)
 })
@@ -516,7 +517,7 @@ test('单台对比：贡献覆盖整层、本表行高亮、标题带本表 Δ',
  assert.equal(c.sub, '本表 +35')
  assert.equal(c.rows[1].highlight, true)
  const svg = decodeURIComponent(c.src.slice('data:image/svg+xml;utf8,'.length))
- assert.match(svg, /#f5efdf/) // 高亮行淡黄铜底
+ assert.match(svg, new RegExp(AGENT_COLORS.warningFaint)) // 高亮行淡警示底
  // 高亮行未进前 8 时服务端已强制塞入；视图不再重排
  const far = { ...loc, contribution: { ...loc.contribution, rows: [...Array.from({ length: 8 }, (_, i) => ({ label: `位置${i}`, delta: -10 - i, meterIds: [] })), { label: '26楼运营部', delta: 1, meterIds: ['m-a'], highlight: true }] } }
  assert.equal(meterReportContribution(far).rows.at(-1).highlight, true)
@@ -623,8 +624,8 @@ test('区域曲线：A 玉绿 B 黄铜实线，单台平均后缀图例', () => 
  const svg = decodeURIComponent(curve.src.slice('data:image/svg+xml;utf8,'.length))
  assert.match(svg, /26楼 · 单台平均/)
  assert.match(svg, /27楼 · 单台平均/)
- assert.match(svg, /stroke="#b89443"/)
- assert.ok(!/stroke="#b89443" stroke-width="2" stroke-dasharray/.test(svg))
+ assert.match(svg, new RegExp(`stroke="${AGENT_COLORS.warning}"`))
+ assert.ok(!new RegExp(`stroke="${AGENT_COLORS.warning}" stroke-width="2" stroke-dasharray`).test(svg))
  const sameCount = { ...region, sides: { a: { ...region.sides.a, shape24: { rates: region.sides.a.shape24.rates, coveredFraction: 1 } }, b: { ...region.sides.b, shape24: { rates: region.sides.b.shape24.rates, coveredFraction: 1 } } } }
  const raw = decodeURIComponent(meterReportLoadCurve(sameCount).src.slice('data:image/svg+xml;utf8,'.length))
  assert.match(raw, /26楼</)
@@ -639,8 +640,8 @@ test('区域排行：两条独立榜单、标题带范围台数、B 黄铜条', 
  assert.deepEqual(rankings[0].rows.map(r => r.label), ['26楼办公室', '26楼运营部'])
  assert.deepEqual(rankings[1].rows.map(r => r.label), ['27楼展厅'])
  const svg = decodeURIComponent(rankings[1].src.slice('data:image/svg+xml;utf8,'.length))
- assert.match(svg, /fill="#b89443"/)
- assert.ok(!svg.includes('url(#jade)') || !rankings[1].rows.some(r => r.value !== null && !r.highlight))
+ assert.match(svg, new RegExp(`fill="${AGENT_COLORS.warning}"`))
+ assert.ok(!svg.includes('url(#main)') || !rankings[1].rows.some(r => r.value !== null && !r.highlight))
 })
 
 test('区域依据按 A/B 分组；历史查询用单跨度', () => {
@@ -740,12 +741,14 @@ test('09 修正：不等长周期按日均对比、单侧有效保留该侧总�
 test('分段双柱：A 缺测仍画 B；B 缺测不画假零线', () => {
   const bOnly = [{ value: null, baseline: 5, label: '10/01' }]
  const svg = decodeURIComponent(meterBarChart(bOnly, { paired: true }).src.slice('data:image/svg+xml;utf8,'.length))
- assert.match(svg, /fill="#bfd2b9"/)
+ assert.match(svg, new RegExp(`fill="${AGENT_COLORS.chart}"`))
  assert.ok(!svg.includes('缺测'))
  const aOnly = [{ value: 5, baseline: null, label: '10/01' }]
  const svgA = decodeURIComponent(meterBarChart(aOnly, { paired: true }).src.slice('data:image/svg+xml;utf8,'.length))
- assert.match(svgA, /fill="url\(#jade\)"/)
- assert.ok(!svgA.includes('bfd2b9'))
+ assert.match(svgA, /fill="url\(#main\)"/)
+ // 缺测基线不画假零线:defs 之外的柱面 rect 不应出现 chart 色 fill
+ const bodyRects = svgA.slice(svgA.indexOf('</defs>')).match(/<rect[^>]*fill="[^"]*"[^>]*>/g) || []
+ assert.ok(bodyRects.every(r => !r.includes(`fill="${AGENT_COLORS.chart}"`)))
  const neither = meterBarChart([{ value: null, baseline: null, label: '10/01' }], { paired: true })
  assert.equal(neither.hasData, false)
  assert.ok(decodeURIComponent(neither.src).includes('缺测'))

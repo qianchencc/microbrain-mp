@@ -1,15 +1,17 @@
 // 回复正文的轻量渲染：段落 / 标题 / 无序与有序列表 / 管道表格 / 加粗 / 行内代码 / 分隔线。
 // 流式期间前端只展示纯文本，完成后才切换到这里的 rich-text 节点，避免流中反复重排。
 // 微信 rich-text 契约：文本叶子必须是 { type: 'text', text }，元素样式只能放 attrs.style。
+import { AGENT_COLORS } from '../../styles/colors.js'
+
 const paragraphStyle = 'margin:0 0 10px;line-height:1.8;'
 const headingStyle = 'margin:12px 0 6px;font-weight:650;line-height:1.6;'
 const listStyle = 'margin:0 0 10px;padding-left:22px;line-height:1.8;'
 const itemStyle = 'margin:4px 0;'
 const tableStyle = 'margin:0 0 10px;border-collapse:collapse;font-size:13px;line-height:1.6;'
-const headCellStyle = 'padding:6px 9px;border:1px solid rgba(140,157,148,.35);background:rgba(232,239,234,.5);font-weight:650;text-align:left;'
-const cellStyle = 'padding:6px 9px;border:1px solid rgba(140,157,148,.35);vertical-align:top;'
-const codeStyle = 'padding:1px 5px;border-radius:4px;background:rgba(232,239,234,.6);font-family:monospace;font-size:.9em;'
-const ruleStyle = 'margin:12px 0;border:0;border-top:1px solid rgba(140,157,148,.35);'
+const headCellStyle = `padding:6px 9px;border:1px solid ${AGENT_COLORS.line};background:${AGENT_COLORS.tint};font-weight:650;text-align:left;`
+const cellStyle = `padding:6px 9px;border:1px solid ${AGENT_COLORS.line};vertical-align:top;`
+const codeStyle = `padding:1px 5px;border-radius:4px;background:${AGENT_COLORS.tint};font-family:monospace;font-size:.9em;`
+const ruleStyle = `margin:12px 0;border:0;border-top:1px solid ${AGENT_COLORS.line};`
 
 const textNode = text => ({ type: 'text', text })
 const elementNode = (name, style, children) => ({

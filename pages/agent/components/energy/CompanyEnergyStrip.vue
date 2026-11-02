@@ -18,6 +18,7 @@
 <script setup>
 import { computed, ref, watch, getCurrentInstance, onMounted, onUnmounted } from 'vue'
 import { STRIP_COL_WIDTH } from '../../lib/energy.mjs'
+import { AGENT_COLORS } from '../../styles/colors.js'
 
 const props = defineProps({ days: { type: Array, default: () => [] }, selected: String, viewportWidth: { type: Number, default: 0 }, pullEnabled: Boolean })
 const emit = defineEmits(['select', 'pull-open', 'reach-left', 'visible-range'])
@@ -33,7 +34,7 @@ const pullWidth = computed(() => Math.min(pull.value * 0.42, 48))
 const ringImage = computed(() => {
  const C = 2 * Math.PI * 10
  const off = C * (1 - Math.min(pull.value / PULL_FULL, 1))
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 28 28"><circle cx="14" cy="14" r="10" fill="none" stroke="#d5dfd2" stroke-width="3"/><circle cx="14" cy="14" r="10" fill="none" stroke="#176b54" stroke-width="3" stroke-linecap="round" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 14 14)"/></svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 28 28"><circle cx="14" cy="14" r="10" fill="none" stroke="${AGENT_COLORS.line}" stroke-width="3"/><circle cx="14" cy="14" r="10" fill="none" stroke="${AGENT_COLORS.accentDeep}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 14 14)"/></svg>`
  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
 })
 
@@ -121,22 +122,22 @@ button { margin:0; padding:0; background:transparent; line-height:1.2; }
 button::after { border:0; }
 .strip-wrap { position:relative; margin:10px -20px 0; }
 .pullzone { position:absolute; left:0; top:0; bottom:0; width:0; overflow:hidden; z-index:2; display:flex; align-items:center; }
-.pz { flex:0 0 48px; height:calc(100% - 8px); margin:4px 0 4px 4px; border-radius:$agent-radius-medium; background:#e9efe4; display:flex; align-items:center; justify-content:center; }
+.pz { flex:0 0 48px; height:calc(100% - 8px); margin:4px 0 4px 4px; border-radius:$agent-radius-medium; background:$agent-color-tint; display:flex; align-items:center; justify-content:center; }
 .pz-ring { width:26px; height:26px; }
 .strip { white-space:nowrap; padding:2px 0 0; }
 .eday { display:inline-flex; flex-direction:column; align-items:center; width:21px; padding:0; vertical-align:top; }
 .ebar { width:100%; height:64px; display:flex; align-items:flex-end; justify-content:center; }
-.bar { display:block; width:8px; min-height:4px; border-radius:2.5px; background:#cfe0cd; }
-.bar.sel { background:#3c8c6b; }
-.bar.empty { background:#e2e8de; }
-.bar.fail { background:#e2e8de; }
+.bar { display:block; width:8px; min-height:4px; border-radius:2.5px; background:$agent-color-chart; }
+.bar.sel { background:$agent-color-chart-deep; }
+.bar.empty { background:$agent-color-tint; }
+.bar.fail { background:$agent-color-tint; }
 /* 待加载占位柱：幽灵呼吸（同 EnergySkeleton），选中即染玉色——日历跳转后立刻有高亮，不等数据。 */
-.bar.pend { background:#e2eadf; animation:sk-pulse 1.4s ease-in-out infinite; }
-.bar.pend.sel { background:#9cc5b0; }
+.bar.pend { background:$agent-color-tint; animation:sk-pulse 1.4s ease-in-out infinite; }
+.bar.pend.sel { background:$agent-color-chart; }
 @keyframes sk-pulse { 0%,100% { opacity:.45 } 50% { opacity:.9 } }
 @media(prefers-reduced-motion:reduce) { .bar.pend { animation:none; opacity:.6 } }
 .eday.dim .bar { opacity:.45; }
 .edlab { position:relative; width:100%; height:36px; }
-.lab { position:absolute; right:10.5px; top:1px; font-style:normal; font-size:7.5px; color:#a0ab95; white-space:nowrap; transform:rotate(-60deg); transform-origin:top right; }
-.lab.sel { color:#3c8c6b; font-weight:700; }
+.lab { position:absolute; right:10.5px; top:1px; font-style:normal; font-size:7.5px; color:$agent-color-text-muted; white-space:nowrap; transform:rotate(-60deg); transform-origin:top right; }
+.lab.sel { color:$agent-color-accent-deep; font-weight:700; }
 </style>

@@ -1,7 +1,9 @@
+import { AGENT_COLORS } from '../../styles/colors.js'
+
 export function timelineSvg(scene) {
  const pathData = commands => commands.map(command => command.join(' ')).join(' ')
  const paint = value => ['future', 'elapsed'].includes(value) ? `url(#${value})` : value || 'none'
- const defs = '<linearGradient id="future" gradientUnits="userSpaceOnUse" x1="46" x2="74"><stop stop-color="#b4d3c1"/><stop offset="1" stop-color="#d9e9dd"/></linearGradient><linearGradient id="elapsed" gradientUnits="userSpaceOnUse" x1="46" x2="74"><stop stop-color="#126448"/><stop offset="1" stop-color="#258767"/></linearGradient>'
+ const defs = `<linearGradient id="future" gradientUnits="userSpaceOnUse" x1="46" x2="74"><stop stop-color="${AGENT_COLORS.chart}"/><stop offset="1" stop-color="${AGENT_COLORS.tint}"/></linearGradient><linearGradient id="elapsed" gradientUnits="userSpaceOnUse" x1="46" x2="74"><stop stop-color="${AGENT_COLORS.accentDeep}"/><stop offset="1" stop-color="${AGENT_COLORS.accent}"/></linearGradient>`
  let clips = ''
  const body = scene.shapes.map((shape, index) => {
   let attrs = `fill="${paint(shape.fill)}" stroke="${shape.stroke || 'none'}" stroke-width="${shape.lineWidth || 0}" stroke-linecap="round" opacity="${shape.opacity ?? 1}"`

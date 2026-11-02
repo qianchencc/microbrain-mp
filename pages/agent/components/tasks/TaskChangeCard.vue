@@ -19,7 +19,7 @@
      <text v-for="target in version.targets.items" :key="target" class="target-item">{{ target }}</text>
      <text v-if="version.targets.omitted" class="target-more">另有 {{ version.targets.omitted }} 项</text>
     </view>
-    <view v-if="version.key === 'before' && change.operation === 'edit'" class="change-arrow"><uni-icons type="down" size="13" color="#98a59d" /></view>
+    <view v-if="version.key === 'before' && change.operation === 'edit'" class="change-arrow"><uni-icons type="down" size="13" color="var(--agent-text-faint)" /></view>
    </view>
   </view>
 
@@ -100,36 +100,36 @@ function targetSummary(template) {
 view,text,input { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; background:transparent; }
 button::after { border:0; }
-.change-card { box-sizing:border-box; width:100%; margin-top:14px; padding:12px; border-radius:14px; background:linear-gradient(#fdfefd,#f6f8f5); box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(26,55,43,.10),0 1px 2px rgba(28,57,42,.07),0 8px 20px rgba(28,57,42,.06); color:#2f4838; }
+.change-card { box-sizing:border-box; width:100%; margin-top:14px; padding:12px; border-radius:14px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 .5px rgba(var(--agent-shadow-rgb),.10),0 1px 2px rgba(var(--agent-shadow-rgb),.07),0 8px 20px rgba(var(--agent-shadow-rgb),.06); color:$agent-color-text-primary; }
 .change-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .change-heading { display:flex; align-items:center; gap:$agent-space-small; min-width:0; }
-.change-kicker { color:#536e5c; font-size:$agent-font-size-compact; font-weight:650; }
-.change-scope { flex-shrink:0; padding:3px 7px; border-radius:8px; background:#f3ead8; color:#87662c; font-size:10px; }
-.change-status { flex-shrink:0; color:#9a7135; font-size:10px; font-weight:600; }
-.change-status.confirmed { color:#397b61; }.change-status.cancelled,.change-status.expired { color:#87938b; }
-.change-title { display:block; margin-top:6px; color:#263c2e; font-size:15px; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
-.change-versions { margin-top:10px; border-top:1px solid #dfe7e1; }
+.change-kicker { color:$agent-color-text-secondary; font-size:$agent-font-size-compact; font-weight:650; }
+.change-scope { flex-shrink:0; padding:3px 7px; border-radius:8px; background:$agent-color-warning-faint; color:$agent-color-warning-deep; font-size:10px; }
+.change-status { flex-shrink:0; color:$agent-color-warning-deep; font-size:10px; font-weight:600; }
+.change-status.confirmed { color:$agent-color-success; }.change-status.cancelled,.change-status.expired { color:$agent-color-text-muted; }
+.change-title { display:block; margin-top:6px; color:$agent-color-text-primary; font-size:15px; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
+.change-versions { margin-top:10px; border-top:1px solid $agent-color-line; }
 .change-version { padding:10px 4px 8px; }
-.change-version--after { border-left:2px solid #4a9272; padding-left:9px; }
-.version-label { display:block; color:#87948b; font-size:10px; font-weight:600; }
-.version-title { display:block; margin-top:3px; color:#344a3b; font-size:$agent-font-size-compact; font-weight:650; overflow-wrap:anywhere; }
-.version-line { display:block; margin-top:4px; color:#748379; font-size:10px; line-height:1.5; overflow-wrap:anywhere; }
+.change-version--after { border-left:2px solid $agent-color-accent; padding-left:9px; }
+.version-label { display:block; color:$agent-color-text-muted; font-size:10px; font-weight:600; }
+.version-title { display:block; margin-top:3px; color:$agent-color-text-primary; font-size:$agent-font-size-compact; font-weight:650; overflow-wrap:anywhere; }
+.version-line { display:block; margin-top:4px; color:$agent-color-text-muted; font-size:10px; line-height:1.5; overflow-wrap:anywhere; }
 .target-list { display:flex; flex-direction:column; gap:3px; margin-top:6px; }
-.target-item,.target-more { color:#526b5a; font-size:10px; line-height:1.45; overflow-wrap:anywhere; }
-.target-more { color:#919d95; }
+.target-item,.target-more { color:$agent-color-text-secondary; font-size:10px; line-height:1.45; overflow-wrap:anywhere; }
+.target-more { color:$agent-color-text-muted; }
 .change-arrow { height:14px; display:flex; align-items:center; justify-content:center; }
-.change-note { display:block; padding:8px 9px; border-left:2px solid #b58c4b; background:#f8f4eb; color:#806338; font-size:10px; line-height:1.5; }
-.change-effect { display:block; padding:10px; border-left:2px solid #4a9272; background:#edf5ef; color:#436850; font-size:$agent-font-size-compact; line-height:1.5; }
-.change-receipt { display:block; padding:9px 3px 1px; border-top:1px solid #e0e8e1; color:#718176; font-size:11px; }
-.change-actions { display:flex; justify-content:flex-end; align-items:center; gap:$agent-space-small; margin-top:7px; padding:11px 3px 1px; border-top:1px solid #dfe7e1; }
+.change-note { display:block; padding:8px 9px; border-left:2px solid $agent-color-warning; background:$agent-color-warning-faint; color:$agent-color-warning-deep; font-size:10px; line-height:1.5; }
+.change-effect { display:block; padding:10px; border-left:2px solid $agent-color-accent; background:$agent-color-tint; color:$agent-color-text-secondary; font-size:$agent-font-size-compact; line-height:1.5; }
+.change-receipt { display:block; padding:9px 3px 1px; border-top:1px solid $agent-color-line; color:$agent-color-text-muted; font-size:11px; }
+.change-actions { display:flex; justify-content:flex-end; align-items:center; gap:$agent-space-small; margin-top:7px; padding:11px 3px 1px; border-top:1px solid $agent-color-line; }
 .change-actions button { min-height:42px; padding:0 12px; border-radius:9px; font-size:$agent-font-size-compact; line-height:42px; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 150ms ease,opacity 150ms ease; }
-.change-discard { color:#6e7d73; }
-.change-confirm { min-width:100px; border:1px solid $agent-color-accent; background:$agent-color-accent; color:#fff; box-shadow:0 3px 8px #176b5422; }
-.change-confirm.destructive { border-color:#a15343; background:#a15343; box-shadow:0 3px 8px #a1534322; }
+.change-discard { color:$agent-color-text-muted; }
+.change-confirm { min-width:100px; border:1px solid $agent-color-accent-deep; background:$agent-color-accent-deep; color:#fff; box-shadow:0 3px 8px rgba(var(--agent-shadow-rgb),.13); }
+.change-confirm.destructive { border-color:$agent-color-error; background:$agent-color-error; box-shadow:0 3px 8px rgba(var(--agent-shadow-rgb),.13); }
 .change-discard--pressed,.change-confirm--pressed { transform:scale(.975); }
-.change-discard--pressed { background:#eef3ef; }
-.change-confirm--pressed { background:#125b44; }
-.change-confirm.destructive.change-confirm--pressed { background:#8c463a; }
+.change-discard--pressed { background:$agent-color-tint; }
+.change-confirm--pressed { background:$agent-color-accent-deep; }
+.change-confirm.destructive.change-confirm--pressed { background:$agent-color-error; }
 .change-actions button[disabled] { opacity:.52; }
 @media(prefers-reduced-motion:reduce) { .change-actions button { transition:none; } }
 </style>

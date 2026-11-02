@@ -86,23 +86,23 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		justify-content: center;
 		animation: activity-pop 200ms cubic-bezier(.23,1,.32,1) both;
 
-		&--done { background: rgba(23,107,84,.13); }
-		&--failed { background: rgba(176,77,59,.13); }
-		&--idea { background: rgba(181,140,75,.16); }
+		&--done { background: $agent-color-success-faint; }
+		&--failed { background: $agent-color-error-faint; }
+		&--idea { background: $agent-color-warning-faint; }
 	}
 
 	&__idea-dot {
 		width: 10rpx;
 		height: 10rpx;
 		border-radius: 50%;
-		background: #b58c4b;
+		background: $agent-color-warning;
 	}
 
 	&__check {
 		width: 10rpx;
 		height: 6rpx;
-		border-left: 3rpx solid $agent-color-accent;
-		border-bottom: 3rpx solid $agent-color-accent;
+		border-left: 3rpx solid $agent-color-success;
+		border-bottom: 3rpx solid $agent-color-success;
 		transform: translateY(-1rpx) rotate(-45deg);
 	}
 
@@ -120,7 +120,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 			width: 3rpx;
 			height: 12rpx;
 			border-radius: 2rpx;
-			background: #a2493d;
+			background: $agent-color-error;
 		}
 		&::before { transform: translate(-50%,-50%) rotate(45deg); }
 		&::after { transform: translate(-50%,-50%) rotate(-45deg); }
@@ -138,7 +138,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		width: 14rpx;
 		height: 14rpx;
 		border-radius: 50%;
-		background: #b7c3bb;
+		background: $agent-color-text-faint;
 	}
 
 	&__idle {
@@ -146,14 +146,14 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		height: 14rpx;
 		box-sizing: border-box;
 		border-radius: 50%;
-		border: 2rpx dashed #b7c3bb;
+		border: 2rpx dashed $agent-color-line;
 	}
 
 	&__line {
 		flex: 1;
 		width: 2rpx;
 		min-height: 10rpx;
-		background: rgba(29,53,42,.08);
+		background: rgba(var(--agent-shadow-rgb), .08);
 	}
 
 	&__content {
@@ -174,9 +174,9 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		font-size: 26rpx;
 		font-weight: 600;
 		line-height: 40rpx;
-		color: #1d2923;
+		color: $agent-color-text-primary;
 
-		&--idea { color: #8a6d3a; }
+		&--idea { color: $agent-color-warning-deep; }
 	}
 
 	&__state {
@@ -185,8 +185,8 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		letter-spacing: 1rpx;
 		color: $agent-color-accent;
 
-		&--failed { color: #a2493d; }
-		&--skipped { color: #8a948e; }
+		&--failed { color: $agent-color-error; }
+		&--skipped { color: $agent-color-text-faint; }
 	}
 
 	// 结果收进浅色 chip，而不是裸露的第二行文字。
@@ -194,10 +194,10 @@ view, text, input { font-size: inherit; line-height: inherit; }
 		margin-top: 10rpx;
 		padding: 12rpx 16rpx;
 		border-radius: 14rpx;
-		background: rgba(29,53,42,.05);
+		background: rgba(var(--agent-shadow-rgb), .05);
 		font-size: 23rpx;
 		line-height: 1.6;
-		color: #5d6a62;
+		color: $agent-color-text-secondary;
 	}
 }
 

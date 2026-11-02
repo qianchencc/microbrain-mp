@@ -1,10 +1,11 @@
 // 公司逐日能耗统计的视图模型：把 company-energy-daily 接口的诚实口径转成界面状态。
 // 规则：usage=null/状态非正常 → 显示“—”，不补零、不取绝对值；
 // 未确认口径（aggregation.status!=verified 或 basis.unit!=kWh）数字不带“度”。
+import { AGENT_COLORS } from '../../styles/colors.js'
 
 export const STRIP_COL_WIDTH = 21 // px，与 .eday 列宽一致
 export const STRIP_PAGE_DAYS = 30
-export const PIE_COLORS = ['#3c8c6b', '#a47b35', '#8fb294', '#cfe0cd', '#dde5d8']
+export const PIE_COLORS = [AGENT_COLORS.accentDeep, AGENT_COLORS.warning, AGENT_COLORS.chart, AGENT_COLORS.tint, AGENT_COLORS.line]
 
 // 日期条增量合并：按 date 去重、升序，返回新数组（供 didPrepend 位移补偿计算 added）。
 export function mergeStripDays(current, days) {
@@ -50,7 +51,7 @@ export function donutImage(values, size = 58) {
   arcs += `<circle cx="29" cy="29" r="${R}" fill="none" stroke="${PIE_COLORS[i % PIE_COLORS.length]}" stroke-width="10" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 29 29)"/>`
   off += len
  })
- const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 58 58"><circle cx="29" cy="29" r="${R}" fill="none" stroke="#eef2ea" stroke-width="10"/>${arcs}</svg>`
+ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 58 58"><circle cx="29" cy="29" r="${R}" fill="none" stroke="${AGENT_COLORS.tint}" stroke-width="10"/>${arcs}</svg>`
  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
 }
 

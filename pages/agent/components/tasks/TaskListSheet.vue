@@ -1,12 +1,12 @@
 <template>
  <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" @close="closeSheet">
   <template #header-left>
-   <button v-if="issue || selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="#63776a" /></button>
+   <button v-if="issue || selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="var(--agent-text-muted)" /></button>
   </template>
   <template #header-right>
    <view class="header-actions">
-    <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="#176b54" /></button>
-    <view v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="inbox-entry"><button class="refresh-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="#176b54" /></button><view v-if="inboxUnread" class="inbox-badge"><text>{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></view></view>
+    <button v-if="!selectedTask && !selectedPlan && view !== 'inbox'" class="refresh-button" aria-label="刷新安排" :disabled="loading" @tap="load(true)"><uni-icons :class="{ spinning: loading }" type="refreshempty" size="16" color="var(--agent-accent-deep)" /></button>
+    <view v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'" class="inbox-entry"><button class="refresh-button" aria-label="通知中心" @tap="view = 'inbox'"><uni-icons type="email" size="16" color="var(--agent-accent-deep)" /></button><view v-if="inboxUnread" class="inbox-badge"><text>{{ inboxUnread > 99 ? '99+' : inboxUnread }}</text></view></view>
    </view>
   </template>
   <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
@@ -19,14 +19,14 @@
      <TaskCalendarView v-if="source === 'company' && view === 'calendar'" ref="calendar" @issue="showIssue" :active="open && view === 'calendar' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
      <template v-else>
      <button v-if="view === 'all' && source === 'company'" class="plan-strip" hover-class="plan-strip--pressed" @tap="view = 'plans'">
-      <view class="strip-icon"><uni-icons type="reload" size="15" color="#176b54" /></view>
+      <view class="strip-icon"><uni-icons type="reload" size="15" color="var(--agent-accent-deep)" /></view>
       <view class="strip-copy">
        <text class="strip-title">重复安排</text>
        <text v-if="plansError" class="strip-meta strip-meta--fail">未能加载</text>
        <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已开启 {{ enabledPlansCount }}</text>
        <text v-else class="strip-meta">读取中…</text>
       </view>
-      <uni-icons type="right" size="13" color="#99a59d" />
+      <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
      </button>
      <view class="list-summary"><text>{{ listSummary }}</text><view class="summary-side"><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text><button v-if="view === 'plans' && pausablePlans.length" class="plans-pause-all" :disabled="planLoading" @tap="pauseAllPlans">全部暂停</button></view></view>
      <view v-if="loading && !listLoaded" class="state-message">加载中…</view>
@@ -76,12 +76,12 @@
          <text v-if="source === 'company' && taskRequirementsText(plan)" class="row-subtitle">{{ taskRequirementsText(plan) }}</text>
          <view class="row-meta"><text>{{ planNextTime(plan) ? `${planNextLabel(plan)} · ${taskTime(planNextTime(plan))}` : '暂无下一次执行' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
         </view>
-        <uni-icons type="right" size="13" color="#99a59d" />
+        <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
        </button>
        <view v-if="!planCanToggle(plan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(plan)">
-        <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" class="plan-switch" :checked="planIsEnabled(plan)" disabled />
+        <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" class="plan-switch" :checked="planIsEnabled(plan)" :color="AGENT_COLORS.accentDeep" disabled />
        </view>
-       <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" class="plan-switch" :checked="planIsEnabled(plan)" :disabled="planLoading" @change.stop="togglePlanStatus(plan, $event.detail.value)" />
+       <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" class="plan-switch" :checked="planIsEnabled(plan)" :color="AGENT_COLORS.accentDeep" :disabled="planLoading" @change.stop="togglePlanStatus(plan, $event.detail.value)" />
       </view>
      </template>
 
@@ -92,14 +92,14 @@
         <text v-if="task.repeat" class="row-subtitle">{{ repeatText(task.repeat) }}</text>
         <view class="row-meta"><text>{{ taskTime(taskTimeValue(task, view)) || '时间未提供' }}</text><text>{{ task.creator?.displayName || '成员' }}</text></view>
        </view>
-       <uni-icons type="right" size="13" color="#99a59d" />
+       <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
       </button>
      </template>
 
      <view v-if="error && visibleRows.length" class="list-footer list-error"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load">重试</button></view>
      </template>
     </scroll-view>
-    <button v-if="source === 'company' && !inboxNavigation.canBack && !stackedView" class="create-task" @tap="emit('create')">让 Agent 安排任务 <uni-icons type="chatbubble" size="14" color="#176b54" /></button>
+    <button v-if="source === 'company' && !inboxNavigation.canBack && !stackedView" class="create-task" @tap="emit('create')">让 Agent 安排任务 <uni-icons type="chatbubble" size="14" color="var(--agent-accent-deep)" /></button>
    </view>
 
    <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text><TaskErrorNotice v-if="planDetailError" :message="planDetailError" @details="showIssue" />
@@ -116,13 +116,13 @@
       <view class="plan-toggle-row">
        <view class="plan-toggle-copy"><text class="plan-toggle-title">重复安排</text><text class="plan-toggle-note">{{ planIsEnabled(selectedPlan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
        <view v-if="!planCanToggle(selectedPlan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(selectedPlan)">
-        <switch :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" disabled />
+        <switch :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" :color="AGENT_COLORS.accentDeep" disabled />
        </view>
-       <switch v-else :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" :disabled="planLoading" @change="togglePlanStatus(selectedPlan, $event.detail.value)" />
+       <switch v-else :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" :color="AGENT_COLORS.accentDeep" :disabled="planLoading" @change="togglePlanStatus(selectedPlan, $event.detail.value)" />
       </view>
       <view v-if="selectedPlan.latestTask" class="latest-result">
        <view class="latest-result-copy"><text class="latest-result-title">最近一次结果</text><text>{{ taskTime(taskTimeValue(selectedPlan.latestTask, 'results')) || '时间未提供' }} · {{ taskStatus(selectedPlan.latestTask.status) }}</text></view>
-       <button v-if="selectedPlan.latestTask.id || selectedPlan.latestTask.taskId" class="latest-result-link" @tap="openLatestReport">查看报告 <uni-icons type="right" size="12" color="#176b54" /></button>
+       <button v-if="selectedPlan.latestTask.id || selectedPlan.latestTask.taskId" class="latest-result-link" @tap="openLatestReport">查看报告 <uni-icons type="right" size="12" color="var(--agent-accent-deep)" /></button>
       </view>
      </view>
     </scroll-view>
@@ -149,6 +149,7 @@ import SlidingSegments from '../shared/SlidingSegments.vue'
 import TaskResultContent from './TaskResultContent.vue'
 import TaskCalendarView from './TaskCalendarView.vue'
 import TaskInboxContent from './TaskInboxContent.vue'
+import { AGENT_COLORS } from '../../styles/colors.js'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' }, initialView: String, date: String, initialTask: Object, refreshKey: Number })
 const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-count'])
@@ -244,7 +245,7 @@ async function togglePlanStatus(plan, enabled) {
  const content = operation === 'resume'
   ? resumeContent(plan)
   : '只暂停以后的安排；已经安排的本次任务会继续，已做的操作保持原样。'
- const confirmed = await new Promise(resolve => uni.showModal({ title, content, confirmText: title, confirmColor: operation === 'resume' ? '#176b54' : '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ const confirmed = await new Promise(resolve => uni.showModal({ title, content, confirmText: title, confirmColor: operation === 'resume' ? AGENT_COLORS.accentDeep : AGENT_COLORS.error, success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed) {
   if (action === planStatusRequest && planContextCurrent(planId, source, scope, version)) resetPlanSwitch()
   return
@@ -273,7 +274,7 @@ async function pauseAllPlans() {
  const skipped = plans.value.filter(plan => plan?.status === 'enabled' && plan.nextAt && !plan.canPause).length
  const confirmed = await new Promise(resolve => uni.showModal({ title: '暂停全部重复安排',
   content: `将暂停 ${pausable.length} 个已开启重复安排，只影响以后的安排；已经安排的本次任务会继续，已做的操作保持原样。${skipped ? `另有 ${skipped} 项不能暂停，保持不变。` : ''}`,
-  confirmText: '全部暂停', confirmColor: '#a15343',
+  confirmText: '全部暂停', confirmColor: AGENT_COLORS.error,
   success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || action !== planStatusRequest || !props.open || source !== props.source || scope !== getAgentStorageScope()) return
  planLoading.value = true
@@ -477,7 +478,7 @@ async function cancelWholePlan(scopeType) {
  if (!selectedPlan.value?.canManage || planLoading.value) return
  const plan = selectedPlan.value, source = props.source, scope = getAgentStorageScope()
  const title = scopeType === 'all' ? '取消全部' : '取消本次'
- const confirmed = await new Promise(resolve => uni.showModal({ title, content: scopeType === 'all' ? '取消这个周期全部尚未执行的安排；已执行或已发送的动作保持原样。' : '只取消下一次执行，后续周期照常执行。', confirmText: title, confirmColor: '#a15343', success: result => resolve(result.confirm), fail: () => resolve(false) }))
+ const confirmed = await new Promise(resolve => uni.showModal({ title, content: scopeType === 'all' ? '取消这个周期全部尚未执行的安排；已执行或已发送的动作保持原样。' : '只取消下一次执行，后续周期照常执行。', confirmText: title, confirmColor: AGENT_COLORS.error, success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || !props.open || selectedPlan.value?.planId !== plan.planId || source !== props.source || scope !== getAgentStorageScope()) return
  planLoading.value = true
  try {
@@ -531,83 +532,83 @@ button::after { border:0; }
 .arrangements-content,.list-pane,.detail-pane { min-height:0; flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .view-switch { flex-shrink:0; padding:4px 18px 8px; }
 .arrangements-scroll,.detail-scroll { height:0; min-height:0; flex:1; box-sizing:border-box; padding:0 18px 14px; }
-.list-summary { display:flex; justify-content:space-between; padding:7px 2px 10px; border-bottom:1px solid #e5ebe6; color:#75877b; font-size:11px; }
+.list-summary { display:flex; justify-content:space-between; padding:7px 2px 10px; border-bottom:1px solid $agent-color-line; color:$agent-color-text-muted; font-size:11px; }
 .summary-side { display:flex; align-items:center; gap:10px; }
-.plans-pause-all { margin:0; padding:0; color:#a15343; font-size:11px; }
+.plans-pause-all { margin:0; padding:0; color:$agent-color-error; font-size:11px; }
 .plans-pause-all[disabled] { opacity:.55; }
-.plan-row,.task-row { width:100%; min-height:76px; display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid #e8ede9; text-align:left; }
-.plan-row:active,.task-row:active { background:#f5f8f5; }
+.plan-row,.task-row { width:100%; min-height:76px; display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid $agent-color-line; text-align:left; }
+.plan-row:active,.task-row:active { background:$agent-color-surface-page; }
 .plan-main { min-width:0; flex:1; display:flex; align-items:center; gap:11px; text-align:left; }
 .plan-switch { flex-shrink:0; transform:scale(.78); transform-origin:right center; }
 .plan-switch-wrap { flex-shrink:0; min-width:52px; min-height:32px; display:flex; align-items:center; justify-content:flex-end; }
 .plan-switch-wrap--disabled { opacity:.72; }
 .row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
 .row-heading { min-width:0; display:flex; align-items:baseline; justify-content:space-between; gap:9px; }
-.row-title { min-width:0; white-space:normal; word-break:break-word; color:#304739; font-size:13px; font-weight:600; }
+.row-title { min-width:0; white-space:normal; word-break:break-word; color:$agent-color-text-secondary; font-size:13px; font-weight:600; }
 .plan-status,.task-status { flex-shrink:0; font-size:10px; }
-.plan-access-tag { flex-shrink:0; color:#8b7561; font-size:10px; }
-.tone-active,.tone-ok { color:#397b61; }.tone-muted { color:#7e8982; }.tone-warn { color:$agent-color-warning; }.tone-fail { color:#a15343; }
-.row-subtitle { color:#78877e; font-size:11px; line-height:1.45; }
-.row-meta { min-width:0; display:flex; justify-content:space-between; gap:$agent-space-small; color:#929e96; font-size:10px; }
+.plan-access-tag { flex-shrink:0; color:$agent-color-warning-deep; font-size:10px; }
+.tone-active,.tone-ok { color:$agent-color-success; }.tone-muted { color:$agent-color-text-muted; }.tone-warn { color:$agent-color-warning; }.tone-fail { color:$agent-color-error; }
+.row-subtitle { color:$agent-color-text-muted; font-size:11px; line-height:1.45; }
+.row-meta { min-width:0; display:flex; justify-content:space-between; gap:$agent-space-small; color:$agent-color-text-faint; font-size:10px; }
 .row-meta text { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.status-mark { width:7px; height:7px; flex-shrink:0; border-radius:50%; background:#b0833c; box-shadow:0 0 0 3px #f5eddf; }
-.status-mark--paused { background:#9aa59e; box-shadow:0 0 0 3px #eef1ee; }
-.state-message { padding:48px 16px; text-align:center; color:#839189; font-size:13px; }
+.status-mark { width:7px; height:7px; flex-shrink:0; border-radius:50%; background:$agent-color-badge; box-shadow:0 0 0 3px $agent-color-warning-faint; }
+.status-mark--paused { background:$agent-color-text-faint; box-shadow:0 0 0 3px $agent-color-tint; }
+.state-message { padding:48px 16px; text-align:center; color:$agent-color-text-muted; font-size:13px; }
 .state-message text { display:block; overflow-wrap:anywhere; }
 .state-message button,.list-footer button { margin:10px auto 0; color:$agent-color-accent; font-size:$agent-font-size-compact; }
-.list-footer { padding:16px 0 22px; text-align:center; color:#99a39d; font-size:11px; }
-.list-error { color:#a15343; }
-.detail-error { display:block; flex-shrink:0; padding:8px 18px 0; color:#a15343; font-size:11px; text-align:center; }
-.plan-strip { width:100%; display:flex; align-items:center; gap:10px; margin:2px 0 8px; padding:10px 12px; border-radius:$agent-radius-medium; background:#f0f5f1; text-align:left; }
+.list-footer { padding:16px 0 22px; text-align:center; color:$agent-color-text-faint; font-size:11px; }
+.list-error { color:$agent-color-error; }
+.detail-error { display:block; flex-shrink:0; padding:8px 18px 0; color:$agent-color-error; font-size:11px; text-align:center; }
+.plan-strip { width:100%; display:flex; align-items:center; gap:10px; margin:2px 0 8px; padding:10px 12px; border-radius:$agent-radius-medium; background:$agent-color-tint; text-align:left; }
 .plan-strip::after { border:0; }
-.plan-strip--pressed { background:#e3ebe5; }
-.strip-icon { width:30px; height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:10px; background:#e0eae3; }
+.plan-strip--pressed { background:$agent-color-line; }
+.strip-icon { width:30px; height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:10px; background:$agent-color-line; }
 .strip-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
-.strip-title { color:#2c4636; font-size:13px; font-weight:600; }
-.strip-meta { color:#77887d; font-size:11px; }
-.strip-meta--fail { color:#a15343; }
+.strip-title { color:$agent-color-text-secondary; font-size:13px; font-weight:600; }
+.strip-meta { color:$agent-color-text-muted; font-size:11px; }
+.strip-meta--fail { color:$agent-color-error; }
 .agenda-day { display:flex; gap:10px; padding-top:8px; }
 .agenda-rail { width:32px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding-top:14px; }
-.day-num { font-size:15px; font-weight:700; color:#33503d; line-height:1.2; }
-.day-num--later { font-size:$agent-font-size-compact; color:#75877b; }
-.day-wd { font-size:10px; color:#8b9a90; }
+.day-num { font-size:15px; font-weight:700; color:$agent-color-text-secondary; line-height:1.2; }
+.day-num--later { font-size:$agent-font-size-compact; color:$agent-color-text-muted; }
+.day-wd { font-size:10px; color:$agent-color-text-muted; }
 .agenda-rows { min-width:0; flex:1; }
-.day-empty { display:block; padding:14px 0; border-bottom:1px solid #e8ede9; color:#b4bfb8; font-size:11px; }
+.day-empty { display:block; padding:14px 0; border-bottom:1px solid $agent-color-line; color:$agent-color-text-faint; font-size:11px; }
 .task-row--agenda { min-height:0; gap:10px; }
-.row-clock { width:46px; flex-shrink:0; align-self:flex-start; padding-top:2px; font-size:11px; color:#466350; line-height:1.4; }
+.row-clock { width:46px; flex-shrink:0; align-self:flex-start; padding-top:2px; font-size:11px; color:$agent-color-text-secondary; line-height:1.4; }
 .row-clock--later { display:flex; flex-direction:column; gap:3px; }
 .row-clock--later text:first-child { font-weight:600; }
 .inbox-entry { position:relative; flex-shrink:0; }
-.inbox-badge { position:absolute; top:-4px; right:-3px; min-width:15px; height:15px; padding:0 4px; border-radius:8px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:#a15343; color:#fff; font-size:9px; line-height:1; pointer-events:none; }
+.inbox-badge { position:absolute; top:-4px; right:-3px; min-width:15px; height:15px; padding:0 4px; border-radius:8px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:$agent-color-badge; color:#fff; font-size:9px; line-height:1; pointer-events:none; }
 .header-actions { display:flex; align-items:center; gap:$agent-space-small; flex-shrink:0; }
-.back-button,.refresh-button { width:32px; height:32px; margin-right:8px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:#eff3ef; }
+.back-button,.refresh-button { width:32px; height:32px; margin-right:8px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:$agent-color-tint; }
 .header-actions .refresh-button { margin-right:0; }
 .refresh-button[disabled] { opacity:.5; }
 .spinning { animation:arrangements-spin 900ms linear infinite; }
 .detail-scroll { padding-top:4px; }
 .plan-summary { padding:12px 3px 18px; }
 .summary-heading { display:flex; align-items:center; gap:11px; }
-.plan-label { min-width:0; color:#263c2e; font-size:17px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
+.plan-label { min-width:0; color:$agent-color-text-primary; font-size:17px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
 .summary-status { display:block; margin:8px 0 17px 18px; font-size:11px; }
-.summary-line { min-height:38px; display:grid; grid-template-columns:82px minmax(0,1fr); align-items:center; gap:12px; border-top:1px solid #e8ede9; font-size:$agent-font-size-compact; }
-.summary-line text:first-child { color:#87948b; }
-.summary-line text:last-child { color:#34483b; overflow-wrap:anywhere; text-align:right; }
-.summary-note { display:block; padding:11px 0 3px; color:#87948b; font-size:11px; }
+.summary-line { min-height:38px; display:grid; grid-template-columns:82px minmax(0,1fr); align-items:center; gap:12px; border-top:1px solid $agent-color-line; font-size:$agent-font-size-compact; }
+.summary-line text:first-child { color:$agent-color-text-muted; }
+.summary-line text:last-child { color:$agent-color-text-secondary; overflow-wrap:anywhere; text-align:right; }
+.summary-note { display:block; padding:11px 0 3px; color:$agent-color-text-muted; font-size:11px; }
 .pause-reason { display:block; padding-top:4px; color:$agent-color-warning; font-size:11px; }
-.plan-toggle-row { margin-top:13px; padding-top:12px; border-top:1px solid #e8ede9; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.plan-toggle-row { margin-top:13px; padding-top:12px; border-top:1px solid $agent-color-line; display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .plan-toggle-copy { min-width:0; display:flex; flex-direction:column; gap:4px; }
-.plan-toggle-title { color:#34483b; font-size:$agent-font-size-compact; font-weight:600; }
-.plan-toggle-note { color:#87948b; font-size:10px; }
-.latest-result { margin-top:14px; padding-top:12px; border-top:1px solid #e4eae5; display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.latest-result-copy { min-width:0; display:flex; flex-direction:column; gap:4px; color:#87948b; font-size:10px; }
-.latest-result-title { color:#4d7663; font-size:11px; font-weight:700; }
+.plan-toggle-title { color:$agent-color-text-secondary; font-size:$agent-font-size-compact; font-weight:600; }
+.plan-toggle-note { color:$agent-color-text-muted; font-size:10px; }
+.latest-result { margin-top:14px; padding-top:12px; border-top:1px solid $agent-color-line; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.latest-result-copy { min-width:0; display:flex; flex-direction:column; gap:4px; color:$agent-color-text-muted; font-size:10px; }
+.latest-result-title { color:$agent-color-text-secondary; font-size:11px; font-weight:700; }
 .latest-result-link { min-height:32px; flex-shrink:0; display:flex; align-items:center; gap:4px; color:$agent-color-accent; font-size:11px; }
 .task-content-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
-.detail-actions { flex-shrink:0; padding:10px 18px 12px; border-top:1px solid #e5ebe6; background:#fbfcfb; }
-.reference-button { width:100%; min-height:42px; display:flex; align-items:center; justify-content:center; gap:$agent-space-small; border-radius:6px; background:linear-gradient(180deg,#28775e,#17634c); color:#fff; font-size:$agent-font-size-compact; font-weight:600; box-shadow:0 2px 5px #16372816,inset 0 1px 0 #ffffff30; }
-.cancel-actions { display:flex; gap:$agent-space-small; margin-top:10px; }.cancel-button { flex:1; min-width:0; margin:0; height:38px; display:flex; align-items:center; justify-content:center; border:1px solid #ead6d1; border-radius:6px; background:#fff; color:#a15343; font-size:$agent-font-size-compact; }.cancel-button[disabled] { opacity:.55; }
-.reference-button:active { background:#145841; }
+.detail-actions { flex-shrink:0; padding:10px 18px 12px; border-top:1px solid $agent-color-line; background:$agent-color-surface-page; }
+.reference-button { width:100%; min-height:42px; display:flex; align-items:center; justify-content:center; gap:$agent-space-small; border-radius:6px; background:linear-gradient(180deg,$agent-color-accent,$agent-color-accent-deep); color:#fff; font-size:$agent-font-size-compact; font-weight:600; box-shadow:0 2px 5px rgba(var(--agent-shadow-rgb),.09),inset 0 1px 0 #ffffff30; }
+.cancel-actions { display:flex; gap:$agent-space-small; margin-top:10px; }.cancel-button { flex:1; min-width:0; margin:0; height:38px; display:flex; align-items:center; justify-content:center; border:1px solid $agent-color-error-faint; border-radius:6px; background:#fff; color:$agent-color-error; font-size:$agent-font-size-compact; }.cancel-button[disabled] { opacity:.55; }
+.reference-button:active { background:$agent-color-accent-deep; }
 @keyframes arrangements-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .spinning { animation:none; } }
-.create-task { min-height:44px; margin:6px 18px 10px; display:flex; align-items:center; justify-content:center; gap:$agent-space-small; color:$agent-color-accent; background:#eaf1eb; border-radius:8px; font-size:$agent-font-size-compact; flex-shrink:0; }
+.create-task { min-height:44px; margin:6px 18px 10px; display:flex; align-items:center; justify-content:center; gap:$agent-space-small; color:$agent-color-accent; background:$agent-color-accent-faint; border-radius:8px; font-size:$agent-font-size-compact; flex-shrink:0; }
 </style>
