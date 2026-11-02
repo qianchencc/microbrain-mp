@@ -101,7 +101,7 @@ import MeterHistoryView from './components/observations/MeterHistoryView.vue'
 import CompanyEnergySheet from './components/energy/CompanyEnergySheet.vue'
 import CompanyDeviceDrawer from './components/shared/CompanyDeviceDrawer.vue'
 import CompanyAgentFloat from './components/shared/CompanyAgentFloat.vue'
-import { parseAgentContext, meterHistoryPrompt } from './lib/conversation.mjs'
+import { parseAgentContext, meterHistoryPrompt, beginAgentEntry, markAgentEntry } from './lib/conversation.mjs'
 import { environmentHistoryPrompt, environmentWindowReference } from './lib/observations.mjs'
 import { taskToday } from './lib/tasks.mjs'
 
@@ -415,6 +415,7 @@ function openMeterAgent(window) { observationType.value = ''; openCompanyAgent({
 function openAgent(source) {
  if (openingAgent.value) return
  openingAgent.value = source
+ beginAgentEntry(source); markAgentEntry(source, 'navigate')
  uni.navigateTo({ url: `/pages/agent/index?source=${source}&from=dashboard`, fail: () => { openingAgent.value = ''; uni.showToast({ title: '未能打开，请重试', icon: 'none' }) } })
 }
 // 卡片/深链参数在 onLoad 只写入暂存；真正的消费点只有 onShow（App 的登录恢复、

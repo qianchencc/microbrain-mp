@@ -20,3 +20,5 @@ export {
   takeComposerView,
 } from '../domains/conversation/composer-drafts.mjs'
 export { parseAgentContext, meterHistoryPrompt } from '../domains/conversation/context-link.mjs'
+export { createConversationRecovery } from '../domains/conversation/conversation-recovery.mjs'
+export { beginAgentEntry, markAgentEntry, getAgentEntryTimings } from '../domains/conversation/entry-timing.mjs'

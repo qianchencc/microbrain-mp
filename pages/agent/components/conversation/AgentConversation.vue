@@ -28,7 +28,7 @@
   </scroll-view>
   <view v-if="clearing" class="clearing-hint"><text>正在清除会话…</text></view>
   </view>
-  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning || taskConfirmationRunning" :disabled="!conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
+  <view class="composer-shell" :style="composerShellStyle"><AgentComposer ref="composer" v-model="input" :running="isRunning || taskConfirmationRunning" :disabled="!conversationReady || !conversationId || mutating || hasExecution" :editing="Boolean(editingTurn)" :reference="editingTurn ? editingTurn.reference : composerReference" @remove-reference="composerReference = null" :placeholder="isCompany ? '查询设备或调整智慧空调' : undefined" @send="onComposerSend" @voice="sendMessage" @stop="stopRun" @keyboard="onComposerKeyboard" @cancel-edit="cancelEdit" /></view>
   <DraftSheetLayer v-if="sheetMounted" :source="source" :draft="sheetDraft" :result="sheetTurn?.result ?? null" :browser="sheetBrowser" :current-action-id="sheetActionId" :open-request="sheetOpenRequest" :busy="busy" :baseline="sheetBaseline" :error="sheetError"
    :settle-selection="settleSelection"
    @reconnect="reconnectSheet" @close="closeSheet" @select="sheetTurn && selectDraft(sheetTurn, $event)" @confirm="sheetTurn && confirmDraft(sheetTurn)" @restore="sheetTurn && restoreDraft(sheetTurn)"
@@ -56,11 +56,12 @@ import { cancelRun, createConversation, restoreConversation, clearConversation, 
 import { confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskChange, discardTaskChange, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, readAgentNotifications, readAgentPlans, readAgentTasks } from '@/apis/agent/tasks'
 import { cancelAction, confirmAction, updateSelection, retrySummary, revalidateAction, restoreAction } from '@/apis/agent/actions'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
+import { conversationRecovery } from '@/apis/agent/conversation-view'
 import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail } from '../../lib/conversation.mjs'
 import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference, preserveComposerView, takeComposerView } from '../../lib/conversation.mjs'
 import { createDraftBaseline } from '../../lib/actions.mjs'
 import { mergeTaskPlan, taskNavigation, taskListRange } from '../../lib/tasks.mjs'
-import { createPresentation } from '../../lib/conversation.mjs'
+import { createPresentation, markAgentEntry } from '../../lib/conversation.mjs'
 import { openAgentMenu } from '../../lib/navigation.mjs'
 import DeviceSheet from '../shared/DeviceSheet.vue'
 import SafetyEventDetail from '../observations/SafetyEventDetail.vue'
@@ -165,6 +166,9 @@ watch(input, value => {
 }, { flush: 'sync' })
 const composer = ref(null)
 const turns = ref([])
+const conversationReady = ref(false)
+let recoveryTicket = null
+const currentConversationView = () => ({ id: conversationId.value, source: props.source, turns: turns.value, phase: phase.value })
 const tasksOf = turn => turn.tasks?.length ? turn.tasks : turn.task ? [turn.task] : []
 const errorMessage = ref(''), issue = ref(null)
 const recoveryMessage = ref('')
@@ -179,17 +183,18 @@ const scrollIntoView = ref(''), restoredScrollTop = ref(0)
 let currentScrollTop = 0, readingHydrated = false
 const nearBottom = ref(true)
 const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
-const busy = computed(() => isRunning.value || mutating.value || hasExecution.value || hasTaskConfirmation.value)
-const statusText = computed(() => !conversationId.value ? '正在连接' : clearing.value ? '正在清除' : busy.value ? '正在处理' : '服务在线')
+const busy = computed(() => !conversationReady.value || !conversationRecovery.canMutate(recoveryTicket) || isRunning.value || mutating.value || hasExecution.value || hasTaskConfirmation.value)
+const statusText = computed(() => !conversationReady.value ? '正在恢复对话' : clearing.value ? '正在清除' : busy.value ? '正在处理' : '服务在线')
 // 宿主状态播报：页面导航头/浮层面板头、浮标运行态都由这组事件驱动
 watch(statusText, value => emit('status', value), { immediate: true })
 watch(() => isRunning.value || taskConfirmationRunning.value, value => emit('running', value), { immediate: true })
-watch(conversationId, value => emit('connected', Boolean(value)), { immediate: true })
+watch(() => Boolean(conversationId.value && conversationReady.value), value => emit('connected', value), { immediate: true })
 watch(inboxUnreadCount, value => emit('inbox-count', value), { immediate: true })
 watch(errorMessage, value => emit('error', Boolean(value)), { immediate: true })
 // 收起期间到达的新内容 → 浮标未读角标（服务端续跑经 restore 整表回读也覆盖）
 watch(() => turns.value.length, (now, before = 0) => { if (now > before && !props.active) emit('unread') })
 function clearIdentityView() {
+ conversationRecovery.forget(recoveryTicket); recoveryTicket = null; conversationReady.value = false
  selectedEvent.value = null; eventOpen.value = false
  closeReport()
  activeRequest?.abort(); presentation?.cancel()
@@ -200,6 +205,7 @@ function clearIdentityView() {
  inboxOpen.value = false; tasksOpen.value = false; closeCompanyTask(); ++inboxCountRequest; inboxUnreadCount.value = 0
 }
 function preserveCurrentComposerDraft() {
+ conversationRecovery.retain(recoveryTicket, currentConversationView())
  if (draftScope.value) preserveComposerDraft(draftScope.value, props.source, editingTurn.value ? composerStash : input.value)
  if (draftScope.value) {
   preserveComposerReference(draftScope.value, props.source, composerReference.value)
@@ -309,11 +315,17 @@ async function restore() {
  if (restoring || activeRequest || confirming.size && !creatingTask.value || disposed || clearing.value) return
  restoring = true
  const epoch = confirmEpoch, clearMark = clearEpoch
+ let ticket = recoveryTicket
  try {
   await waitForAgentSession()
+  markAgentEntry(props.source, 'session-ready')
   const scope = getAgentStorageScope()
   if (draftScope.value && draftScope.value !== scope) clearIdentityView()
   draftScope.value = scope
+  if (!conversationRecovery.current(ticket)) {
+   ticket = recoveryTicket = conversationRecovery.open(props.source)
+   conversationReady.value = false
+  }
   if (!composerHydrated) {
    const savedDraft = takeComposerDraft(scope, props.source)
    if (savedDraft !== null && !editingTurn.value) input.value = savedDraft
@@ -327,11 +339,14 @@ async function restore() {
    }
    composerHydrated = true
   }
+  markAgentEntry(props.source, 'restore-requested')
   const restored = await restoreConversation(props.source)
+  markAgentEntry(props.source, 'restore-received')
+  if (disposed || !conversationRecovery.current(ticket) || clearMark !== clearEpoch) return
   const conversation = restored.conversation || await createConversation(props.source)
   const returnedSource = restored.source ?? conversation.source ?? conversation.agent_source
   if (returnedSource && returnedSource !== props.source) throw new Error('会话来源与当前入口不一致')
-  if (disposed || getAgentStorageScope() !== scope || clearMark !== clearEpoch) return
+  if (disposed || !conversationRecovery.current(ticket) || getAgentStorageScope() !== scope || clearMark !== clearEpoch) return
   // 快照可能取于确认请求到达服务端之前（EXECUTING 提交前的待确认旧态）：
   // 跨越确认起点的快照整表丢弃，由确认结果写回或下一轮轮询收口。
   if (epoch !== confirmEpoch) { schedule(); return }
@@ -346,6 +361,10 @@ async function restore() {
   isRunning.value = Boolean(conversation.running)
   if (!isRunning.value) turns.value.forEach(turn => { turn.running = false })
   errorMessage.value = ''
+  conversationReady.value = conversationRecovery.accept(ticket, currentConversationView())
+  markAgentEntry(props.source, 'hydrated')
+  nextTick(() => { if (!disposed && conversationRecovery.current(ticket)) markAgentEntry(props.source, 'rendered') })
+  recoveryMessage.value = ''
   if (!readingHydrated) {
    const view = takeComposerView(draftScope.value, props.source)
    readingHydrated = true
@@ -361,8 +380,19 @@ async function restore() {
   if (turns.value.some(turn => tasksOf(turn).some(task => task.repeat && task.created))) void refreshScheduledTasks()
   void refreshInboxCount()
   void prewarmLists()
- } catch (error) { if (!disposed) { errorMessage.value = error.message || '未取得网络响应，网络层未提供具体原因'; schedule() } }
- finally { restoring = false }
+ } catch (error) {
+  if (!disposed && ticket === recoveryTicket && clearMark === clearEpoch) {
+   conversationReady.value = false
+   if (error.status === 401 || error.status === 403 || error.code === 'AGENT_SESSION_EXPIRED') clearIdentityView()
+   errorMessage.value = error.message || '未取得网络响应，网络层未提供具体原因'
+   schedule()
+  }
+ }
+ finally {
+  restoring = false
+  if (!disposed && visible && props.active && ticket !== recoveryTicket
+    && conversationRecovery.current(recoveryTicket) && !conversationReady.value && !activeRequest) void restore()
+ }
 }
 // 消息编辑收编进主输入框（全页面单一键盘链路）：进入编辑暂存 composer 草稿并预填原文，
 // 取消/提交后还原草稿；编辑期间轮次被整表回读替换或失格时自动退出编辑态。
@@ -379,6 +409,7 @@ function cancelEdit() {
  composerStash = ''
 }
 function onComposerSend() {
+ if (busy.value) return
  const turn = editingTurn.value
  if (!turn) return sendMessage()
  const content = input.value.trim()
@@ -675,7 +706,9 @@ async function retryAnswer(turn) {
  finally { mutating.value = false; schedule() }
 }
 async function stopRun() {
+ if (!conversationReady.value || !conversationRecovery.canMutate(recoveryTicket)) return
  const turn = turns.value[turns.value.length - 1]
+ if (!turn) return
  if (activeRequest) {
   presentation?.cancel()
   activeRequest.abort()
@@ -698,9 +731,10 @@ function clearHistory() {
   return
  }
  uni.showModal({ title: isCompany.value ? '清除公司会话' : '清除会话', content: isCompany.value ? '清除当前公司 Agent 对话记录？' : '清除当前对话和草案记录？', success: async response => {
-  if (!response.confirm || clearing.value) return
+  if (!response.confirm || clearing.value || !conversationReady.value || !conversationRecovery.canMutate(recoveryTicket)) return
   const staleId = conversationId.value
   ++clearEpoch
+  conversationRecovery.forget(recoveryTicket); recoveryTicket = null; conversationReady.value = false
   mutating.value = true
   clearing.value = true
   // 退役旧会话与创建新会话互不依赖，并行发出，与淡出动画同时进行；
@@ -731,8 +765,13 @@ function clearHistory() {
     } catch (error) { if (!disposed) errorMessage.value = error.message }
    }
   }
+  if (!disposed && cleared.status === 'fulfilled' && conversationId.value) {
+   recoveryTicket = conversationRecovery.open(props.source)
+   conversationReady.value = conversationRecovery.accept(recoveryTicket, currentConversationView())
+  }
   clearing.value = false
   mutating.value = false
+  if (!disposed && !conversationReady.value) void restore()
  } })
 }
 // 宿主驱动生命周期：active=true ↔ 页面 onShow / 浮层展开，false ↔ onHide / 收起。
@@ -740,13 +779,26 @@ function clearHistory() {
 function reloadRegions() { return loadRegionFocus({ isActive: () => props.active && visible && !disposed }).catch(() => {}) }
 function activate() {
  visible = true
+ markAgentEntry(props.source, 'activated')
  openingRegion.value = false
  if (!isCompany.value) void reloadRegions()
- if (!activeRequest) restore()
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 会话准备完成后由 restore 重新分区 */ }
  if (draftScope.value && draftScope.value !== scope) clearIdentityView()
  draftScope.value = scope
+ if (!activeRequest) {
+  try {
+   recoveryTicket = conversationRecovery.open(props.source)
+   conversationReady.value = false
+   const preview = recoveryTicket.preview
+   if (!conversationId.value && preview) {
+    conversationId.value = preview.id; turns.value = preview.turns; isRunning.value = false; phase.value = 'restoring'
+    markAgentEntry(props.source, 'preview-restored')
+   }
+   if (conversationId.value) recoveryMessage.value = '正在同步对话，完成后可继续操作'
+  } catch { clearIdentityView() }
+  void restore()
+ }
  const savedDraft = takeComposerDraft(scope, props.source)
  if (savedDraft !== null && !editingTurn.value) input.value = savedDraft
  const savedReference = takeComposerReference(scope, props.source)

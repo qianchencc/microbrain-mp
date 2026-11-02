@@ -20,7 +20,7 @@ import RegionChip from './components/regions/RegionChip.vue'
 import AgentConversation from './components/conversation/AgentConversation.vue'
 import { backToParent, previousPageLabel } from './lib/navigation.mjs'
 import { focusRegion } from './lib/region-focus.mjs'
-import { parseAgentContext } from './lib/conversation.mjs'
+import { parseAgentContext, markAgentEntry } from './lib/conversation.mjs'
 
 const conv = ref(null), pageActive = ref(false), redirecting = ref(false)
 const returnLabel = ref('总览')
@@ -39,7 +39,7 @@ onLoad(options => {
  uni.setNavigationBarTitle({ title: '办公室 Agent' })
 })
 // onLoad 先于组件挂载：暂存引用，挂载后经 staging 队列进 hydration 消费
-onMounted(() => { if (pendingReference) conv.value?.setReference(pendingReference) })
+onMounted(() => { markAgentEntry('office', 'mounted'); if (pendingReference) conv.value?.setReference(pendingReference) })
 onShow(() => { pageActive.value = true; uni.setNavigationBarTitle({ title: '办公室 Agent' }) })
 onHide(() => { pageActive.value = false })
 function returnToOffice() { backToParent() }
