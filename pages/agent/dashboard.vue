@@ -37,13 +37,12 @@
     <text v-if="alertsNote" class="fineprint">安全台账更新未完成 · {{ alertsNote }}</text>
 
     <view class="section"><text>用电观察</text><button @tap="openEnergy()">查看详情 ›</button></view>
-    <view class="energy-card">
-     <button class="energy-heading" hover-class="pressed" @tap="openEnergy()"><text>计量日用电</text><text class="energy-value">{{ simpleEnergy.value }}</text><text v-if="energyNote">更新未完成 · {{ energyNote }}</text><text v-else>{{ simpleEnergy.status }}</text></button>
-     <CompanyEnergyStrip v-if="energyStrip.length" ref="energyStripRef" :days="energyStrip" :selected="selectedStripDate" pull-enabled @select="openEnergy" @pull-open="openEnergy()" />
-     <EnergySkeleton v-else-if="energyLoading && !energyNote" />
-     <text v-else-if="!energyStrip.length" class="fineprint">暂无可统计的计量日</text>
-     <MonthlyEnergyComparison :active="pageActive && !energyLoading" :refresh-key="monthlyRefresh" :cutoff="energyReport?.latestSampleTime || ''" />
-    </view>
+    <button class="energy-card" hover-class="pressed" @tap="openEnergy()" aria-label="查看用电详情">
+     <view class="energy-heading"><text>计量日用电</text><text class="energy-value">{{ simpleEnergy.value }}</text><text v-if="energyNote">更新未完成 · {{ energyNote }}</text><text v-else>{{ simpleEnergy.status }}</text></view>
+     <view v-if="energyPreview.length" class="energy-bars" aria-hidden="true">
+      <view v-for="day in energyPreview" :key="day.date" class="energy-bar" :class="{ missing: day.missing, latest: day.latest }" :style="{ height: day.height + 'px' }" />
+     </view>
+    </button>
 
     <view class="section"><text>设备目录</text><button @tap="openCatalog">查看全部 ›</button></view>
     <scroll-view class="device-scroll" scroll-x enhanced :show-scrollbar="false">
@@ -99,10 +98,7 @@ import SafetyEventDetail from './components/observations/SafetyEventDetail.vue'
 import SafetyHistoryList from './components/observations/SafetyHistoryList.vue'
 import EnvironmentHistoryView from './components/observations/EnvironmentHistoryView.vue'
 import MeterHistoryView from './components/observations/MeterHistoryView.vue'
-import CompanyEnergyStrip from './components/energy/CompanyEnergyStrip.vue'
-import EnergySkeleton from './components/energy/EnergySkeleton.vue'
 import CompanyEnergySheet from './components/energy/CompanyEnergySheet.vue'
-import MonthlyEnergyComparison from './components/energy/MonthlyEnergyComparison.vue'
 import CompanyDeviceDrawer from './components/shared/CompanyDeviceDrawer.vue'
 import CompanyAgentFloat from './components/shared/CompanyAgentFloat.vue'
 import { parseAgentContext, meterHistoryPrompt } from './lib/conversation.mjs'
@@ -165,12 +161,24 @@ watch(drawerKind, kind => { if (kind) drawerMounted.value = true }, { flush: 'sy
 function openKind(kind) { if (devicesLoaded.value) drawerKind.value = kind }
 function openCatalog() { if (devicesLoaded.value) drawerKind.value = 'catalog' }
 
-/* 能耗统计：横滑日柱 + 拉环开面板 + 同期对比环 */
+/* 首页只预览七个计量日；完整历史在能耗面板。 */
 const energyReport = ref(null), energyStrip = ref([]), energyError = ref('')
-const energyStripRef = ref(null), selectedStripDate = ref('')
+const selectedStripDate = ref('')
 const energyOpen = ref(false), energyFocusDate = ref('')
 watch(energyOpen, open => { if (open) energyMounted.value = true }, { flush: 'sync' })
 const latestCompleteDay = computed(() => energyReport.value?.latestCompleteDay || '')
+const energyPreview = computed(() => {
+ const end = latestCompleteDay.value || [...energyStrip.value].reverse().find(day => day.complete)?.date
+ if (!end) return []
+ const byDate = new Map(energyStrip.value.map(day => [day.date, day]))
+ const days = Array.from({ length: 7 }, (_, i) => {
+  const date = shiftDate(end, i - 6), day = byDate.get(date)
+  const usage = day?.complete && typeof day.usage === 'number' && Number.isFinite(day.usage) && day.usage >= 0 ? day.usage : null
+  return { date, usage }
+ })
+ const max = Math.max(0, ...days.map(day => day.usage ?? 0))
+ return days.map((day, i) => ({ date: day.date, missing: day.usage == null, latest: i === 6 && day.usage != null, height: day.usage == null ? 3 : max ? Math.max(3, Math.round(day.usage / max * 38)) : 3 }))
+})
 // 后端 stale 的 lastError 与本次刷新失败分开保留：两者都不能清掉已有日柱，
 // 也不用前端时间重新标记为 fresh。
 const energyFailure = computed(() => sectionErrors.value.energyDaily || energyError.value || sectionCache.value.energyDaily?.lastError?.message || '')
@@ -287,7 +295,6 @@ function saveCompanyDashboardCache() {
 }
 function allLoaded() { loading.value = false; energyLoading.value = false; alertsLoading.value = false; devicesLoading.value = false }
 
-const monthlyRefresh = ref(0)
 let requestId = 0, scope = '', visible = false
 const dashboardUser = useUserStoreHook()
 watch(() => [dashboardUser.token, dashboardUser.getDistrict?.id, dashboardUser.authorized], () => {
@@ -303,7 +310,7 @@ async function load(force = false) {
   const nextScope = getAgentStorageScope()
   if (current !== requestId || !visible) return
   if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
-  if (force === true) { invalidateCompanyDashboard(); monthlyRefresh.value++; taskRevision.value++; simpleUnreadError.value = '' }
+  if (force === true) { invalidateCompanyDashboard(); taskRevision.value++; simpleUnreadError.value = '' }
   if (!simpleUnreadLoaded.value || force === true) void loadUnread(force === true)
   const cached = readCompanyDashboardCache()
   if (!force && cached) {
@@ -457,7 +464,8 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .summary { display:flex; gap:8px; margin-top:10px; }.summary button { flex:1; min-width:0; padding:12px; text-align:left; background:#fff; border-radius:15px; }
 .summary button text { display:block; color:#718496; font-size:10px; }.summary button .summary-value { margin-top:4px; color:#425c78; font-size:15px; font-weight:700; }
 .section { display:flex; justify-content:space-between; align-items:center; margin:19px 2px 9px; font-size:15px; font-weight:700; }.section button { min-height:36px; color:#667f96; font-size:11px; font-weight:400; }
-.energy-card { padding:15px; background:#eaf1fc; border-radius:18px; }.energy-heading { display:block; width:100%; text-align:left; color:#637d9e; font-size:11px; }.energy-heading text { display:block; }.energy-heading .energy-value { color:$agent-color-accent; font-size:21px; font-weight:700; margin:4px 0; }
+.energy-card { display:flex; align-items:flex-end; gap:15px; width:100%; box-sizing:border-box; padding:15px; text-align:left; background:#eaf1fc; border-radius:18px; }.energy-heading { flex:1; min-width:0; color:#637d9e; font-size:11px; }.energy-heading text { display:block; }.energy-heading .energy-value { color:$agent-color-accent; font-size:21px; font-weight:700; margin:4px 0; }
+.energy-bars { flex-shrink:0; display:flex; align-items:flex-end; gap:5px; height:38px; }.energy-bar { width:8px; border-radius:4px 4px 0 0; background:#a8c4e8; }.energy-bar.latest { background:#719ed8; }.energy-bar.missing { background:#c4d0de; }
 .fineprint { display:block; margin-top:8px; color:$agent-color-warning; font-size:11px; line-height:1.5; }
 .device-scroll { width:100%; white-space:nowrap; }.device-ribbon { display:flex; gap:9px; padding:1px 0 6px; }.device-card { flex:0 0 112px; box-sizing:border-box; padding:11px; text-align:left; background:#fff; border-radius:18px; }.device-card image { display:block; width:100%; height:64px; }.device-name,.device-count { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.device-name { margin-top:7px; font-weight:600; }.device-count { margin-top:3px; color:#718496; font-size:10px; }
 .task-card { padding:14px; background:#fff; border-radius:18px; }

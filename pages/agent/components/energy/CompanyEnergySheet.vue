@@ -37,6 +37,7 @@
     </template>
     <text v-else-if="selectedDay?.failed" class="sec-empty">该日读取失败，可在上方重试</text>
     <text v-else class="sec-empty">当日无可计算的构成</text>
+    <MonthlyEnergyComparison v-if="!bounded" :active="active" :cutoff="latestSampleTime" />
     <view class="esec"><text>电表明细 · {{ labelOf(selected) }}</text><text>{{ meterList.length }} 台</text></view>
     <template v-if="dayPending">
      <view v-for="i in 6" :key="'mk' + i" class="mrow"><view class="mrow-copy"><view class="sk-name" /><view class="sk-loc" /></view><view class="sk-v" /></view>
@@ -61,6 +62,7 @@ import { getAgentStorageScope, isAgentStorageScope, waitForAgentSession } from '
 import RegionCalendar from '../regions/RegionCalendar.vue'
 import CompanyEnergyStrip from './CompanyEnergyStrip.vue'
 import EnergySkeleton from './EnergySkeleton.vue'
+import MonthlyEnergyComparison from './MonthlyEnergyComparison.vue'
 import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, mergeHistoryCache, historyCacheFailure, energyHistoryBlock, energyMeterSetChanged, energyHistoryRecheckBlocks, createEnergyHistoryQueue } from '../../lib/energy.mjs'
 import { fmtDateTime } from '../../lib/observations.mjs'
 
