@@ -12,7 +12,7 @@
 ## 暂保留的硬编码
 
 1. 模板中的 `uni-icons`、`switch`、`radio` 等颜色属性仍是字面值，例如 `pages/agent/dashboard.vue` 和 `pages/agent/components/tasks/TaskListSheet.vue`。Sass 变量不能直接供模板属性使用；需要确认微信编译方案后再统一，不能另外手写一份 JS 色表冒充同一来源。
-2. JavaScript 生成的 SVG 与图表仍保留原值，例如 `pages/agent/domains/shared/avatar.js`、`pages/agent/domains/energy/energy-chart.mjs`、`pages/agent/domains/regions/timeline-geometry.mjs` 和 `pages/agent/components/energy/CompanyEnergyStrip.vue`。它们被编码为 data URI，不能直接继承页面 CSS；后续应从同一来源提供颜色并验证输出。
+2. JavaScript 生成的 SVG 与图表不能直接继承页面 CSS；`pages/agent/domains/shared/avatar.js` 的静态头像主体已对齐强调色，供公司和办公室 Agent 共用，修改强调色时须同步检查。`pages/agent/domains/energy/energy-chart.mjs`、`pages/agent/domains/regions/timeline-geometry.mjs` 和 `pages/agent/components/energy/CompanyEnergyStrip.vue` 的图表仍保留原值，后续应从同一来源提供颜色并验证输出。
 3. 带透明度的八位十六进制、渐变、阴影、部分状态色以及尚未确认可共享角色的字体、边距和圆角仍保持原样。它们的相同色相不一定代表同一用途，不应直接做字符串替换。
 4. `ActionDraftCard.vue`、`DraftSheetLayer.vue`、`TaskDetailContent.vue` 未在前一轮 token 迁移中改动；其视觉硬编码仍保留，不属于本轮仪表盘布局调整。
 5. 设备产品图及其他图片素材不是可直接继承样式的颜色，保留原资源。
