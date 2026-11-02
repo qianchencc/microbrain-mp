@@ -11,50 +11,122 @@ let owner = ''
 let sequence = 0
 let loadedAt = 0, inFlight = null
 const storageKey = scope => 'agent-focus-region:' + scope
+const directoryKey = scope => 'agent-region-directory:v1:' + scope
+const shanghaiDay = at => Math.floor((at + 8 * 3600000) / 86400000)
+const denied = error => [401, 403].includes(error.status ?? error.statusCode)
+ || error.code === 'AGENT_SESSION_EXPIRED'
+const validDirectory = value => Array.isArray(value)
+ && value.every(region => region && typeof region.id === 'string' && typeof region.name === 'string')
+
+function readLocal(key) {
+ try { return uni.getStorageSync(key) } catch { return undefined }
+}
+function writeLocal(key, value) {
+ try { uni.setStorageSync(key, value) } catch { /* Storage is optional; backend data stays usable. */ }
+}
+function clearDirectory(scope) {
+ regions.value = []
+ focusRegionId.value = ''
+ loadedAt = 0
+ regionsLoading.value = false
+ regionsError.value = ''
+ if (scope) {
+  try { uni.removeStorageSync(directoryKey(scope)) } catch { /* Keep the in-memory denial effective. */ }
+ }
+}
+function useDirectory(scope, rows) {
+ const directory = rows.map(({ id, name }) => ({ id, name }))
+ regions.value = directory
+ const saved = readLocal(storageKey(scope))
+ focusRegionId.value = regions.value.find(region => region.id === saved)?.id || regions.value[0]?.id || ''
+ writeLocal(storageKey(scope), focusRegionId.value)
+ return directory
+}
+function refreshAttention(scope, request, options) {
+ listRegions(undefined, { isActive: () => request === sequence && options.isActive?.() !== false }).then(latest => {
+  if (request !== sequence || !isAgentStorageScope(scope)) return
+  const attention = new Map((latest.regions || []).map(region => [region.id, region.attention]))
+  regions.value = regions.value.map(region => ({ ...region, attention: attention.get(region.id) }))
+ }).catch(error => {
+  if (request === sequence && isAgentStorageScope(scope) && denied(error)) {
+   clearDirectory(scope)
+   regionsError.value = error.message || '区域访问已失效'
+  }
+ })
+}
 
 export async function loadRegionFocus(options = {}) {
- await waitForAgentSession()
+ if (owner && !isAgentStorageScope(owner)) {
+  ++sequence
+  clearDirectory('')
+  owner = ''
+  inFlight = null
+ }
+ try { await waitForAgentSession() } catch (error) {
+  ++sequence
+  clearDirectory(owner)
+  owner = ''
+  inFlight = null
+  regionsError.value = error.message || '区域暂不可用'
+  throw error
+ }
  const scope = getAgentStorageScope()
- if (scope === owner && regions.value.length && Date.now() - loadedAt < 30000) return
- if (inFlight?.scope === scope && inFlight.isActive?.() !== false) return inFlight.promise
+ if (scope !== owner) {
+  ++sequence
+  clearDirectory('')
+  owner = scope
+  inFlight = null
+  const saved = readLocal(directoryKey(scope))
+  if (saved && Number.isFinite(saved.loadedAt) && saved.loadedAt > 0 && validDirectory(saved.regions)) {
+   useDirectory(scope, saved.regions)
+   loadedAt = saved.loadedAt
+  }
+ }
+ if (loadedAt && shanghaiDay(loadedAt) === shanghaiDay(Date.now())) {
+  regionsLoading.value = false
+  refreshAttention(scope, sequence, options)
+  return
+ }
+ if (inFlight?.scope === scope && inFlight.isActive?.() !== false) {
+  return loadedAt ? undefined : inFlight.promise
+ }
  const request = ++sequence
- if (scope !== owner) { regions.value = []; focusRegionId.value = ''; owner = scope; loadedAt = 0 }
- regionsLoading.value = true
+ regionsLoading.value = !loadedAt
  regionsError.value = ''
- const promise = (async () => {
+ const promise = Promise.resolve().then(async () => {
   try {
    const result = await listRegions('directory', { isActive: () => request === sequence && options.isActive?.() !== false })
-   if (request !== sequence || scope !== getAgentStorageScope()) return
-   regions.value = result.regions || []
-   const saved = uni.getStorageSync(storageKey(scope))
-   focusRegionId.value = regions.value.find(region => region.id === saved)?.id || regions.value[0]?.id || ''
-   uni.setStorageSync(storageKey(scope), focusRegionId.value)
-   loadedAt = Date.now()
-   // Names are already usable; device-level attention must not gate selection.
-   listRegions(undefined, { isActive: () => request === sequence && options.isActive?.() !== false }).then(latest => {
-    if (request !== sequence || scope !== getAgentStorageScope()) return
-    const attention = new Map((latest.regions || []).map(region => [region.id, region.attention]))
-    regions.value = regions.value.map(region => ({ ...region, attention: attention.get(region.id) }))
-   }).catch(() => {})
+   if (request !== sequence || !isAgentStorageScope(scope)) return
+   if (!validDirectory(result.regions)) throw new Error('区域目录响应无效')
+   const directory = useDirectory(scope, result.regions)
+   const observed = Date.parse(result.cache?.updatedAt)
+   loadedAt = Number.isFinite(observed) ? observed : Date.now()
+   writeLocal(directoryKey(scope), { regions: directory, loadedAt })
+   refreshAttention(scope, request, options)
   } catch (error) {
    if (request === sequence) {
-    if (!isAgentStorageScope(scope) || [401, 403].includes(error.status)) { regions.value = []; focusRegionId.value = '' }
+    if (!isAgentStorageScope(scope) || denied(error)) clearDirectory(scope)
     regionsError.value = error.message || '区域暂不可用'
    }
    throw error
   } finally {
    if (request === sequence) regionsLoading.value = false
-   if (inFlight?.promise === promise) inFlight = null
+   if (inFlight?.request === request) inFlight = null
   }
- })()
- inFlight = { scope, promise, isActive: options.isActive }
+ })
+ inFlight = { scope, promise, request, isActive: options.isActive }
+ if (loadedAt) {
+  // A refresh failure is recorded above; it must not block an already usable directory.
+  promise.catch(() => {})
+  return
+ }
  return promise
 }
 
 export function selectFocusRegion(id) {
  if (regionsLoading.value || owner !== getAgentStorageScope() || !regions.value.some(region => region.id === id)) return false
  focusRegionId.value = id
- uni.setStorageSync(storageKey(owner), id)
+ writeLocal(storageKey(owner), id)
  return true
 }
 

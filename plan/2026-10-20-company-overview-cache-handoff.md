@@ -54,3 +54,10 @@
 - 前端草案卡片和明细接入既有ordinaryRead准备协议；只向backend请求，在关闭/切换草案后取消旧等待，不把preparing当空状态交付。
 - 后端真实只读样本为3盏灯开/关/开，以及2台空调关机、温度25/26℃；普通状态有既有CURRENT快照，后台刷新时仍返回已持有值。没有确认下发控制。
 - 前端259项、157源文件边界及开发编译通过；真实草案页面由用户验收。见[52号票及证据](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/issues/52-draft-current-device-states.md)。
+
+## 53：区域名称独立读取与重开恢复
+
+- 后端directory分区只读取授权区域清单，不等待完整设备范围或attention；区域目录使用既有深夜更新模板，动态提示独立读取并复用同一份基础目录，不每分钟重读网关名称。
+- 前端按当前会话身份保存纯区域ID/名称。同上海日重开立即恢复，跨日保留已有名称并后台对齐，不因后台刷新而禁止选区；换身份、拒绝访问及迟到响应不得回写旧目录。
+- 前端265项回归、158源文件边界及开发编译通过。最终3207实例真实backend目录与授权清单逐项一致，首次可读约1.53秒、重复2ms；不是界面端到端测时，真实选区体验由用户验收。
+- 实施及证据见[53号票](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/issues/53-region-directory-readiness.md)。
