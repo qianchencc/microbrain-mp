@@ -61,7 +61,7 @@ import { getAgentStorageScope, isAgentStorageScope, waitForAgentSession } from '
 import RegionCalendar from '../regions/RegionCalendar.vue'
 import CompanyEnergyStrip from './CompanyEnergyStrip.vue'
 import EnergySkeleton from './EnergySkeleton.vue'
-import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, mergeHistoryCache, historyCacheFailure } from '../../lib/energy.mjs'
+import { shiftDate, shanghaiToday, dayLabel, unitOf, unitNote, floorComposition, meterRows, comparePct, statusText, mergeStripDays, padStripDays, markStripFailed, STRIP_PAGE_DAYS, PIE_COLORS, fmtUsage, fixedEnergyContext, fixedEnergyWindow, meterStatisticsDailyView, mergeHistoryCache, historyCacheFailure, energyHistoryBlock, energyMeterSetChanged, energyHistoryRecheckBlocks, createEnergyHistoryQueue } from '../../lib/energy.mjs'
 import { fmtDateTime } from '../../lib/observations.mjs'
 
 const props = defineProps({ active: Boolean, focusDate: String, bounded: Boolean, initialQuery: Object })
@@ -81,6 +81,9 @@ const calOpen = ref(false)
 const stripRef = ref(null)
 const bounds = ref(null)
 let boundedJob = null, boundedContextKey = ''
+let panelMode = ''
+let retainedDay = ''
+let historyRecheck = new Map()
 let sheetVisible = true
 const unit = computed(() => unitOf(report.value))
 const basisNote = computed(() => unitNote(report.value))
@@ -163,12 +166,17 @@ const footnote = computed(() => {
 })
 function pctText(v) { return v == null ? '—' : (v >= 0 ? '+' : '') + v + '%' }
 
-// 条带是整段日期铺开的占位（pending 柱），数据按 90 天一块补进原位——
-// 滚动没有拼接点，日历跳任何日期都有目标列；补块串行，一次一个在途。
-const SPAN_DAYS = 180, CHUNK_DAYS = 90
-let queue = [], requested = new Set(), pumping = 0
-
+// 条带是整段日期铺开的占位（pending 柱），历史按稳定自然月块补进原位——
+// 滚动没有拼接点，日历跳任何日期都有目标列；同块只请求一次，选中块优先。
+const SPAN_DAYS = 180, PAD_DAYS = 90, HISTORY_CONCURRENCY = 2
+let selectedDemand = null, visibleDemand = null
 let requestId = 0
+const historyQueue = createEnergyHistoryQueue({
+ concurrency: HISTORY_CONCURRENCY,
+ load: (block, isActive) => fetchWindow(block.days, block.end, block.force === true, isActive),
+ onResult: (block, next) => applyHistoryBlock(block, next),
+ onError: (block, cause) => failHistoryBlock(block, cause),
+})
 function mergeReport(next, replace = true) {
  if (replace || !report.value) {
   report.value = next
@@ -186,6 +194,8 @@ function mergeReport(next, replace = true) {
  }
  strip.value = mergeStripDays(strip.value, next.days || [])
  if (!replace) historyCache.value = mergeHistoryCache(historyCache.value, next.days, next.cache)
+ // 重开面板保留历史块时，首屏 fresh 窗口覆盖到的旧日期要清掉此前的块失败提示，但不新增占位元数据。
+ else if (!props.bounded && next.cache?.status === 'fresh') historyCache.value = mergeHistoryCache(historyCache.value, next.days, next.cache)
  if (next.truncated) {
   const missing = new Set((next.days || []).filter(day => day.usage == null).map(day => day.date))
   strip.value = strip.value.map(day => missing.has(day.date) ? { ...day, failed: true } : day)
@@ -206,10 +216,10 @@ function mergeReport(next, replace = true) {
  })
  meterDaily.value = md
 }
-async function fetchWindow(days, end, force = false) {
+async function fetchWindow(days, end, force = false, wanted = null) {
  const current = requestId
  await waitForAgentSession()
- return getCompanyEnergyDaily({ days, ...(end ? { end } : {}) }, { force: force === true, isActive: () => current === requestId && props.active && sheetVisible })
+ return getCompanyEnergyDaily({ days, ...(end ? { end } : {}) }, { force: force === true, isActive: () => current === requestId && props.active && sheetVisible && (!wanted || wanted()) })
 }
 async function fetchMeterReport(request, force = false) {
  const current = requestId
@@ -218,23 +228,42 @@ async function fetchMeterReport(request, force = false) {
 }
 async function init(force = false) {
  const current = ++requestId
- queue = []; requested = new Set()
+ historyQueue.reset()
+ selectedDemand = null; visibleDemand = null
  loading.value = true; error.value = ''
  try {
   await waitForAgentSession()
   if (current !== requestId || !props.active || !sheetVisible) return
-  if (!props.bounded) {
-   const nextScope = getAgentStorageScope()
-   if (scope.value !== nextScope) clearBoundedData()
-   scope.value = nextScope
+  if (props.bounded) { panelMode = 'bounded'; await initBounded(current, force); return }
+  const nextScope = getAgentStorageScope()
+  const samePanel = panelMode === 'daily' && scope.value === nextScope
+  const dayNow = shanghaiToday()
+  const crossedDay = Boolean(retainedDay && retainedDay !== dayNow)
+  // 同身份重开保留已合并历史；但跨上海日或显式刷新后，选中/可视范围内的已加载旧块
+  // 要允许重新问 backend（后台是否更新仍由 backend 决定），不能把保留当成永久 fresh。
+  // 同日普通重开保留尚未查看过的重读资格，已实际重读的块在 apply/fail 时移出。
+  if (!samePanel) {
+   historyRecheck = new Map()
+   clearBoundedData()
+  } else if (force || crossedDay) {
+   const recheck = energyHistoryRecheckBlocks(strip.value, latestCompleteDay.value || today, { retainedDay, currentDay: dayNow, force, recentDays: STRIP_PAGE_DAYS })
+   historyRecheck = new Map(recheck.map(block => [block.key, block]))
   }
+  panelMode = 'daily'
+  scope.value = nextScope
   const scopeNow = scope.value
-  if (props.bounded) { await initBounded(current, force); return }
   // 首块沿用 30 天窗口：命中首屏已暖的报告缓存，面板基本秒开；更早的由补块队列后台填。
   const next = await fetchWindow(STRIP_PAGE_DAYS, undefined, force)
   if (current !== requestId || !props.active || scopeNow !== getAgentStorageScope()) return
-  strip.value = []; meterDaily.value = {}; historyCache.value = {}
+  // 只按新首屏已返回的授权电表集合判断：同集合保留历史；集合变化则旧明细/旧历史合计
+  // 可能越权或过时，全部丢弃后由本次首屏与补块重新准备。
+  if (samePanel && report.value && energyMeterSetChanged(report.value.meters, next.meters)) {
+   report.value = null
+   strip.value = []; meterDaily.value = {}; historyCache.value = {}; selected.value = ''
+   historyRecheck = new Map()
+  }
   mergeReport(next)
+  retainedDay = dayNow
   const edge = latestCompleteDay.value || today
   strip.value = padStripDays(strip.value, shiftDate(edge, -(SPAN_DAYS - 1)), edge)
   if (selected.value) jumpToDate(selected.value)
@@ -242,8 +271,8 @@ async function init(force = false) {
   else {
    selected.value = edge || next.days?.at(-1)?.date || today
    nextTick(() => stripRef.value?.centerOn(selected.value))
+   setSelectedDemand(shiftDate(selected.value, -45), shiftDate(selected.value, 15))
   }
-  needRange(shiftDate(selected.value || edge, -45), shiftDate(selected.value || edge, 15))
  } catch (cause) {
   if (current === requestId) {
    if (!isAgentStorageScope(scope.value) || [401, 403].includes(cause.status)) clearBoundedData()
@@ -253,6 +282,7 @@ async function init(force = false) {
 }
 function clearBoundedData() {
  report.value = null; strip.value = []; meterDaily.value = {}; historyCache.value = {}; selected.value = ''; bounds.value = null
+ historyRecheck = new Map(); retainedDay = ''
 }
 async function initBounded(current, force = false) {
  const job = { ctx: null, scope: '', queue: [], requested: new Set(), pumping: false }
@@ -356,59 +386,126 @@ function resumeBounded() {
  void init()
 }
 const scope = ref('')
-// 为 [from,to] 内仍 pending 且未申请的日期排队补块：新→旧扫描，
-// 遇到连续 pending 段的最新日即以它为 end 申请一整块 CHUNK_DAYS。
-function needRange(from, to) {
- const edge = latestCompleteDay.value || today
- if (!edge || to < from) return
- if (to > edge) to = edge
- const byDate = new Map(strip.value.map(d => [d.date, d]))
- let d = to
- while (d >= from) {
-  const day = byDate.get(d)
-  if (day?.pending && !requested.has(d)) {
-   for (let x = shiftDate(d, -(CHUNK_DAYS - 1)); x <= d; x = shiftDate(x, 1)) requested.add(x)
-   queue.push(d)
-   d = shiftDate(d, -CHUNK_DAYS)
-   continue
-  }
-  d = shiftDate(d, -1)
- }
- pump()
+// 当前需求内的待加载日期 → 稳定自然月块：选中块最前，其次选中附近，最后可视范围。
+// 每次需求变化都整体替换队列，未开始且已无需求的块直接移除；在途但已离开目标的块失活。
+function setSelectedDemand(from, to) {
+ selectedDemand = { from, to }
+ scheduleHistory()
 }
-async function pump() {
- const current = requestId
- if (pumping === current) return
- pumping = current
- while (queue.length) {
-  const end = queue.shift()
-  try {
-   const next = await fetchWindow(CHUNK_DAYS, end)
-   if (current !== requestId || scope.value !== getAgentStorageScope()) break
-   mergeReport(next, false)
-   if (!strip.value.some(day => day.failed)) error.value = ''
-  } catch (cause) {
-   if (current !== requestId) break
-   if (!isAgentStorageScope(scope.value) || [401, 403].includes(cause.status)) { clearBoundedData(); error.value = failureMessage(cause, '逐日能耗暂不可用'); queue = []; break }
-   // 该块标失败：柱变灰、选中该段日期时给重试；不阻塞后续块。
-   for (let x = shiftDate(end, -(CHUNK_DAYS - 1)); x <= end; x = shiftDate(x, 1)) requested.delete(x)
-   strip.value = markStripFailed(strip.value, shiftDate(end, -(CHUNK_DAYS - 1)), end)
-   if (['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) { error.value = failureMessage(cause, '逐日能耗暂不可用'); queue = []; break }
-  }
+function setVisibleDemand(from, to) {
+ visibleDemand = { from, to }
+ scheduleHistory()
+}
+function blockHasPending(block, byDate) {
+ for (let date = block.start; date <= block.end; date = shiftDate(date, 1)) {
+  if (byDate.get(date)?.pending) return true
  }
- if (pumping === current) pumping = 0
+ return false
+}
+function blockTouchesRange(block, range) {
+ return Boolean(range?.from && range?.to && range.from <= block.end && range.to >= block.start)
+}
+function scheduleHistory() {
+ if (props.bounded || !strip.value.length) return
+ // 面板跨午夜未关闭时也把保留的旧块重新纳入可重读；只更新重读资格，不改 today/日历结构。
+ const dayNow = shanghaiToday()
+ if (retainedDay && retainedDay !== dayNow) {
+  const recheck = energyHistoryRecheckBlocks(strip.value, latestCompleteDay.value || today, { retainedDay, currentDay: dayNow, recentDays: STRIP_PAGE_DAYS })
+  for (const block of recheck) {
+   historyQueue.forget(block.key)
+   historyRecheck.set(block.key, block)
+  }
+  retainedDay = dayNow
+ }
+ const edge = latestCompleteDay.value || today
+ const first = strip.value[0].date
+ const byDate = new Map(strip.value.map(day => [day.date, day]))
+ const blocks = new Map()
+ const addDay = date => {
+  if (date < first || !byDate.get(date)?.pending) return
+  const block = energyHistoryBlock(date, edge)
+  if (!block) return
+  // 仅在条带内仍有 pending 时才需要该块；若此前只取过当时可见子集，清掉完成记账后重取。
+  historyQueue.forget(block.key)
+  if (!blocks.has(block.key)) blocks.set(block.key, block)
+ }
+ const selectedBlock = selected.value ? energyHistoryBlock(selected.value, edge) : null
+ const selectedRecheck = selectedBlock ? historyRecheck.get(selectedBlock.key) : null
+ if (selectedBlock && blockHasPending(selectedBlock, byDate)) {
+  historyQueue.forget(selectedBlock.key)
+  blocks.set(selectedBlock.key, selectedRecheck || selectedBlock)
+ } else if (selectedRecheck && !historyQueue.isSettled(selectedBlock.key)) {
+  blocks.set(selectedBlock.key, selectedRecheck)
+ }
+ const addRange = range => {
+  if (!range?.from || !range?.to) return
+  const to = range.to > edge ? edge : range.to
+  // 新→旧扫描：离选中/可视右缘最近的块先入队，远端历史随后。
+  for (let date = to; date >= range.from; date = shiftDate(date, -1)) addDay(date)
+ }
+ addRange(selectedDemand)
+ addRange(visibleDemand)
+ // 跨日/显式刷新：需求范围内已加载的旧块重问 backend；已结算的块本代不再重复。
+ for (const [key, block] of historyRecheck) {
+  if (key === selectedBlock?.key || historyQueue.isSettled(key)) continue
+  if (!blockTouchesRange(block, selectedDemand) && !blockTouchesRange(block, visibleDemand)) continue
+  blocks.set(key, block)
+ }
+ historyQueue.setWanted([...blocks.values()])
+}
+function applyHistoryBlock(block, next) {
+ let scopeNow
+ try { scopeNow = getAgentStorageScope() } catch { return }
+ if (!props.active || !sheetVisible || scopeNow !== scope.value) return
+ if (!next) return
+ const first = strip.value[0]?.date, last = strip.value[strip.value.length - 1]?.date
+ if (!first || !last) return
+ // 自然月块可能比当前可视条带更宽：只落位条带内的日期，条带不因后台补块而改变范围。
+ const days = (next.days || []).filter(day => day.date >= first && day.date <= last)
+ const meters = (next.meters || []).map(meter => {
+  const daily = {}
+  for (const [date, cell] of Object.entries(meter.daily || {})) {
+   if (date >= first && date <= last) daily[date] = cell
+  }
+  return { ...meter, daily }
+ })
+ mergeReport({ ...next, days, meters }, false)
+ // 块范围内、条带内仍未落位的日期不能当作完整：标失败，选中当日可单独重试。
+ const from = block.start < first ? first : block.start
+ const to = block.end > last ? last : block.end
+ strip.value = strip.value.map(day => day.pending && day.date >= from && day.date <= to
+  ? { ...day, pending: false, failed: true }
+  : day)
+ if (!strip.value.some(day => day.failed)) error.value = ''
+ historyRecheck.delete(block.key)
+}
+function failHistoryBlock(block, cause) {
+ let scopeNow
+ try { scopeNow = getAgentStorageScope() } catch { return }
+ if (!props.active || !sheetVisible || scopeNow !== scope.value) return
+ if (!isAgentStorageScope(scopeNow) || [401, 403].includes(cause.status)) {
+  historyQueue.reset()
+  clearBoundedData()
+  error.value = failureMessage(cause, '逐日能耗暂不可用')
+  return
+ }
+ // 该块标失败：柱变灰、选中该段日期时给重试；不阻塞其他块。
+ strip.value = markStripFailed(strip.value, block.start, block.end)
+ error.value = failureMessage(cause, '逐日能耗暂不可用')
+ if (['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) historyQueue.reset()
+ historyRecheck.delete(block.key)
 }
 // 可视区间变化：左看 15 天预取；逼近条带左端 20 天时再向左铺 90 天占位（唯一的 prepend 路径）。
 function onVisibleRange(r) {
  if (props.bounded || !r?.first || !strip.value.length) return
  const first = strip.value[0].date
  if (r.first < shiftDate(first, 20)) {
-  const newFrom = shiftDate(first, -CHUNK_DAYS)
+  const newFrom = shiftDate(first, -PAD_DAYS)
   strip.value = padStripDays(strip.value, newFrom, shiftDate(first, -1))
   const added = strip.value.findIndex(d => d.date === first)
   if (added > 0) stripRef.value?.didPrepend(added)
  }
- needRange(shiftDate(r.first, -15), r.last)
+ setVisibleDemand(shiftDate(r.first, -15), r.last)
 }
 function retrySelected() {
  if (props.bounded) {
@@ -421,8 +518,15 @@ function retrySelected() {
  }
  const from = shiftDate(selected.value, -15), to = shiftDate(selected.value, 15)
  strip.value = strip.value.map(d => d.failed && d.date >= from && d.date <= to ? { ...d, failed: false, pending: true } : d)
- for (let date = from; date <= to; date = shiftDate(date, 1)) requested.delete(date)
- needRange(from, to)
+ const forgot = new Set()
+ const edge = latestCompleteDay.value || today
+ for (let date = from; date <= to; date = shiftDate(date, 1)) {
+  const block = energyHistoryBlock(date, edge)
+  if (!block || forgot.has(block.key)) continue
+  forgot.add(block.key)
+  historyQueue.forget(block.key)
+ }
+ setSelectedDemand(from, to)
 }
 function jumpToDate(date) {
  if (props.bounded) { selectBounded(date); return }
@@ -434,27 +538,37 @@ function jumpToDate(date) {
   if (added > 0) stripRef.value?.didPrepend(added)
  }
  selected.value = date
- needRange(shiftDate(date, -15), shiftDate(date, 15))
+ setSelectedDemand(shiftDate(date, -45), shiftDate(date, 15))
  nextTick(() => stripRef.value?.centerOn(date))
 }
 function onSelectDay(date) {
  if (props.bounded) { selectBounded(date); return }
  selected.value = date
- needRange(shiftDate(date, -15), shiftDate(date, 15))
+ setSelectedDemand(shiftDate(date, -45), shiftDate(date, 15))
 }
 function onCalendar(date) {
  calOpen.value = false
  jumpToDate(date)
 }
 watch([() => props.active, () => props.initialQuery], ([active]) => {
- if (!props.bounded) { if (active && sheetVisible) void init(); else { ++requestId; queue = []; loading.value = false }; return }
+ if (!props.bounded) {
+  if (active && sheetVisible) void init()
+  else { ++requestId; historyQueue.reset(); selectedDemand = null; visibleDemand = null; loading.value = false }
+  return
+ }
  if (active && sheetVisible) { void init(); return }
  requestId++; boundedJob = null; loading.value = false
  if (active) clearBoundedData()
 }, { immediate: true })
-onHide(() => { sheetVisible = false; requestId++; boundedJob = null; queue = []; loading.value = false })
+onHide(() => {
+ sheetVisible = false; requestId++; boundedJob = null
+ historyQueue.reset(); selectedDemand = null; visibleDemand = null; loading.value = false
+})
 onShow(() => { sheetVisible = true; if (props.bounded) resumeBounded(); else if (props.active) void init() })
-onBeforeUnmount(() => { sheetVisible = false; requestId++; boundedJob = null; queue = [] })
+onBeforeUnmount(() => {
+ sheetVisible = false; requestId++; boundedJob = null
+ historyQueue.reset(); selectedDemand = null; visibleDemand = null
+})
 watch(() => props.focusDate, date => {
  if (date && !props.bounded) selected.value = date
  if (date && props.active) jumpToDate(date)

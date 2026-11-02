@@ -39,3 +39,11 @@
 当前Java后端为同级`iot-agent-backend`，Node sidecar由该后端独立部署使用；原`iot-agent-runtime`仅作历史行为证据，不作为运行时依赖，也未在本轮修改生产。缓存整改规格、47–50号票与故障/真实业务证据统一在`../iot-agent-backend/.scratch/iot-agent-backend-refactor/`，入口`cache-current-read-spec.md`、`evidence/cache-current-read-2026-11-02.md`。控制/回读、MySQL事实、会话和短效视频地址不由这些显示快照替代。
 
 后续修改普通读取、前后端缓存、权限范围复用或页面加载时，先读[核心思想与后续方向](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/cache-current-read-spec.md#核心思想与后续方向)；原则只在该权威规格维护，本文记录前端契约与验收入口。
+
+## 51：历史能耗滚动复用与重开保留
+
+- 普通历史补块采用自然月稳定键（闭合月整月，未闭合月截止最近完整日），最多两个在途；选中/可视目标优先，移除无需求队列，已离开目标的准备等待失活，迟到结果不回写。
+- 同身份同模式重开保留已合并的历史；跨上海日或显式刷新重新询问后端，保留已有数值。新首屏已返回的授权电表ID集合变化时清除旧集合结果，不新增权限核验请求。
+- 有限日期报告的原区间约束继续生效；历史基础读数复用、上游分页及边界处理集中在backend，不由页面承担。
+- 前端259项回归、157源文件边界检查及微信开发编译通过。用户已明确此后的真实页面浏览由其验收，后端HTTP和回归结果不替代这项验收。
+- 实施与后端真实证据见[51号票](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/issues/51-energy-history-range-reuse.md)及[验证记录](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/evidence/energy-history-range-reuse-2026-11-02.md)。

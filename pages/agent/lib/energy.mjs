@@ -65,4 +65,5 @@ export {
   meterReportPowerFactor,
 } from '../domains/energy/meter-report-view.mjs'
 export { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../domains/energy/meter-panel-view.mjs'
+export { energyHistoryBlock, energyMeterSetChanged, energyHistoryRecheckBlocks, createEnergyHistoryQueue } from '../domains/energy/energy-history-queue.mjs'
 export { monthlyNumber, monthlyDate, monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView, monthlySnapshotCache } from '../domains/energy/monthly-energy-view.mjs'
