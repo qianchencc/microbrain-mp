@@ -1,0 +1,44 @@
+/* 物联助手 CSS 变量层：与 _tokens.scss / colors.js 同源，test/agent-tokens.test.mjs 校验一致性。
+   定义在 page 选择器上，靠 CSS 变量继承穿透 scoped 组件样式；
+   由 App.vue 全局引入，仅影响使用了 --agent-* 变量的物联助手页面。 */
+page {
+  /* 品牌与强调 */
+  --agent-accent: #466eae;
+  --agent-accent-deep: #315a80;
+  --agent-accent-faint: #eaf1fc;
+
+  /* 表面与氛围 */
+  --agent-surface-page: #f3f6fa;
+  --agent-tint: #e6eef8;
+  --agent-surface: #ffffff;
+
+  /* 文字 */
+  --agent-text-primary: #263332;
+  --agent-text-secondary: #516b85;
+  --agent-text-muted: #718496;
+  --agent-text-faint: #8b9ba8;
+
+  /* 线条 */
+  --agent-line: #e2e9f0;
+
+  /* 状态语义 */
+  --agent-success: #3f8a66;
+  --agent-success-faint: #e8f2ec;
+  --agent-warning: #a27128;
+  --agent-warning-deep: #8e650f;
+  --agent-warning-faint: #f6eed6;
+  --agent-error: #a15343;
+  --agent-error-faint: #f4e5e0;
+  --agent-badge: #b4553f;
+
+  /* 图表 */
+  --agent-chart: #a8c4e8;
+  --agent-chart-deep: #719ed8;
+
+  /* 阴影与遮罩（三元组用于 rgba(var(--agent-shadow-rgb), x)） */
+  --agent-shadow-rgb: 49, 90, 128;
+  --agent-ink-rgb: 38, 51, 50;
+  --agent-mask: rgba(0, 0, 0, 0.4);
+  --agent-shadow-card: 0 1px 4px rgba(49, 90, 128, 0.05), 0 0 0 0.5px rgba(49, 90, 128, 0.04);
+  --agent-shadow-float: 0 6px 16px rgba(49, 90, 128, 0.12);
+}

@@ -56,6 +56,8 @@
 	/*每个页面公共css */
 	@import "common/css/uni.css";
 	@import "common/css/common.css";
+	/* 物联助手 G 方案蓝灰 token：仅定义 --agent-* 变量，不影响未使用它们的页面 */
+	@import "./pages/agent/styles/tokens.css";
 
 	page {
 		background-color: #F7F7F7;
