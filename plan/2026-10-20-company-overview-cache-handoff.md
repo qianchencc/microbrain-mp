@@ -37,3 +37,5 @@
 ## 本轮权威后端与证据
 
 当前Java后端为同级`iot-agent-backend`，Node sidecar由该后端独立部署使用；原`iot-agent-runtime`仅作历史行为证据，不作为运行时依赖，也未在本轮修改生产。缓存整改规格、47–50号票与故障/真实业务证据统一在`../iot-agent-backend/.scratch/iot-agent-backend-refactor/`，入口`cache-current-read-spec.md`、`evidence/cache-current-read-2026-11-02.md`。控制/回读、MySQL事实、会话和短效视频地址不由这些显示快照替代。
+
+后续修改普通读取、前后端缓存、权限范围复用或页面加载时，先读[核心思想与后续方向](../../iot-agent-backend/.scratch/iot-agent-backend-refactor/cache-current-read-spec.md#核心思想与后续方向)；原则只在该权威规格维护，本文记录前端契约与验收入口。
