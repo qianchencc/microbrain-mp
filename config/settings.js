@@ -29,9 +29,9 @@ export const ENDPOINTS = {
 	// Agent and video requests use the integrated local backend.
 	'develop.local': {
 		gatewayOrigin: 'https://ncim.577119.com',
-		agentBaseUrl: 'http://127.0.0.1:3217/api',
+		agentBaseUrl: 'http://127.0.0.1:3381/api',
 		videoPlayerUrl: 'http://127.0.0.1:9419/owner/h5player/index.html',
-		videoApiBaseUrl: 'http://127.0.0.1:3217/api'
+		videoApiBaseUrl: 'http://127.0.0.1:3381/api'
 	}
 }
 
