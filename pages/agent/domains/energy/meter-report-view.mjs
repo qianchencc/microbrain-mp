@@ -92,6 +92,13 @@ export function meterReportParamLine(report) {
   const when = base ? `${spanLabel(spanReq, !diffYear)} vs ${spanLabel(base, !diffYear)}` : meterReportSpan(report)
   line = `${when} · ${scope.label || '全部电表'} ${scope.meterCount ?? report?.meters?.length ?? 0}台`
  }
+ const requested = report?.params?.span?.requested || {}
+ const observed = report?.params?.span?.observed || {}
+ const sampleFrom = Date.parse(observed.from || ''), sampleTo = Date.parse(observed.to || '')
+ const showObserved = !meterReportIsComparison(report) && !report?.params?.dailyWindow
+  && Number.isFinite(sampleFrom) && Number.isFinite(sampleTo)
+  && (sampleFrom !== Date.parse(requested.from || '') || sampleTo !== Date.parse(requested.to || ''))
+ if (showObserved) line += ` · 采样覆盖 ${spanLabel(observed, false)}`
  const through = (coverage.partial || []).map(item => item.through).filter(Boolean).sort().at(-1)
  if (report?.params?.dailyWindow) line += ` · 每日20:00–次日08:00${coverage.partial?.length ? ' · 部分夜间缺测' : ''}`
  if (!report?.params?.dailyWindow && meterReportAxis(report) !== 'region' && (coverage.partial || []).length) line += ` · ${coverage.partial.length}台数据截至${comparisonDate(through)}`

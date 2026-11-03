@@ -236,3 +236,36 @@ test('原轮两次系统承接分别保留原答复、中断正文与新问题',
  ] }])
  assert.deepEqual(turn.items.filter(item => ['text','draftText'].includes(item.kind)).map(item => item.text ?? turn.text), ['原任务已准备，请确认', '正在核实原定时间', '需要新的执行时间'])
 })
+
+test('新轮退役旧确认卡：实时与恢复都保留原对象和已创建任务', () => {
+	const saved = () => [{
+		id: 'old', content: '准备操作',
+		draft: { draftId: 'old-draft', status: 'PENDING_CONFIRMATION', inventory: [{ deviceId: 'lamp-1' }] },
+		tasks: [
+			{ taskId: 'pending-task', status: 'PENDING_CONFIRMATION', phases: [{ at: '2030-01-01T10:00:00Z' }] },
+			{ taskId: 'registered-task', status: 'SCHEDULED', created: true },
+			{ changeId: 'change-1', taskId: 'registered-task', status: 'PENDING_CONFIRMATION' },
+			{ cancellationId: 'cancel-1', taskId: 'registered-task', status: 'PENDING_CONFIRMATION' },
+		], events: [],
+	}]
+	const resolutions = [
+		{ type: 'action.resolved', draftId: 'old-draft', status: 'CANCELLED' },
+		{ type: 'task.resolved', taskId: 'pending-task', status: 'CANCELLED' },
+		{ type: 'task.change.resolved', changeId: 'change-1', status: 'CANCELLED' },
+		{ type: 'task.cancellation.resolved', cancellationId: 'cancel-1', status: 'CANCELLED' },
+	]
+	const live = restoreTurns(saved())
+	const current = createTurn('new', '改为其他安排')
+	live.push(current)
+	for (const event of resolutions) applyEvent(current, event, live)
+	const restored = restoreTurns([...saved(), { id: 'new', content: current.content, events: resolutions }])
+	for (const turns of [live, restored]) {
+		assert.equal(turns[0].draft.status, 'CANCELLED')
+		assert.deepEqual(turns[0].draft.inventory, [{ deviceId: 'lamp-1' }])
+		assert.deepEqual(turns[0].tasks.map(task => [task.taskId || task.changeId, task.status]),
+			[['pending-task', 'CANCELLED'], ['registered-task', 'SCHEDULED'], ['registered-task', 'CANCELLED'], ['registered-task', 'CANCELLED']])
+		assert.equal(turns[0].tasks[1].created, true)
+		assert.deepEqual(turns[0].tasks[0].phases, [{ at: '2030-01-01T10:00:00Z' }])
+		assert.deepEqual(turns[1].tasks, [])
+	}
+})

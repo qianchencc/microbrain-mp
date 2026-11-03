@@ -47,7 +47,35 @@
       <text v-if="block.title" class="rpc-sec-title">{{ block.title }}</text>
       <text class="rpc-sec-text">{{ block.text }}</text>
      </template>
-     <ReportFactSection v-else-if="block.type === 'meter_report'" :report="block.report" @evidence="openEvidence" />
+    <ReportFactSection v-else-if="block.type === 'meter_report'" :report="block.report" @evidence="openEvidence" />
+    <template v-else-if="block.type === 'ac_inspection' && acViews[index]">
+     <view class="rpc-ac">
+      <view class="rpc-ac-head">
+       <text class="rpc-sec-title">{{ acViews[index].title }}</text>
+       <text v-if="acViews[index].outcomeText" class="rpc-ac-pill" :class="`tone-${acViews[index].outcomeTone}`">{{ acViews[index].outcomeText }}</text>
+      </view>
+      <text v-if="acViews[index].timeText" class="rpc-ac-meta">{{ acViews[index].timeText }}</text>
+      <text class="rpc-ac-meta">{{ acViews[index].modeText }}</text>
+      <view v-for="row in acViews[index].rows" :key="row.key" class="rpc-ac-row">
+       <text class="rpc-ac-name">{{ row.name }}<text v-if="row.location" class="rpc-ac-loc"> · {{ row.location }}</text></text>
+       <text v-if="row.stateText" class="rpc-ac-sub">检查前 {{ row.stateText }}</text>
+       <text class="rpc-ac-sub" :class="`tone-${row.tone}`">{{ row.actionText }}<text v-if="row.readbackText"> · {{ row.readbackText }}</text></text>
+       <text v-if="row.reason" class="rpc-ac-reason">{{ row.reason }}</text>
+      </view>
+      <text v-if="!acViews[index].rows.length" class="rpc-ac-sub">本检查点没有取得设备结果</text>
+      <view v-if="acViews[index].estimate" class="rpc-ac-estimate">
+       <view class="rpc-ac-estimate-head">
+        <text class="rpc-ac-estimate-badge">{{ acViews[index].estimate.badge }}</text>
+        <text v-if="acViews[index].estimate.valueText" class="rpc-ac-estimate-value">{{ acViews[index].estimate.valueText }}</text>
+       </view>
+       <text v-if="acViews[index].estimate.costText" class="rpc-ac-sub">{{ acViews[index].estimate.costText }}</text>
+       <text v-for="(line, i) in acViews[index].estimate.assumptionTexts" :key="i" class="rpc-ac-sub">{{ line }}</text>
+       <text v-if="acViews[index].estimate.calculationText" class="rpc-ac-sub">计算式 {{ acViews[index].estimate.calculationText }}</text>
+       <text v-if="acViews[index].estimate.reasonText" class="rpc-ac-sub">{{ acViews[index].estimate.reasonText }}</text>
+       <text v-if="acViews[index].estimate.potentialText" class="rpc-ac-sub">{{ acViews[index].estimate.potentialText }}</text>
+      </view>
+     </view>
+    </template>
     </view>
     <view class="rpc-actions">
      <button class="rpc-btn" :disabled="quoting || downloading" @tap="quote">{{ quoting ? '正在读取…' : '引用本报告' }}</button>
@@ -66,6 +94,7 @@ import { getReportArtifact, downloadReportArtifact } from '@/apis/agent/reports'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { fmtShanghaiDateTime } from '../../lib/observations.mjs'
 import { meterReportEvidenceSections, meterReportSpanText } from '../../lib/energy.mjs'
+import { acInspectionSectionView } from '../../lib/reports.mjs'
 import ReportFactSection from './ReportFactSection.vue'
 import TaskIssueDetails from '../tasks/TaskIssueDetails.vue'
 import TaskErrorNotice from '../tasks/TaskErrorNotice.vue'
@@ -80,6 +109,8 @@ let requestId = 0, pageVisible = true
 
 const evidenceSections = computed(() => evidence.value ? meterReportEvidenceSections(evidence.value) : [])
 const evidenceSpan = computed(() => evidence.value ? meterReportSpanText(evidence.value) : '')
+const acViews = computed(() => (report.value?.blocks || [])
+ .map(block => block?.type === 'ac_inspection' ? acInspectionSectionView(block) : null))
 const navigation = computed(() => ({ title: issue.value ? '查看原因' : evidence.value ? '计量依据' : '', canBack: Boolean(issue.value || evidence.value) }))
 watch(navigation, value => emit('navigation', value), { immediate: true })
 
@@ -204,6 +235,25 @@ button::after { border: 0; }
 .rpc-basis-n { display: block; color: var(--agent-text-primary); font-size: $agent-font-size-compact; font-weight: 600; overflow-wrap: anywhere; }
 .rpc-basis-s { display: block; margin-top: 2px; color: var(--agent-text-muted); font-size: 11px; overflow-wrap: anywhere; }
 .rpc-basis-v { flex-shrink: 0; color: var(--agent-text-primary); font-size: 13px; font-weight: 650; }
+.rpc-ac { display: flex; flex-direction: column; gap: 3px; }
+.rpc-ac-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.rpc-ac-pill { flex-shrink: 0; padding: 2px 8px; border-radius: 999px; background: var(--agent-success-faint); color: var(--agent-success); font-size: 10px; }
+.rpc-ac-pill.tone-warn { background: var(--agent-warning-faint); color: var(--agent-warning); }
+.rpc-ac-pill.tone-fail { background: var(--agent-error-faint); color: var(--agent-error); }
+.rpc-ac-pill.tone-muted { background: var(--agent-surface-page); color: var(--agent-text-muted); }
+.rpc-ac-meta { display: block; color: var(--agent-text-muted); font-size: 11px; }
+.rpc-ac-row { display: flex; flex-direction: column; gap: 1px; padding: 7px 0; border-bottom: 1px solid var(--agent-line); }
+.rpc-ac-name { color: var(--agent-text-primary); font-size: $agent-font-size-compact; font-weight: 600; overflow-wrap: anywhere; }
+.rpc-ac-loc { color: var(--agent-text-faint); font-weight: 400; }
+.rpc-ac-sub { color: var(--agent-text-secondary); font-size: 11px; overflow-wrap: anywhere; }
+.rpc-ac-sub.tone-ok { color: var(--agent-success); }
+.rpc-ac-sub.tone-warn { color: var(--agent-warning); }
+.rpc-ac-sub.tone-muted { color: var(--agent-text-muted); }
+.rpc-ac-reason { color: var(--agent-text-muted); font-size: 11px; overflow-wrap: anywhere; }
+.rpc-ac-estimate { display: flex; flex-direction: column; gap: 3px; margin-top: 9px; padding: 9px 10px; border: 1px solid var(--agent-line); border-radius: 9px; background: linear-gradient(var(--agent-surface), var(--agent-surface-page)); }
+.rpc-ac-estimate-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rpc-ac-estimate-badge { flex-shrink: 0; padding: 2px 8px; border-radius: 999px; background: var(--agent-warning-faint); color: var(--agent-warning); font-size: 10px; font-weight: 700; }
+.rpc-ac-estimate-value { color: var(--agent-text-primary); font-size: 14px; font-weight: 700; }
 .rpc-actions { display: flex; gap: 10px; margin-top: 18px; }
 .rpc-btn { flex: 1; min-height: 44px; margin: 0; padding: 0; border: 1px solid var(--agent-line); border-radius: 9px; background: linear-gradient(var(--agent-surface), var(--agent-tint)); color: $agent-color-accent; font-size: $agent-font-size-compact; display: flex; align-items: center; justify-content: center; }
 .rpc-btn[disabled] { opacity: .55; }

@@ -47,6 +47,14 @@ test('参数行：跨度·范围·台数，数据不全给截至时刻、无数�
  assert.match(meterReportParamLine(matched), /按名称匹配「办公室」 12台/)
 })
 
+test('统计卡明确展示与请求不同的实际采样起止', () => {
+ const shifted = { ...report, params: { ...report.params, span: {
+  requested: { from: '2026-10-01T00:00:00+08:00', to: '2026-10-08T00:00:00+08:00' },
+  observed: { from: '2026-09-30T20:00:00+08:00', to: '2026-10-07T20:00:00+08:00' },
+ } }, coverage: { meters: 2, dataMeters: 2, noData: [], partial: [], truncated: false } }
+ assert.match(meterReportParamLine(shifted), /采样.*09-30 20:00.*10-07 20:00/)
+})
+
 test('合计行：度与目录电价估算金额', () => {
  assert.deepEqual(meterReportHero(report), { value: '210', yuan: '约 ¥241.5 · 按 1.15 元/度' })
  const mixedTariff = { ...report, total: { ...report.total, yuan: null, tariff: null } }
