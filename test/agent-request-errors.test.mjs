@@ -30,6 +30,34 @@ test('lost selection response adopts the persisted revision; conflicts do not ov
  } finally { globalThis.uni = original }
 })
 
+test('lost revalidation adopts the fresh draft without creating another draft or crossing identity', async () => {
+ const original = globalThis.uni
+ let active = true, invalidateOnReplacement = false, writes = 0
+ try {
+  const expired = { draftId: 'old', status: 'EXPIRED', revision: 2, revalidatedInto: 'fresh' }
+  const fresh = { draftId: 'fresh', status: 'PENDING_CONFIRMATION', revision: 1, selectedActionIds: ['light-1'] }
+  globalThis.uni = { request: options => {
+   if (options.method !== 'GET') {
+    writes += 1
+    throw new Error('revalidation must not be submitted again')
+   }
+   const replacement = options.url.includes('/fresh?')
+   if (replacement && invalidateOnReplacement) active = false
+   options.success({ statusCode: 200, data: replacement ? fresh : expired })
+  } }
+  const result = await recoverDraftRequest('/api/agent/action-drafts/old/revalidate?source=company', 'POST', { revision: 1 }, {}, undefined, () => active)
+  assert.equal(result.draftId, 'fresh')
+  assert.equal(result.status, 'PENDING_CONFIRMATION')
+  assert.deepEqual(result.selectedActionIds, ['light-1'])
+  assert.equal(writes, 0)
+
+  invalidateOnReplacement = true
+  await assert.rejects(recoverDraftRequest('/api/agent/action-drafts/old/revalidate?source=company', 'POST', { revision: 1 }, {}, undefined, () => active))
+  assert.equal(active, false)
+  assert.equal(writes, 0)
+ } finally { globalThis.uni = original }
+})
+
 test('zero-dispatch confirmation retries only the unchanged pending revision and never crosses identity', async () => {
  const original = globalThis.uni, calls = []
  try {

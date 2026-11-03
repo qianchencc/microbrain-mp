@@ -428,13 +428,6 @@ async function runTurn(current, content) {
    selectionSynced.set(event.draftId, event.selectedActionIds ?? [])
    for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) { previous.draft = null; previous.result = null }
   }
-  if (event.type === 'action.resolved') for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) previous.draft.status = event.status
-  if (event.type === 'task.resolved') for (const previous of turns.value) if (previous !== current) {
-   for (const task of tasksOf(previous)) if (task.taskId === event.taskId && !task.cancellationId) task.status = event.status
-  }
-  if (event.type === 'task.cancellation.resolved') for (const previous of turns.value) {
-   if (previous !== current) for (const task of tasksOf(previous)) if (task.cancellationId === event.cancellationId) task.status = event.status
-  }
   follow()
  })
  const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion?.id, props.source, current.reference)
@@ -559,7 +552,7 @@ async function confirmDraft(turn) {
  current.draft.status = 'EXECUTING'
  confirming.add(draftId)
  confirmEpoch++
- let resync = false
+ let resync = false, confirmationError = ''
  try {
   const result = await confirmAction(draftId, current.draft.revision, props.source)
   const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
@@ -568,9 +561,9 @@ async function confirmDraft(turn) {
  } catch (error) {
   const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
   if (['REJECTED', 'INTERRUPTED'].includes(error.data?.status)) { live.result = error.data; live.draft.status = error.data.status }
-  else { errorMessage.value = error.message ? `${error.message}；请重新读取执行回执` : '未取得执行结果或具体原因，请重新读取回执'; if (sheetDraftId.value === draftId) sheetError.value = errorMessage.value; resync = true }
+  else { const reason = error.data?.message || error.message; confirmationError = reason ? `${reason}；请重新读取执行回执` : '未取得执行结果或具体原因，请重新读取回执'; if (sheetDraftId.value === draftId) sheetError.value = confirmationError; resync = true }
  } finally { confirming.delete(draftId); mutating.value = false; schedule(); follow() }
- if (resync && !disposed) await restore()
+ if (resync && !disposed) { await restore(); if (!disposed) errorMessage.value = confirmationError }
 }
 async function confirmTaskProposal(task) {
  issue.value = null
@@ -659,7 +652,12 @@ async function revalidateDraft(turn) {
  await settleSelection(draftId)
  try {
   const live = liveDraftTurn(draftId) ?? turn
-  if (live.draft) Object.assign(live.draft, await revalidateAction(draftId, live.draft.revision, props.source))
+  if (live.draft) {
+   const fresh = await revalidateAction(draftId, live.draft.revision, props.source)
+   Object.assign(live.draft, fresh)
+   live.roster = fresh.inventory
+   live.result = null
+  }
  } catch (error) { errorMessage.value = error.message }
  finally { mutating.value = false; schedule() }
 }

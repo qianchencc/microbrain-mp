@@ -7,10 +7,12 @@
     <text class="seg__item" :class="{ 'seg__item--on': tab === 'draft' }" hover-class="seg__item--tap" @tap="tab = 'draft'">草案</text>
    </view>
   </view>
-  <view class="panel-stats">
+  <view v-if="stats" class="panel-stats">
    <view class="panel-stat"><text class="panel-stat__num">{{ stats.total }}</text><text class="panel-stat__label">共找到</text></view>
    <view class="panel-stat panel-stat--act"><text class="panel-stat__num">{{ stats.operate }}</text><text class="panel-stat__label">拟执行</text></view>
-   <view class="panel-stat"><text class="panel-stat__num">{{ stats.idle }}</text><text class="panel-stat__label">不动</text></view>
+   <view class="panel-stat"><text class="panel-stat__num">{{ stats.excluded }}</text><text class="panel-stat__label">已排除</text></view>
+   <view class="panel-stat"><text class="panel-stat__num">{{ stats.satisfied }}</text><text class="panel-stat__label">无需操作</text></view>
+   <view class="panel-stat"><text class="panel-stat__num">{{ stats.standby + stats.untouched }}</text><text class="panel-stat__label">其他未选</text></view>
   </view>
   <view class="panel-body" :class="{ 'panel-body--overview': tab === 'overview' }">
    <DeviceRoster v-show="tab === 'overview'" class="panel-pane" :entries="roster" :draft="draft" :observed="result?.observedStates" :active="tab === 'overview'" />
@@ -42,7 +44,6 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { rosterLiveStats } from '../../lib/actions.mjs'
 import ActionDraftCard from './ActionDraftCard.vue'
 import DeviceRoster from './DeviceRoster.vue'
 
@@ -61,7 +62,7 @@ const hasRoster = computed(() => Boolean(props.roster?.length))
 
 const headingText = computed(() => ({ PENDING_CONFIRMATION: '待确认操作', EXECUTING: '正在执行', CANCELLED: '草案已取消', EXPIRED: '草案已过期', NO_CHANGE: '无需操作', INTERRUPTED: '执行中断' }[props.draft.status] || '操作结果'))
 const meta = computed(() => (tab.value === 'overview' ? '概览 · 按位置分组' : headingText.value))
-const stats = computed(() => rosterLiveStats(props.roster || [], props.draft))
+const stats = computed(() => props.draft.counts)
 const pending = computed(() => props.draft.status === 'PENDING_CONFIRMATION')
 const selectedCount = computed(() => props.draft.selectedActionIds?.length ?? 0)
 </script>

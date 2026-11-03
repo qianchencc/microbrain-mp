@@ -156,7 +156,9 @@ export function applyEvent(turn, event, turns = [turn]) {
 		turn.draft = { ...event, status: 'PENDING_CONFIRMATION' }; turn.roster = event.inventory || null; turn.traceOpen = false
 		if (!turn.items.some(item => item.kind === 'panel')) pushItem(turn, 'panel')
 	}
-	if (event.type === 'action.resolved' && turn.draft?.draftId === event.draftId) turn.draft.status = event.status
+	if (event.type === 'action.resolved') for (const previous of turns) {
+		if (previous.draft?.draftId === event.draftId) previous.draft.status = event.status
+	}
 	if (event.type === 'task.proposed' || event.type === 'task.cancellation.proposed' || event.type === 'task.change.proposed') {
 		if (!turn.tasks.some(task => (task.changeId || task.cancellationId || task.taskId) === (event.task.changeId || event.task.cancellationId || event.task.taskId))) {
 			turn.tasks.push(event.task)
@@ -171,9 +173,15 @@ export function applyEvent(turn, event, turns = [turn]) {
 		}
 		if (turn.task?.taskId === event.taskId) turn.task.confirmation = event.confirmation || null
 	}
-	if (event.type === 'task.resolved') for (const task of turn.tasks) if (task.taskId === event.taskId && !task.cancellationId) task.status = event.status
-	if (event.type === 'task.change.resolved') for (const task of turn.tasks) if (task.changeId === event.changeId) task.status = event.status
-	if (event.type === 'task.cancellation.resolved') for (const task of turn.tasks) if (task.cancellationId === event.cancellationId) task.status = event.status
+	if (event.type === 'task.resolved') for (const previous of turns) {
+		for (const task of previous.tasks) if (task.taskId === event.taskId && !task.cancellationId && !task.changeId) task.status = event.status
+	}
+	if (event.type === 'task.change.resolved') for (const previous of turns) {
+		for (const task of previous.tasks) if (task.changeId === event.changeId) task.status = event.status
+	}
+	if (event.type === 'task.cancellation.resolved') for (const previous of turns) {
+		for (const task of previous.tasks) if (task.cancellationId === event.cancellationId) task.status = event.status
+	}
 	if (['run.completed', 'run.failed', 'run.aborted', 'run.awaiting_confirmation'].includes(event.type)) {
 		turn.running = false
 		turn.streaming = false

@@ -46,6 +46,12 @@ export async function recoverDraftRequest(url, method, data, header, timeout, is
  const snapshot = await requestJson(match[1] + (match[3] || ''), 'GET', undefined, header, timeout)
  if (!isActive()) throw new Error('会话身份已变化')
  const operation = match[2]
+ if (operation === 'revalidate' && snapshot.revalidatedInto) {
+  const collection = match[1].slice(0, match[1].lastIndexOf('/'))
+  const replacement = await requestJson(`${collection}/${encodeURIComponent(snapshot.revalidatedInto)}${match[3] || ''}`, 'GET', undefined, header, timeout)
+  if (!isActive()) throw new Error('会话身份已变化')
+  return replacement
+ }
  if (operation === 'confirm') {
   if (snapshot.result) return snapshot.result
   if (snapshot.status === 'EXECUTING') return { draftId: snapshot.draftId, status: 'EXECUTING' }
