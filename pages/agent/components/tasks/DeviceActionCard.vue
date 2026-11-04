@@ -33,7 +33,7 @@ const location = computed(() => deviceLocationLabel(props.action))
 const before = computed(() => stateText(props.action, props.phase === 'pending' ? props.currentState : props.action.beforeState))
 const beforeKnown = computed(() => Boolean(before.value) && !before.value.includes('未知'))
 const powerLabel = computed(() => props.currentState === true || props.currentState?.power === 'on' ? '已开启' : props.currentState === false || props.currentState?.power === 'off' ? '已关闭' : '状态未知')
-const phaseLabel = computed(() => props.phase === 'failed' || props.action.kind === 'access' && props.phase === 'accepted' ? props.outcomeLabel : ({ complete: '已达到目标', accepted: '指令已受理', cancelled: '已取消', expired: '已过期', unselected: '未选择' }[props.phase] || ''))
+const phaseLabel = computed(() => ['failed', 'unknown', 'partial'].includes(props.phase) || props.action.kind === 'access' && props.phase === 'accepted' ? props.outcomeLabel : ({ complete: '已达到目标', accepted: '已下发', cancelled: '已取消', expired: '已过期', unselected: '未选择' }[props.phase] || ''))
 const configurable = computed(() => cardConfigurable(props.action, props.phase, { readonly: props.readonly, disabled: props.disabled }))
 
 function highlightParts(value) {
@@ -138,7 +138,7 @@ view, text, input { font-size: inherit; line-height: inherit; }
 .copy { padding:6px 8px; flex:1; min-height:0; }.type,.name,.location,.outcome { display:block; }.type { color:$agent-color-warning-deep; font-size:8px; line-height:10px; }.name { font-size:11.5px; line-height:14px; font-weight:600; margin:5px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.foot { border-top:1px solid rgba(var(--agent-shadow-rgb),.12); padding-top:5px; }.location { color:$agent-color-text-secondary; font-size:9px; line-height:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }/* before→after 纵向两行制：acSummary 复合串在 103px 内宽里单行不可能容纳两段，
    每段独占一行 + nowrap+ellipsis（与 name/location 同一纪律），最坏退化为行尾省略，
    禁止横向 flex-wrap 硬排——flex item 缩到内容宽以下时 CJK 逐字竖排（2026-09-17 根因）。 */
-.change { font-size:9px; line-height:12px; }.from,.to { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.from { color:$agent-color-text-muted; }.to { color:$agent-color-accent-deep; margin-top:1px; }.to .arrow { color:$agent-color-text-muted; }.outcome { min-height:12px; font-size:9px; line-height:12px; color:$agent-color-text-secondary; margin-top:3px; animation:arrive 180ms ease-out; }.complete .outcome { color:$agent-color-success; }.cancelled .to { color:$agent-color-text-muted; text-decoration:line-through; }
+.outcome { min-height:12px; font-size:9px; line-height:12px; color:$agent-color-text-secondary; margin-top:3px; animation:arrive 180ms ease-out; }.complete .outcome { color:$agent-color-success; }.unknown .outcome,.partial .outcome { color:$agent-color-warning-deep; }.cancelled .to { color:$agent-color-text-muted; text-decoration:line-through; }
 .match { border-radius:2px; background:$agent-color-warning-faint; box-shadow:0 0 0 1px rgba(var(--agent-shadow-rgb),.14); color:inherit; }
 @keyframes arrive { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .outcome { animation:none; }.device-card { transition:none; } }

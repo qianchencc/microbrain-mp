@@ -157,7 +157,11 @@ export function applyEvent(turn, event, turns = [turn]) {
 		if (!turn.items.some(item => item.kind === 'panel')) pushItem(turn, 'panel')
 	}
 	if (event.type === 'action.resolved') for (const previous of turns) {
-		if (previous.draft?.draftId === event.draftId) previous.draft.status = event.status
+		if (previous.draft?.draftId === event.draftId) {
+			previous.draft.status = event.status
+			// 后端在事件上附带执行结果时直接采用同一投影；没有就只推进权威状态。
+			if (event.result) previous.result = event.result
+		}
 	}
 	if (event.type === 'task.proposed' || event.type === 'task.cancellation.proposed' || event.type === 'task.change.proposed') {
 		if (!turn.tasks.some(task => (task.changeId || task.cancellationId || task.taskId) === (event.task.changeId || event.task.cancellationId || event.task.taskId))) {
@@ -278,8 +282,14 @@ export function operationText(action) {
 export function receiptText(receipt) {
 	if (!receipt) return ''
 	if (receipt.outcome === 'UNSELECTED') return '未选择'
-	if (receipt.attempts) return `${receipt.attempts.filter(item => item.outcome === 'ACCEPTED').length}/${receipt.attempts.length} 次已受理`
-	const rejected = receipt.fields?.filter(field => field.outcome === 'REJECTED').map(field => fieldLabels[field.field] || field.field)
-	if (rejected?.length) return `未受理：${rejected.join('、')}`
-	return { ACCEPTED: '指令已受理', REJECTED: '未受理', PARTIALLY_ACCEPTED: '部分受理', ALREADY_SATISFIED: '已达到目标，无需操作', DISPATCHED_UNKNOWN: '已下发，待核实', NOT_DISPATCHED: '未执行' }[receipt.outcome] || '结果待核实'
+	if (receipt.attempts) return `${receipt.attempts.filter(item => item.outcome === 'ACCEPTED').length}/${receipt.attempts.length} 次已下发`
+	// 空调参数级混合结果按字段点名：被拒与结果未知分别可见，不折叠成整体成功/失败。
+	const fieldNames = outcomes => (receipt.fields || []).filter(field => outcomes.includes(field.outcome)).map(field => fieldLabels[field.field] || field.field)
+	const rejected = fieldNames(['REJECTED'])
+	const unknown = fieldNames(['UNKNOWN', 'TIMEOUT'])
+	if (rejected.length && unknown.length) return `未受理：${rejected.join('、')}；结果未知：${unknown.join('、')}`
+	if (rejected.length) return `未受理：${rejected.join('、')}`
+	if (unknown.length) return `部分结果未知：${unknown.join('、')}`
+	// 已受理只说已下发（受理≠物理成功）；设备已证实才说已完成；未知/超时不下失败结论。
+	return { ACCEPTED: '已下发', DEVICE_APPLIED: '已完成', REJECTED: '未受理', PARTIALLY_ACCEPTED: '部分已下发', ALREADY_SATISFIED: '已达到目标，无需操作', TIMEOUT: '下发结果未知', UNKNOWN: '下发结果未知', DISPATCHED_UNKNOWN: '已下发，结果待核实', NOT_DISPATCHED: '未执行' }[receipt.outcome] || '结果待核实'
 }

@@ -15,6 +15,7 @@ const privatePageModules = new Set([
   'energy-daily-view.mjs', 'energy-chart.mjs', 'energy-business-view.mjs', 'energy-comparison-view.mjs',
   'meter-report-view.mjs', 'meter-panel-view.mjs', 'monthly-energy-view.mjs',
   'ac-draft.js', 'action-draft-presentation.js', 'device-card-state.js', 'device-roster.js',
+  'execution-result-view.js',
   'state-refresh.mjs', 'list-viewport.mjs', 'navigation.mjs', 'region-focus.js', 'agent-menu.mjs',
   'timeline-geometry.mjs', 'timeline-svg.mjs',
 ])

@@ -31,9 +31,9 @@
    <text class="panel-foot__hint">核验已过期，未执行</text>
    <button class="foot-primary" :disabled="busy" hover-class="foot-primary--pressed" @tap="emit('revalidate')">重新核验</button>
   </view>
-  <view v-else-if="result || draft.status === 'EXECUTING'" class="panel-foot panel-foot--receipt">
-   <uni-icons :class="{ spinning: draft.status === 'EXECUTING' }" :type="draft.status === 'EXECUTING' ? 'loop' : result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? 'info' : 'checkmarkempty'" size="16" :color="result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? 'var(--agent-warning-deep)' : 'var(--agent-text-secondary)'" />
-   <text class="panel-foot__receipt">{{ result?.message || '正在执行，请稍候' }}</text>
+  <view v-else-if="(result || draft.status === 'EXECUTING') && notice" class="panel-foot panel-foot--receipt">
+   <uni-icons :class="{ spinning: notice.kind === 'executing' }" :type="notice.kind === 'executing' ? 'loop' : notice.kind === 'attention' ? 'info' : 'checkmarkempty'" size="16" :color="notice.kind === 'attention' ? 'var(--agent-warning-deep)' : 'var(--agent-text-secondary)'" />
+   <text class="panel-foot__receipt">{{ notice.text }}</text>
   </view>
  </view>
  <ActionDraftCard :source="source" v-else :draft="draft" :result="result" :busy="busy"
@@ -46,6 +46,7 @@
 import { computed, ref } from 'vue'
 import ActionDraftCard from './ActionDraftCard.vue'
 import DeviceRoster from './DeviceRoster.vue'
+import { executionNotice } from '../../lib/actions.mjs'
 
 const props = defineProps({
 	draft: { type: Object, required: true },
@@ -59,7 +60,8 @@ const emit = defineEmits(['confirm', 'cancel', 'select', 'revalidate', 'updated'
 // 提案到达即落草案页；无 roster 的旧持久化轮次整体降级为原独立草案卡。
 const tab = ref('draft')
 const hasRoster = computed(() => Boolean(props.roster?.length))
-
+// 执行中只认草案权威状态；终态文案以规范化 result.message 为准，旧记录按状态真实兜底。
+const notice = computed(() => executionNotice(props.draft, props.result))
 const headingText = computed(() => ({ PENDING_CONFIRMATION: '待确认操作', EXECUTING: '正在执行', CANCELLED: '草案已取消', EXPIRED: '草案已过期', NO_CHANGE: '无需操作', INTERRUPTED: '执行中断' }[props.draft.status] || '操作结果'))
 const meta = computed(() => (tab.value === 'overview' ? '概览 · 按位置分组' : headingText.value))
 const stats = computed(() => props.draft.counts)

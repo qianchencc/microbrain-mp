@@ -11,19 +11,21 @@
   </view></scroll-view></view>
   <view v-if="pending && !embedded" class="actions"><text class="selection-status">已选 {{ selected.length }} 项</text><button class="quiet" :disabled="busy" hover-class="quiet--pressed" @tap="emit('cancel')">取消</button><button class="primary" :disabled="busy || !selected.length" :loading="busy" hover-class="primary--pressed" @tap="emit('confirm')">执行操作</button></view>
   <button v-if="draft.status === 'EXPIRED' && !embedded" class="quiet" :disabled="busy" @tap="emit('revalidate')">重新核验</button>
-  <view v-if="(result || draft.status === 'EXECUTING') && !embedded" class="receipt"><uni-icons :class="{ spinning: draft.status === 'EXECUTING' }" :type="draft.status === 'EXECUTING' ? 'loop' : result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? 'info' : 'checkmarkempty'" size="16" :color="result && !['ACCEPTED','NO_CHANGE'].includes(result.status) ? 'var(--agent-warning-deep)' : 'var(--agent-text-secondary)'" /><text>{{ result?.message || '正在执行，请稍候' }}</text></view>
+  <view v-if="(result || draft.status === 'EXECUTING') && notice && !embedded" class="receipt"><uni-icons :class="{ spinning: notice.kind === 'executing' }" :type="notice.kind === 'executing' ? 'loop' : notice.kind === 'attention' ? 'info' : 'checkmarkempty'" size="16" :color="notice.kind === 'attention' ? 'var(--agent-warning-deep)' : 'var(--agent-text-secondary)'" /><text>{{ notice.text }}</text></view>
  </view>
 </template>
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { readDeviceStates } from '@/apis/agent/actions'
-import { operationLabel, receiptPhase, createStateRefresh } from '../../lib/actions.mjs'
+import { operationLabel, receiptPhase, createStateRefresh, executionNotice } from '../../lib/actions.mjs'
 import { receiptText } from '../../lib/conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
 const props = defineProps({ source: { type: String, default: 'office' }, draft: {type:Object,required:true}, result:Object, busy:Boolean, embedded:Boolean })
 const emit = defineEmits(['confirm','cancel','select','revalidate','updated','editing','configure','browse'])
 const scopeOpen = ref(false), states = ref({}), stateLoading = ref(false)
 const pending = computed(() => props.draft.status === 'PENDING_CONFIRMATION')
+// 执行中只认草案权威状态；终态文案以规范化 result.message 为准，旧记录按状态真实兜底。
+const notice = computed(() => executionNotice(props.draft, props.result))
 const historyNote = computed(() => ({EXPIRED:'核验已过期，未执行。重新核验后需再次确认。',CANCELLED:'操作已取消，未执行。发送新指令可重新下达。',NO_CHANGE:'核验时已达到目标，未发送控制指令。',INTERRUPTED:'执行中断，部分指令可能已下发，以设备实际状态为准。'}[props.draft.status] || ''))
 const selected = computed(() => props.draft.selectedActionIds || [])
 const preview = computed(() => props.draft.actions.length > 4 ? props.draft.actions.slice(0,3) : props.draft.actions)

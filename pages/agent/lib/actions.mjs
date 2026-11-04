@@ -20,6 +20,7 @@ export {
   remainingBelowFold,
 } from '../domains/actions/action-draft-presentation.js'
 export { cardConfigurable, receiptPhase, reduceCardHold, stateText, tapBlockHint } from '../domains/actions/device-card-state.js'
+export { executionNotice } from '../domains/actions/execution-result-view.js'
 export { rosterGroups, rosterLiveStats, rosterLiveView } from '../domains/actions/device-roster.js'
 export { createStateRefresh } from '../domains/actions/state-refresh.mjs'
 export { createViewportMeasurer } from '../domains/actions/list-viewport.mjs'

@@ -182,7 +182,10 @@ const mutating = ref(false), clearing = ref(false)
 const scrollIntoView = ref(''), restoredScrollTop = ref(0)
 let currentScrollTop = 0, readingHydrated = false
 const nearBottom = ref(true)
-const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING' || turn.result?.summary?.status === 'running'))
+// 执行中的唯一权威是草案权威状态；总结生成只是答复整理，不是执行——不得据此锁定输入，
+// 也不得把回执渲染成「正在执行」。轮询单独保留：总结完成仍需回读收口。
+const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING'))
+const hasRunningSummary = computed(() => turns.value.some(turn => turn.result?.summary?.status === 'running'))
 const busy = computed(() => !conversationReady.value || !conversationRecovery.canMutate(recoveryTicket) || isRunning.value || mutating.value || hasExecution.value || hasTaskConfirmation.value)
 const statusText = computed(() => !conversationReady.value ? '正在恢复对话' : clearing.value ? '正在清除' : busy.value ? '正在处理' : '服务在线')
 // 宿主状态播报：页面导航头/浮层面板头、浮标运行态都由这组事件驱动
@@ -268,7 +271,7 @@ function handleScroll(event) {
 }
 function schedule() {
  clearTimeout(pollTimer)
- if (visible && !disposed && (hasExecution.value || taskConfirmationRunning.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
+ if (visible && !disposed && (hasExecution.value || hasRunningSummary.value || taskConfirmationRunning.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
  clearTimeout(taskPollTimer)
  if (visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
  clearTimeout(expiryTimer)

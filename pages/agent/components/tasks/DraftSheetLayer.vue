@@ -22,7 +22,7 @@
      </view>
     </view>
     <view class="device-scroll-shell"><scroll-view scroll-y enhanced :show-scrollbar="false" class="device-list" :scroll-top="scrollCtrl" scroll-with-animation @scroll="onListScroll"><view v-for="group in groups" :key="group.key" class="group" :style="{ width: grid.trackWidth + 'px' }"><text class="group-title">{{ group.label }} · {{ group.items.length }}</text><view class="grid"><DeviceActionCard v-for="item in group.items" :key="item.action.id" :action="item.action" :index="item.index" :selected="selected.includes(item.action.id)" :readonly="!pending" :disabled="busy" :phase="phase(item.action)" :current-state="states[item.action.deviceId] ?? null" :operation="operationLabel(item.action)" :outcome-label="outcome(item.action)" :highlight="search" @toggle="toggle(item.action.id)" @configure="configure(item.action)" /></view></view><text v-if="!groups.length" class="note">没有匹配的设备</text><view class="list-tail" /></scroll-view><view class="scroll-fade" :class="{ off: !remainingBelow }" /><view class="cue-float" :class="{ off: !remainingBelow }" role="button" hover-class="cue-float--pressed" @tap="scrollNext"><image class="cue-icon" src="/static/chevron-down.svg" /><text class="cue-text">还有 {{ remainingBelow }} 台设备</text></view></view>
-    <view class="confirm-float"><view v-if="error" class="confirm-error"><text>{{ error }}</text><button @tap="emit('reconnect')">重新读取</button></view><button v-if="pending" class="confirm-btn" :disabled="busy || !pending || !selected.length" hover-class="confirm-btn--pressed" @tap="emit('confirm')"><text class="confirm-btn-text">确认草案 · {{ selected.length }}</text></button><text v-if="!pending && !error" class="confirm-caption">{{ renderResult?.message || (renderDraft?.status === 'EXECUTING' ? '正在执行，可以关闭面板后查看结果' : '草案状态已更新') }}</text><text v-else-if="pending" class="confirm-caption">已选择 {{ selected.length }} 台设备</text></view>
+    <view class="confirm-float"><view v-if="error" class="confirm-error"><text>{{ error }}</text><button @tap="emit('reconnect')">重新读取</button></view><button v-if="pending" class="confirm-btn" :disabled="busy || !pending || !selected.length" hover-class="confirm-btn--pressed" @tap="emit('confirm')"><text class="confirm-btn-text">确认草案 · {{ selected.length }}</text></button><text v-if="!pending && !error && notice" class="confirm-caption">{{ notice.kind === 'executing' ? '正在执行，可以关闭面板后查看结果' : notice.text }}</text><text v-else-if="pending" class="confirm-caption">已选择 {{ selected.length }} 台设备</text></view>
    </view>
    <view class="surface editor-surface">
     <button v-if="current" class="back" hover-class="back--pressed" @tap="backFromEditor"><image class="back-icon" src="/static/back.svg" /><text>{{ editorBack === 1 ? '返回搜索结果' : '返回全部设备' }}</text></button>
@@ -36,7 +36,7 @@
 <script setup>
 import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { readDeviceStates, updateParameters } from '@/apis/agent/actions'
-import { operationLabel, receiptPhase, createStateRefresh, computeDeviceGrid, createDraftGroups, draftBaselineChanged, firstRowBelowFold, remainingBelowFold, createViewportMeasurer } from '../../lib/actions.mjs'
+import { operationLabel, receiptPhase, createStateRefresh, computeDeviceGrid, createDraftGroups, draftBaselineChanged, firstRowBelowFold, remainingBelowFold, createViewportMeasurer, executionNotice } from '../../lib/actions.mjs'
 import { receiptText } from '../../lib/conversation.mjs'
 import DeviceActionCard from './DeviceActionCard.vue'
 import DeviceSheet from '../shared/DeviceSheet.vue'
@@ -77,6 +77,8 @@ watch(() => props.draft, value => {
 watch(() => props.baseline, value => { if (value) renderBaseline.value = value }, { immediate: true })
 const pending = computed(() => renderDraft.value?.status === 'PENDING_CONFIRMATION')
 const staleText = computed(() => ({ EXPIRED: '核验已过期，未执行。重新核验后可继续调整。', CANCELLED: '操作已取消，未执行。发送新指令可重新下达。', INTERRUPTED: '执行中断，部分指令可能已下发，以设备实际状态为准。' }[renderDraft.value?.status] || ''))
+// 底部说明与面板同一事实来源：执行中只认 EXECUTING，终态文案真实兜底，不虚构「已更新」。
+const notice = computed(() => executionNotice(renderDraft.value, renderResult.value))
 const selected = computed(() => renderDraft.value?.selectedActionIds || [])
 const allSelected = computed(() => Boolean(renderDraft.value?.actions.length) && selected.value.length === renderDraft.value.actions.length)
 // 「还原」仅在有改动时出现：草案与发布基线一致时它是纯噪声；过期/终态只读不显示。
