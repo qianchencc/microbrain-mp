@@ -4,7 +4,6 @@
   <text class="rfs-param">{{ paramLine }}</text>
   <view class="rfs-coverage">
    <text v-for="(line, index) in coverageLines" :key="index" class="rfs-cov">{{ line }}</text>
-   <text v-if="simulatedNote" class="rfs-cov rfs-cov-warn">{{ simulatedNote }}</text>
   </view>
 
   <template v-if="isComparison">
@@ -141,12 +140,6 @@ const coverageLines = computed(() => {
  if (coverage.truncated) lines.push('读取不完整')
  return lines
 })
-const simulatedNote = computed(() => {
- const boundary = Date.parse('2025-01-01T00:00:00+08:00')
- const spanTo = Date.parse(props.report?.params?.span?.requested?.to || '')
- const baselineTo = Date.parse(props.report?.params?.baseline?.requested?.to || '')
- return (spanTo > boundary || baselineTo > boundary) ? '所选期间包含客户模拟补数，不作为真实运行或节能证据' : ''
-})
 watch(() => props.report, () => { grain.value = props.report.params?.grain || 'day' })
 </script>
 <style scoped lang="scss">
@@ -160,8 +153,6 @@ button::after { border: 0; }
 .rfs-evidence { flex-shrink: 0; min-height: 30px; padding: 0 4px; color: $agent-color-accent; font-size: 11px; }
 .rfs-param { display: block; margin-top: 5px; color: var(--agent-text-muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .rfs-coverage { display: block; margin-top: 4px; }
-.rfs-cov { display: block; margin-top: 2px; color: var(--agent-text-muted); font-size: 10px; line-height: 1.5; }
-.rfs-cov-warn { color: var(--agent-warning); }
 .rfs-hero { padding: 10px 0 6px; }
 .rfs-hero-label { color: var(--agent-text-muted); font-size: 11px; }
 .rfs-number { margin-top: 3px; font-size: 28px; letter-spacing: 0; line-height: 1.25; font-weight: 650; font-variant-numeric: tabular-nums; }
