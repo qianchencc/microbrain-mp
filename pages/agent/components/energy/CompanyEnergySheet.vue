@@ -126,20 +126,17 @@ const vsToday = computed(() => comparePct(todayUsage.value, selectedDay.value?.e
 const cacheNote = computed(() => {
  const cache = report.value?.cache
  if (!cache || cache.status !== 'stale') return ''
- if (cache.lastError?.message) return cache.refreshing ? `${cache.lastError.message}（正在后台重试）` : cache.lastError.message
- if (cache.refreshing) return '正在后台更新'
- return '沿用最近一次完整数据'
+ if (cache.lastError?.message) return cache.lastError.message
+ return ''
 })
 // 历史补块按日期保留 cache 元数据：完整 stale body 的用量继续显示，但失败与原始
 // updatedAt 要提示；同块 fresh 返回时只清掉该块日期上的旧失败。
 const historyCache = ref({})
 const historyNote = computed(() => {
  const failure = historyCacheFailure(historyCache.value)
- if (!failure) return ''
+ if (!failure?.messages?.length) return ''
  const range = failure.from === failure.to ? failure.from : `${failure.from}–${failure.to}`
- const status = failure.messages.length ? `更新失败：${failure.messages.join('；')}` : failure.refreshing ? '正在后台更新' : '沿用上次完整数据'
- const time = failure.updatedAt ? ` · 数据截至 ${fmtDateTime(failure.updatedAt)}` : ''
- return `${range} 历史补块${status}${time}`
+ return `${range} 历史补块读取失败：${failure.messages.join('；')}`
 })
 const footnote = computed(() => {
  if (!report.value) return ''

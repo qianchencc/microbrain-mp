@@ -122,3 +122,5 @@
 - 报告图表 SVG 必须同时声明与 viewBox 一致的数值 width/height；仅 viewBox 搭配 preserveAspectRatio="none" 会使图片固有尺寸退回 300×150，widthFix 下文字和条形被压扁。修复记录见 `../../plan/2026-10-20-report-chart-aspect-ratio-fix.md`。
 
 - 任务创建反馈按 `confirmingTaskId` 只落在当前卡，全局 `busy` 继续禁用其他操作；等待不代表已创建。待确认/已创建/已结束保持互斥，新一轮确认清旧错误，失败清等待。真实微信验收与目录超时边界见 `plan/2026-10-25-task-create-wait-and-read-handoff.md`。
+
+- 视觉设计（2026-11-04，G 方案 token 统一后）：Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.「正在后台更新/沿用上次完整数据/正在后台重试」这类状态注记不再单列次级文字；pill、数值、骨架和空态本身已自解释，只有真实错误原因（lastError/message）可在分区空态或依据行出现。

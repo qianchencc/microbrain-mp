@@ -60,11 +60,7 @@ function periodView(span, states) {
  const detailLabel = `${monthlyDate(span.from)} ${span.from.slice(11, 16)} → ${monthlyDate(span.to)} ${span.to.slice(11, 16)}`
  // 后端 stale 的刷新失败以 cache.lastError 为准；数据仍按上次完整快照展示。
  const cache = report?.cache
- const cacheNote = cache?.status === 'stale'
-  ? cache.lastError?.message
-   ? (cache.refreshing ? `${cache.lastError.message}（正在后台重试）` : cache.lastError.message)
-   : (cache.refreshing ? '正在后台更新' : '沿用上次完整数据')
-  : ''
+ const cacheNote = cache?.status === 'stale' && cache.lastError?.message ? cache.lastError.message : ''
  return { span, label: periodLabel(span), detailLabel, value, complete, meters: matching ? meters : [], unitValid: report?.total?.unit === '度', truncated: Boolean(coverage?.truncated), pending: !state || Boolean(state?.preparing),
   error: state?.error || '', through: shanghaiTime(report?.params?.span?.observed?.to), cacheNote,
   note: state?.refreshError || state?.error || cacheNote || (state?.waiting ? '本月用电待首个采样区间完成' : state?.preparing ? (state.message || '数据准备中') : state ? (value === null ? (matching && coverage?.dataMeters > 0 && !insideMonth ? '月初缺少准确边界采样' : '暂无有效用电数据') : !complete ? '数据覆盖不完整，显示已取得用电' : '') : '正在读取月度用电') }

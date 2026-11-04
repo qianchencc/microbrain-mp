@@ -22,10 +22,9 @@
 
     <button class="hero" hover-class="pressed" @tap="openObservation('environment')">
      <text class="hero-label">环境传感器 · 查看趋势 ›</text>
-     <text class="hero-name">{{ environment?.name || (loading ? '正在更新环境读数' : envError ? '环境读数暂不可用' : '暂无环境读数') }}</text>
      <text class="hero-temperature">{{ metricValue(environment?.reading?.temp) }}<text class="hero-unit"> °C</text></text>
      <text class="hero-meta">湿度 {{ metricValue(environment?.reading?.humidity) }}% · PM2.5 {{ metricValue(environment?.reading?.pm25) }}</text>
-     <text v-if="envNote" class="hero-note">更新未完成 · {{ envNote }}</text>
+     <text v-if="envNote || !environment?.reading" class="hero-note" :class="{ 'status-error': envFailure }">{{ envNote || (loading ? '正在更新环境读数' : envError ? '环境读数暂不可用' : '暂无环境读数') }}</text>
      <image class="hero-image" src="/static/device-art/environment-air-quality-sensor.png" mode="aspectFit" />
     </button>
     <view class="summary">
@@ -33,12 +32,11 @@
      <button hover-class="pressed" @tap="openObservation('alerts')"><text>安全台账</text><text class="summary-value">{{ simpleSafety.status }}</text></button>
      <button hover-class="pressed" @tap="openTaskSchedule({ view: 'inbox', date: taskToday(), task: null })"><text>通知中心</text><text class="summary-value">{{ simpleInbox.status }}</text></button>
     </view>
-    <text v-if="devicesNote" class="fineprint">设备目录更新未完成 · {{ devicesNote }}</text>
-    <text v-if="alertsNote" class="fineprint">安全台账更新未完成 · {{ alertsNote }}</text>
+
 
     <view class="section"><text>用电观察</text><button @tap="openEnergy()">查看详情 ›</button></view>
     <button class="energy-card" hover-class="pressed" @tap="openEnergy()" aria-label="查看用电详情">
-     <view class="energy-heading"><text>计量日用电</text><text class="energy-value">{{ simpleEnergy.value }}</text><text v-if="energyNote">更新未完成 · {{ energyNote }}</text><text v-else>{{ simpleEnergy.status }}</text></view>
+     <view class="energy-heading"><text>计量日用电</text><text class="energy-value">{{ simpleEnergy.value }}</text><text v-if="energyNote" :class="{ 'status-error': energyFailure }">{{ energyNote }}</text><text v-else>{{ simpleEnergy.status }}</text></view>
      <view v-if="energyPreview.length" class="energy-bars" aria-hidden="true">
       <view v-for="day in energyPreview" :key="day.date" class="energy-bar" :class="{ missing: day.missing, latest: day.latest }" :style="{ height: day.height + 'px' }" />
      </view>
@@ -125,13 +123,9 @@ const alertsLoading = ref(false), loadedSections = ref([]), sectionErrors = ref(
 // 各分区独立保留后端 cache 状态与原始 updatedAt：一个分区的新响应不能覆盖另一个
 // 分区的刷新失败，也不把 stale 当成刚更新的 fresh。
 const sectionCache = ref({})
-const backendStale = area => {
- const cache = sectionCache.value[area]
- if (!cache) return ''
- if (cache.lastError?.message) return cache.refreshing ? `${cache.lastError.message}（正在后台重试）` : cache.lastError.message
- return cache.status === 'stale' ? (cache.refreshing ? '正在后台更新' : '沿用上次完整数据') : ''
-}
-const sectionNote = area => sectionErrors.value[area] || backendStale(area)
+// 分区失败原因只留错误本体：「正在后台更新/沿用上次数据」这类次级状态不再单列小字，
+// pill 上的数值与读取中已自解释；真错误由分区空态/sheet 说明承载。
+const sectionNote = area => sectionErrors.value[area] || sectionCache.value[area]?.lastError?.message || ''
 const sectionFailure = area => sectionErrors.value[area] || sectionCache.value[area]?.lastError?.message || ''
 // 与后端 cache.lastError 对齐：通用 body.message 只在没有具体失败原因时兜底。
 const failureMessage = (cause, fallback) => cause?.data?.cache?.lastError?.message || cause?.data?.message || cause?.message || fallback
@@ -147,7 +141,6 @@ const dateLine = computed(() => {
 /* 设备目录计数 + 单类设备抽屉 */
 const catalogDevices = ref([]), devicesLoaded = ref(false), devicesError = ref('')
 // 设备目录同样按分区保留后端 lastError 与原始 updatedAt；失败不清空已加载目录。
-const devicesNote = computed(() => sectionNote('devices') || devicesError.value)
 const drawerKind = ref('')
 const kindCounts = computed(() => {
  const map = {}
@@ -196,7 +189,7 @@ function openEnergy(date) {
 const environment = computed(() => snapshot.value?.environment?.find(row => row.reading) || snapshot.value?.environment?.[0])
 // 有旧数据时刷新失败只提示、不隐藏台账；仅在没有可用台账时才显示不可用。
 const alertsUnavailable = computed(() => !snapshot.value?.alerts && (Boolean(sectionErrors.value.alerts) || Boolean(snapshot.value?.errors?.some(row => row.area === 'alerts'))))
-const alertsNote = computed(() => sectionNote('alerts'))
+
 
 // 通知快照按身份隔离；任务列表由 CompanyTaskOverview 自行加载。
 const simpleUnread = ref(0), simpleUnreadLoaded = ref(false), simpleUnreadError = ref('')
@@ -457,17 +450,18 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .date { display:block; margin-top:2px; color:$agent-color-text-muted; font-size:11px; }
 .refresh { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff; flex-shrink:0; }.refresh[disabled] { opacity:.6; }
 .hero { position:relative; display:block; width:100%; min-height:178px; box-sizing:border-box; padding:19px; text-align:left; border-radius:22px; overflow:hidden; background:linear-gradient(130deg,$agent-color-tint,$agent-color-surface); }
-.hero-label,.hero-name,.hero-temperature,.hero-meta,.hero-note { display:block; position:relative; z-index:1; max-width:66%; }
-.hero-label { color:$agent-color-text-secondary; font-size:11px; }.hero-name { margin-top:5px; color:$agent-color-text-secondary; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hero-label,.hero-temperature,.hero-meta,.hero-note { display:block; position:relative; z-index:1; max-width:66%; }
+.hero-label { color:$agent-color-text-secondary; font-size:11px; }
 .hero-temperature { margin-top:10px; color:$agent-color-accent-deep; font-size:45px; line-height:1.2; font-weight:700; letter-spacing:-2px; }.hero-unit { font-size:16px; letter-spacing:0; }
-.hero-meta,.hero-note { color:$agent-color-text-muted; font-size:11px; }.hero-note { margin-top:4px; color:$agent-color-warning; }
+.hero-meta,.hero-note { color:$agent-color-text-muted; font-size:11px; }.hero-note { margin-top:4px; }
 .hero-image { position:absolute; width:116px; height:116px; right:9px; top:31px; }
 .summary { display:flex; gap:8px; margin-top:10px; }.summary button { flex:1; min-width:0; padding:12px; text-align:left; background:#fff; border-radius:15px; }
 .summary button text { display:block; color:$agent-color-text-muted; font-size:10px; }.summary button .summary-value { margin-top:4px; color:$agent-color-text-secondary; font-size:15px; font-weight:700; }
 .section { display:flex; justify-content:space-between; align-items:center; margin:19px 2px 9px; font-size:15px; font-weight:700; }.section button { min-height:36px; color:$agent-color-text-secondary; font-size:11px; font-weight:400; }
 .energy-card { display:flex; align-items:flex-end; gap:15px; width:100%; box-sizing:border-box; padding:15px; text-align:left; background:$agent-color-accent-faint; border-radius:18px; }.energy-heading { flex:1; min-width:0; color:$agent-color-text-muted; font-size:11px; }.energy-heading text { display:block; }.energy-heading .energy-value { color:$agent-color-accent; font-size:21px; font-weight:700; margin:4px 0; }
 .energy-bars { flex-shrink:0; display:flex; align-items:flex-end; gap:5px; height:38px; }.energy-bar { width:8px; border-radius:4px 4px 0 0; background:$agent-color-chart; }.energy-bar.latest { background:$agent-color-chart-deep; }.energy-bar.missing { background:$agent-color-tint; }
-.fineprint { display:block; margin-top:8px; color:$agent-color-warning; font-size:11px; line-height:1.5; }
+
+.status-error { color:$agent-color-warning; }
 .device-scroll { width:100%; white-space:nowrap; }.device-ribbon { display:flex; gap:9px; padding:1px 0 6px; }.device-card { flex:0 0 112px; box-sizing:border-box; padding:11px; text-align:left; background:#fff; border-radius:18px; }.device-card image { display:block; width:100%; height:64px; }.device-name,.device-count { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.device-name { margin-top:7px; font-weight:600; }.device-count { margin-top:3px; color:$agent-color-text-muted; font-size:10px; }
 .task-card { padding:14px; background:#fff; border-radius:18px; }
 .agent-entry { display:flex; justify-content:space-between; width:100%; margin-top:17px; padding:14px 16px; box-sizing:border-box; background:$agent-color-tint; border-radius:16px; color:$agent-color-accent-deep; font-weight:600; }
