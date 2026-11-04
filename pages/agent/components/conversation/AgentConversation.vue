@@ -285,9 +285,10 @@ function schedule() {
 async function refreshScheduledTasks() {
  const active = turns.value.flatMap(turn => tasksOf(turn)).filter(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase()))
  await Promise.allSettled(active.map(async task => {
-  const id = task.taskId
+  const id = task.repeat ? task.planId : task.taskId
+  if (!id) return
   const result = task.repeat ? await getTaskPlan(id, props.source) : await getTaskDetail(id, props.source)
-  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => item.taskId === id && !item.cancellationId)
+  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (task.repeat ? item.planId === id : item.taskId === id) && !item.cancellationId && !item.changeId)
   if (live && result.plan) mergeTaskPlan(live, result.plan)
   if (live && result.task) mergeTaskDetail(live, result.task)
  }))
@@ -607,7 +608,19 @@ async function confirmTaskProposal(task) {
  try {
   const result = changeId ? await confirmTaskChange(changeId, props.source) : cancellationId ? await confirmTaskCancellation(cancellationId, props.source) : await confirmScheduledTask(taskId, task.version, props.source)
   const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.changeId || item.cancellationId || item.taskId) === key)
-  if (live) { live.confirmation = null; live.status = cancellationId ? result.proposalStatus : result.status; if (!cancellationId && !changeId) { live.created = true; if (result.planId) { live.planId = result.planId; live.nextAt = result.nextAt; live.nextCheckpointAt = result.nextCheckpointAt } } }
+  if (live) {
+   live.confirmation = null
+   live.status = cancellationId ? result.proposalStatus : result.status
+   if (!cancellationId && !changeId) {
+    live.created = true
+    if (result.taskId) live.taskId = result.taskId
+    if (result.planId) {
+     live.planId = result.planId
+     live.nextAt = result.nextAt
+     live.nextCheckpointAt = result.nextCheckpointAt
+    }
+   }
+  }
   tasksChanged()
   if (changeId) resync = true
   if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
