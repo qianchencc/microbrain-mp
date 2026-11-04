@@ -5,18 +5,18 @@
   <view v-if="loading && !loaded" class="agenda-state">加载中…</view>
   <view v-else-if="error && !previewDays.length" class="agenda-error"><text>任务暂未加载</text><view class="error-actions"><button class="error-detail" @tap="showError">查看原因</button><button class="error-retry" @tap="load(true)">重试</button></view></view>
   <view v-else>
-   <view v-for="day in previewDays" :key="day.date" class="agenda-day">
+   <view v-for="day in previewDays" :key="day.finished ? day.date + ':done' : day.date" class="agenda-day">
     <view class="agenda-rail"><text class="rail-num">{{ railNum(day.date) }}</text><text class="rail-wd">{{ railText(day.date) }}</text></view>
     <view class="agenda-rows">
      <button v-for="task in day.rows" :key="taskKey(task)" class="agenda-row" @tap="open('all', task)">
       <text class="row-clock">{{ taskDayTime(task, day.date) }}</text>
-      <view class="row-copy"><text class="row-name">{{ task.label || '任务安排' }}</text><text v-if="task.repeat || task.occurrence" class="row-rule">{{ repeatText(task.repeat) || '按周期执行' }}</text></view>
-      <text class="row-state" :class="'row-state--' + stateTone(task.status)">{{ taskLabel(task.status) }}</text>
+      <view class="row-copy"><text class="row-name">{{ task.label || '任务安排' }}</text><text v-if="taskProgressNote(task)" class="row-progress">{{ taskProgressNote(task) }}</text><text v-if="task.repeat || task.occurrence" class="row-rule">{{ repeatText(task.repeat) || '按周期执行' }}</text></view>
+      <text class="row-state" :class="'row-state--' + (task.stateTone || stateTone(task.status))">{{ task.stateLabel || taskLabel(task.status) }}</text>
      </button>
      <text v-if="day.more" class="row-more">还有 {{ day.more }} 项</text>
     </view>
    </view>
-   <view v-if="!loading && !previewDays.length" class="agenda-state">近两个月暂无待执行任务</view>
+   <view v-if="!loading && !previewDays.length" class="agenda-state">近两个月暂无任务安排</view>
    <view v-if="error && previewDays.length" class="agenda-error agenda-error--stale"><text>任务暂未更新</text><view class="error-actions"><button class="error-detail" @tap="showError">查看原因</button><button class="error-retry" @tap="load(true)">重试</button></view></view>
   </view>
   <button class="overview-foot" @tap="open('all')">查看所有任务 ›</button>
@@ -27,25 +27,13 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { peekAgentNotifications, peekAgentTasks, readAgentNotifications, readAgentTasks } from '@/apis/agent/tasks'
 import { getAgentStorageScope } from '@/utils/agent-session'
-import { shiftDate, agendaGroups, taskDayTime, taskLabel, taskSettled, taskToday, taskStatusTone, repeatText } from '../../lib/tasks.mjs'
+import { shiftDate, agendaPreview, taskPollDelay, taskDayTime, taskLabel, taskProgressNote, taskToday, taskStatusTone, repeatText, TASK_POLL_IDLE_MS } from '../../lib/tasks.mjs'
 const props = defineProps({ active: Boolean, refreshKey: Number })
-const emit = defineEmits(['open'])
+const emit = defineEmits(['open', 'unread'])
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 const issue = ref(null)
 const tasks = ref([]), unread = ref(0), loading = ref(false), loaded = ref(false), error = ref(''), today = ref(taskToday())
-const previewDays = computed(() => {
- const days = []
- let total = 0
- for (const day of agendaGroups(tasks.value, today.value, 62).days) {
-  if (total >= 4) break
-  const rows = day.rows.filter(task => !taskSettled(task))
-  if (!rows.length) continue
-  const shown = rows.slice(0, Math.min(3, 4 - total))
-  total += shown.length
-  days.push({ date: day.date, rows: shown, more: rows.length - shown.length })
- }
- return days
-})
+const previewDays = computed(() => agendaPreview(tasks.value, today.value, 62))
 let generation = 0, timer = 0, visible = true, loadedScope = ''
 function open(view, task) { emit('open', { view, date: today.value, task }) }
 function taskKey(task) { return task.taskId || task.id || task.occurrence?.id || task.label }
@@ -60,7 +48,7 @@ async function load(force = false) {
  clearTimeout(timer)
  const current = ++generation
  loading.value = true; error.value = ''
- let scope = '', delay = 30000
+ let scope = '', delay = TASK_POLL_IDLE_MS
  try {
   scope = getAgentStorageScope()
   if (scope !== loadedScope) { tasks.value = []; loaded.value = false; loadedScope = scope }
@@ -68,13 +56,12 @@ async function load(force = false) {
   // 同身份议程快照先落位：重挂载、切模式与短时返回都不闪「加载中…」，随后按同一缓存口径对齐。
   const saved = peekAgentTasks({ source: 'company', ...range }), savedUnread = peekAgentNotifications({ source: 'company', limit: 1 })
   if (saved && !loaded.value) { tasks.value = saved.tasks || []; loaded.value = true }
-  if (savedUnread) unread.value = Number(savedUnread.unreadCount) || 0
-  const executing = tasks.value.some(task => task.status === 'executing')
-  delay = executing ? 5000 : 30000
+  if (savedUnread) { unread.value = Number(savedUnread.unreadCount) || 0; emit('unread', unread.value) }
   const result = await readAgentTasks({ source: 'company', ...range, force })
   if (current !== generation || scope !== getAgentStorageScope() || !props.active || !visible) return
   tasks.value = result.tasks || []; loaded.value = true
-  void refreshUnread(force)
+  // 节拍取自新读取的状态：到点未推进 1 秒快刷、执行中 5 秒、最近未来边界 +1 秒唤醒。
+  delay = taskPollDelay(tasks.value, Date.now())
  } catch (cause) {
   if (current !== generation) return
   let liveScope = ''
@@ -84,6 +71,8 @@ async function load(force = false) {
  } finally {
   if (current === generation) {
    loading.value = false
+   // 未读数独立刷新：任务读取失败也不冻结未读。
+   void refreshUnread(force)
    if (props.active && visible) timer = setTimeout(() => load(true), delay)
   }
  }
@@ -94,7 +83,7 @@ async function refreshUnread(force = false) {
   const scope = getAgentStorageScope()
   if (scope !== loadedScope) return
   const result = await readAgentNotifications({ source: 'company', limit: 1, force })
-  if (current === generation && props.active && scope === getAgentStorageScope()) unread.value = Number(result.unreadCount) || 0
+  if (current === generation && props.active && scope === getAgentStorageScope()) { unread.value = Number(result.unreadCount) || 0; emit('unread', unread.value) }
  } catch { /* 未读数失败不影响任务预览 */ }
 }
 watch(() => [props.active, props.refreshKey], ([active, revision], previous) => {
@@ -133,7 +122,8 @@ button::after { border:0; }
 .row-clock { width:48px; flex-shrink:0; font-size:11px; color:$agent-color-text-secondary; }
 .row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
 .row-name { white-space:normal; word-break:break-word; font-size:13px; font-weight:600; color:$agent-color-text-primary; }
-.row-rule { font-size:10px; color:$agent-color-text-muted; }
+.row-progress { font-size:10px; color:$agent-color-text-secondary; }.row-rule { font-size:10px; color:$agent-color-text-muted; }
+.row-state--ok { color:$agent-color-success; }
 .row-state { flex-shrink:0; font-size:11px; color:$agent-color-text-muted; }
 .row-state--active { color:$agent-color-accent; }.row-state--warn { color:$agent-color-warning-deep; }
 .row-more { padding:5px 0 3px; color:$agent-color-text-muted; font-size:10px; }

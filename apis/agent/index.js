@@ -77,14 +77,14 @@ const agentNotificationsUrl = ({ source = 'company', limit = 30, before }) => '/
 const peekSnapshot = url => { try { return agentReadCache.peek(globalConfig.agentUrl + url)?.value ?? null } catch { return null } }
 export const readAgentTasks = ({ source = 'company', from, to, force = false } = {}) => readSnapshot(agentTasksUrl({ source, from, to }), undefined, { force })
 export const peekAgentTasks = ({ source = 'company', from, to } = {}) => peekSnapshot(agentTasksUrl({ source, from, to }))
-// 日历月窗口另立快照键：历史月不会新增任务（任务不能创建到过去），永久复用；
-// 当月与未来月 60 秒。打开日历只刷新今天（#calendar-day），不重取整格。
+// 日历月窗口另立快照键：整格按默认 60 秒新鲜度对齐。历史月不再视为不可变——
+// 跨月未完任务的结果会随窗口读取推进（历史月不新增任务，但结果可以迟到）；
+// 实时推进仍只走当日 #calendar-day。
 const calendarUrl = ({ source = 'company', from, to }, suffix = '#calendar') => globalConfig.agentUrl + agentTasksUrl({ source, from, to }) + suffix
-const calendarTtl = historical => historical ? { freshMs: Infinity, staleMs: Infinity } : {}
-export const readAgentCalendar = ({ source = 'company', from, to, historical = false, force = false } = {}) =>
- readSnapshot(agentTasksUrl({ source, from, to }), undefined, { key: calendarUrl({ source, from, to }), ...calendarTtl(historical), force })
-export const peekAgentCalendar = ({ source = 'company', from, to, historical = false } = {}) => {
- try { return agentReadCache.peek(calendarUrl({ source, from, to }), calendarTtl(historical))?.value ?? null } catch { return null }
+export const readAgentCalendar = ({ source = 'company', from, to, force = false } = {}) =>
+ readSnapshot(agentTasksUrl({ source, from, to }), undefined, { key: calendarUrl({ source, from, to }), force })
+export const peekAgentCalendar = ({ source = 'company', from, to } = {}) => {
+ try { return agentReadCache.peek(calendarUrl({ source, from, to }))?.value ?? null } catch { return null }
 }
 export const readAgentCalendarDay = ({ source = 'company', from, to, force = false } = {}) =>
  readSnapshot(agentTasksUrl({ source, from, to }), undefined, { key: calendarUrl({ source, from, to }, '#calendar-day'), force })

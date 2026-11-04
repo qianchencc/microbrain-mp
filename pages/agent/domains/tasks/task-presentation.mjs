@@ -35,3 +35,6 @@ export function taskResultStatus(record) {
  if (devices.some(device => DISPATCHED.has(device.outcome))) return 'dispatched'
  return devices.length && devices.every(device => deviceResultView(device).settled) ? 'verified' : 'completed'
 }
+// 已结束行的结果桥：completed 只写「已结束」，有设备事实才经 taskResultStatus 表达目标结果；
+// 前端不推断执行成功，只投影后端事实。
+export const taskResultLabel = record => taskStatusText(taskResultStatus(record))

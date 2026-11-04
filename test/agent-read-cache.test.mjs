@@ -166,9 +166,9 @@ test('预取后打开任务与通知不产生第二次请求；手动刷新与�
  assert.equal(calls.length, 6)
 })
 
-test('日历月窗口按身份与月缓存：重复打开不重读，历史月不随时间过期', async t => {
+test('日历月窗口按身份与月缓存：一分钟内不重读，历史月同样按分钟级新鲜度重读', async t => {
  const { client, calls } = await setup(t)
- const past = { source: 'company', from: '2026-08-31', to: '2026-10-04', historical: true }
+ const past = { source: 'company', from: '2026-08-31', to: '2026-10-04' }
  const current = { source: 'company', from: '2026-09-28', to: '2026-11-01' }
  await client.readAgentCalendar(past)
  await client.readAgentCalendar(current)
@@ -179,11 +179,11 @@ test('日历月窗口按身份与月缓存：重复打开不重读，历史月�
  await client.readAgentCalendar(past)
  await client.readAgentCalendar(current)
  assert.equal(calls.length, 2)
- t.mock.timers.tick(86_400_000)
+ // 历史月不再视为不可变：默认新鲜度到期后，跨月未完任务的结果随重读推进。
+ t.mock.timers.tick(61_000)
  await client.readAgentCalendar(past)
- assert.equal(calls.length, 2)
  await client.readAgentCalendar(current)
- assert.equal(calls.length, 3)
+ assert.equal(calls.length, 4)
 })
 
 test('日历打开只刷新今天：不重取整格，也不影响月快照复用', async t => {
@@ -203,7 +203,7 @@ test('日历打开只刷新今天：不重取整格，也不影响月快照复�
 
 test('任务确认后日历月快照一并失效；历史月同样重读', async t => {
  const { client, calls } = await setup(t)
- const past = { source: 'company', from: '2026-08-31', to: '2026-10-04', historical: true }
+ const past = { source: 'company', from: '2026-08-31', to: '2026-10-04' }
  await client.readAgentCalendar(past)
  assert.equal(calls.length, 1)
  await client.confirmTask('task-1', 3, 'company')

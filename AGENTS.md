@@ -17,6 +17,11 @@ Architecture terms and the accepted Agent page module decision are in [GLOSSARY.
 
 处理客户小程序接入、身份、设备范围、业务探索或历史计划时，先读 `docs/README.md`，再按其中任务入口进入权威文档。历史编号计划只作证据，不得覆盖当前生产主线。
 
+### 实现取舍
+
+- 以基础业务可靠闭环为目标，保持状态明确、设计简洁；不为未要求的边缘或高压场景增加复杂机制。
+- 任务和通知只向后端读写；前端快照仅作展示，不自行判定任务成功。生命周期变更对照[基础闭环设计](../iot-agent-backend/.scratch/agent-business-recovery/task-lifecycle.md)。
+
 ### Git 规范
 
 - 开始任何跨目录迁移或批量修改前，先执行 `git status --short --branch`、`git log -5 --oneline` 和 `git diff --stat`，确认基线、分支和未提交内容；未提交内容不得直接当作可信基线。

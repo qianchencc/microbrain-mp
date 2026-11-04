@@ -23,7 +23,7 @@ import { peekAgentCalendar, readAgentCalendar, readAgentCalendarDay } from '@/ap
 import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionCalendar from '../regions/RegionCalendar.vue'
 import { calendarWindow, shiftDate, validCalendarDate } from '../../lib/region.mjs'
-import { taskToday, taskDayTime, taskCalendarMarks, tasksOnDate, taskLabel, taskAbnormal, mergeDayTasks, calendarPollDelay } from '../../lib/tasks.mjs'
+import { taskToday, taskDayTime, taskCalendarMarks, tasksOnDate, taskLabel, taskAbnormal, mergeDayTasks, calendarPollDelay, taskSettled } from '../../lib/tasks.mjs'
 const props = defineProps({ active: Boolean, compact: Boolean, date: String, refreshKey: Number, source: { type: String, default: 'company' } })
 const emit = defineEmits(['date-change', 'select-task', 'open-date', 'refreshed', 'issue'])
 const today = ref(taskToday()), selected = ref(validCalendarDate(props.date) ? props.date : today.value)
@@ -41,8 +41,9 @@ function showError() { emit('issue', { title: '任务暂未加载', reason: erro
 function stop() { ++generation; clearTimeout(timer); loading.value = false }
 function schedule() {
  clearTimeout(timer)
- const delay = calendarPollDelay(tasks.value, today.value, window.value.from, window.value.to)
- if (delay) timer = setTimeout(pollToday, delay)
+ // 节拍取自刚读取的状态：未完任务（含跨日/历史月）才定时，边界到点 1 秒内唤醒。
+ const delay = calendarPollDelay(tasks.value, window.value.from, window.value.to)
+ if (delay) timer = setTimeout(pollTick, delay)
 }
 const calendarRange = queryMonth => {
  const range = calendarWindow(queryMonth)
@@ -52,16 +53,16 @@ async function load(force = false) {
  if (!props.active || !visible) return
  clearTimeout(timer)
  const current = ++generation, source = props.source, queryMonth = month.value
- const range = calendarRange(queryMonth), historical = queryMonth < today.value.slice(0, 7)
+ const range = calendarRange(queryMonth)
  loading.value = true; error.value = ''
  let scope = ''
  try {
   scope = getAgentStorageScope()
   if (scope !== loadedScope) { tasks.value = []; loaded.value = false; loadedScope = scope }
-  // 先落位再对齐：历史月永久命中，当月与未来月一分钟内命中；打开日历不等于重新读取整格。
-  const saved = peekAgentCalendar({ source, ...range, historical })
+  // 先落位再对齐：一分钟内命中同一快照；打开日历不等于重新读取整格。
+  const saved = peekAgentCalendar({ source, ...range })
   if (saved) { tasks.value = saved.tasks || []; loaded.value = true; loading.value = false }
-  const result = await readAgentCalendar({ source, ...range, historical, force })
+  const result = await readAgentCalendar({ source, ...range, force })
   if (current !== generation || source !== props.source || scope !== getAgentStorageScope() || !props.active || !visible) return
   tasks.value = result.tasks || []; loaded.value = true
   emit('refreshed')
@@ -75,17 +76,24 @@ async function load(force = false) {
   if (current === generation) { loading.value = false; schedule() }
  }
 }
-// 定时只刷新今天，并按任务身份合并进整格：过去日不会新增任务，整格不再重复读取。
-async function pollToday() {
+// 今天以外也有未完任务时直接刷新月窗；否则只读今天。每次轮询只发一个请求。
+async function pollTick() {
  if (!props.active || !visible) return
- const current = ++generation, source = props.source, date = today.value
+ const current = ++generation, source = props.source, queryMonth = month.value
+ const range = calendarRange(queryMonth), grid = calendarWindow(queryMonth)
+ const todayIn = today.value >= grid.from && today.value <= grid.to
+ const offToday = !todayIn || tasks.value.some(row => !taskSettled(row) && !tasksOnDate([row], today.value).length)
  try {
-  const result = await readAgentCalendarDay({ source, from: `${date}T00:00:00+08:00`, to: `${shiftDate(date, 1)}T00:00:00+08:00`, force: true })
-  if (current !== generation || source !== props.source || !props.active || !visible) return
-  tasks.value = mergeDayTasks(tasks.value, result.tasks || [], date)
+  const scope = getAgentStorageScope()
+  const date = today.value
+  const result = offToday
+   ? await readAgentCalendar({ source, ...range, force: true })
+   : await readAgentCalendarDay({ source, from: `${date}T00:00:00+08:00`, to: `${shiftDate(date, 1)}T00:00:00+08:00`, force: true })
+  if (current !== generation || source !== props.source || scope !== getAgentStorageScope() || !props.active || !visible) return
+  tasks.value = offToday ? result.tasks || [] : mergeDayTasks(tasks.value, result.tasks || [], date)
+  loaded.value = true; error.value = ''
  } catch (cause) {
-  if (current !== generation) return
-  error.value = cause.message || '日程暂不可用'
+  if (current === generation) error.value = cause.message || '日程暂不可用'
  } finally {
   if (current === generation) schedule()
  }

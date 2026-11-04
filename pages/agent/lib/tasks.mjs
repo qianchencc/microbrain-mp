@@ -9,9 +9,15 @@ export {
   taskCalendarMarks,
   mergeDayTasks,
   calendarPollDelay,
+  taskPollDelay,
+  TASK_POLL_FAST_MS,
+  TASK_POLL_ACTIVE_MS,
+  TASK_POLL_IDLE_MS,
   taskSettled,
   taskListRange,
   agendaGroups,
+  agendaPreview,
+  taskProgressNote,
   taskDayTime,
   TASK_ALL_CHUNK_DAYS,
   TASK_ALL_MAX_DAYS,
@@ -37,5 +43,6 @@ export {
   taskStatusTone,
   taskNeedsDetails,
   taskResultStatus,
+  taskResultLabel,
 } from '../domains/tasks/task-presentation.mjs'
 export { deviceTimelineItems } from '../domains/tasks/device-timeline-view.mjs'

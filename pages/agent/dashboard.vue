@@ -52,7 +52,7 @@
      </view>
     </scroll-view>
     <view class="section"><text>近期任务</text></view>
-    <view class="task-card"><CompanyTaskOverview :active="pageActive && !tasksOpen" :refresh-key="taskRevision" @open="openTaskSchedule" /></view>
+    <view class="task-card"><CompanyTaskOverview :active="pageActive && !tasksOpen" :refresh-key="taskRevision" @open="openTaskSchedule" @unread="syncSimpleUnread" /></view>
     <button class="agent-entry" hover-class="pressed" @tap="openCompanyAgent()"><text>✦ 公司 Agent</text><text>问问助手 ›</text></button>
 
    </view>
@@ -208,6 +208,8 @@ async function loadUnread(force = false) {
   if (current === agendaRequestId && visible) simpleUnreadLoaded.value = true
  }
 }
+// 首页议程轮询会顺带刷新未读数；同步给通知块，仪表盘常驻时未读不无限期滞留。
+function syncSimpleUnread(count) { simpleUnread.value = Number(count) || 0; simpleUnreadError.value = ''; simpleUnreadLoaded.value = true }
 const envNote = computed(() => sectionNote('environment'))
 const envFailure = computed(() => sectionFailure('environment'))
 const envError = computed(() => !environment.value?.reading && Boolean(envFailure.value || snapshot.value?.errors?.some(row => row.area === 'environment')))
