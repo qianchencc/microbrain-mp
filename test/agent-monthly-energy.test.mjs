@@ -40,6 +40,26 @@ test('跨年、短月及闰年保持有效日期，短月两侧使用共同截�
  assert.equal(leap.pairs[1].baseline.to.slice(0,10),'2023-02-28')
 })
 
+test('Java精简ISO时间与毫秒请求表示同一时刻时，保留本月合计及同期比较', async () => {
+ const windows = monthlyEnergyWindows(new Date('2026-11-04T21:00:00+08:00'))
+ const states = await load(windows, async query => {
+  const value = query.from.startsWith('2026-11') ? 120 : query.from.startsWith('2026-10') ? 100 : 150
+  const result = report(query, value)
+  result.params.span.requested = {
+   from: query.from.replace(':00.000+08:00', '+08:00'),
+   to: query.to.replace(':00.000+08:00', '+08:00')
+  }
+  for (const meter of result.meters) meter.value = value / 2
+  return result
+ })
+ const view = monthlyEnergyView(windows, states)
+ assert.equal(view.current.value, 120)
+ assert.equal(view.current.complete, true)
+ assert.equal(view.pairs[0].pct, '↑ 20%')
+ assert.equal(view.pairs[1].pct, '↓ 20%')
+ assert.deepEqual(view.pairs[0].rows.map(row => row.delta), [10, 10])
+})
+
 test('环比与同比按总量独立计算，正负与简短描述对应，不将变少称为已节能', async () => {
  const windows = monthlyEnergyWindows(now())
  const states = await load(windows, async q => report(q, q.from.startsWith('2026-10') ? 100 : q.from.startsWith('2026-09') ? 80 : 125))
@@ -104,6 +124,7 @@ test('UTC时间戳按上海日期核对，合法同日采样不被误判为前�
  const windows=monthlyEnergyWindows(new Date('2026-10-25T00:30:00+08:00'))
  const states=await load(windows,async q=>{
   const r=report(q,100)
+  r.params.span.requested={from:new Date(q.from).toISOString(),to:new Date(q.to).toISOString()}
   r.params.span.observed.to=new Date(q.to).toISOString()
   for(const m of r.meters) {
    m.observed.fromSample.readTime=new Date(q.from).toISOString()

@@ -51,10 +51,12 @@ export async function readMonthlyEnergy(windows, request, publish) {
 function periodView(span, states) {
  const state = states[span.from + '/' + span.to]
  const report = state?.report, coverage = report?.coverage, meters = report?.meters || []
- const matching = report?.kind === 'statistics' && report.params?.span?.requested?.from === span.from && report.params?.span?.requested?.to === span.to
- const insideMonth = meters.length > 0 && meters.filter(m => m.status === 'ok').every(m => Date.parse(m.observed?.fromSample?.readTime || '') >= Date.parse(span.from) && Date.parse(m.observed?.toSample?.readTime || '') <= Date.parse(span.to))
+ // Java可省略秒或毫秒；同一统计期间按时刻匹配，不要求ISO字符串拼写一致。
+ const start = Date.parse(span.from), end = Date.parse(span.to)
+ const matching = report?.kind === 'statistics' && Date.parse(report.params?.span?.requested?.from) === start && Date.parse(report.params?.span?.requested?.to) === end
+ const insideMonth = meters.length > 0 && meters.filter(m => m.status === 'ok').every(m => Date.parse(m.observed?.fromSample?.readTime || '') >= start && Date.parse(m.observed?.toSample?.readTime || '') <= end)
  const value = matching && insideMonth && report.total?.unit === '度' && coverage?.dataMeters > 0 && finite(report.total.value) && report.total.value >= 0 ? round(report.total.value) : null
- const boundaryComplete = meters.every(m => Date.parse(m.observed?.fromSample?.readTime || '') === Date.parse(span.from) && Date.parse(m.observed?.toSample?.readTime || '') === Date.parse(span.to))
+ const boundaryComplete = meters.every(m => Date.parse(m.observed?.fromSample?.readTime || '') === start && Date.parse(m.observed?.toSample?.readTime || '') === end)
  const complete = boundaryComplete && value !== null && coverage?.meters > 0 && coverage.dataMeters === coverage.meters && !coverage.truncated
   && !coverage.noData?.length && !coverage.partial?.length && meters.length === coverage.meters && meters.every(m => m.status === 'ok')
  const detailLabel = `${monthlyDate(span.from)} ${span.from.slice(11, 16)} → ${monthlyDate(span.to)} ${span.to.slice(11, 16)}`
