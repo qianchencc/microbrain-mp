@@ -36,10 +36,8 @@
 							indicator-active-color="#366092">
 							<swiper-item v-for="(page, index) in workMenuPages" :key="index">
 								<view class="menu-one">
-									<view v-for="menu in page" :key="menu.id" class="menu-item" :class="{ 'agent-entry': menu.agent }" @click="menu.agent ? goPage('/pages/agent/dashboard') : jumpUrl(menu)">
-										<view v-if="menu.agent" class="agent-entry-icon">
-											<image class="agent-entry-avatar" src="/static/iot-assistant-icon.png" />
-										</view>
+									<view v-for="menu in page" :key="menu.id" class="menu-item" @click="menu.agent ? goPage('/pages/agent/dashboard') : jumpUrl(menu)">
+										<image v-if="menu.agent" class="agent-entry-avatar" src="/static/iot-assistant-icon.png" mode="aspectFit"></image>
 										<image v-else :src="getUrl(menu.icon)" mode="aspectFit"></image>
 										<view class="text">{{ menu.resourceTitle }}</view>
 									</view>
@@ -337,20 +335,6 @@
 			grid-gap: 20rpx 0;
 			.menu-item {
 				text-align: center;
-				.agent-entry-icon {
-					width: 80rpx;
-					height: 80rpx;
-					margin: 0 auto;
-					border-radius: 16rpx;
-					background: #dcebe4;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					.agent-entry-avatar {
-						width: 72rpx;
-						height: 72rpx;
-					}
-				}
 				image {
 					width: 80rpx;
 					height: 80rpx;
@@ -361,9 +345,7 @@
 					white-space: nowrap;
 					text-overflow: ellipsis;
 				}
-				&.agent-entry .text {
-					white-space: nowrap;
-				}
+
 			}
 		}
 		
