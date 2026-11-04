@@ -53,7 +53,6 @@
     </scroll-view>
     <view class="section"><text>近期任务</text></view>
     <view class="task-card"><CompanyTaskOverview :active="pageActive && !tasksOpen" :refresh-key="taskRevision" @open="openTaskSchedule" @unread="syncSimpleUnread" /></view>
-    <button class="agent-entry" hover-class="pressed" @tap="openCompanyAgent()"><text>✦ 公司 Agent</text><text>问问助手 ›</text></button>
 
    </view>
   </scroll-view>
@@ -466,7 +465,6 @@ button { margin:0; padding:0; background:transparent; font-size:inherit; line-he
 .status-error { color:$agent-color-warning; }
 .device-scroll { width:100%; white-space:nowrap; }.device-ribbon { display:flex; gap:9px; padding:1px 0 6px; }.device-card { flex:0 0 112px; box-sizing:border-box; padding:11px; text-align:left; background:#fff; border-radius:18px; }.device-card image { display:block; width:100%; height:64px; }.device-name,.device-count { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.device-name { margin-top:7px; font-weight:600; }.device-count { margin-top:3px; color:$agent-color-text-muted; font-size:10px; }
 .task-card { padding:14px; background:#fff; border-radius:18px; }
-.agent-entry { display:flex; justify-content:space-between; width:100%; margin-top:17px; padding:14px 16px; box-sizing:border-box; background:$agent-color-tint; border-radius:16px; color:$agent-color-accent-deep; font-weight:600; }
 
 /* 标题旁办公室入口：细分隔线 + 次要色文字链接（AssistantNav #title 插槽内容用本文件样式）。
    具名插槽会被 uni-app 包一层 <view slot="title">（普通块级、无 data-v，
