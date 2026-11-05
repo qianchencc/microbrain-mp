@@ -391,3 +391,18 @@ test('空调窗口计划显示下一次检查而不是窗口起点', () => {
  assert.equal(view.nextText, '2026-10-25 00:30')
  assert.equal(view.nextLabel, '下一次检查')
 })
+
+test('周期任务的虚拟发生在缺省字段下仍产出可显示卡片', () => {
+ const virtual = { id: 'occurrence:plan-1:2026-11-07', status: 'scheduled',
+  repeat: { frequency: 'daily' }, occurrence: { planId: 'plan-1', date: '2026-11-07', virtual: true },
+  interval: { startsAt: '2026-11-07T02:45:00.000Z', endsAt: '2026-11-07T02:46:00.000Z' },
+  phases: [{ at: '2026-11-07T02:45:00.000Z', devices: [] }] }
+ const item = regionTimelineItems([virtual])[0]
+ assert.equal(item.label, '周期任务', '无标签的周期发生兜底为周期任务')
+ assert.equal(item.creatorMark, '?', '无创建人时不崩溃')
+ assert.equal(item.avatars.length, 0)
+ const labeled = regionTimelineItems([{ ...virtual, label: '晚间关闭', creator: { displayName: '钱晨' }, devices: [{ id: 'l1', kind: 'lighting', name: '走廊灯' }] }])[0]
+ assert.equal(labeled.label, '晚间关闭')
+ assert.equal(labeled.creatorMark, '钱')
+ assert.equal(labeled.avatars.length, 1)
+})

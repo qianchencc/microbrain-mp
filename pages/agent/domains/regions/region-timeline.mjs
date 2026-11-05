@@ -6,14 +6,18 @@ export function regionTimelineItems(tasks) {
  return tasks.filter(task => task.status !== 'cancelled').map(task => {
   // 来源 draft/conversation id 只对创建者本人返回，等价于“我创建的任务”身份信号。
   const mine = Boolean(task.source?.draftId || task.source?.conversationId)
+  const devices = task.devices || []
+  const creatorName = task.creator?.displayName || ''
   return {
-   ...task, at: task.interval?.startsAt ?? task.phases[0].at,
-   endAt: task.interval?.endsAt ?? (task.phases.length > 1 ? task.phases.at(-1).at : undefined),
+   ...task,
+   label: task.label || (task.occurrence?.virtual || task.repeat ? '周期任务' : '任务安排'),
+   at: task.interval?.startsAt ?? task.phases?.[0]?.at,
+   endAt: task.interval?.endsAt ?? (task.phases?.length > 1 ? task.phases.at(-1).at : undefined),
    faded: taskResultStatus(task) === 'verified' || task.status === 'cancelled',
    warning: taskNeedsDetails(taskResultStatus(task)), failure: false,
-   avatars: task.devices.slice(0, 3).map(device => ({ id: device.id, src: resolveDeviceArtwork({ ...device, deviceName: device.name }).src })),
-   more: Math.max(0, task.devices.length - 3), creatorName: task.creator.displayName,
-   creatorMark: mine ? '我' : task.creator.displayName.slice(0, 1), creatorVariant: creatorVariant(task.creator.displayName, mine),
+   avatars: devices.slice(0, 3).map(device => ({ id: device.id, src: resolveDeviceArtwork({ ...device, deviceName: device.name }).src })),
+   more: Math.max(0, devices.length - 3), creatorName,
+   creatorMark: mine ? '我' : creatorName.slice(0, 1) || '?', creatorVariant: creatorVariant(creatorName, mine),
   }
  })
 }
