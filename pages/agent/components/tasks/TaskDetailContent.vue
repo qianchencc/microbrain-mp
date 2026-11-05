@@ -25,10 +25,9 @@
   <view v-else-if="detail" class="task-detail">
    <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="var(--agent-text-muted)" /> 返回周期安排</button>
    <view class="task-heading"><text class="task-name">{{ detail.label }}</text><button v-if="taskNeedsDetails(detail.presentationStatus)" class="state-tag result-link" :class="detail.presentationStatus" @tap="showTaskIssue">{{ detail.statusText }} ›</button><text v-else class="state-tag" :class="detail.presentationStatus">{{ detail.statusText }}</text></view>
+   <text v-if="detail.occurrence?.virtual && detail.occurrenceText" class="task-when">{{ detail.occurrenceText }}</text>
    <text class="task-when">{{ whenLine }}</text>
    <text v-if="loading" class="task-when">正在更新…</text>
-   <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">{{ detail.nextLabel }}：{{ detail.nextText }}</text>
-   <text v-if="detail.report?.summary" class="task-when">{{ detail.report.summary.devicesText }}</text>
    <view v-if="detail.rulesText" class="task-rules"><text>{{ detail.rulesText }}</text></view>
    <view v-if="plan && !sampleTask" class="plan-toggle-row">
     <view class="plan-toggle-copy"><text class="plan-toggle-title">周期任务</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
@@ -46,7 +45,7 @@
     <view class="phase-main">
      <view class="phase-head">
       <view class="phase-top"><text class="phase-time">{{ phase.clock }}</text><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :class="'tone-' + phase.tone" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
-      <view class="phase-bottom"><text class="phase-note">{{ phase.title }}</text></view>
+      <view class="phase-bottom"><text class="phase-note">{{ phaseNote(phase) }}</text></view>
      </view>
      <view v-if="phase.observations?.length" class="phase-reveal" :class="{ open: expandedPhases.includes(phase.id) }" :aria-hidden="!expandedPhases.includes(phase.id)"><view class="phase-reveal-inner"><ObservationCard :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" /></view></view>
      <button v-if="phase.report && source === 'company'" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
@@ -248,11 +247,15 @@ const whenLine = computed(() => {
  if (!detail.value) return ''
  // 同日区间只留时刻（日期已在 Sheet 副标题）；跨日保留完整起止。
  const when = detail.value.whenText.replace(/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}) 至 (\d{2}:\d{2})$/, '$1 至 $2')
- const parts = [detail.value.occurrenceText, when, detail.value.repeatText]
- if (detail.value.phases.length > 1) parts.push(detail.value.progressText)
- return parts.filter(Boolean).join(' · ')
+ return [when, detail.value.repeatText].filter(Boolean).join(' · ')
 })
 const reportLink = computed(() => props.source === 'company' ? (detail.value?.phases || []).filter(phase => phase.report?.reportId).at(-1)?.report || null : null)
+function phaseNote(phase) {
+ const devices = phase.devices || []
+ const reasons = [...new Set(devices.map(d => (d.resultReason || d.targetText || '').split('\n')[0]).filter(Boolean))]
+ const parts = [devices.length ? `${devices.length} 台` : '', ...reasons.slice(0, 2)]
+ return parts.filter(Boolean).join(' · ') || phase.title
+}
 // 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于保留原取消权限。
 const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
 const lightIds = computed(() => props.source === 'office' ? [...new Set((detail.value?.phases || []).flatMap(phase => phase.devices.filter(device => device.kind === 'lighting').map(device => device.id)))] : [])
@@ -413,7 +416,7 @@ defineExpose({ returnToPlan, back })
 .task-heading { display:flex; align-items:flex-start; gap:12px; }
 .task-heading .task-name { min-width:0; flex:1; }
 .task-heading .state-tag { margin:0; }
-.task-rules { margin-top:14px; padding:12px 13px; border-radius:12px; background:var(--agent-tint); color:var(--agent-text-secondary); font-size:12px; line-height:1.65; }
+.task-rules { margin-top:14px; padding:12px 13px; border:1px solid var(--agent-line); border-radius:12px; color:var(--agent-text-secondary); font-size:12px; line-height:1.65; }
 .records-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; }
 .records-heading .section-title { margin:0; }
 .records-toggle { min-height:44px; margin:0; color:var(--agent-text-muted); font-size:12px; }
