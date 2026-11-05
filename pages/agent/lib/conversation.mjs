@@ -23,3 +23,4 @@ export { parseAgentContext, meterHistoryPrompt } from '../domains/conversation/c
 export { createConversationRecovery } from '../domains/conversation/conversation-recovery.mjs'
 export { beginAgentEntry, markAgentEntry, getAgentEntryTimings } from '../domains/conversation/entry-timing.mjs'
 export { createContextDelivery } from '../domains/conversation/context-delivery.mjs'
+export { createConversationOperations } from '../domains/conversation/conversation-operations.mjs'

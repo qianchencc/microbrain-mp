@@ -51,17 +51,17 @@
  </view>
 </template>
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, toRef, watch } from 'vue'
 import { cancelRun, createConversation, restoreConversation, clearConversation, discardTurn, streamMessage } from '@/apis/agent/conversation'
 import { confirmTask as confirmScheduledTask, discardTask as discardScheduledTask, confirmTaskChange, discardTaskChange, confirmTaskCancellation, discardTaskCancellation, getTaskPlan, getTaskDetail, readAgentNotifications, readAgentPlans, readAgentTasks } from '@/apis/agent/tasks'
 import { cancelAction, confirmAction, updateSelection, retrySummary, revalidateAction, restoreAction } from '@/apis/agent/actions'
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session'
 import { conversationRecovery } from '@/apis/agent/conversation-view'
-import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail } from '../../lib/conversation.mjs'
+import { createTurn, restoreTurns, canRecoverTurn, restartTurn, mergeTaskDetail, createConversationOperations } from '../../lib/conversation.mjs'
 import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference, preserveComposerView, takeComposerView } from '../../lib/conversation.mjs'
 import { createDraftBaseline } from '../../lib/actions.mjs'
 import { mergeTaskPlan, taskNavigation, taskListRange } from '../../lib/tasks.mjs'
-import { createPresentation, markAgentEntry, createContextDelivery } from '../../lib/conversation.mjs'
+import { markAgentEntry, createContextDelivery } from '../../lib/conversation.mjs'
 import { openAgentMenu } from '../../lib/navigation.mjs'
 import DeviceSheet from '../shared/DeviceSheet.vue'
 import SafetyEventDetail from '../observations/SafetyEventDetail.vue'
@@ -171,10 +171,27 @@ const conversationReady = ref(false)
 let recoveryTicket = null
 const currentConversationView = () => ({ id: conversationId.value, source: props.source, turns: turns.value, phase: phase.value })
 const tasksOf = turn => turn.tasks?.length ? turn.tasks : turn.task ? [turn.task] : []
-const errorMessage = ref(''), issue = ref(null)
-const recoveryMessage = ref('')
-const isRunning = ref(false)
-const confirmingTaskId = ref('')
+const issue = ref(null)
+const operations = createConversationOperations({
+ createState: reactive,
+ read: () => ({ source: props.source, scope: getAgentStorageScope(), conversationId: conversationId.value,
+  turns: turns.value, disposed, active: props.active, blocked: busy.value, taskConfirmationRunning: taskConfirmationRunning.value }),
+ api: { streamMessage, cancelRun, updateSelection, restoreAction, confirmAction, cancelAction, revalidateAction, retrySummary,
+  confirmTask: confirmScheduledTask, discardTask: discardScheduledTask, confirmTaskChange, discardTaskChange, confirmTaskCancellation, discardTaskCancellation },
+ effects: {
+  changed: schedule, follow, restore, unread: () => emit('unread'), tasksChanged,
+  rememberDraft: draft => draftBaselines.set(draft.draftId, createDraftBaseline(draft)),
+  notice: (kind, message, draftId) => {
+   if (kind === 'toast') uni.showToast({ title: message, icon: 'none' })
+   else if (kind === 'confirmation') { if (sheetDraftId.value === draftId) sheetError.value = message }
+   else uni.showModal({ title: kind === 'selection' ? '选择未保存' : '还原失败', content: String(message), showCancel: false })
+  },
+ },
+})
+const errorMessage = toRef(operations.state, 'error')
+const recoveryMessage = toRef(operations.state, 'recovery')
+const isRunning = toRef(operations.state, 'running')
+const confirmingTaskId = toRef(operations.state, 'confirmingTaskId')
 const hasTaskConfirmation = computed(() => turns.value.some(turn => tasksOf(turn).some(task => task.confirmation?.status === 'recovering')))
 const creatingTask = computed(() => Boolean(confirmingTaskId.value && turns.value.some(turn => tasksOf(turn).some(task => task.taskId === confirmingTaskId.value && !task.changeId && !task.cancellationId))))
 const taskConfirmationRunning = computed(() => creatingTask.value || hasTaskConfirmation.value)
@@ -187,7 +204,7 @@ const nearBottom = ref(true)
 // 也不得把回执渲染成「正在执行」。轮询单独保留：总结完成仍需回读收口。
 const hasExecution = computed(() => turns.value.some(turn => turn.draft?.status === 'EXECUTING'))
 const hasRunningSummary = computed(() => turns.value.some(turn => turn.result?.summary?.status === 'running'))
-const busy = computed(() => !conversationReady.value || !conversationRecovery.canMutate(recoveryTicket) || isRunning.value || mutating.value || hasExecution.value || hasTaskConfirmation.value)
+const busy = computed(() => !conversationReady.value || !conversationRecovery.canMutate(recoveryTicket) || isRunning.value || mutating.value || operations.state.busy || hasExecution.value || hasTaskConfirmation.value)
 const statusText = computed(() => !conversationReady.value ? '正在恢复对话' : clearing.value ? '正在清除' : busy.value ? '正在处理' : '服务在线')
 // 宿主状态播报：页面导航头/浮层面板头、浮标运行态都由这组事件驱动
 watch(statusText, value => emit('status', value), { immediate: true })
@@ -201,7 +218,7 @@ function clearIdentityView() {
  conversationRecovery.forget(recoveryTicket); recoveryTicket = null; conversationReady.value = false
  selectedEvent.value = null; eventOpen.value = false
  closeReport()
- activeRequest?.abort(); presentation?.cancel()
+ operations.reset()
  conversationId.value = ''; turns.value = []; regionChanges.value = []; draftBaselines.clear()
  sheetDraftId.value = ''; sheetError.value = ''; isRunning.value = false; phase.value = ''
  editingTurn.value = null; composerStash = ''; input.value = ''; composerReference.value = null
@@ -247,14 +264,9 @@ function openSheetBrowser(turn) {
 }
 async function reconnectSheet() { await restore(); sheetError.value = errorMessage.value }
 function closeSheet() { sheetDraftId.value = '' }
-let activeRequest, presentation, pollTimer, expiryTimer, taskPollTimer
+let pollTimer, expiryTimer, taskPollTimer
 let disposed = false, visible = false, restoring = false, sequence = 0
-// 确认在途的 draftId 集合 + 纪元计数：确认请求本身即执行结果的权威通路，
-// 期间 restore 整表回读会让路（服务端 EXECUTING 提交前的快照仍是待确认，
-// 回读会把界面冻结成"幻觉待确认"）；纪元用于丢弃跨越确认起点的在途 restore 快照。
-const confirming = new Set()
-let confirmEpoch = 0
-// 清除纪元：确认清除即递增，跨越清除起点取到的恢复快照属于旧会话，整表丢弃。
+// Clearing invalidates snapshots independently of confirmation and transport activity.
 let clearEpoch = 0
 // 键盘停靠：adjust-position=false 页面不平移，键盘高度转为 composer-shell 底 padding
 //（键盘高 + 8px 缝），对话区 flex 自动收缩；弹起时仅当用户本在底部才跟到底部锚点。
@@ -273,7 +285,7 @@ function handleScroll(event) {
 }
 function schedule() {
  clearTimeout(pollTimer)
- if (visible && !disposed && (hasExecution.value || hasRunningSummary.value || taskConfirmationRunning.value || isRunning.value && !activeRequest)) pollTimer = setTimeout(restore, 1500)
+ if (visible && !disposed && (hasExecution.value || hasRunningSummary.value || taskConfirmationRunning.value || isRunning.value && !operations.hasRequest())) pollTimer = setTimeout(restore, 1500)
  clearTimeout(taskPollTimer)
  if (visible && !disposed && turns.value.some(turn => tasksOf(turn).some(task => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase())))) taskPollTimer = setTimeout(refreshScheduledTasks, 10000)
  clearTimeout(expiryTimer)
@@ -281,7 +293,7 @@ function schedule() {
  const pendingTasks = turns.value.flatMap(turn => tasksOf(turn)).filter(task => task.status === 'PENDING_CONFIRMATION')
  const deadline = Math.min(...pending.map(turn => Date.parse(turn.draft.expiresAt)), ...pendingTasks.map(task => Date.parse(task.expiresAt)))
  if (Number.isFinite(deadline)) expiryTimer = setTimeout(() => {
-  if (mutating.value) return
+  if (mutating.value || operations.state.busy) return
   for (const turn of pending) if (turn.draft.status === 'PENDING_CONFIRMATION' && Date.parse(turn.draft.expiresAt) <= Date.now()) turn.draft.status = 'EXPIRED'
   for (const task of pendingTasks) if (task.status === 'PENDING_CONFIRMATION' && Date.parse(task.expiresAt) <= Date.now()) task.status = 'EXPIRED'
   schedule()
@@ -299,7 +311,7 @@ async function refreshScheduledTasks() {
  }))
  schedule()
 }
-watch(mutating, schedule)
+watch(() => mutating.value || operations.state.busy, schedule)
 watch(() => turns.value.map(turn => [turn.draft?.draftId, turn.draft?.status, ...tasksOf(turn).map(task => `${task.changeId || task.cancellationId || task.taskId}:${task.status}`)].join(':')).join('|'), () => schedule())
 // 外部注入的引用/预填：hydration 前暂存到 incoming*，由 restore 的消费块统一落地；
 // 已 hydration 则直接进输入区（浮层打开携带上下文的路径）。
@@ -328,9 +340,9 @@ function prefill(prompt) {
  else applyHistoryPrompt(prompt)
 }
 async function restore() {
- if (restoring || activeRequest || confirming.size && !creatingTask.value || disposed || clearing.value) return
+ if (restoring || !operations.canRestore(creatingTask.value) || disposed || clearing.value) return
  restoring = true
- const epoch = confirmEpoch, clearMark = clearEpoch
+ const clearMark = clearEpoch
  let ticket = recoveryTicket
  try {
   await waitForAgentSession()
@@ -360,6 +372,7 @@ async function restore() {
    if (paired) void contextDelivery.receive(paired)
   }
   markAgentEntry(props.source, 'restore-requested')
+  const fence = operations.snapshotFence()
   const restored = await restoreConversation(props.source)
   markAgentEntry(props.source, 'restore-received')
   if (disposed || !conversationRecovery.current(ticket) || clearMark !== clearEpoch) return
@@ -369,13 +382,13 @@ async function restore() {
   if (disposed || !conversationRecovery.current(ticket) || getAgentStorageScope() !== scope || clearMark !== clearEpoch) return
   // 快照可能取于确认请求到达服务端之前（EXECUTING 提交前的待确认旧态）：
   // 跨越确认起点的快照整表丢弃，由确认结果写回或下一轮轮询收口。
-  if (epoch !== confirmEpoch) { schedule(); return }
+  if (!operations.snapshotCurrent(fence)) { schedule(); return }
   conversationId.value = conversation.id
   phase.value = conversation.phase || 'idle'
   turns.value = restoreTurns(conversation.turns)
   for (const turn of turns.value) if (turn.draft && !draftBaselines.has(turn.draft.draftId)) {
    draftBaselines.set(turn.draft.draftId, createDraftBaseline(turn.draft))
-   selectionSynced.set(turn.draft.draftId, turn.draft.selectedActionIds ?? [])
+   operations.rememberDraft(turn.draft)
   }
   // 相位已持久化为服务端权威（含启动自愈），前端不再做僵死 running 的本地解锁。
   isRunning.value = Boolean(conversation.running)
@@ -411,7 +424,7 @@ async function restore() {
  finally {
   restoring = false
   if (!disposed && visible && props.active && ticket !== recoveryTicket
-    && conversationRecovery.current(recoveryTicket) && !conversationReady.value && !activeRequest) void restore()
+    && conversationRecovery.current(recoveryTicket) && !conversationReady.value && !operations.hasRequest()) void restore()
  }
 }
 // 消息编辑收编进主输入框（全页面单一键盘链路）：进入编辑暂存 composer 草稿并预填原文，
@@ -467,51 +480,7 @@ async function sendMessage(voiceText) {
  if (typeof voiceText !== 'string') input.value = ''
  await runTurn(current, content)
 }
-async function runTurn(current, content) {
- isRunning.value = true
- errorMessage.value = ''
- follow(true)
- presentation = createPresentation(event => {
-  if (disposed) return
-  applyEvent(current, event, turns.value)
-  if (event.type === 'action.proposed') {
-   draftBaselines.set(event.draftId, createDraftBaseline(event))
-   selectionSynced.set(event.draftId, event.selectedActionIds ?? [])
-   for (const previous of turns.value) if (previous !== current && previous.draft?.draftId === event.draftId) { previous.draft = null; previous.result = null }
-  }
-  follow()
- })
- const request = streamMessage(conversationId.value, content, event => presentation.push(event), current.focusRegion?.id, props.source, current.reference)
- activeRequest = request
- let transportInterrupted = false
- try { await request.promise; await presentation.settle() }
- catch (error) {
-  if (error.data?.code === 'CONVERSATION_AWAITING_CONFIRMATION') {
-   // 相位门（执行中）：消息未进入服务端，撤回乐观轮次并回到服务端事实。
-   const index = turns.value.indexOf(current)
-   if (index >= 0) turns.value.splice(index, 1)
-   uni.showToast({ title: '设备指令执行中，请稍候', icon: 'none' })
-   if (!disposed) restore()
-   return
-  }
-  if (error.transport) {
-   // 断开≠取消：传输死了但服务端运行继续——保持进行中观感，交给 schedule 的
-   // restore 轮询收尾（运行终态后完整回复/错误自然渲染进轮次），停止走 stopRun。
-   transportInterrupted = true
-  } else if (!disposed && current.running) {
-   if (error.data?.conversationId === conversationId.value && typeof error.data?.turnId === 'string' && error.data.turnId) current.serverId = error.data.turnId
-   current.error = error.message
-  }
- }
- finally {
-  current.running = transportInterrupted
-  isRunning.value = transportInterrupted
-  activeRequest = null
-  // 收起时回复仍到达 → 通知宿主浮标亮未读角标
-  if (!transportInterrupted && !props.active && current.text) emit('unread')
-  if (!disposed) schedule()
- }
-}
+function runTurn(current, content) { return operations.run(current, content) }
 async function recoverTurn(turn, content) {
  if (busy.value || !canRecoverTurn(turn, turns.value.at(-1) === turn)) return
  const region = isCompany.value ? null : readyRegion()
@@ -529,152 +498,11 @@ async function recoverTurn(turn, content) {
 }
 function retryTurn(turn) { return recoverTurn(turn, turn.content) }
 function editTurn(turn, content) { return recoverTurn(turn, content) }
-// 点选不占 busy：本地勾选立即生效，PATCH 按 draftId 串行合并下发（latest-wins），
-// 避免每次点选都让 busy 翻转、整个面板控件闪烁，且连点不再被守卫吞掉。
-const selectionDesired = new Map(), selectionSynced = new Map(), selectionInflight = new Map()
-const sameIds = (a, b) => a.length === b.length && a.every(id => b.includes(id))
-const settleSelection = draftId => selectionInflight.get(draftId) ?? Promise.resolve()
-function selectDraft(turn, selected) {
- // tap 事件携带的是渲染时刻的轮次对象；整表回读后被替换时按 draftId 重解析活对象。
- const live = liveDraftTurn(turn.draft?.draftId) ?? turn
- if (busy.value || live.draft?.status !== 'PENDING_CONFIRMATION') return
- if (Date.parse(live.draft.expiresAt) <= Date.now()) {
-  live.draft.status = 'EXPIRED'
-  uni.showToast({ title: '草案已过期，请重新核验', icon: 'none' })
-  schedule()
-  return
- }
- const draftId = live.draft.draftId
- live.draft.selectedActionIds = selected
- selectionDesired.set(draftId, selected)
- if (selectionInflight.has(draftId)) return
- selectionInflight.set(draftId, (async () => {
-  try {
-   while (selectionDesired.has(draftId)) {
-    const live = liveDraftTurn(draftId)
-    if (!live) break
-    const desired = selectionDesired.get(draftId)
-    selectionDesired.delete(draftId)
-    if (sameIds(desired, selectionSynced.get(draftId) ?? [])) continue
-    try {
-     Object.assign(live.draft, await updateSelection(draftId, live.draft.revision, desired, props.source))
-     selectionSynced.set(draftId, desired)
-    } catch (error) {
-     const synced = selectionSynced.get(draftId)
-     const failed = liveDraftTurn(draftId)
-     if (synced && failed) failed.draft.selectedActionIds = synced
-     uni.showModal({ title: '选择未保存', content: String(error.data?.message || error.message || '服务端未返回具体原因'), showCancel: false })
-     selectionDesired.delete(draftId)
-     if (!activeRequest && !confirming.size && !disposed) await restore()
-     break
-    }
-   }
-  } finally { selectionInflight.delete(draftId); schedule() }
- })())
-}
-// 草案写回纪律：await 之后轮次可能已被整表回读替换，必须按 draftId 重解析活对象。
-const liveDraftTurn = draftId => turns.value.find(item => item.draft?.draftId === draftId)
-async function restoreDraft(turn) {
- if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
- mutating.value = true
- const draftId = turn.draft.draftId
- await settleSelection(draftId)
- try {
-  const updated = await restoreAction(draftId, (liveDraftTurn(draftId) ?? turn).draft?.revision ?? turn.draft.revision, props.source)
-  const live = liveDraftTurn(draftId) ?? turn
-  if (live.draft) Object.assign(live.draft, updated)
- } catch (error) {
-  uni.showModal({ title: '还原失败', content: String(error.data?.message || error.message || '服务端未返回具体原因'), showCancel: false })
-  if (!activeRequest && !confirming.size && !disposed) await restore()
- }
- finally { mutating.value = false; schedule() }
-}
-async function confirmDraft(turn) {
- sheetError.value = ''
- if (busy.value || turn.draft?.status !== 'PENDING_CONFIRMATION') return
- const draftId = turn.draft.draftId
- mutating.value = true
- // 等选区同步落地再读 revision，避免确认到旧勾选
- await settleSelection(draftId)
- // settle 期间可能发生过整表回读：重新按 draftId 解析活轮次，不写闭包里的孤儿对象
- const current = turns.value.find(item => item.draft?.draftId === draftId) ?? turn
- if (current.draft?.status !== 'PENDING_CONFIRMATION' || !current.draft.selectedActionIds.length) { mutating.value = false; return }
- clearTimeout(expiryTimer)
- current.draft.status = 'EXECUTING'
- confirming.add(draftId)
- confirmEpoch++
- let resync = false, confirmationError = ''
- try {
-  const result = await confirmAction(draftId, current.draft.revision, props.source)
-  const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
-  live.result = result
-  live.draft.status = result.status
- } catch (error) {
-  const live = turns.value.find(item => item.draft?.draftId === draftId) ?? current
-  if (['REJECTED', 'INTERRUPTED'].includes(error.data?.status)) { live.result = error.data; live.draft.status = error.data.status }
-  else { const reason = error.data?.message || error.message; confirmationError = reason ? `${reason}；请重新读取执行回执` : '未取得执行结果或具体原因，请重新读取回执'; if (sheetDraftId.value === draftId) sheetError.value = confirmationError; resync = true }
- } finally { confirming.delete(draftId); mutating.value = false; schedule(); follow() }
- if (resync && !disposed) { await restore(); if (!disposed) errorMessage.value = confirmationError }
-}
-async function confirmTaskProposal(task) {
- issue.value = null
- if (busy.value || task?.status !== 'PENDING_CONFIRMATION') return
- const taskId = task.taskId, cancellationId = task.cancellationId, changeId = task.changeId
- const key = changeId || cancellationId || taskId
- issue.value = null; errorMessage.value = ''; recoveryMessage.value = ''
- mutating.value = true; confirmingTaskId.value = key; confirming.add(key); confirmEpoch++; schedule()
- let resync = false
- try {
-  const result = changeId ? await confirmTaskChange(changeId, props.source) : cancellationId ? await confirmTaskCancellation(cancellationId, props.source) : await confirmScheduledTask(taskId, task.version, props.source)
-  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.changeId || item.cancellationId || item.taskId) === key)
-  if (live) {
-   live.confirmation = null
-   live.status = cancellationId ? result.proposalStatus : result.status
-   if (!cancellationId && !changeId) {
-    live.created = true
-    if (result.taskId) live.taskId = result.taskId
-    if (result.planId) {
-     live.planId = result.planId
-     live.nextAt = result.nextAt
-     live.nextCheckpointAt = result.nextCheckpointAt
-    }
-   }
-  }
-  tasksChanged()
-  if (changeId) resync = true
-  if (cancellationId) for (const previous of turns.value) for (const item of tasksOf(previous)) if (item.taskId === taskId && !item.cancellationId) item.status = result.status
- } catch (error) {
-  const code = error.data?.code
-  if (code === 'TASK_CONFIRMATION_STOPPED') {
-   recoveryMessage.value = '已停止本次任务确认'
-   errorMessage.value = ''
-   resync = true
-  } else if (code === 'TASK_RECONFIRM_REQUIRED') {
-   recoveryMessage.value = '核实完成：提案已更新，请重新确认'
-   errorMessage.value = ''
-   resync = true
-  } else if (code === 'TASK_EXPIRED' || code === 'TASK_TIME_PASSED') {
-   recoveryMessage.value = error.data?.message || '原定时间已过，请指定新的执行时间'
-   errorMessage.value = ''
-   resync = true
-  } else {
-   errorMessage.value = error.data?.message || error.message
-   resync = true
-  }
- } finally { confirmEpoch++; confirming.delete(key); confirmingTaskId.value = ''; mutating.value = false; schedule(); follow() }
- if (resync && !disposed) await restore()
-}
-async function discardTaskProposal(task) {
- if (busy.value || task?.status !== 'PENDING_CONFIRMATION') return
- const taskId = task.taskId, cancellationId = task.cancellationId, changeId = task.changeId
- mutating.value = true
- try {
-  const result = changeId ? await discardTaskChange(changeId, props.source) : cancellationId ? await discardTaskCancellation(cancellationId, props.source) : await discardScheduledTask(taskId, props.source)
-  const live = turns.value.flatMap(turn => tasksOf(turn)).find(item => (item.changeId || item.cancellationId || item.taskId) === (changeId || cancellationId || taskId))
-  if (live) live.status = result.status
- } catch (error) { errorMessage.value = error.data?.message || error.message }
- finally { mutating.value = false; schedule() }
-}
+function selectDraft(turn, selected) { return operations.select(turn, selected) }
+function restoreDraft(turn) { return operations.restoreDraft(turn) }
+function confirmDraft(turn) { sheetError.value = ''; return operations.confirmDraft(turn) }
+function confirmTaskProposal(task) { issue.value = null; return operations.confirmTask(task) }
+function discardTaskProposal(task) { return operations.discardTask(task) }
 function openTaskRegion(task) {
  const periodic = task?.planId || (task?.repeat && !task?.occurrence ? task?.taskId || task?.id : '')
  if (periodic && !task.occurrence) { companyTaskId.value = ''; companyPlanId.value = periodic; return }
@@ -696,67 +524,16 @@ function openTaskRegion(task) {
  navigateRegion(`/pages/agent/region?regionId=${encodeURIComponent(target.regionId)}&date=${encodeURIComponent(target.date)}&taskId=${encodeURIComponent(target.taskId)}`)
 }
 
-async function cancelDraft(turn) {
- if (busy.value || turn.draft.status !== 'PENDING_CONFIRMATION') return
- mutating.value = true
- const draftId = turn.draft.draftId
- await settleSelection(draftId)
- try {
-  const cancelled = await cancelAction(draftId, props.source)
-  const live = liveDraftTurn(draftId) ?? turn
-  if (live.draft) live.draft.status = cancelled.status
- } catch (error) { errorMessage.value = error.message }
- finally { mutating.value = false; schedule() }
-}
-async function revalidateDraft(turn) {
- if (busy.value || !turn.draft) return
- mutating.value = true
- const draftId = turn.draft.draftId
- await settleSelection(draftId)
- try {
-  const live = liveDraftTurn(draftId) ?? turn
-  if (live.draft) {
-   const fresh = await revalidateAction(draftId, live.draft.revision, props.source)
-   Object.assign(live.draft, fresh)
-   live.roster = fresh.inventory
-   live.result = null
-  }
- } catch (error) { errorMessage.value = error.message }
- finally { mutating.value = false; schedule() }
-}
-async function retryAnswer(turn) {
- if (busy.value || !turn.draft) return
- mutating.value = true
- const draftId = turn.draft.draftId
- try {
-  const summary = await retrySummary(draftId, props.source)
-  const live = liveDraftTurn(draftId) ?? turn
-  if (live.result) live.result.summary = summary
- } catch (error) { errorMessage.value = error.message }
- finally { mutating.value = false; schedule() }
-}
-async function stopRun() {
- if (!conversationReady.value || !conversationRecovery.canMutate(recoveryTicket)) return
- const turn = turns.value[turns.value.length - 1]
- if (!turn) return
- if (activeRequest) {
-  presentation?.cancel()
-  activeRequest.abort()
- }
- turn.running = false
- turn.error = taskConfirmationRunning.value ? '' : '本次回答已停止'
- for (const item of turn.activities) if (['running', 'searching'].includes(item.status)) item.status = 'skipped'
- isRunning.value = false
- // 停止=显式取消：本地断流之外必须终止服务端在途运行（含断开重连轮询盯着的孤儿运行）。
- if (conversationId.value) {
-  try { await cancelRun(conversationId.value, props.source) } catch { /* 无在途运行或未达服务端，以本地事实为准 */ }
-  if (!disposed) restore()
- }
+function cancelDraft(turn) { return operations.cancelDraft(turn) }
+function revalidateDraft(turn) { return operations.revalidateDraft(turn) }
+function retryAnswer(turn) { return operations.retryAnswer(turn) }
+function stopRun() {
+ if (conversationReady.value && conversationRecovery.canMutate(recoveryTicket)) return operations.stop()
 }
 function clearHistory() {
  if (!conversationId.value || clearing.value) return
  // 在途回答/执行中草案服务端同样按 409 拒绝；先本地拦截，省一轮等待。
- if (busy.value || activeRequest) {
+ if (busy.value || operations.hasRequest()) {
   uni.showToast({ title: '请等待当前请求结束后清除', icon: 'none' })
   return
  }
@@ -781,6 +558,7 @@ function clearHistory() {
    regionChanges.value = []
    closeReport()
    draftBaselines.clear()
+   operations.reset()
    if (editingTurn.value) cancelEdit()
    if (created.status === 'fulfilled') {
     conversationId.value = created.value.id
@@ -816,7 +594,7 @@ function activate() {
  try { scope = getAgentStorageScope() } catch { /* 会话准备完成后由 restore 重新分区 */ }
  if (draftScope.value && draftScope.value !== scope) clearIdentityView()
  draftScope.value = scope
- if (!activeRequest) {
+ if (!operations.hasRequest()) {
   try {
    recoveryTicket = conversationRecovery.open(props.source)
    conversationReady.value = false
@@ -848,7 +626,7 @@ function deactivate() {
 }
 watch(() => props.active, on => { if (on) activate(); else deactivate() }, { immediate: true })
 watch(() => props.source, () => { issue.value = null; closeReport() })
-onBeforeUnmount(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); presentation?.cancel(); activeRequest?.abort() })
+onBeforeUnmount(() => { preserveCurrentComposerDraft(); disposed = true; clearTimeout(pollTimer); clearTimeout(taskPollTimer); clearTimeout(expiryTimer); operations.reset() })
 // 面板头「⋯」按钮走同一套会话菜单（公司面板无工作台项）。
 function openMenu() {
  openAgentMenu({ disabled: !conversationId.value, tasksEnabled: true, inboxEnabled: true, inboxUnreadCount: inboxUnreadCount.value }, event => {

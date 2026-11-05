@@ -44,6 +44,8 @@ export {
   taskStatusTone,
   taskNeedsDetails,
   taskResultStatus,
+  planPresentation,
   taskResultLabel,
 } from '../domains/tasks/task-presentation.mjs'
 export { deviceTimelineItems } from '../domains/tasks/device-timeline-view.mjs'
+export { createPlanManagement } from '../domains/tasks/plan-management.mjs'

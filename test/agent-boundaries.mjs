@@ -18,6 +18,7 @@ const privatePageModules = new Set([
   'execution-result-view.js',
   'state-refresh.mjs', 'list-viewport.mjs', 'navigation.mjs', 'region-focus.js', 'agent-menu.mjs',
   'timeline-geometry.mjs', 'timeline-svg.mjs',
+  'plan-management.mjs', 'conversation-operations.mjs', 'energy-panel.mjs', 'company-overview.mjs',
 ])
 const errors = []
 const files = []

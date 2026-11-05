@@ -38,3 +38,24 @@ export function taskResultStatus(record) {
 // 已结束行的结果桥：completed 只写「已结束」，有设备事实才经 taskResultStatus 表达目标结果；
 // 前端不推断执行成功，只投影后端事实。
 export const taskResultLabel = record => taskStatusText(taskResultStatus(record))
+
+// A server capability is authoritative; nextAt alone is not a status.
+export function planPresentation(plan) {
+ const status = plan?.status
+ const enabled = status === 'enabled' && Boolean(plan.nextAt)
+ const paused = status === 'paused' || status === 'disabled'
+ const ended = status === 'ended' || status === 'deleted' || status === 'enabled' && !plan.nextAt
+ const canToggle = status === 'enabled' ? Boolean(plan.canPause) : status === 'paused' && Boolean(plan.canResume)
+ const hasCheckpoints = (plan?.template?.phases || plan?.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes)
+ return {
+  enabled,
+  canToggle,
+  statusText: paused ? '已暂停' : status === 'deleted' ? '已删除' : ended ? '已结束' : enabled ? '已开启' : '状态待确认',
+  nextAt: plan?.nextCheckpointAt || plan?.nextAt,
+  nextLabel: hasCheckpoints ? '下一次检查' : '下一次执行',
+  nextNote: paused ? '已暂停 · 历史结果保留' : ended ? '已结束 · 历史结果保留' : '',
+  accessSummary: status === 'enabled' && plan.canPause ? '可暂停以后的安排；本次已安排的任务会继续'
+   : status === 'paused' && plan.canResume ? '继续前会重新检查设备权限'
+    : plan?.canManage ? '可取消本次或全部' : '当前账号仅可查看',
+ }
+}

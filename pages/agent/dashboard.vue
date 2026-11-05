@@ -75,7 +75,7 @@
  </view>
 </template>
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, toRefs, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { pickAgentLaunch, savePendingAgentLaunch, takePendingAgentLaunch } from '@/utils/agent-launch-link.mjs'
 import { getCompanyDashboard, getCompanyDevices, clearCompanyReadCache, readCompanyDashboardCache, writeCompanyDashboardCache, getLatestSafetyEvent } from '@/apis/agent/observations'
@@ -85,8 +85,8 @@ import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session
 import { useUserStoreHook } from '@/store/modules/user'
 import AssistantNav from './components/shared/AssistantNav.vue'
 import { backToParent } from './lib/navigation.mjs'
-import { shiftDate, shanghaiToday, mergeStripDays, STRIP_PAGE_DAYS } from './lib/energy.mjs'
-import { metricValue } from './lib/dashboard.mjs'
+import { shiftDate, shanghaiToday } from './lib/energy.mjs'
+import { metricValue, createCompanyOverview } from './lib/dashboard.mjs'
 import TaskListSheet from './components/tasks/TaskListSheet.vue'
 import CompanyTaskOverview from './components/tasks/CompanyTaskOverview.vue'
 import DeviceSheet from './components/shared/DeviceSheet.vue'
@@ -116,20 +116,26 @@ const selectedEvent = ref(null)
 const tasksOpen = ref(false), taskRevision = ref(0), taskEntry = ref({ view: 'schedule', date: '', task: null })
 function openTaskSchedule(entry) { taskEntry.value = entry; tasksOpen.value = true }
 function createTask() { tasksOpen.value = false; openCompanyAgent({ prompt: '帮我安排一个任务' }) }
-const snapshot = ref(null), loading = ref(false), error = ref(''), observationType = ref('')
-const energyLoading = ref(false), devicesLoading = ref(false)
-const alertsLoading = ref(false), loadedSections = ref([]), sectionErrors = ref({})
-// 各分区独立保留后端 cache 状态与原始 updatedAt：一个分区的新响应不能覆盖另一个
-// 分区的刷新失败，也不把 stale 当成刚更新的 fresh。
-const sectionCache = ref({})
+const observationType = ref('')
+const overview = createCompanyOverview({
+ createState: reactive,
+ identity: getAgentStorageScope,
+ api: { ready: waitForAgentSession, dashboard: getCompanyDashboard, devices: getCompanyDevices,
+  energy: getCompanyEnergyDaily, peekUnread: peekAgentNotifications, unread: readAgentNotifications },
+ cache: { read: readCompanyDashboardCache, write: writeCompanyDashboardCache, clear: clearCompanyReadCache },
+ effects: { tasksChanged: () => { taskRevision.value++ },
+  reset: () => { taskRevision.value++; observationType.value = ''; energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false } },
+})
+const { snapshot, loading, error, energyLoading, devicesLoading, alertsLoading, loadedSections,
+ sectionErrors, sectionCache, catalogDevices, devicesLoaded, devicesError, energyReport, energyStrip,
+ energyError, selectedStripDate, simpleUnread, simpleUnreadLoaded, simpleUnreadError } = toRefs(overview.state)
+const { load, invalidate: invalidateCompanyDashboard, syncUnread: syncSimpleUnread } = overview
 // 分区失败原因只留错误本体：「正在后台更新/沿用上次数据」这类次级状态不再单列小字，
 // pill 上的数值与读取中已自解释；真错误由分区空态/sheet 说明承载。
 const sectionNote = area => sectionErrors.value[area] || sectionCache.value[area]?.lastError?.message || ''
 const sectionFailure = area => sectionErrors.value[area] || sectionCache.value[area]?.lastError?.message || ''
-// 与后端 cache.lastError 对齐：通用 body.message 只在没有具体失败原因时兜底。
-const failureMessage = (cause, fallback) => cause?.data?.cache?.lastError?.message || cause?.data?.message || cause?.message || fallback
 const tasksMounted = ref(false), observationMounted = ref(false), energyMounted = ref(false), drawerMounted = ref(false)
-watch(tasksOpen, open => { if (open) tasksMounted.value = true; else if (visible && scope) void loadUnread(true) }, { flush: 'sync' })
+watch(tasksOpen, open => { if (open) tasksMounted.value = true; else void overview.refreshUnread(true) }, { flush: 'sync' })
 watch(observationType, type => { selectedEvent.value = null; if (type) observationMounted.value = true }, { flush: 'sync' })
 
 const dateLine = computed(() => {
@@ -138,7 +144,6 @@ const dateLine = computed(() => {
 })
 
 /* 设备目录计数 + 单类设备抽屉 */
-const catalogDevices = ref([]), devicesLoaded = ref(false), devicesError = ref('')
 // 设备目录同样按分区保留后端 lastError 与原始 updatedAt；失败不清空已加载目录。
 const drawerKind = ref('')
 const kindCounts = computed(() => {
@@ -154,8 +159,6 @@ function openKind(kind) { if (devicesLoaded.value) drawerKind.value = kind }
 function openCatalog() { if (devicesLoaded.value) drawerKind.value = 'catalog' }
 
 /* 首页只预览七个计量日；完整历史在能耗面板。 */
-const energyReport = ref(null), energyStrip = ref([]), energyError = ref('')
-const selectedStripDate = ref('')
 const energyOpen = ref(false), energyFocusDate = ref('')
 watch(energyOpen, open => { if (open) energyMounted.value = true }, { flush: 'sync' })
 const latestCompleteDay = computed(() => energyReport.value?.latestCompleteDay || '')
@@ -175,10 +178,6 @@ const energyPreview = computed(() => {
 // 也不用前端时间重新标记为 fresh。
 const energyFailure = computed(() => sectionErrors.value.energyDaily || energyError.value || sectionCache.value.energyDaily?.lastError?.message || '')
 const energyNote = computed(() => sectionNote('energyDaily') || energyError.value)
-function mergeDailyReport(next) {
- energyReport.value = next
- energyStrip.value = mergeStripDays(energyStrip.value, next.days || [])
-}
 function openEnergy(date) {
  energyFocusDate.value = date || latestCompleteDay.value || ''
  if (date) selectedStripDate.value = date
@@ -190,25 +189,7 @@ const environment = computed(() => snapshot.value?.environment?.find(row => row.
 const alertsUnavailable = computed(() => !snapshot.value?.alerts && (Boolean(sectionErrors.value.alerts) || Boolean(snapshot.value?.errors?.some(row => row.area === 'alerts'))))
 
 
-// 通知快照按身份隔离；任务列表由 CompanyTaskOverview 自行加载。
-const simpleUnread = ref(0), simpleUnreadLoaded = ref(false), simpleUnreadError = ref('')
-let agendaRequestId = 0
-async function loadUnread(force = false) {
- const current = ++agendaRequestId
- const saved = peekAgentNotifications({ source: 'company', limit: 1 })
- if (saved) { simpleUnread.value = Number(saved.unreadCount) || 0; simpleUnreadError.value = ''; simpleUnreadLoaded.value = true }
- try {
-  const unread = await readAgentNotifications({ source: 'company', limit: 1, force })
-  if (current !== agendaRequestId || !visible || getAgentStorageScope() !== scope) return
-  simpleUnread.value = Number(unread.unreadCount) || 0; simpleUnreadError.value = ''
- } catch (cause) {
-  if (current === agendaRequestId && visible) simpleUnreadError.value = cause?.message || '暂不可用'
- } finally {
-  if (current === agendaRequestId && visible) simpleUnreadLoaded.value = true
- }
-}
-// 首页议程轮询会顺带刷新未读数；同步给通知块，仪表盘常驻时未读不无限期滞留。
-function syncSimpleUnread(count) { simpleUnread.value = Number(count) || 0; simpleUnreadError.value = ''; simpleUnreadLoaded.value = true }
+// Notification and section lifetimes are owned together by the overview module.
 const envNote = computed(() => sectionNote('environment'))
 const envFailure = computed(() => sectionFailure('environment'))
 const envError = computed(() => !environment.value?.reading && Boolean(envFailure.value || snapshot.value?.errors?.some(row => row.area === 'environment')))
@@ -249,144 +230,9 @@ const observation = computed(() => {
  return { observedAt: snapshot.value[type + 'ObservedAt'], blocks: [type === 'alerts' ? { type, ...snapshot.value.alerts } : { type, devices: snapshot.value[type] || [] }] }
 })
 
-function resetForScope() {
- taskRevision.value++
- snapshot.value = null; loadedSections.value = []; observationType.value = ''
- catalogDevices.value = []; devicesLoaded.value = false; devicesError.value = ''
- energyReport.value = null; energyStrip.value = []; selectedStripDate.value = ''
- energyOpen.value = false; drawerKind.value = ''; tasksOpen.value = false
- sectionCache.value = {}; sectionErrors.value = {}
- ++agendaRequestId; simpleUnread.value = 0
- simpleUnreadLoaded.value = false; simpleUnreadError.value = ''
-}
-function invalidateCompanyDashboard() { clearCompanyReadCache() }
-function applyCompanyDashboardCache(cached) {
- snapshot.value = cached.snapshot
- loadedSections.value = [...cached.loadedSections]
- sectionErrors.value = { ...(cached.sectionErrors || {}) }
- sectionCache.value = { ...(cached.sectionCache || {}) }
- catalogDevices.value = [...cached.catalogDevices]
- devicesLoaded.value = cached.devicesLoaded
- devicesError.value = cached.devicesError
- energyReport.value = cached.energyReport
- energyStrip.value = [...cached.energyStrip]
- energyError.value = cached.energyError
- if (!selectedStripDate.value) selectedStripDate.value = cached.selectedStripDate
-}
-function saveCompanyDashboardCache() {
- if (error.value || !snapshot.value || snapshot.value.errors?.length || Object.keys(sectionErrors.value).length || !devicesLoaded.value || devicesError.value || !energyReport.value || energyReport.value.truncated || energyError.value) return
- // 后端 stale 的分区不阻止占位写入，但整个快照降级为 stale 占位：下次进入仍会
- // 重新询问后端，而不是按本地写入时刻再复用 60 秒。
- const stale = ['environment', 'alerts', 'devices', 'energyDaily'].some(area => {
-  const cache = sectionCache.value[area]
-  return Boolean(cache?.lastError) || Boolean(cache?.status && cache.status !== 'fresh')
- })
- writeCompanyDashboardCache({
-  snapshot: snapshot.value, loadedSections: [...loadedSections.value], sectionErrors: { ...sectionErrors.value },
-  sectionCache: { ...sectionCache.value }, cache: { status: stale ? 'stale' : 'fresh' },
-  catalogDevices: [...catalogDevices.value], devicesLoaded: devicesLoaded.value, devicesError: devicesError.value,
-  energyReport: energyReport.value, energyStrip: [...energyStrip.value], energyError: energyError.value, selectedStripDate: selectedStripDate.value,
- })
-}
-function allLoaded() { loading.value = false; energyLoading.value = false; alertsLoading.value = false; devicesLoading.value = false }
-
-let requestId = 0, scope = '', visible = false
 const dashboardUser = useUserStoreHook()
-watch(() => [dashboardUser.token, dashboardUser.getDistrict?.id, dashboardUser.authorized], () => {
- if (!scope) return
- try { if (scope === getAgentStorageScope()) return } catch { /* 登录失效，清理旧快照。 */ }
- invalidateCompanyDashboard(); ++requestId; resetForScope(); scope = ''; allLoaded()
- if (visible) void load()
-})
-async function load(force = false) {
- const current = ++requestId
- try {
-  await waitForAgentSession()
-  const nextScope = getAgentStorageScope()
-  if (current !== requestId || !visible) return
-  if (nextScope !== scope) { if (scope) resetForScope(); scope = nextScope }
-  if (force === true) { invalidateCompanyDashboard(); taskRevision.value++; simpleUnreadError.value = '' }
-  if (!simpleUnreadLoaded.value || force === true) void loadUnread(force === true)
-  const cached = readCompanyDashboardCache()
-  if (!force && cached) {
-   applyCompanyDashboardCache(cached.value)
-   error.value = ''
-   allLoaded()
-   if (cached.fresh) return
-  }
-  loading.value = true; energyLoading.value = !energyReport.value; alertsLoading.value = !loadedSections.value.includes('alerts'); devicesLoading.value = !devicesLoaded.value; error.value = ''
-  let criticalSectionsRemaining = 3
-  await Promise.allSettled(['environment', 'alerts', 'devices', 'energyDaily'].map(async section => {
-   const active = () => {
-    if (current !== requestId || !visible) return false
-    try { if (getAgentStorageScope() === nextScope) return true } catch { /* 身份失效时旧概览不能继续可见。 */ }
-    invalidateCompanyDashboard(); ++requestId; resetForScope(); allLoaded()
-    error.value = '登录身份已变化，请重新读取'
-    return false
-   }
-   try {
-    if (section === 'devices') {
-     const result = await getCompanyDevices({ force: force === true, isActive: active })
-     if (!active()) return
-     const { cache, ...body } = result
-     catalogDevices.value = body.devices || []
-     devicesLoaded.value = true; devicesError.value = ''
-     sectionCache.value = { ...sectionCache.value, devices: cache || null }
-     return
-    }
-    if (section === 'energyDaily') {
-     const result = await getCompanyEnergyDaily({ days: STRIP_PAGE_DAYS }, { force: force === true, isActive: active })
-     if (!active()) return
-     const { cache, ...body } = result
-     energyStrip.value = []
-     mergeDailyReport(body)
-     selectedStripDate.value = body.latestCompleteDay || body.days?.at(-1)?.date || ''
-     energyError.value = ''
-     sectionCache.value = { ...sectionCache.value, energyDaily: cache || null }
-     return
-    }
-    const result = await getCompanyDashboard(section, { force: force === true, isActive: active })
-    if (!active()) return
-    const { cache, ...body } = result
-    const previous = snapshot.value || { devices: [], errors: [] }
-    const previousBody = { ...previous }; delete previousBody.cache
-    const kind = section === 'alerts' ? 'safety' : section
-    // 成功分区先移出失败集合，再重建 errors；否则本次成功分区的旧错误会被重新塞回顶部提示。
-    const nextErrors = { ...sectionErrors.value }; delete nextErrors[section]; sectionErrors.value = nextErrors
-    const devices = [...previous.devices.filter(row => row.kind !== kind), ...body.devices]
-    const errors = [...previous.errors.filter(row => row.area !== section), ...body.errors]
-    for (const [area, message] of Object.entries(nextErrors)) if (!errors.some(row => row.area === area)) errors.push({ area, message })
-    snapshot.value = { ...previousBody, ...body, devices, [section + 'ObservedAt']: body.observedAt, errors }
-    sectionCache.value = { ...sectionCache.value, [section]: cache || null }
-    if (!loadedSections.value.includes(section)) loadedSections.value.push(section)
-   } catch (cause) {
-    if (!active()) return
-    if ([401, 403].includes(cause.status) || cause.code === 'AGENT_READ_INVALIDATED' || ['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code)) { invalidateCompanyDashboard(); resetForScope(); ++requestId; error.value = cause.message; allLoaded(); return }
-    if (['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) { error.value = cause.message; return }
-    if (section === 'devices') devicesError.value = failureMessage(cause, '设备目录暂不可用')
-    else if (section === 'energyDaily') energyError.value = failureMessage(cause, '暂不可用')
-    else {
-     sectionErrors.value[section] = failureMessage(cause, '暂不可用')
-     if (snapshot.value) snapshot.value = { ...snapshot.value, errors: [...snapshot.value.errors.filter(row => row.area !== section), { area: section, message: sectionErrors.value[section] }] }
-    }
-   } finally {
-    if (current === requestId && section !== 'energyDaily') {
-     criticalSectionsRemaining--
-     if (criticalSectionsRemaining === 0) loading.value = false
-    }
-   }
-  }))
-  if (current === requestId && visible) saveCompanyDashboardCache()
-  if (current === requestId && !snapshot.value && !error.value) error.value = '公司数据暂不可用，请重试'
- } catch (cause) {
-  if (current === requestId && visible) {
-   ++requestId; allLoaded()
-   invalidateCompanyDashboard()
-   resetForScope()
-   error.value = cause.message === 'request:fail' ? '公司数据暂不可用，请检查网络后重试' : cause.message || '公司数据暂不可用'
-  }
- } finally { if (current === requestId) allLoaded() }
-}
+let visible = false
+watch(() => [dashboardUser.token, dashboardUser.getDistrict?.id, dashboardUser.authorized], () => { void overview.identityChanged() })
 function openObservation(type) { if (['alerts', 'environment', 'energy'].includes(type) || snapshot.value) observationType.value = type }
 function showErrors() { uni.showModal({ title: '部分数据暂不可用', content: snapshot.value.errors.map(row => row.message).join('\n'), showCancel: false }) }
 function observationBack() { if (selectedEvent.value) selectedEvent.value = null; else observationType.value = '' }
@@ -460,15 +306,13 @@ onMounted(openPendingAgentLaunch)
 function back() { backToParent('/pages/index/index') }
 onShow(() => {
  visible = true; pageActive.value = true; openingAgent.value = ''
- try { if (scope && scope !== getAgentStorageScope()) { resetForScope(); scope = '' } }
- catch { resetForScope(); scope = '' }
  const pending = takePendingAgentLaunch()
  if (pending) pendingAgentOpen = pending.query
- load()
+ void overview.show()
  openPendingAgentLaunch()
 })
 function hide() {
- visible = false; pageActive.value = false; ++requestId; ++agendaRequestId; ++latestAlertRequest; allLoaded()
+ visible = false; pageActive.value = false; ++latestAlertRequest; overview.hide()
  if (latestAlertLoading) { latestAlertLoading = false; uni.hideLoading() }
 }
 onHide(hide); onUnload(hide)

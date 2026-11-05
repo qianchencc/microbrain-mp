@@ -67,3 +67,4 @@ export {
 export { meterPanelQuery, meterPanelScopes, createMeterPanelLoader } from '../domains/energy/meter-panel-view.mjs'
 export { energyHistoryBlock, energyMeterSetChanged, energyHistoryRecheckBlocks, createEnergyHistoryQueue } from '../domains/energy/energy-history-queue.mjs'
 export { monthlyNumber, monthlyDate, monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView, monthlySnapshotCache } from '../domains/energy/monthly-energy-view.mjs'
+export { createEnergyPanel } from '../domains/energy/energy-panel.mjs'

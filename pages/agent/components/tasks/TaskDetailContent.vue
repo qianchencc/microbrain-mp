@@ -34,7 +34,7 @@
     <view v-if="!planCanToggle(plan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(plan)">
      <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :color="AGENT_COLORS.accentDeep" disabled />
     </view>
-    <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :color="AGENT_COLORS.accentDeep" :disabled="cancelling" @change="togglePlanStatus(plan, $event.detail.value)" />
+    <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :color="AGENT_COLORS.accentDeep" :disabled="busy" @change="togglePlanStatus(plan, $event.detail.value)" />
    </view>
    <TaskErrorNotice v-if="plan?.pauseReason" :message="plan.pauseReason" summary="安排已暂停" @details="showIssue" />
    <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>{{ currentLoading && Object.keys(currentStates).length ? '上次状态' : '现在状态' }} · {{ currentLoading && !Object.keys(currentStates).length ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="var(--agent-accent-deep)" /></button></view>
@@ -113,16 +113,16 @@
     <button class="latest-report-link" @tap="openLatestReport">查看最近一次报告</button>
    </view>
    <view v-if="!sampleTask" class="reference-actions"><button class="task-reference" @tap="referenceCurrent">{{ plan ? '询问这个计划' : '引用任务并询问' }}</button></view>
-   <button v-if="!sampleTask && !loading && (detail.canCancel || (task?.occurrence?.virtual && detailMine && task.status !== 'cancelled'))" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="task?.occurrence?.virtual ? cancelPeriod('occurrence') : deleteTask()">{{ task?.occurrence ? '取消本次' : '取消任务' }}</button>
-   <button v-if="!sampleTask && (plan?.canManage || (task?.occurrence && detailMine))" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="cancelPeriod('all')">取消全部</button>
+   <button v-if="!sampleTask && !loading && (detail.canCancel || (task?.occurrence?.virtual && detailMine && task.status !== 'cancelled'))" class="task-delete" :disabled="busy" :loading="busy" @tap="task?.occurrence?.virtual ? cancelPeriod('occurrence') : deleteTask()">{{ task?.occurrence ? '取消本次' : '取消任务' }}</button>
+   <button v-if="!sampleTask && (plan?.canManage || (task?.occurrence && detailMine))" class="task-delete" :disabled="busy" :loading="busy" @tap="cancelPeriod('all')">取消全部</button>
   </view>
  </scroll-view>
  </view>
 </template>
 <script setup>
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, reactive, ref, toRef, watch } from 'vue'
 import { cancelTask, cancelTaskPlan, getTaskDetail, getTaskLightingStates, getTaskPlan, setTaskPlanStatus } from '@/apis/agent/tasks'
-import { taskDetailView, taskPlanSnapshot, taskTime, taskNeedsDetails } from '../../lib/tasks.mjs'
+import { taskDetailView, taskPlanSnapshot, taskTime, taskNeedsDetails, planPresentation, createPlanManagement } from '../../lib/tasks.mjs'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import { createStateRefresh } from '../../lib/actions.mjs'
@@ -135,9 +135,23 @@ const props = defineProps({ active: Boolean, taskId: String, planId: String, sam
 const emit = defineEmits(['cancelled', 'changed', 'loaded', 'report-open', 'open-report', 'plan-return', 'reference', 'dismiss', 'select-alert', 'browse-alerts', 'navigation'])
 const task = ref(null), plan = ref(null), returnPlan = ref(null)
 const activeTaskId = ref(''), activePlanId = ref('')
-const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false), planSwitchRevision = ref(0)
+const loading = ref(false), error = ref(''), ownActionError = ref(''), cancelling = ref(false)
 const detailFresh = ref(false)
 const currentStates = ref({}), currentLoading = ref(false)
+const planControls = createPlanManagement({
+ createState: reactive,
+ readContext: () => ({ active: props.active && pageVisible, source: props.source, scope: getAgentStorageScope(),
+  key: activePlanId.value || activeTaskId.value, plans: plan.value ? [plan.value] : [] }),
+ updatePlan: next => { if (plan.value?.planId === next.planId) plan.value = next },
+ api: { setStatus: setTaskPlanStatus, getPlan: getTaskPlan, cancelPlan: cancelTaskPlan },
+ confirm: dialog => new Promise(resolve => uni.showModal({ ...dialog, confirmColor: dialog.destructive ? AGENT_COLORS.error : AGENT_COLORS.accentDeep, success: result => resolve(result.confirm), fail: () => resolve(false) })),
+ notify: title => uni.showToast({ title, icon: 'none' }),
+ changed: () => emit('changed'),
+})
+const planSwitchRevision = toRef(planControls.state, 'revision')
+const busy = computed(() => cancelling.value || planControls.state.busy)
+const actionError = computed({ get: () => ownActionError.value || planControls.state.error,
+ set: value => { ownActionError.value = value; if (!value) planControls.clearError() } })
 const expandedPhases = ref([]), allPhases = ref(false), energyBasis = ref(false), issue = ref(null)
 const visiblePhases = computed(() => allPhases.value ? detail.value?.phases : detail.value?.previewPhases)
 
@@ -161,7 +175,7 @@ const detailSubtitle = computed(() => {
 })
 const detail = computed(() => {
  const view = taskDetailView(task.value || taskPlanSnapshot(plan.value))
- if (plan.value && view) return { ...view, statusText: ({ enabled: plan.value.nextAt ? '已开启' : '已结束', paused: '已暂停', deleted: '已删除' })[plan.value.status] || (plan.value.nextAt ? '已开启' : '已结束') }
+ if (plan.value && view) return { ...view, statusText: planPresentation(plan.value).statusText }
  return view
 })
 watch([issue, detailSubtitle], () => emit('navigation', { title: issue.value ? '查看原因' : '', canBack: Boolean(issue.value), subtitle: issue.value ? '' : detailSubtitle.value }), { immediate: true })
@@ -169,78 +183,21 @@ function referenceCurrent() {
  if (plan.value) emit('reference', { type: 'task_plan', planId: plan.value.planId, label: plan.value.label })
  else if (task.value) emit('reference', { type: 'task', taskId: task.value.id, label: task.value.label })
 }
-function planIsEnabled(value) { return value?.status === 'enabled' && Boolean(value.nextAt) }
-function planCanToggle(value) {
- if (value?.status === 'enabled') return Boolean(value.canPause)
- if (value?.status === 'paused') return Boolean(value.canResume)
- return false
-}
+const planIsEnabled = value => planPresentation(value).enabled
+const planCanToggle = value => planPresentation(value).canToggle
 function explainPlanAccess(value) {
  if (!value || ['ended', 'deleted'].includes(value.status)) return
  uni.showToast({ title: '需使用创建者账号，且当前范围覆盖全部设备才能管理', icon: 'none' })
 }
-function planStatusContextCurrent(planId, source, scope, version, action) {
- if (action !== planStatusRequest || !props.active || props.source !== source || activePlanId.value !== planId || plan.value?.planId !== planId) return false
- let currentScope = ''
- try { currentScope = getAgentStorageScope() } catch { return false }
- return currentScope === scope && plan.value.version === version
-}
-function resumeContent(value) {
- const next = value?.resumeNextAt ? taskTime(value.resumeNextAt) : ''
- return `下一次执行：${next || '暂无以后的安排'}。将重新核验当前设备权限和操作范围，从下一次安排继续，不补做过去的安排。`
-}
-async function togglePlanStatus(value, enabled) {
- if (!value?.planId || !planCanToggle(value) || cancelling.value) return
- const action = ++planStatusRequest, operation = enabled ? 'resume' : 'pause', planId = value.planId, version = value.version
- const source = props.source, scope = getAgentStorageScope()
- const title = operation === 'resume' ? '继续执行' : '暂停周期任务'
- const content = operation === 'resume'
-  ? resumeContent(value)
-  : '只暂停以后的安排；已经安排的本次任务会继续，已做的操作保持原样。'
- const confirmed = await new Promise(resolve => uni.showModal({ title, content, confirmText: title, confirmColor: operation === 'resume' ? AGENT_COLORS.accentDeep : AGENT_COLORS.error, success: result => resolve(result.confirm), fail: () => resolve(false) }))
- if (!confirmed) {
-  if (planStatusContextCurrent(planId, source, scope, version, action)) planSwitchRevision.value += 1
-  return
- }
- if (!planStatusContextCurrent(planId, source, scope, version, action)) return
- cancelling.value = true; actionError.value = ''
- try {
-  const result = await setTaskPlanStatus(planId, version, operation, source, operation === 'resume')
-  if (!planStatusContextCurrent(planId, source, scope, version, action)) return
-  if (result?.plan) plan.value = result.plan
-  planSwitchRevision.value += 1
-  emit('changed')
-  uni.showToast({ title: operation === 'resume' ? '已继续执行' : '已暂停以后的安排', icon: 'none' })
- } catch (cause) {
-  if (!planStatusContextCurrent(planId, source, scope, version, action)) return
-  if (cause.data?.recovery?.plan) plan.value = cause.data.recovery.plan
-  planSwitchRevision.value += 1
-  actionError.value = cause.message || '状态更新失败，请刷新后重试'
- } finally { if (action === planStatusRequest) cancelling.value = false }
+function togglePlanStatus(value, enabled) {
+ if (!cancelling.value) return planControls.toggle(value, enabled)
 }
 async function cancelPeriod(scope) {
  if (cancelling.value) return
- const planId = plan.value?.planId || task.value?.occurrence?.planId, date = task.value?.occurrence?.date
- const source = props.source, identity = getAgentStorageScope()
- if (!planId) return
- cancelling.value = true; actionError.value = ''
- try {
-  const result = await getTaskPlan(planId, source)
-  if (!result.plan?.canManage) throw new Error('当前无权取消这个周期')
-  const title = scope === 'all' ? '取消全部' : '取消本次'
-  const confirmed = await new Promise(resolve => uni.showModal({ title, content: scope === 'all'
-   ? '取消这个周期全部尚未执行的安排；已执行或已发送的动作保持原样。'
-   : '只取消这一次，后续周期照常执行。', confirmText: title, confirmColor: AGENT_COLORS.error, success: value => resolve(value.confirm), fail: () => resolve(false) }))
-  if (!confirmed || !props.active || source !== props.source || identity !== getAgentStorageScope()
-    || planId !== (plan.value?.planId || task.value?.occurrence?.planId)) return
-  await cancelTaskPlan(planId, result.plan.version, scope, date, source)
+ const target = plan.value || { planId: task.value?.occurrence?.planId }
+ if (await planControls.cancel(target, { scope, date: task.value?.occurrence?.date, refresh: true })) {
   emit('cancelled'); emit('dismiss')
- } catch (cause) {
-  if (!props.active || source !== props.source || identity !== getAgentStorageScope() || planId !== (plan.value?.planId || task.value?.occurrence?.planId)) return
-  if (cause.data?.recovery?.plan && plan.value) plan.value = cause.data.recovery.plan
-  actionError.value = cause.message || '取消失败，请刷新后重试'
  }
- finally { cancelling.value = false }
 }
 const latestReport = computed(() => taskDetailView(plan.value?.latestTask)?.report || null)
 const whenLine = computed(() => {
@@ -265,19 +222,19 @@ const currentSummary = computed(() => {
  const unknown = lightIds.value.length - known.length
  return [on && `${on} 开启`, known.length - on && `${known.length - on} 关闭`, unknown && `${unknown} 未知`].filter(Boolean).join(' · ')
 })
-let requestId = 0, currentRequestId = 0, planStatusRequest = 0, refreshTimer, observedTaskId = '', pageVisible = true, wasHidden = false, detailScope = ''
+let requestId = 0, currentRequestId = 0, refreshTimer, observedTaskId = '', pageVisible = true, wasHidden = false, detailScope = ''
 function startPolling() {
  clearInterval(refreshTimer)
  if (props.active && pageVisible && !props.sampleTask) refreshTimer = setInterval(() => {
   if (activePlanId.value || ['scheduled', 'executing'].includes(task.value?.status)) load(true)
  }, 10000)
 }
-onHide(() => { pageVisible = false; wasHidden = true; clearInterval(refreshTimer); stateRefresh.cancel(); ++requestId; ++currentRequestId; ++planStatusRequest; loading.value = false; currentLoading.value = false; cancelling.value = false; planSwitchRevision.value += 1 })
+onHide(() => { pageVisible = false; wasHidden = true; clearInterval(refreshTimer); stateRefresh.cancel(); ++requestId; ++currentRequestId; loading.value = false; currentLoading.value = false; cancelling.value = false; planControls.invalidate() })
 onShow(() => {
  pageVisible = true
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 失效身份不保留上一人的报告 */ }
- if (scope !== detailScope) { ++planStatusRequest; task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; allPhases.value = false; energyBasis.value = false; issue.value = null; cancelling.value = false; planSwitchRevision.value += 1 }
+ if (scope !== detailScope) { planControls.invalidate(); task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; allPhases.value = false; energyBasis.value = false; issue.value = null; cancelling.value = false }
  if (wasHidden && props.active) { load(true); startPolling() }
  wasHidden = false
 })
@@ -374,7 +331,7 @@ function returnToPlan() {
  emit('plan-return')
 }
 async function deleteTask() {
- if (!detail.value?.canCancel || cancelling.value) return
+ if (!detail.value?.canCancel || busy.value) return
  const taskId = activeTaskId.value, version = task.value.version
  const settledInterval = detail.value?.interval && !detail.value.phases.some(phase => phase.status === 'pending')
  const title = task.value.occurrence ? '取消本次' : '取消任务'
@@ -394,7 +351,7 @@ async function deleteTask() {
  } finally { cancelling.value = false }
 }
 watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.source], () => {
- ++planStatusRequest; planSwitchRevision.value += 1
+ planControls.invalidate()
  clearInterval(refreshTimer)
  stateRefresh.cancel(); ++currentRequestId; currentLoading.value = false
  activeTaskId.value = props.taskId || ''
@@ -411,7 +368,7 @@ watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.s
  }
  else { ++requestId; loading.value = false; cancelling.value = false } // 保留关闭动画的结果快照；下次打开由 load 重新读取。
 }, { immediate: true })
-onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId; ++requestId; ++planStatusRequest })
+onUnmounted(() => { clearInterval(refreshTimer); stateRefresh.cancel(); ++currentRequestId; ++requestId; planControls.invalidate() })
 function back() { if (!issue.value) return false; issue.value = null; return true }
 defineExpose({ returnToPlan, back })
 </script>
