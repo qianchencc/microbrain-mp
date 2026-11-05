@@ -2,26 +2,26 @@
   <view class="inbox-content">
    <TaskIssueDetails back-in-header style="height:0;min-height:0;flex:1;display:flex;flex-direction:column" v-if="issue" :issue="issue" @close="issue = null" />
    <scroll-view :style="{ display: selected || issue ? 'none' : 'block' }" class="inbox-scroll" scroll-y enhanced :show-scrollbar="false" @scrolltolower="load(false)">
-    <view class="inbox-filters"><button v-for="option in filters" :key="option.value" :class="{ chosen: filter === option.value }" @tap="filter = option.value">{{ option.label }}</button><button v-if="unreadCount || markingAll" class="inbox-markall" :loading="markingAll" :disabled="markingAll" @tap="markAllSeen">{{ markingAll ? '正在标记…' : '全部已读' }}</button><button class="inbox-refresh" :disabled="loading || markingAll" @tap="load(true, true)">刷新</button></view>
-    <view class="list-summary"><text>任务结束消息</text><text v-if="markingAll" class="markall-status">正在将通知标为已读…</text><text>{{ unreadCount }} 条未读</text></view>
-    <view v-if="markAllError" class="markall-error"><TaskErrorNotice :message="markAllError" @details="showIssue" /><button @tap="retryMarkAllSeen">重试</button></view>
-    <view v-if="loading && !notifications.length" class="state-message">加载中…</view>
-    <view v-else-if="error && !notifications.length" class="state-message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load(true)">重试</button></view>
-    <view v-else-if="!visibleNotifications.length" class="state-message">{{ filter === 'unread' ? nextCursor ? '已加载的消息中没有未读消息' : '没有未读消息' : filter === 'abnormal' ? nextCursor ? '已加载的消息中没有待查看结果' : '没有待查看结果消息' : '任务结束后，结果消息会出现在这里' }}</view>
-    <view v-for="notification in visibleNotifications" :key="notification.id" class="notification-row" @tap="openReport(notification)">
-     <view class="unread-mark" :class="{ 'unread-mark--active': !notification.readAt }" />
-     <view class="notification-copy">
-      <text class="notification-title">{{ notification.label || '任务执行结果' }}</text>
-      <button v-if="taskNeedsDetails(notification.outcome)" class="notification-outcome outcome-link" @tap.stop="notification.reason ? showIssue({ title: notification.label, reason: notification.reason }) : openReport(notification)">{{ outcomeLabel(notification.outcome) }} ›</button><text v-else class="notification-outcome" :class="'tone-' + outcomeTone(notification.outcome)">{{ outcomeLabel(notification.outcome) }}</text>
-      <text v-if="notification.summary" class="notification-facts">{{ summaryLine(notification.summary) }}</text>
-      <text class="notification-time">{{ dateTime(notification.endedAt) }}</text>
-     </view>
-     <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
+   <SlidingSegments class="inbox-tabs" tone="glass" :options="filters" :model-value="filter" @update:model-value="filter = $event" />
+   <view class="inbox-tools"><text class="inbox-count">{{ unreadCount }} 条未读</text><button class="inbox-refresh" :disabled="loading || markingAll" @tap="load(true, true)">刷新</button><button v-if="unreadCount || markingAll" class="inbox-markall" :loading="markingAll" :disabled="markingAll" @tap="markAllSeen">{{ markingAll ? '正在标记…' : '全部已读' }}</button></view>
+   <view v-if="markAllError" class="markall-error"><TaskErrorNotice :message="markAllError" @details="showIssue" /><button @tap="retryMarkAllSeen">重试</button></view>
+   <view v-if="loading && !notifications.length" class="state-message">加载中…</view>
+   <view v-else-if="error && !notifications.length" class="state-message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load(true)">重试</button></view>
+   <view v-else-if="!visibleNotifications.length" class="state-message">{{ filter === 'unread' ? nextCursor ? '已加载的消息中没有未读消息' : '没有未读消息' : filter === 'abnormal' ? nextCursor ? '已加载的消息中没有待查看结果' : '没有待查看结果消息' : '任务结束后，结果消息会出现在这里' }}</view>
+   <view v-for="notification in visibleNotifications" :key="notification.id" class="notification-card" :class="{ seen: notification.readAt }" @tap="openReport(notification)">
+    <view class="ntile" :class="'ntile-' + outcomeTone(notification.outcome)"><uni-icons :type="tileIcon(notification)" size="20" :color="tileColor(notification.outcome)" /></view>
+    <view class="notification-copy">
+     <text class="notification-title">{{ notification.label || '任务执行结果' }}</text>
+     <button v-if="taskNeedsDetails(notification.outcome)" class="notification-outcome outcome-link" @tap.stop="notification.reason ? showIssue({ title: notification.label, reason: notification.reason }) : openReport(notification)">{{ outcomeLabel(notification.outcome) }} ›</button><text v-else class="notification-outcome" :class="'tone-' + outcomeTone(notification.outcome)">{{ outcomeLabel(notification.outcome) }}</text>
+     <text v-if="notification.summary" class="notification-facts">{{ summaryLine(notification.summary) }}</text>
     </view>
-    <button v-if="nextCursor && !loadingMore" class="load-more" @tap="load(false)">加载更多消息</button>
-    <view v-if="notifications.length && error" class="list-footer list-error"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load(false)">重试</button></view>
-    <view v-else-if="loadingMore" class="list-footer">加载更多…</view>
-    <view v-else-if="notifications.length && !nextCursor" class="list-footer">已显示全部消息</view>
+    <view class="notification-edge"><text class="notification-time">{{ dateTime(notification.endedAt) }}</text><view class="unread-mark" :class="{ 'unread-mark--active': !notification.readAt }" /></view>
+    <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
+   </view>
+   <button v-if="nextCursor && !loadingMore" class="load-more" @tap="load(false)">加载更多消息</button>
+   <view v-if="notifications.length && error" class="list-footer list-error"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load(false)">重试</button></view>
+   <view v-else-if="loadingMore" class="list-footer">加载更多…</view>
+   <view v-else-if="notifications.length && !nextCursor" class="list-footer">已显示全部消息</view>
    </scroll-view>
    <view v-if="selected && markError" class="mark-error"><text>报告已打开，但未读状态未更新</text><button @tap="retryMarkSeen">重试</button></view>
    <TaskResultContent v-if="selected" :style="{ display: issue ? 'none' : 'flex' }" ref="content" class="task-content-host" :active="open && !issue" :task-id="selected.taskId" :source="source" @loaded="onReportLoaded" @changed="$emit('changed')" @dismiss="backToList" @reference="$emit('reference', $event)" @navigation="navigation = $event" />
@@ -37,6 +37,7 @@ import TaskResultContent from './TaskResultContent.vue'
 import TaskIssueDetails from './TaskIssueDetails.vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
 import { taskStatusText, taskStatusTone, taskNeedsDetails, taskExecutionSummaryView } from '../../lib/tasks.mjs'
+import SlidingSegments from '../shared/SlidingSegments.vue'
 import { fmtShanghaiDateTime } from '../../lib/observations.mjs'
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
@@ -61,6 +62,18 @@ const marking = new Set(), seenFailed = new Set()
 
 const outcomeLabel = taskStatusText
 const outcomeTone = taskStatusTone
+/* 图标瓦块:无 kind 字段,按 label 关键词启发式定图标,outcome 定底色(参考通知中心卡)。 */
+function tileIcon(notification) {
+ const label = notification.label || ''
+ if (taskNeedsDetails(notification.outcome)) return 'info'
+ if (/报告|能耗|用电/.test(label)) return 'paperplane'
+ if (/关闭|开启|照明|巡检/.test(label)) return 'checkmarkempty'
+ return 'notification'
+}
+function tileColor(outcome) {
+ const tone = taskStatusTone(outcome)
+ return tone === 'warn' ? 'var(--agent-warning-deep)' : tone === 'ok' ? 'var(--agent-success)' : 'var(--agent-accent-deep)'
+}
 function summaryLine(summary) { return taskExecutionSummaryView(summary)?.devicesText || '' }
 function dateTime(value) {
  const text = fmtShanghaiDateTime(value)
@@ -208,17 +221,26 @@ button { margin:0; padding:0; border:0; background:transparent; line-height:1.2;
 button::after { border:0; }
 .inbox-content { min-height:0; flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .inbox-scroll { height:0; min-height:0; flex:1; box-sizing:border-box; padding:0 18px 12px; }
-.list-summary { display:flex; align-items:center; justify-content:space-between; padding:8px 2px 10px; border-bottom:1px solid $agent-color-line; color:$agent-color-text-muted; font-size:11px; }
-.notification-row { width:100%; min-height:76px; display:flex; align-items:center; gap:11px; padding:12px 2px; border-bottom:1px solid $agent-color-line; text-align:left; }
-.notification-row:active { background:$agent-color-surface-page; }
+.inbox-tabs { margin:2px 0 12px; }
+.inbox-tools { display:flex; align-items:center; gap:14px; padding:0 2px 12px; }
+.inbox-count { color:$agent-color-text-muted; font-size:11px; }
+.inbox-refresh,.inbox-markall { padding:4px 2px; color:$agent-color-accent; font-size:12px; }
+.inbox-refresh { margin-left:auto; }
+.notification-card { position:relative; width:100%; box-sizing:border-box; min-height:76px; display:flex; align-items:center; gap:12px; margin-bottom:10px; padding:14px 14px; border:1px solid $agent-color-line; border-radius:16px; background:$agent-color-surface; text-align:left; box-shadow:0 2px 8px -6px rgba(var(--agent-shadow-rgb),.18); }
+.notification-card:active { background:$agent-color-surface-page; }
+.notification-card.seen { border-color:transparent; background:transparent; box-shadow:none; }
+.ntile { flex-shrink:0; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:12px; background:$agent-color-accent-faint; }
+.ntile-warn { background:$agent-color-warning-faint; }
+.ntile-ok { background:$agent-color-success-faint; }
+.notification-edge { flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.notification-time { color:$agent-color-text-muted; font-size:10px; white-space:nowrap; }
 .unread-mark { width:7px; height:7px; flex-shrink:0; border-radius:50%; background:transparent; }
 .unread-mark--active { background:$agent-color-badge; box-shadow:0 0 0 3px $agent-color-warning-faint; }
-.notification-copy { min-width:0; flex:1; display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:10px; row-gap:4px; align-items:baseline; }
+.notification-copy { min-width:0; flex:1; display:grid; grid-template-columns:minmax(0,1fr); row-gap:4px; }
 .notification-title { min-width:0; overflow:hidden; white-space:normal; word-break:break-word; color:$agent-color-text-secondary; font-size:13px; font-weight:600; }
-.notification-outcome { grid-column:1; font-size:11px; }
-.notification-time { grid-column:2; grid-row:1 / span 3; color:$agent-color-text-muted; font-size:10px; white-space:nowrap; }
-.notification-reason { grid-column:1; color:$agent-color-warning; font-size:10px; line-height:1.35; }.tone-ok { color:$agent-color-success; }.tone-warn { color:$agent-color-warning; }.tone-fail { color:$agent-color-error; }.tone-muted { color:$agent-color-text-muted; }
-.notification-facts { grid-column:1; color:$agent-color-text-muted; font-size:10px; line-height:1.35; }
+.seen .notification-title { color:$agent-color-text-muted; font-weight:500; }
+.notification-outcome { font-size:11px; }
+.notification-facts { color:$agent-color-text-muted; font-size:10px; line-height:1.35; }
 .state-message { padding:48px 16px; text-align:center; color:$agent-color-text-muted; font-size:13px; }
 .state-message text { display:block; }
 .state-message button,.list-footer button,.mark-error button { margin:10px auto 0; color:$agent-color-accent; font-size:$agent-font-size-compact; }
@@ -230,11 +252,5 @@ button::after { border:0; }
 .markall-error { padding:4px 2px 8px; display:flex; align-items:center; gap:10px; color:$agent-color-error; font-size:11px; }
 .markall-error button { margin:0 0 0 auto; flex-shrink:0; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 .task-content-host { height:0; min-height:0; flex:1; display:flex; flex-direction:column; }
-.inbox-filters { display:flex; gap:$agent-space-small; padding:6px 0 12px; }
-.inbox-filters button { padding:7px 12px; border-radius:16px; font-size:11px; color:$agent-color-text-muted; }
-.inbox-filters .chosen { background:$agent-color-accent-faint; color:$agent-color-accent; }
-.inbox-filters .inbox-refresh { margin-left:auto; }
-.inbox-filters .inbox-markall { margin-left:auto; color:$agent-color-accent; }
-.inbox-filters .inbox-markall + .inbox-refresh { margin-left:0; }
 .load-more { margin:12px auto; padding:10px; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 </style>

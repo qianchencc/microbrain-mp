@@ -1,16 +1,18 @@
 <template>
- <DeviceSheet :open="open" :back="goBack" tall compact-header :title="navigation.title || '通知中心'" @close="$emit('close')">
+ <DeviceSheet :open="open" :back="goBack" tall compact-header :title="navigation.title || '通知中心'" :subtitle="navigation.canBack ? '' : sourceLabel + ' Agent · ' + lastUnread + ' 条未读'" @close="$emit('close')">
   <template #header-left><button v-if="navigation.canBack" class="back-button" @tap="goBack"><uni-icons type="back" size="15" color="var(--agent-text-muted)" /></button></template>
-  <TaskInboxContent ref="content" class="inbox-host" :open="open" :source="source" @navigation="navigation = $event" @unread-count="$emit('unread-count', $event)" @reference="$emit('reference', $event)" />
+  <TaskInboxContent ref="content" class="inbox-host" :open="open" :source="source" @navigation="navigation = $event" @unread-count="onUnread" @reference="$emit('reference', $event)" />
  </DeviceSheet>
 </template>
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import DeviceSheet from '../shared/DeviceSheet.vue'
 import TaskInboxContent from './TaskInboxContent.vue'
-defineProps({ open: Boolean, source: { type: String, default: 'office' } })
+const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } })
 const emit = defineEmits(['close', 'unread-count', 'reference'])
-const content = ref(null), navigation = ref({ title: '', canBack: false })
+const content = ref(null), navigation = ref({ title: '', canBack: false }), lastUnread = ref(0)
+const sourceLabel = computed(() => props.source === 'company' ? '公司' : '办公室')
+function onUnread(count) { lastUnread.value = Number(count) || 0; emit('unread-count', count) }
 function goBack() { if (!content.value?.back()) emit('close') }
 </script>
 <style scoped>
