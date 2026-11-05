@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" :subtitle="navigation.subtitle || (source === 'company' ? '公司 Agent' : '')" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" :subtitle="source === 'company' ? '公司 Agent' : '办公室 Agent'" @close="closeSheet">
   <template #header-left>
    <button v-if="issue || selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="var(--agent-text-muted)" /></button>
   </template>
@@ -13,7 +13,7 @@
   <view class="arrangements-content" :style="{ display: issue ? 'none' : 'flex' }">
    <TaskErrorNotice v-if="operationError" :message="operationError" summary="部分操作未完成" @details="showIssue" />
    <view class="list-pane" :style="{ display: selectedTask || selectedPlan ? 'none' : 'flex' }">
-    <view v-if="!inboxNavigation.canBack && !stackedView" class="view-switch"><SlidingSegments v-model="view" :options="views" /></view>
+    <view v-if="!inboxNavigation.canBack && !stackedView" class="view-switch"><SlidingSegments v-model="view" tone="glass" :options="views" /></view>
     <TaskInboxContent v-if="source === 'company' && view === 'inbox'" ref="inbox" class="task-content-host" :open="open && view === 'inbox' && !selectedTask && !selectedPlan" :source="source" @navigation="inboxNavigation = $event" @reference="emit('reference', $event)" @unread-count="inboxUnread = $event; emit('unread-count', $event)" @changed="emit('changed')" />
     <scroll-view v-else class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
      <TaskCalendarView v-if="source === 'company' && view === 'calendar'" ref="calendar" @issue="showIssue" :active="open && view === 'calendar' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
@@ -87,11 +87,12 @@
      </template>
 
      <template v-else>
-      <button v-for="task in tasks" :key="taskKey(task)" class="task-row" @tap="openTask(task)">
+      <button v-for="task in tasks" :key="taskKey(task)" class="task-card" @tap="openTask(task)">
+       <text class="card-clock">{{ rowClock(task) }}</text>
        <view class="row-copy">
-        <view class="row-heading"><text class="row-title">{{ task.label || '任务安排' }}</text><text class="task-status" :class="'tone-' + taskTone(task.status)">{{ taskStatus(task.status) }}</text></view>
-        <text v-if="task.repeat" class="row-subtitle">{{ repeatText(task.repeat) }}</text>
-        <view class="row-meta"><text>{{ taskTime(taskTimeValue(task, view)) || '时间未提供' }}</text><text>{{ task.creator?.displayName || '成员' }}</text></view>
+        <view class="row-heading"><text class="row-title">{{ task.label || '任务安排' }}</text></view>
+        <text v-if="agendaSubtitle(task)" class="row-subtitle">{{ agendaSubtitle(task) }}</text>
+        <text class="task-chip" :class="'chip-' + taskTone(task.status)">{{ taskStatus(task.status) }}</text>
        </view>
        <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
       </button>
@@ -187,6 +188,7 @@ const enabledPlansCount = computed(() => plans.value.filter(plan => planIsEnable
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '任务安排' : '周期任务')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无周期任务')
 function dayHead(date) { const today = taskToday(); return date === today ? `今天 · ${Number(date.slice(5, 7))}月${Number(date.slice(8))}日` : date === shiftDate(today, 1) ? `明天 · ${Number(date.slice(5, 7))}月${Number(date.slice(8))}日` : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]} · ${Number(date.slice(5, 7))}月${Number(date.slice(8))}日` }
+function rowClock(task) { const at = taskTimeValue(task, view.value); return Number.isFinite(Date.parse(at)) ? new Date(Date.parse(at) + 8 * 3600000).toISOString().slice(11, 16) : '—' }
 function agendaSubtitle(task) { const requirements = taskRequirementsText(task); return requirements || (task.repeat || task.occurrence ? repeatText(task.repeat) || '按周期执行' : '') }
 let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, moreRequest = 0, loadedScope = '', pageVisible = true
 
@@ -548,8 +550,6 @@ button::after { border:0; }
 .plans-title { color:$agent-color-text-primary; font-size:15px; font-weight:600; }
 .plans-pause-all { margin:0; padding:0; color:$agent-color-accent; font-size:11px; }
 .plans-pause-all[disabled] { opacity:.55; }
-.task-row { width:100%; min-height:76px; display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid $agent-color-line; text-align:left; }
-.task-row:active { background:$agent-color-surface-page; }
 .plan-card { width:100%; display:flex; align-items:center; gap:10px; margin-top:10px; padding:14px; border:1px solid $agent-color-line; border-radius:14px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); box-sizing:border-box; text-align:left; }
 .plan-card:active { background:$agent-color-surface-page; }
 .plan-main { min-width:0; flex:1; display:flex; align-items:center; gap:11px; text-align:left; }
@@ -561,12 +561,9 @@ button::after { border:0; }
 .row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
 .row-heading { min-width:0; display:flex; align-items:baseline; justify-content:space-between; gap:9px; }
 .row-title { min-width:0; white-space:normal; word-break:break-word; color:$agent-color-text-secondary; font-size:13px; font-weight:600; }
-.task-status { flex-shrink:0; font-size:10px; }
 .plan-access-tag { flex-shrink:0; color:$agent-color-warning-deep; font-size:10px; }
 .tone-active,.tone-ok { color:$agent-color-success; }.tone-muted { color:$agent-color-text-muted; }.tone-warn { color:$agent-color-warning; }.tone-fail { color:$agent-color-error; }
 .row-subtitle { color:$agent-color-text-muted; font-size:11px; line-height:1.45; }
-.row-meta { min-width:0; display:flex; justify-content:space-between; gap:$agent-space-small; color:$agent-color-text-faint; font-size:10px; }
-.row-meta text { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .status-mark { width:7px; height:7px; flex-shrink:0; border-radius:50%; background:$agent-color-badge; box-shadow:0 0 0 3px $agent-color-warning-faint; }
 .status-mark--paused { background:$agent-color-text-faint; box-shadow:0 0 0 3px $agent-color-tint; }
 .state-message { padding:48px 16px; text-align:center; color:$agent-color-text-muted; font-size:13px; }
