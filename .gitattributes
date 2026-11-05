@@ -10,3 +10,7 @@ AGENTS.md export-ignore
 /GLOSSARY.md export-ignore
 /README.md export-ignore
 /pages/agent/prototypes/ export-ignore
+/.zcode/ export-ignore
+/0001-business-fact-storage.md export-ignore
+/internal/controller/HealthController.java export-ignore
+/src/main/java/ltd/qianc/iotagent/agent/internal/controller/AgentToolBridgeController.java export-ignore

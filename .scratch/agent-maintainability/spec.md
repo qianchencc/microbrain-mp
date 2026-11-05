@@ -51,3 +51,9 @@ Status: done
 预期维护效果：展示调整留在Vue；周期状态只改一处；会话确认与选区同步、能耗历史准备、概览缓存／身份失效分别在一个行为模块内修改和验证。不是承诺客户必然认可，也不是对API总入口、全部页面或全部性能问题的一次性改造。
 
 另记交付风险：此前评估发现`0001-business-fact-storage.md`、`internal/controller/HealthController.java`、`src/main/java/ltd/qianc/iotagent/agent/internal/controller/AgentToolBridgeController.java`可进入当前归档。未在本轮删除、修改或交付；正式客户交付仍应单独检查纯源码边界。
+
+## 后续：双远端同步与纯源码分支
+
+2026-11-05，用户明确将GitLab的`iot-agent-linglv`用作纯源码分支，GitHub保存完整开发仓库，`新世纪办公室`分支不动。远端基线`54eac47`是当前`main`祖先，无待合入的独有提交；原GitLab开发树含内部文档，按用户选择以普通提交切换最新文件树，保留历史，不做force push。
+
+交付前补齐`.gitattributes`与两项交付检查：除上述3个后端文件，实际导出还发现1个`.zcode`临时计划。修订后的检查已对旧554文件导出报出4条禁止路径并拒绝；本地原文件均保留，改动仅控制导出边界。新导出须检查禁止路径为0后才能同步。

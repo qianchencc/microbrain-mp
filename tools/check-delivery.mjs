@@ -14,6 +14,11 @@ const RULES = [
  [/(^|\/)AGENTS\.md$/, 'agent 上下文文件'],
  [/^CONTEXT\.md$/, '领域上下文'],
  [/^tools\//, '内部工具（含本脚本）'],
+ [/^(README|GLOSSARY)\.md$/, '内部说明与领域词汇表'],
+ [/^\.zcode\//, '个人工具状态与临时计划'],
+ [/^0001-business-fact-storage\.md$/, '后端设计文档'],
+ [/^(internal\/controller\/HealthController\.java|src\/main\/java\/ltd\/qianc\/iotagent\/agent\/internal\/controller\/AgentToolBridgeController\.java)$/, '误入小程序仓库的后端源码'],
+ [/^pages\/agent\/prototypes\//, '交互原型目录'],
  [/^pages\/agent\/proto-[^/]*\.html$/, '交互原型（位于生产目录内，最易被顺带复制）'],
 ]
 
