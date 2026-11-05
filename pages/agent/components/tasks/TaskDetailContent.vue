@@ -26,8 +26,7 @@
    <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="var(--agent-text-muted)" /> 返回周期安排</button>
    <view class="task-heading"><text class="task-name">{{ detail.label }}</text><button v-if="taskNeedsDetails(detail.presentationStatus)" class="state-tag result-link" :class="detail.presentationStatus" @tap="showTaskIssue">{{ detail.statusText }} ›</button><text v-else class="state-tag" :class="detail.presentationStatus">{{ detail.statusText }}</text></view>
    <text v-if="detail.occurrenceText" class="task-when">{{ detail.occurrenceText }}</text>
-   <text class="task-when">{{ detail.whenText }}</text>
-   <text v-if="detail.repeatText" class="task-when">{{ detail.repeatText }}</text>
+   <text class="task-when">{{ whenLine }}</text>
    <text v-if="loading" class="task-when">正在更新…</text>
    <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">{{ detail.nextLabel }}：{{ detail.nextText }}</text>
    <text v-if="detail.phases.length > 1" class="task-progress">{{ detail.progressText }}</text>
@@ -48,8 +47,8 @@
     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
      <view class="phase-head">
-      <view class="phase-top"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text></view>
-      <view class="phase-bottom"><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :class="'tone-' + phase.tone" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+      <view class="phase-top"><text class="phase-time">{{ phase.clock }}</text><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :class="'tone-' + phase.tone" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+      <view class="phase-bottom"><text class="phase-note">{{ phase.title }}</text></view>
      </view>
      <view v-if="phase.observations?.length" class="phase-reveal" :class="{ open: expandedPhases.includes(phase.id) }" :aria-hidden="!expandedPhases.includes(phase.id)"><view class="phase-reveal-inner"><ObservationCard :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" /></view></view>
      <button v-if="phase.report" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
@@ -71,9 +70,15 @@
     </view>
    </view>
    <view v-if="detail.report" class="task-report">
-    <text class="report-title">执行报告 · {{ detail.report.generatedText }}</text>
-    <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 次记录 · {{ detail.report.devicesVisible }} 台设备</text>
-    <text v-if="detail.report.summary" class="report-summary">{{ detail.report.summary.checkpointsText }} · {{ detail.report.summary.devicesText }}</text>
+    <button v-if="reportLink" class="report-cta" @tap="emit('open-report', reportLink)">
+     <uni-icons type="compose" size="17" color="var(--agent-accent-deep)" />
+     <view class="report-cta-copy"><text class="report-cta-title">查看本次检查报告</text><text class="report-cta-note">设备与检查点依据 · {{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 次记录 · {{ detail.report.devicesVisible }} 台设备</text></view>
+     <uni-icons type="right" size="14" color="var(--agent-accent-deep)" />
+    </button>
+    <view v-else class="report-summary-block">
+     <text class="report-title">执行报告 · {{ detail.report.generatedText }}</text>
+     <text class="report-summary">{{ detail.report.outcomeText }} · {{ detail.report.checkpoints }} 次记录 · {{ detail.report.devicesVisible }} 台设备</text>
+    </view>
     <template v-if="detail.report.summary?.energy">
      <template v-if="detail.report.summary.energy.hero">
       <view class="energy-hero" :class="{ 'energy-hero--unavailable': detail.report.summary.energy.kind === 'unavailable' }">
@@ -241,6 +246,13 @@ async function cancelPeriod(scope) {
  finally { cancelling.value = false }
 }
 const latestReport = computed(() => taskDetailView(plan.value?.latestTask)?.report || null)
+const whenLine = computed(() => {
+ if (!detail.value) return ''
+ // 同日区间只留时刻（日期已在 Sheet 副标题）；跨日保留完整起止。
+ const when = detail.value.whenText.replace(/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}) 至 (\d{2}:\d{2})$/, '$1 至 $2')
+ return [when, detail.value.repeatText].filter(Boolean).join(' · ')
+})
+const reportLink = computed(() => (detail.value?.phases || []).filter(phase => phase.report?.reportId).at(-1)?.report || null)
 // 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于保留原取消权限。
 const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
 const lightIds = computed(() => props.source === 'office' ? [...new Set((detail.value?.phases || []).flatMap(phase => phase.devices.filter(device => device.kind === 'lighting').map(device => device.id)))] : [])
@@ -473,10 +485,10 @@ button::after { border:0; }
 .phase-link-fill { width:100%; background:linear-gradient(var(--agent-accent-deep),var(--agent-chart)); }
 .phase-main { flex:1; min-width:0; padding-bottom:18px; }
 .phase-head { min-width:0; }
-.phase-top { display:flex; align-items:baseline; gap:7px; min-width:0; }
-.phase-bottom { display:flex; align-items:center; gap:7px; min-width:0; margin-top:4px; }
+.phase-top { display:flex; align-items:baseline; gap:8px; min-width:0; }
+.phase-bottom { display:flex; align-items:center; gap:7px; min-width:0; margin-top:3px; }
 .phase-time { color:var(--agent-text-muted); font-size:12px; font-variant-numeric:tabular-nums; }
-.phase-title { color:var(--agent-text-muted); font-size:11px; }
+.phase-note { color:var(--agent-text-muted); font-size:11px; }
 .phase-status { flex-shrink:0; color:var(--agent-text-secondary); font-size:14px; font-weight:600; }
 .phase-status.tone-ok { color:var(--agent-success); }
 .phase-status.tone-warn { color:var(--agent-warning); }
@@ -509,6 +521,12 @@ button::after { border:0; }
 .current-device { grid-column:1/-1; color:var(--agent-text-secondary); font-size:10px; }
 .result.ok { color:var(--agent-success); }.result.warn { color:var(--agent-warning); }.result.fail { color:var(--agent-error); }.result.wait { color:var(--agent-text-muted); }
 .task-report { margin-top:14px; padding:12px 14px; border:1px solid var(--agent-line); border-radius:10px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(var(--agent-shadow-rgb),.05); }
+.report-cta { width:100%; margin:0; padding:12px 14px; display:flex; align-items:center; gap:10px; border:1px solid var(--agent-line); border-radius:12px; background:var(--agent-tint); text-align:left; }
+.report-cta:active { background:var(--agent-line); }
+.report-cta-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
+.report-cta-title { color:var(--agent-accent-deep); font-size:13px; font-weight:600; }
+.report-cta-note { color:var(--agent-text-muted); font-size:10px; }
+.report-summary-block { display:block; }
 .latest-report-link { width:100%; margin:8px 0 0; color:var(--agent-accent-deep); font-size:11px; text-align:left; }
 .report-title { display:block; color:var(--agent-text-secondary); font-size:11px; font-weight:700; }
 .report-summary { display:block; margin-top:5px; color:var(--agent-text-primary); font-size:12px; font-weight:600; }

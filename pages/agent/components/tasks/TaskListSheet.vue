@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" :subtitle="source === 'company' ? '公司 Agent' : '办公室 Agent'" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" :subtitle="sheetSubtitle" @close="closeSheet">
   <template #header-left>
    <button v-if="issue || selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="var(--agent-text-muted)" /></button>
   </template>
@@ -180,6 +180,14 @@ const selectedTask = ref(null), selectedPlan = ref(null), planDetailError = ref(
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
 const stackedView = computed(() => props.source === 'company' && view.value === 'inbox')
 const sheetTitle = computed(() => selectedTask.value ? '任务详情' : selectedPlan.value ? '周期任务' : props.source === 'company' ? '任务安排' : '我的安排')
+const sheetSubtitle = computed(() => {
+ const agent = props.source === 'company' ? '公司 Agent' : '办公室 Agent'
+ if (!selectedTask.value) return agent
+ const at = taskTimeValue(selectedTask.value, view.value)
+ if (!Number.isFinite(Date.parse(at))) return agent
+ const d = new Date(Date.parse(at) + 8 * 3600000).toISOString().slice(0, 10)
+ return `${agent} · ${Number(d.slice(5, 7))}月${Number(d.slice(8))}日`
+})
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
 const agenda = computed(() => agendaGroups(tasks.value, taskToday(), 10))
 const agendaHasDays = computed(() => agenda.value.days.some(day => day.rows.length))
