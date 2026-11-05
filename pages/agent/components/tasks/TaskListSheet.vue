@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" :subtitle="source === 'company' ? '公司 Agent' : ''" @close="closeSheet">
   <template #header-left>
    <button v-if="issue || selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="var(--agent-text-muted)" /></button>
   </template>
@@ -18,17 +18,9 @@
     <scroll-view v-else class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
      <TaskCalendarView v-if="source === 'company' && view === 'calendar'" ref="calendar" @issue="showIssue" :active="open && view === 'calendar' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
      <template v-else>
-     <button v-if="view === 'all' && source === 'company'" class="plan-strip" hover-class="plan-strip--pressed" @tap="view = 'plans'">
-      <view class="strip-icon"><uni-icons type="reload" size="15" color="var(--agent-accent-deep)" /></view>
-      <view class="strip-copy">
-       <text class="strip-title">周期任务</text>
-       <text v-if="plansError" class="strip-meta strip-meta--fail">未能加载</text>
-       <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已开启 {{ enabledPlansCount }}</text>
-       <text v-else class="strip-meta">读取中…</text>
-      </view>
-      <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
-     </button>
-     <view class="list-summary"><text>{{ listSummary }}</text><view class="summary-side"><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text><button v-if="view === 'plans' && pausablePlans.length" class="plans-pause-all" :disabled="planLoading" @tap="pauseAllPlans">全部暂停</button></view></view>
+
+     <view v-if="view === 'plans'" class="plans-head"><text class="plans-title">周期任务</text><button v-if="pausablePlans.length" class="plans-pause-all" :disabled="planLoading" @tap="pauseAllPlans">全部暂停</button></view>
+     <view v-else class="list-summary"><text>{{ listSummary }}</text><view class="summary-side"><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text></view></view>
      <view v-if="loading && !listLoaded" class="state-message">加载中…</view>
      <view v-else-if="error && !visibleRows.length" class="state-message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load">重试</button></view>
      <view v-else-if="!visibleRows.length && view !== 'all'" class="state-message">{{ emptyText }}</view>
@@ -67,14 +59,13 @@
      </template>
 
      <template v-else-if="view === 'plans'">
-      <view v-for="plan in plans" :key="plan.planId" class="plan-row">
+      <view v-for="plan in plans" :key="plan.planId" class="plan-card">
        <button class="plan-main" @tap="openPlan(plan)">
-        <view class="status-mark" :class="planIsEnabled(plan) ? 'status-mark--active' : 'status-mark--paused'" />
         <view class="row-copy">
-         <view class="row-heading"><text class="row-title">{{ plan.label || '未命名周期安排' }}</text><text v-if="!planCanToggle(plan) && ['enabled', 'paused'].includes(plan.status)" class="plan-access-tag">仅可查看</text><text v-else class="plan-status" :class="planIsEnabled(plan) ? 'tone-active' : 'tone-muted'">{{ planStatus(plan) }}</text></view>
+         <view class="row-heading"><text class="row-title">{{ plan.label || '未命名周期任务' }}</text><text v-if="!planCanToggle(plan) && ['enabled', 'paused'].includes(plan.status)" class="plan-access-tag">仅可查看</text></view>
          <text class="row-subtitle">{{ repeatText(plan.repeat) || '重复规则未提供' }}</text>
          <text v-if="source === 'company' && taskRequirementsText(plan)" class="row-subtitle">{{ taskRequirementsText(plan) }}</text>
-         <view class="row-meta"><text>{{ planNextTime(plan) ? `${planNextLabel(plan)} · ${taskTime(planNextTime(plan))}` : '暂无下一次执行' }}</text><text>{{ plan.creator?.displayName || '成员' }} 创建</text></view>
+         <text class="plan-next">{{ planNextLine(plan) }}</text>
         </view>
         <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
        </button>
@@ -83,6 +74,7 @@
        </view>
        <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" class="plan-switch" :checked="planIsEnabled(plan)" :color="AGENT_COLORS.accentDeep" :disabled="planLoading" @change.stop="togglePlanStatus(plan, $event.detail.value)" />
       </view>
+      <text v-if="plans.length" class="plans-foot">暂停只影响未来安排，保留已有执行记录</text>
      </template>
 
      <template v-else>
@@ -105,7 +97,7 @@
    <view v-if="selectedPlan" class="detail-pane"><text v-if="planLoading" class="list-footer">正在更新…</text><TaskErrorNotice v-if="planDetailError" :message="planDetailError" @details="showIssue" />
     <scroll-view class="detail-scroll" scroll-y enhanced :show-scrollbar="false">
      <view class="plan-summary">
-      <view class="summary-heading"><view class="status-mark" :class="planIsEnabled(selectedPlan) ? 'status-mark--active' : 'status-mark--paused'" /><text class="plan-label">{{ selectedPlan.label || '未命名周期安排' }}</text></view>
+      <view class="summary-heading"><view class="status-mark" :class="planIsEnabled(selectedPlan) ? 'status-mark--active' : 'status-mark--paused'" /><text class="plan-label">{{ selectedPlan.label || '未命名周期任务' }}</text></view>
       <text class="summary-status" :class="planIsEnabled(selectedPlan) ? 'tone-active' : 'tone-muted'">{{ planStatus(selectedPlan) }}</text>
       <view class="summary-line"><text>重复规则</text><text>{{ repeatText(selectedPlan.repeat) || '未提供' }}</text></view>
       <view v-if="source === 'company' && taskRequirementsText(selectedPlan)" class="summary-line"><text>执行要求</text><text>{{ taskRequirementsText(selectedPlan) }}</text></view>
@@ -155,7 +147,11 @@ const props = defineProps({ open: Boolean, source: { type: String, default: 'off
 const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-count'])
 const calendar = ref(null), inbox = ref(null), inboxNavigation = ref({ title: '', canBack: false }), selectedDate = ref(props.date || taskToday())
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
-const views = computed(() => props.source === 'company' ? [{ value: 'all', label: '任务安排' }, { value: 'calendar', label: '日历' }] : [
+const views = computed(() => props.source === 'company' ? [
+ { value: 'calendar', label: '日历' },
+ { value: 'all', label: '全部任务' },
+ { value: 'plans', label: '周期任务' },
+] : [
  { value: 'upcoming', label: '待执行' },
  { value: 'results', label: '执行结果' },
  { value: 'plans', label: '周期任务' },
@@ -172,12 +168,11 @@ const taskRows = new Map()
 const plansLoaded = ref(false)
 const selectedTask = ref(null), selectedPlan = ref(null), planDetailError = ref(''), returnPlan = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
-const stackedView = computed(() => props.source === 'company' && (view.value === 'inbox' || view.value === 'plans'))
-const sheetTitle = computed(() => selectedTask.value ? '任务详情' : selectedPlan.value || (props.source === 'company' && view.value === 'plans') ? '周期任务' : props.source === 'company' ? '任务管理' : '我的安排')
+const stackedView = computed(() => props.source === 'company' && view.value === 'inbox')
+const sheetTitle = computed(() => selectedTask.value ? '任务详情' : selectedPlan.value ? '周期任务' : props.source === 'company' ? '任务安排' : '我的安排')
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
 const agenda = computed(() => agendaGroups(tasks.value, taskToday(), 10))
 const agendaHasDays = computed(() => agenda.value.days.some(day => day.rows.length))
-const enabledPlansCount = computed(() => plans.value.filter(plan => planIsEnabled(plan)).length)
 const pausablePlans = computed(() => plans.value.filter(plan => plan?.status === 'enabled' && plan.canPause))
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '任务安排' : '周期任务')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无周期任务')
@@ -200,6 +195,11 @@ function planIsEnabled(plan) { return !['paused', 'disabled', 'ended'].includes(
 function planHasCheckpoints(plan) { return Boolean((plan?.template?.phases || plan?.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes)) }
 function planNextTime(plan) { return plan?.nextCheckpointAt || plan?.nextAt }
 function planNextLabel(plan) { return planHasCheckpoints(plan) ? '下一次检查' : '下一次执行' }
+function planNextLine(plan) {
+ if (plan?.status === 'paused' || plan?.status === 'disabled') return '已暂停 · 历史结果保留'
+ if (plan?.status === 'ended' || (!plan?.nextAt && plan?.status !== 'paused')) return '已结束 · 历史结果保留'
+ return planNextTime(plan) ? `下次：${taskTime(planNextTime(plan))}` : '暂无下一次执行'
+}
 function planStatus(plan) {
  if (plan?.status === 'paused' || plan?.status === 'disabled') return '已暂停'
  if (plan?.status === 'ended' || (!plan?.nextAt && plan?.status !== 'paused')) return '已结束'
@@ -534,18 +534,24 @@ button::after { border:0; }
 .arrangements-scroll,.detail-scroll { height:0; min-height:0; flex:1; box-sizing:border-box; padding:0 18px 14px; }
 .list-summary { display:flex; justify-content:space-between; padding:7px 2px 10px; border-bottom:1px solid $agent-color-line; color:$agent-color-text-muted; font-size:11px; }
 .summary-side { display:flex; align-items:center; gap:10px; }
-.plans-pause-all { margin:0; padding:0; color:$agent-color-error; font-size:11px; }
+.plans-head { display:flex; align-items:baseline; justify-content:space-between; padding:10px 2px 4px; }
+.plans-title { color:$agent-color-text-primary; font-size:15px; font-weight:600; }
+.plans-pause-all { margin:0; padding:0; color:$agent-color-accent; font-size:11px; }
 .plans-pause-all[disabled] { opacity:.55; }
-.plan-row,.task-row { width:100%; min-height:76px; display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid $agent-color-line; text-align:left; }
-.plan-row:active,.task-row:active { background:$agent-color-surface-page; }
+.task-row { width:100%; min-height:76px; display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid $agent-color-line; text-align:left; }
+.task-row:active { background:$agent-color-surface-page; }
+.plan-card { width:100%; display:flex; align-items:center; gap:10px; margin-top:10px; padding:14px; border:1px solid $agent-color-line; border-radius:14px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); box-sizing:border-box; text-align:left; }
+.plan-card:active { background:$agent-color-surface-page; }
 .plan-main { min-width:0; flex:1; display:flex; align-items:center; gap:11px; text-align:left; }
-.plan-switch { flex-shrink:0; transform:scale(.78); transform-origin:right center; }
+.plan-next { display:block; margin-top:1px; color:$agent-color-text-muted; font-size:11px; line-height:1.45; }
+.plans-foot { display:block; padding:14px 0 4px; text-align:center; color:$agent-color-text-faint; font-size:11px; }
+.plan-switch { flex-shrink:0; }
 .plan-switch-wrap { flex-shrink:0; min-width:52px; min-height:32px; display:flex; align-items:center; justify-content:flex-end; }
 .plan-switch-wrap--disabled { opacity:.72; }
 .row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
 .row-heading { min-width:0; display:flex; align-items:baseline; justify-content:space-between; gap:9px; }
 .row-title { min-width:0; white-space:normal; word-break:break-word; color:$agent-color-text-secondary; font-size:13px; font-weight:600; }
-.plan-status,.task-status { flex-shrink:0; font-size:10px; }
+.task-status { flex-shrink:0; font-size:10px; }
 .plan-access-tag { flex-shrink:0; color:$agent-color-warning-deep; font-size:10px; }
 .tone-active,.tone-ok { color:$agent-color-success; }.tone-muted { color:$agent-color-text-muted; }.tone-warn { color:$agent-color-warning; }.tone-fail { color:$agent-color-error; }
 .row-subtitle { color:$agent-color-text-muted; font-size:11px; line-height:1.45; }
@@ -559,14 +565,6 @@ button::after { border:0; }
 .list-footer { padding:16px 0 22px; text-align:center; color:$agent-color-text-faint; font-size:11px; }
 .list-error { color:$agent-color-error; }
 .detail-error { display:block; flex-shrink:0; padding:8px 18px 0; color:$agent-color-error; font-size:11px; text-align:center; }
-.plan-strip { width:100%; display:flex; align-items:center; gap:10px; margin:2px 0 8px; padding:10px 12px; border-radius:$agent-radius-medium; background:$agent-color-tint; text-align:left; }
-.plan-strip::after { border:0; }
-.plan-strip--pressed { background:$agent-color-line; }
-.strip-icon { width:30px; height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:10px; background:$agent-color-line; }
-.strip-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
-.strip-title { color:$agent-color-text-secondary; font-size:13px; font-weight:600; }
-.strip-meta { color:$agent-color-text-muted; font-size:11px; }
-.strip-meta--fail { color:$agent-color-error; }
 .agenda-day { display:flex; gap:10px; padding-top:8px; }
 .agenda-rail { width:32px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding-top:14px; }
 .day-num { font-size:15px; font-weight:700; color:$agent-color-text-secondary; line-height:1.2; }

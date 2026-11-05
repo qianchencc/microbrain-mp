@@ -10,11 +10,11 @@
     <RegionCalendar v-if="calOpen && selected && (!bounded || bounds)" class="ecal" :date="selected" :today="today" :min-date="bounded ? bounds?.min : undefined" :max-date="bounded ? (bounds?.max || today) : today" compact @select="onCalendar" />
     <view class="esec"><text>每日用电</text><text v-if="basisNote">{{ basisNote }}</text></view>
     <CompanyEnergyStrip ref="stripRef" :days="strip" :selected="selected" @select="onSelectDay" @visible-range="onVisibleRange" />
-    <EnergySkeleton v-if="loading && !strip.length" :pies="false" />
+    <view v-if="loading && !strip.length" class="eprepare" role="status" aria-label="正在准备历史统计"><EnergySkeleton :pies="false" /><text class="eprepare-note">正在准备历史统计</text></view>
     <view class="ehero">
      <text class="elabel">{{ labelOf(selected) }} 用电</text>
      <template v-if="dayPending">
-      <view class="sk-num" /><view class="sk-delta" />
+      <view class="sk-num" /><text class="edelta">正在准备该日统计</text>
      </template>
      <view v-else-if="selectedDay?.failed" class="efail"><text class="enum">—</text><view class="efail-row"><text>该日读取失败</text><button class="eretry" @tap="retrySelected">重试</button></view></view>
      <template v-else>
@@ -581,6 +581,7 @@ button::after { border:0; }
 .epanel { flex:1; min-height:0; display:flex; flex-direction:column; color:$agent-color-text-secondary; font-size:$agent-font-size-compact; }
 .ebody { flex:1; min-height:0; height:0; padding:6px 20px 24px; box-sizing:border-box; }
 .estate-msg { display:flex; flex-direction:column; align-items:center; gap:10px; padding:30px 0; color:$agent-color-text-muted; font-size:$agent-font-size-compact; }
+.eprepare-note { display:block; padding-top:8px; font-size:10px; color:$agent-color-text-muted; text-align:center; }
 .eretry { font-size:11px; color:$agent-color-accent; border:1px solid $agent-color-line; border-radius:999px; padding:7px 16px; background:$agent-color-surface; }
 .estale { display:flex; align-items:center; flex-wrap:wrap; gap:$agent-space-small; margin-top:8px; font-size:10.5px; color:$agent-color-warning; }
 .calrow { display:flex; margin:8px 0 2px; }

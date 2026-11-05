@@ -47,7 +47,10 @@
    <view v-for="(phase, index) in visiblePhases" :key="phase.id" class="phase">
     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
-     <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :class="'tone-' + phase.tone" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+     <view class="phase-head">
+      <view class="phase-top"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text></view>
+      <view class="phase-bottom"><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :class="'tone-' + phase.tone" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
+     </view>
      <view v-if="phase.observations?.length" class="phase-reveal" :class="{ open: expandedPhases.includes(phase.id) }" :aria-hidden="!expandedPhases.includes(phase.id)"><view class="phase-reveal-inner"><ObservationCard :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" /></view></view>
      <button v-if="phase.report" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
       <uni-icons type="compose" size="13" color="var(--agent-accent-deep)" />
@@ -150,12 +153,18 @@ function showTaskIssue() {
   .join('\n\n')
  if (reason) showIssue({ title: detail.value.statusText, reason })
 }
-watch(issue, value => emit('navigation', { title: value ? '查看原因' : '', canBack: Boolean(value) }))
+const detailSubtitle = computed(() => {
+ if (!detail.value) return ''
+ const date = (detail.value.phases?.[0]?.time || detail.value.createdText || '').slice(0, 10)
+ const label = props.source === 'company' ? '公司 Agent' : '办公室 Agent'
+ return date ? `${label} · ${Number(date.slice(5, 7))}月${Number(date.slice(8, 10))}日` : label
+})
 const detail = computed(() => {
  const view = taskDetailView(task.value || taskPlanSnapshot(plan.value))
  if (plan.value && view) return { ...view, statusText: ({ enabled: plan.value.nextAt ? '已开启' : '已结束', paused: '已暂停', deleted: '已删除' })[plan.value.status] || (plan.value.nextAt ? '已开启' : '已结束') }
  return view
 })
+watch([issue, detailSubtitle], () => emit('navigation', { title: issue.value ? '查看原因' : '', canBack: Boolean(issue.value), subtitle: issue.value ? '' : detailSubtitle.value }), { immediate: true })
 function referenceCurrent() {
  if (plan.value) emit('reference', { type: 'task_plan', planId: plan.value.planId, label: plan.value.label })
  else if (task.value) emit('reference', { type: 'task', taskId: task.value.id, label: task.value.label })

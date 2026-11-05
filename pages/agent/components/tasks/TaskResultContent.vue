@@ -25,9 +25,9 @@ const content = ref(null), report = ref(null)
 const reportRef = ref(null), reportNav = ref({ title: '', canBack: false })
 const safetyRef = ref(null), taskNav = ref({ title: '', canBack: false })
 const navigation = computed(() => {
- if (reportRef.value) return { title: reportNav.value.title || '检查报告', canBack: true }
- if (safetyRef.value?.mode === 'event') return { title: '安全台账详情', canBack: true }
- if (safetyRef.value?.mode === 'history') return { title: '安全事件台账', canBack: true }
+ if (reportRef.value) return { title: reportNav.value.title || '检查报告', canBack: true, subtitle: '' }
+ if (safetyRef.value?.mode === 'event') return { title: '安全台账详情', canBack: true, subtitle: '' }
+ if (safetyRef.value?.mode === 'history') return { title: '安全事件台账', canBack: true, subtitle: '' }
  return taskNav.value
 })
 watch(navigation, value => emit('navigation', value), { immediate: true })

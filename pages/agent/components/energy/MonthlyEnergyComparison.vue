@@ -1,7 +1,7 @@
 <template>
  <view class="monthly">
   <view class="month-head"><text>{{ view.title }}</text><text v-if="view.cutoff" class="cutoff">{{ view.current.through ? '采样截至' : '统计截至' }} {{ view.cutoff }}</text></view>
-  <view v-if="view.current.pending" class="hero-placeholder" aria-label="正在读取本月用电"><view class="skeleton hero-skeleton" aria-hidden="true" /></view>
+  <view v-if="view.current.pending" class="hero-placeholder" role="status" aria-label="正在准备历史统计"><view class="skeleton hero-skeleton" aria-hidden="true" /><text class="hero-note">正在准备历史统计</text></view>
   <text v-else class="hero">{{ monthlyNumber(view.current.value) }}<text class="unit"> 度</text></text>
   <text class="window">{{ view.current.label }} · 全部授权电表合计</text>
   <text class="window">每月 1 日 08:00 起算 · 每日 08:00 / 20:00 更新</text>
@@ -160,7 +160,7 @@ view, text, input { font-size:inherit; line-height:inherit; }
 .retry { display:block; margin:12px 0 0; padding:5px 0; font-size:11px; color:$agent-color-accent; background:transparent; line-height:1.6; }.retry::after { border:0; }
 .skeleton { position:relative; overflow:hidden; background:$agent-color-tint; border-radius:3px; }
 .skeleton::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); transform:translateX(-100%); animation:monthly-shimmer 1.6s linear infinite; }
-.hero-placeholder { height:41px; margin-top:7px; display:flex; align-items:center; }.hero-skeleton { width:138px; height:28px; }
+.hero-placeholder { height:41px; margin-top:7px; display:flex; align-items:center; }.hero-skeleton { width:138px; height:28px; }.hero-note { margin-left:10px; font-size:10px; color:$agent-color-text-muted; }
 .pct-placeholder { height:34px; margin:7px 0 13px; display:flex; align-items:center; }.pct-skeleton { width:70px; height:22px; }
 .amount-skeleton { width:42px; max-width:45%; height:10px; align-self:center; }
 .summary-placeholder { height:32px; margin-top:12px; display:flex; flex-direction:column; justify-content:center; gap:5px; }.summary-skeleton { width:86%; height:8px; }.summary-short { width:58%; height:8px; }
