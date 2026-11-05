@@ -11,14 +11,14 @@ const artwork = Object.freeze({
     key: "generic-device",
     code: "DEV",
     label: "设备",
-    src: "/static/device-art/generic-device.png",
+    src: null,
     variant: "generic",
   }),
   "lighting-generic": Object.freeze({
     key: "lighting-generic",
     code: "LGT",
     label: "照明 / 设备",
-    src: "/static/device-art/lighting-generic.png",
+    src: null,
     variant: "generic",
   }),
   "lighting-grille": Object.freeze({
@@ -61,7 +61,7 @@ const artwork = Object.freeze({
   }),
   "safety-sensor": Object.freeze({
     key: "safety-sensor", code: "SAFE", label: "安全传感器",
-    src: "/static/device-art/safety-sensor.png", variant: "observe",
+    src: null, variant: "observe",
   }),
 });
 

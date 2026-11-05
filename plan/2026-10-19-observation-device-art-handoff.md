@@ -71,3 +71,11 @@ One compact water-leak sensor assembly for commercial building monitoring: a sma
 ## 工作区边界
 
 本次仅提交六张素材、共用映射、公司抽屉 subtype 传递、预览和本文档。已有楼层位置调查、能耗、Company 浮层、领域文档及其他原型并行改动保持独立。API 凭据未写入文件；临时生成日志及原始高分辨率文件不进入业务提交。
+
+## 2026-11-05：撤回新增兜底图，沿用原素材
+
+- 用户否决本轮新生成的 `generic-device.png`、`lighting-generic.png`、`safety-sensor.png`，删除这三张素材并恢复三个目录项的 `src: null`，使用既有 CSS 中性兜底；原有十张产品图不变。
+- 格栅灯、灯带按既有名称规则选图；消防按实际 `subtype` 选烟感、燃气、水浸图，不把“照明开关”或未知消防类型冒充具体型号。
+- 公司、区域抽屉已保留分类字段；任务提案卡原先仅传 kind/name，现保留设备字段，避免丢失 subtype、visualKey 和 location 导致已有图片无法命中。
+- 运行选图冒烟：十张原图路径存在且选图正确，三个未知分类恢复中性兜底；任务提案烟感 subtype 场景修复前落兜底、修复后选中原烟感图。
+- `npm run test:agent`：301/301 通过；HBuilderX 微信开发编译完成，既有 check/detail、img 选择器及鸿蒙兼容提示保留。未完成本轮微信界面／真机验收，以上不替代前端证据。

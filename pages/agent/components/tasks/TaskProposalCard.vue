@@ -112,7 +112,7 @@ const intervalText = computed(() => {
  const span = start.slice(0, 10) === end.slice(0, 10) ? `${start} 至 ${end.slice(-5)}` : `${start} 至 ${end}`
  return `${span} · ${props.task.phases?.length || 0} 次检查`
 })
-const artworkOf = device => resolveDeviceArtwork({ kind: device.kind, deviceName: device.deviceName || device.name }).src
+const artworkOf = device => resolveDeviceArtwork({ ...device, deviceName: device.deviceName || device.name }).src
 function phaseTitle(index) {
  if (isCancellation.value) return state.value === 'confirmed' ? '已取消' : '将取消'
  const actualTitle = props.task.phases[index]?.title
