@@ -1,8 +1,8 @@
 <template>
  <view class="region-page">
   <AssistantNav :back-label="backLabel" @back="goBack"><template #title><RegionChip workbench nav /></template></AssistantNav>
-  <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text class="record-status">{{ !sampleMode && !hasDaySnapshot ? (error ? '加载失败' : '任务加载中…') : tasks.length + ' 条记录' }}</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
-  <text v-if="sampleMode" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
+  <view class="day-heading"><text class="day-title">{{ date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日' }}</text><text class="record-status">{{ sampleMode ? (error ? '演示记录未加载' : tasks.length + ' 条记录') : (!hasDaySnapshot ? (error ? '加载失败' : '任务加载中…') : tasks.length + ' 条记录') }}</text><button v-if="isDev" class="sample-toggle" @tap="toggleSample">{{ sampleMode ? '返回真实记录' : '查看样例' }}</button></view>
+  <text v-if="sampleMode && !error" class="sample-notice">本地演示记录 · 未写入设备或运行库</text>
   <view class="timeline-body">
    <RegionTimeline :key="focusRegionId + '-' + (sampleMode ? 'sample' : 'real')" calendar :bottom-pad="78" :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks" :calendar-error="calendarError" :max-date="maxDate" :items="items" :date="date" :start="windowStart || date" :days="windowDays" :now="displayNow" @date-change="date = $event" @visible-date="onVisibleDate" @reach-start="extendTop" @reach-end="extendBottom" @calendar-month="onCalendarMonth" @select="openTask">
     <template #card="{ item }">
