@@ -1,5 +1,5 @@
 <template>
- <view class="segments" :class="{ blue: tone === 'blue', disabled }">
+ <view class="segments" :class="{ blue: tone === 'blue', glass: tone === 'glass', disabled }">
   <view v-if="index >= 0" class="thumb" :style="{ width: `${100/options.length}%`, transform: `translateX(${index * 100}%)` }" />
   <view v-for="option in options" :key="option.value" class="segment" :class="{ active: modelValue === option.value }" role="radio" :aria-checked="modelValue === option.value" @tap="choose(option.value)"><image v-if="option.icon" :src="'/static/' + option.icon + '.svg'" style="width:19px;height:19px" /><text>{{ option.label }}</text></view>
  </view>
@@ -34,4 +34,7 @@ function end(e) {
    组件必须对宿主全局样式中立：元素级 font-size/line-height 一律改回继承。 */
 view, text, input { font-size: inherit; line-height: inherit; }
 .segments { position:relative; display:flex; padding:3px; border-radius:6px; background:var(--agent-tint); min-height:36px; box-sizing:border-box; }.thumb { position:absolute; top:3px; bottom:3px; left:0; border:3px solid var(--agent-tint); border-top:0; border-bottom:0; border-radius:6px; box-sizing:border-box; background:$agent-color-accent; box-shadow:0 1px 4px rgba(var(--agent-shadow-rgb),.08); transition:transform 220ms cubic-bezier(.23,1,.32,1); }.segment { position:relative; z-index:1; flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:6px 0; font-size:11px; color:var(--agent-text-muted); }.active { color:white; }.blue { background:transparent; }.blue .thumb { background:var(--agent-accent-faint); border-color:var(--agent-surface); box-shadow:inset 0 0 0 1px var(--agent-chart); }.blue .active { color:var(--agent-accent); }.disabled { opacity:.45; }@media(prefers-reduced-motion:reduce) { .thumb { transition:none; } }
+.glass .segment { flex-direction:row; gap:0; padding:8px 0; border-radius:8px; }
+.glass .thumb { background:var(--agent-surface); border-color:var(--agent-tint); border-radius:8px; box-shadow:0 1px 4px rgba(var(--agent-shadow-rgb),.14); }
+.glass .active { color:var(--agent-accent-deep); font-weight:600; }
 </style>

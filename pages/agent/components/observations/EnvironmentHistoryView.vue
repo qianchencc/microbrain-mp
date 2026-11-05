@@ -1,14 +1,21 @@
 <template>
  <view class="history">
-  <view class="filters"><text>历史期间</text><picker mode="date" :value="fromDate" :end="toDate" @change="changeDate('from', $event.detail.value)"><view>{{ fromDate }} <uni-icons type="down" size="10" color="var(--agent-text-muted)" /></view></picker><text>至</text><picker mode="date" :value="toDate" :start="fromDate" :end="today" @change="changeDate('to', $event.detail.value)"><view>{{ toDate }} <uni-icons type="down" size="10" color="var(--agent-text-muted)" /></view></picker></view>
-  <scroll-view class="body" scroll-y enhanced :show-scrollbar="false">
-   <view class="paper"><EnvironmentTrend v-if="report" :report="report" /><text v-else class="empty">{{ loading ? '正在读取站点历史' : '本次未取得历史采样' }}</text></view>
-   <view v-if="error" class="error"><text>{{ error }}</text><button @tap="load(report ? failedPage : 0)">重试</button></view>
-   <button v-if="report?.nextPage !== null && report" class="more" :disabled="loading" @tap="loadMore">{{ loading ? '正在读取…' : '继续读取下一批采样' }}</button>
-   <text v-if="report && !report.samples.length" class="empty">所选期间没有采样，请选择其他日期；实时读数另见概览。</text>
-   <button v-if="report" class="question" hover-class="pressed" @tap="$emit('question', report.window)"><uni-icons type="chatbubble" size="16" color="#fff" /> 向公司 Agent 询问此期间</button>
-  </scroll-view>
+ <view class="ranger">
+  <picker mode="date" :value="fromDate" :end="toDate" @change="changeDate('from', $event.detail.value)"><view class="rdate">{{ fromDate }}</view></picker>
+  <text class="rsep">至</text>
+  <picker mode="date" :value="toDate" :start="fromDate" :end="today" @change="changeDate('to', $event.detail.value)"><view class="rdate">{{ toDate }}</view></picker>
+  <uni-icons type="down" size="10" color="var(--agent-text-muted)" />
  </view>
+ <scroll-view class="body" scroll-y enhanced :show-scrollbar="false">
+  <view class="paper"><EnvironmentTrend v-if="report" :report="report" /><text v-else class="empty">{{ loading ? '正在读取站点历史' : '本次未取得历史采样' }}</text></view>
+  <view v-if="error" class="error"><text>{{ error }}</text><button @tap="load(report ? failedPage : 0)">重试</button></view>
+  <button v-if="report?.nextPage !== null && report" class="more" :disabled="loading" @tap="loadMore">{{ loading ? '正在读取…' : '继续读取下一批采样' }}</button>
+  <text v-if="report && !report.samples.length" class="empty">所选期间没有采样，请选择其他日期；实时读数另见概览。</text>
+ </scroll-view>
+ <view class="foot">
+  <button v-if="report" class="question" hover-class="pressed" @tap="$emit('question', report.window)"><uni-icons type="chatbubble" size="16" color="#fff" /> 向公司 Agent 询问此期间</button>
+ </view>
+</view>
 </template>
 <script setup>
 import { ref, watch, onBeforeUnmount } from 'vue'
@@ -58,7 +65,7 @@ onHide(() => { visible = false; invalidate() });onShow(() => { visible = true; r
 <style scoped lang="scss">
 @import "../../styles/tokens";
 view, text, input { font-size:inherit;line-height:inherit; }
-.history { flex:1;min-height:0;height:0;display:flex;flex-direction:column;color:var(--agent-text-secondary);font-size:$agent-font-size-compact; }.filters { display:flex;align-items:center;gap:$agent-space-small;flex-wrap:wrap;padding:4px 20px 16px;font-size:11px;color:var(--agent-text-muted); }.filters picker view { display:flex;align-items:center;gap:4px;min-height:34px;border:1px solid var(--agent-line);border-radius:8px;padding:0 8px;color:var(--agent-text-secondary); }.body { flex:1;min-height:0;height:0; }
+.history { flex:1;min-height:0;height:0;display:flex;flex-direction:column;color:var(--agent-text-secondary);font-size:$agent-font-size-compact; }.ranger { display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 20px 14px;padding:9px 0;border-radius:11px;background:var(--agent-tint);font-size:12px;color:var(--agent-text-secondary); }.rdate { color:var(--agent-text-primary);font-weight:550;font-variant-numeric:tabular-nums; }.rsep { color:var(--agent-text-muted);font-size:10px; }.body { flex:1;min-height:0;height:0; }
 .paper { margin:0 20px;padding:18px 15px;background:linear-gradient(145deg,var(--agent-surface),var(--agent-surface-page));border:1px solid var(--agent-line);border-radius:14px;box-shadow:inset 0 1px 0 #fff,0 4px 12px -10px rgba(var(--agent-shadow-rgb),.31); }
-button { margin:0;padding:0;background:transparent;line-height:1.3; }button::after { border:0; }.empty { display:block;padding:20px;text-align:center;color:var(--agent-text-muted);font-size:11px; }.error { display:flex;justify-content:space-between;margin:15px 20px;color:var(--agent-warning-deep); }.error button { font-size:$agent-font-size-compact;color:var(--agent-accent-deep); }.question,.more { margin:18px 20px;min-height:44px;display:flex;align-items:center;justify-content:center;gap:$agent-space-small;border-radius:13px;font-size:$agent-font-size-compact; }.question { color:white;background:linear-gradient(155deg,var(--agent-accent),var(--agent-accent-deep));box-shadow:inset 0 1px 0 rgba(255,255,255,.31),0 4px 10px -6px rgba(var(--agent-ink-rgb),.5); }.more { color:var(--agent-accent-deep);background:var(--agent-tint); }.pressed { opacity:.75; }
+button { margin:0;padding:0;background:transparent;line-height:1.3; }button::after { border:0; }.empty { display:block;padding:20px;text-align:center;color:var(--agent-text-muted);font-size:11px; }.error { display:flex;justify-content:space-between;margin:15px 20px;color:var(--agent-warning-deep); }.error button { font-size:$agent-font-size-compact;color:var(--agent-accent-deep); }.more { margin:18px 20px;min-height:44px;display:flex;align-items:center;justify-content:center;gap:$agent-space-small;border-radius:13px;font-size:$agent-font-size-compact;color:var(--agent-accent-deep);background:var(--agent-tint); }.foot { padding:4px 20px calc(10px + env(safe-area-inset-bottom)); }.question { width:100%;min-height:46px;display:flex;align-items:center;justify-content:center;gap:$agent-space-small;border-radius:13px;font-size:$agent-font-size-compact;color:white;background:linear-gradient(155deg,var(--agent-accent),var(--agent-accent-deep));box-shadow:inset 0 1px 0 rgba(255,255,255,.31),0 4px 10px -6px rgba(var(--agent-ink-rgb),.5); }.pressed { opacity:.75; }
 </style>
