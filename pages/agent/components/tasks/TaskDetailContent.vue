@@ -51,7 +51,7 @@
       <view class="phase-bottom"><text class="phase-note">{{ phase.title }}</text></view>
      </view>
      <view v-if="phase.observations?.length" class="phase-reveal" :class="{ open: expandedPhases.includes(phase.id) }" :aria-hidden="!expandedPhases.includes(phase.id)"><view class="phase-reveal-inner"><ObservationCard :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" /></view></view>
-     <button v-if="phase.report" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
+     <button v-if="phase.report && source === 'company'" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
       <uni-icons type="compose" size="13" color="var(--agent-accent-deep)" />
       <text class="phase-report-title">{{ phase.report.title || '检查报告' }}</text>
       <text v-if="phase.report.status === 'partial'" class="phase-report-tag">部分完成</text>
@@ -252,7 +252,7 @@ const whenLine = computed(() => {
  const when = detail.value.whenText.replace(/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}) 至 (\d{2}:\d{2})$/, '$1 至 $2')
  return [when, detail.value.repeatText].filter(Boolean).join(' · ')
 })
-const reportLink = computed(() => (detail.value?.phases || []).filter(phase => phase.report?.reportId).at(-1)?.report || null)
+const reportLink = computed(() => props.source === 'company' ? (detail.value?.phases || []).filter(phase => phase.report?.reportId).at(-1)?.report || null : null)
 // 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于保留原取消权限。
 const detailMine = computed(() => Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId))
 const lightIds = computed(() => props.source === 'office' ? [...new Set((detail.value?.phases || []).flatMap(phase => phase.devices.filter(device => device.kind === 'lighting').map(device => device.id)))] : [])
