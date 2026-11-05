@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" :subtitle="source === 'company' ? '公司 Agent' : ''" @close="closeSheet">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="issue ? '查看原因' : (view === 'inbox' ? inboxNavigation.title : navigation.title) || sheetTitle" :subtitle="navigation.subtitle || (source === 'company' ? '公司 Agent' : '')" @close="closeSheet">
   <template #header-left>
    <button v-if="issue || selectedTask || selectedPlan || inboxNavigation.canBack || stackedView" class="back-button" aria-label="返回上一级" @tap="goBack"><uni-icons type="back" size="15" color="var(--agent-text-muted)" /></button>
   </template>

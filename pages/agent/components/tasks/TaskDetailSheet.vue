@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="navigation.title || (planId ? (viewingReport ? '最近一次报告' : '周期安排') : '任务详情')" @close="$emit('close')">
+ <DeviceSheet :open="open" :back="nativeBack" tall compact-header :title="navigation.title || (planId ? (viewingReport ? '最近一次报告' : '周期安排') : '任务详情')" :subtitle="navigation.subtitle || ''" @close="$emit('close')">
   <template #header-left><button v-if="navigation.canBack" class="back-button" aria-label="返回上一级" @tap="nativeBack"><uni-icons type="back" size="15" color="var(--agent-text-muted)" /></button></template>
   <template #header-right><text v-if="regionName" class="region-name">{{ regionName }}</text></template>
   <TaskResultContent ref="content" class="content-host" :active="open" :task-id="taskId" :plan-id="planId" :source="source" :sample-task="sampleTask" @cancelled="$emit('cancelled')" @changed="$emit('changed')" @dismiss="$emit('close')" @reference="$emit('reference', $event)" @report-open="viewingReport = true" @plan-return="viewingReport = false" @navigation="navigation = $event" />

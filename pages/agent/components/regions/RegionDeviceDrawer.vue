@@ -1,5 +1,5 @@
 <template>
- <DeviceSheet :open="open" expanded compact-header :title="sheetTitle" :back="backWithinDrawer" @close="$emit('close')">
+ <DeviceSheet :open="open" expanded compact-header :title="sheetTitle" :subtitle="activeTask ? taskNavigation.subtitle || '' : ''" :back="backWithinDrawer" @close="$emit('close')">
   <template v-if="depth > 0" #header-left><button class="back-button" aria-label="返回上一级" @tap="backWithinDrawer"><uni-icons type="left" size="17" color="var(--agent-text-secondary)" /></button></template>
   <template #header-right><view class="header-actions"><text v-if="depth === 0" class="sheet-meta">{{ regionName }} · {{ devices.length }} 台</text><button class="state-refresh" aria-label="刷新设备状态" :disabled="stateLoading || !devices.length" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: stateLoading }" type="refreshempty" size="16" color="var(--agent-text-secondary)" /></button></view></template>
   <template #header>
