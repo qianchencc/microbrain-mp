@@ -13,6 +13,7 @@ export function regionSampleTasks(date, regionId, devices) {
  const lights = roster.filter(device => device.kind === 'lighting').slice(0, 4)
  const ac = roster.find(device => device.kind === 'ac')
  const action = (device, target, outcome) => ({ id: device.id, kind: device.kind, name: device.name, target, outcome })
+ const phase = (id, time, status, actions) => ({ id: `sample-phase-${id}`, at: at(time), status, devices: actions })
  const task = (id, label, status, creatorName, phases) => ({
   id: `sample-${id}`, label, status, version: 1, regionIds: [regionId], createdAt: at('07:00'), phases,
   devices: [...new Map(phases.flatMap(item => item.devices).map(device => [device.id, {
