@@ -1,0 +1,57 @@
+{
+  "confirmationDialog": "replace-confirm.png",
+  "uiCancellationCallbackVerified": false,
+  "uiAcceptanceCallbackVerified": false,
+  "unitRegression": "test/agent-context-delivery.test.mjs: cancel preserves both; accept replaces both; late confirmation and scope/edit changes do not overwrite",
+  "water": {
+    "text": "请帮我核实这条水浸告警，并给出处置建议。",
+    "reference": {
+      "deviceId": "63b34281c749954c69b2863f9f8c03fa",
+      "eventId": "c321e1afdca8455c8970df5e04084413",
+      "type": "safety_event",
+      "ledger": "flooding",
+      "label": "26楼未来智城办公区水浸感应器 · 水浸 · 2026-10-28T02:46:03Z"
+    },
+    "running": false
+  },
+  "smoke": {
+    "text": "请帮我核实这条烟感告警，并给出处置建议。",
+    "reference": {
+      "deviceId": "18d46a9a167fa4659443f7199520a24e",
+      "eventId": "c5fd4c856451457f9b652de7657233dd",
+      "type": "safety_event",
+      "ledger": "smoke",
+      "label": "26楼未来智城办公区光电感烟探测器 · 烟感 · 2026-10-16T09:36:22Z"
+    },
+    "running": false
+  },
+  "negative": {
+    "wrongDevice": {
+      "status": 403,
+      "body": {
+        "code": "SAFETY_DEVICE_OUTSIDE_SCOPE",
+        "message": "设备不在当前告警类型的授权范围内"
+      }
+    },
+    "missingType": {
+      "status": 400,
+      "body": {
+        "code": "INVALID_SAFETY_QUERY",
+        "message": "须指定告警类型、查询时刻及有效设备标识"
+      }
+    }
+  },
+  "officeDraftUnchanged": true,
+  "limits": [
+    "No actual WeChat notification was sent or clicked",
+    "Native modal automation did not yield an observable callback; do not count cancel/confirm as UI-accepted",
+    "Hot-start hooks were attempted but did not produce a verifiable page transition; not accepted",
+    "Real logged-out login restoration was not exercised"
+  ],
+  "testCounts": {
+    "frontendPassed": 306,
+    "backendTests": 599,
+    "backendSkipped": 25,
+    "backendFailures": 0
+  }
+}

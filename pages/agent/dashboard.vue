@@ -78,7 +78,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { pickAgentLaunch, savePendingAgentLaunch, takePendingAgentLaunch } from '@/utils/agent-launch-link.mjs'
-import { getCompanyDashboard, getCompanyDevices, clearCompanyReadCache, readCompanyDashboardCache, writeCompanyDashboardCache } from '@/apis/agent/observations'
+import { getCompanyDashboard, getCompanyDevices, clearCompanyReadCache, readCompanyDashboardCache, writeCompanyDashboardCache, getLatestSafetyEvent } from '@/apis/agent/observations'
 import { getCompanyEnergyDaily } from '@/apis/agent/energy'
 import { peekAgentNotifications, readAgentNotifications } from '@/apis/agent/tasks'
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session'
@@ -395,7 +395,7 @@ function observationBack() { if (selectedEvent.value) selectedEvent.value = null
 const agentFloat = ref(null)
 const openingAgent = ref('')
 const pageActive = ref(false)
-let pendingAgentOpen = null
+let pendingAgentOpen = null, latestAlertRequest = 0, latestAlertLoading = false
 function openCompanyAgent(payload = {}) { agentFloat.value?.open(payload) }
 function referenceEvent(reference) { selectedEvent.value = null; observationType.value = ''; openCompanyAgent({ reference }) }
 function referenceTask(reference) { tasksOpen.value = false; openCompanyAgent({ reference }) }
@@ -415,11 +415,42 @@ function openAgent(source) {
 }
 // 卡片/深链参数在 onLoad 只写入暂存；真正的消费点只有 onShow（App 的登录恢复、
 // 后台热启动都写同一个槽），避免两条路径各开一次浮层。
-function openPendingAgentLaunch() {
+async function openPendingAgentLaunch() {
  if (!pendingAgentOpen || !agentFloat.value) return
- const payload = pendingAgentOpen
+ const query = pendingAgentOpen
  pendingAgentOpen = null
- agentFloat.value.open(payload)
+ const current = ++latestAlertRequest
+ if (latestAlertLoading) { latestAlertLoading = false; uni.hideLoading() }
+ if (query.entry !== 'latest-alert') { agentFloat.value.open(parseAgentContext(query)); return }
+ const names = { gas: '燃气', smoke: '烟感', water: '水浸' }
+ if (!['gas', 'smoke', 'water'].includes(query.type) || query.deviceId !== undefined
+     && (typeof query.deviceId !== 'string' || !query.deviceId.trim() || query.deviceId.length > 300)) {
+  uni.showToast({ title: '告警入口的类型或设备标识无效', icon: 'none' }); return
+ }
+ let identity
+ const isActive = () => visible && pageActive.value && agentFloat.value?.isOpen !== false && current === latestAlertRequest && identity === getAgentStorageScope()
+ try {
+  await waitForAgentSession()
+  if (!visible || current !== latestAlertRequest) return
+  identity = getAgentStorageScope()
+  await agentFloat.value.open()
+  latestAlertLoading = true
+  uni.showLoading({ title: `读取最新${names[query.type]}告警`, mask: false })
+  const result = await getLatestSafetyEvent({ type: query.type, deviceId: query.deviceId, to: new Date().toISOString() }, { isActive })
+  if (!isActive()) return
+  if (!result.record || !result.reference) {
+   uni.showModal({ title: `没有可引用的${names[query.type]}告警`, content: '指定范围内未查到告警记录，不会改用其他设备或告警类型。', showCancel: false })
+   return
+  }
+  agentFloat.value.open({ reference: result.reference, prompt: `请帮我核实这条${names[query.type]}告警，并给出处置建议。` })
+ } catch (error) {
+  if (current !== latestAlertRequest || !visible || error.code === 'AGENT_READ_INVALIDATED') return
+  uni.showModal({ title: '告警读取未完成', content: error.message || '请稍后重试，不会改用其他设备或告警类型。', confirmText: '重试', cancelText: '留在助手', success: value => {
+   if (value.confirm && identity && isActive()) { pendingAgentOpen = query; void openPendingAgentLaunch() }
+  } })
+ } finally {
+  if (current === latestAlertRequest && latestAlertLoading) { latestAlertLoading = false; uni.hideLoading() }
+ }
 }
 onLoad(options => {
  const launch = pickAgentLaunch('pages/agent/dashboard', options || {})
@@ -432,11 +463,14 @@ onShow(() => {
  try { if (scope && scope !== getAgentStorageScope()) { resetForScope(); scope = '' } }
  catch { resetForScope(); scope = '' }
  const pending = takePendingAgentLaunch()
- if (pending) pendingAgentOpen = parseAgentContext(pending.query)
+ if (pending) pendingAgentOpen = pending.query
  load()
  openPendingAgentLaunch()
 })
-function hide() { visible = false; pageActive.value = false; ++requestId; ++agendaRequestId; allLoaded() }
+function hide() {
+ visible = false; pageActive.value = false; ++requestId; ++agendaRequestId; ++latestAlertRequest; allLoaded()
+ if (latestAlertLoading) { latestAlertLoading = false; uni.hideLoading() }
+}
 onHide(hide); onUnload(hide)
 </script>
 <style scoped lang="scss">

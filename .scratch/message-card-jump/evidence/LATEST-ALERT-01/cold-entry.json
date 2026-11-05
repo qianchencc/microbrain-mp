@@ -1,0 +1,56 @@
+{
+  "link": "/pages/agent/dashboard?source=company&entry=latest-alert&type=gas&deviceId=53b5b346404f47c8a438ec6d16124931",
+  "backend": {
+    "status": 200,
+    "ms": 3056,
+    "statuses": [
+      "preparing",
+      "preparing",
+      "preparing",
+      "fresh"
+    ],
+    "record": {
+      "eventId": "aa122d376ec44d0db54a7236e0866920",
+      "ledger": "gas",
+      "deviceId": "53b5b346404f47c8a438ec6d16124931",
+      "deviceName": "26楼未来智城办公区燃气感应器",
+      "recordedDeviceName": "27楼茶水间燃气感应器",
+      "currentDevice": {
+        "name": "26楼未来智城办公区燃气感应器",
+        "location": "26楼未来智城办公区"
+      },
+      "location": "26楼未来智城办公区",
+      "subtype": "gas",
+      "occurredAt": "2026-10-16T03:12:56Z",
+      "alarm": true,
+      "report": false
+    },
+    "reference": {
+      "deviceId": "53b5b346404f47c8a438ec6d16124931",
+      "eventId": "aa122d376ec44d0db54a7236e0866920",
+      "type": "safety_event",
+      "ledger": "gas",
+      "label": "26楼未来智城办公区燃气感应器 · 燃气 · 2026-10-16T03:12:56Z"
+    },
+    "cache": {
+      "status": "fresh",
+      "refreshing": false,
+      "updatedAt": "2026-11-05T06:46:49.487883Z",
+      "retryAfterMs": 1000
+    }
+  },
+  "ui": {
+    "route": "pages/agent/dashboard",
+    "text": "请帮我核实这条燃气告警，并给出处置建议。",
+    "reference": {
+      "deviceId": "53b5b346404f47c8a438ec6d16124931",
+      "eventId": "aa122d376ec44d0db54a7236e0866920",
+      "type": "safety_event",
+      "ledger": "gas",
+      "label": "26楼未来智城办公区燃气感应器 · 燃气 · 2026-10-16T03:12:56Z"
+    },
+    "disabled": false,
+    "running": false,
+    "elapsedMs": 4300
+  }
+}

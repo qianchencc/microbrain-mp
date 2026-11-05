@@ -16,6 +16,7 @@ export {
   getSafetyEvent,
   getSafetyEventCameras,
   listSafetyHistory,
+  getLatestSafetyEvent,
   getEnvironmentHistory,
   getVideoStream,
 } from './index.js'

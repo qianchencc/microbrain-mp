@@ -2,7 +2,7 @@
 // 只认公司 Agent 的上下文键，避免把 scene 等启动参数带进业务页。
 const STORAGE_KEY = 'agent.pending-launch'
 const TTL_MS = 10 * 60 * 1000
-const LAUNCH_KEYS = ['source', 'alertPrompt', 'prompt', 'taskReference', 'safetyReference', 'environmentWindow', 'energyWindow', 'alertLedger', 'alertEventId', 'alertDeviceId', 'alertLabel']
+const LAUNCH_KEYS = ['source', 'entry', 'type', 'deviceId', 'alertPrompt', 'prompt', 'taskReference', 'safetyReference', 'environmentWindow', 'energyWindow', 'alertLedger', 'alertEventId', 'alertDeviceId', 'alertLabel']
 
 export const AGENT_LAUNCH_PAGE = 'pages/agent/dashboard'
 

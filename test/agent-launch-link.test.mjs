@@ -83,3 +83,13 @@ test('卡片三元组参数保留在启动参数白名单里', () => {
 	})
 	assert.deepEqual(launch, { path: 'pages/agent/dashboard', query: { alertLedger: 'flooding', alertEventId: '1947', alertDeviceId: '3f8a', alertLabel: '水浸 · 一楼机房' } })
 })
+
+test('固定消息入口保留类型和设备，登录恢复与其他设备不能混淆', () => {
+ const entry = pickAgentLaunch('pages/agent/dashboard', { source: 'company', entry: 'latest-alert', type: 'gas', deviceId: 'gas-a' })
+ assert.deepEqual(entry.query, { source: 'company', entry: 'latest-alert', type: 'gas', deviceId: 'gas-a' })
+ savePendingAgentLaunch(entry, 1000)
+ const restored = takePendingAgentLaunch(2000)
+ assert.equal(new URLSearchParams(agentLaunchUrl(restored).split('?')[1]).get('deviceId'), 'gas-a')
+ assert.equal(shouldHandleLaunch(entry, 50000), true)
+ assert.equal(shouldHandleLaunch({ ...entry, query: { ...entry.query, deviceId: 'gas-b' } }, 50001), true)
+})

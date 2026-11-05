@@ -57,8 +57,7 @@ let pendingPayload = null
 function deliver(payload) {
  if (!payload) return
  // 引用/预填交给会话组件：未 hydration 时内部自动转暂存队列
- if (payload.reference) conv.value?.setReference(payload.reference)
- if (payload.prompt) conv.value?.prefill(payload.prompt)
+ if (payload.reference || payload.prompt) conv.value?.applyContext(payload)
 }
 // 小程序子组件要等 setData 往返后才拿得到实例；深链在页面 onMounted 就打开浮层，
 // 引用/预填必须暂存到 conv 真正挂载再交付，不能静默丢弃。

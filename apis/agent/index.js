@@ -113,6 +113,9 @@ export const listSafetyHistory = (query = {}, options) => {
  return readSnapshot(`/agent/safety-events?source=company&${params}`, undefined, options)
 }
 
+export const getLatestSafetyEvent = ({ type, deviceId, to = new Date().toISOString() }, options) =>
+ ordinaryRead('/agent/safety-events/latest?' + queryString({ source: 'company', type, deviceId, to }), undefined, options)
+
 export const getEnvironmentHistory = (query, options) => ordinaryRead('/agent/environment-history?source=company&' + queryString(query), undefined, options)
 export const getEnergyHistory = (query = {}, options) => ordinaryRead('/agent/energy-history?source=company&' + queryString(query), undefined, options)
 export const getCompanyDevices = (options) => readSnapshot('/agent/company-devices?source=company', undefined, options)

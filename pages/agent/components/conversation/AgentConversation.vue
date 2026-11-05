@@ -61,7 +61,7 @@ import { createTurn, applyEvent, restoreTurns, canRecoverTurn, restartTurn, merg
 import { preserveComposerDraft, takeComposerDraft, preserveComposerReference, takeComposerReference, preserveComposerView, takeComposerView } from '../../lib/conversation.mjs'
 import { createDraftBaseline } from '../../lib/actions.mjs'
 import { mergeTaskPlan, taskNavigation, taskListRange } from '../../lib/tasks.mjs'
-import { createPresentation, markAgentEntry } from '../../lib/conversation.mjs'
+import { createPresentation, markAgentEntry, createContextDelivery } from '../../lib/conversation.mjs'
 import { openAgentMenu } from '../../lib/navigation.mjs'
 import DeviceSheet from '../shared/DeviceSheet.vue'
 import SafetyEventDetail from '../observations/SafetyEventDetail.vue'
@@ -92,6 +92,7 @@ function navigateRegion(url) {
 function openRegion(region) { navigateRegion('/pages/agent/region?regionId=' + encodeURIComponent(region.id)) }
 const conversationId = ref('')
 const isCompany = computed(() => props.source === 'company')
+const contextSourceScope = () => `${getAgentStorageScope()}:${props.source}`
 // 空会话推荐入口：仅公司 Agent 欢迎区，点击 prefill 进输入框（同工作台「新建任务」），
 // 首个 turn 落位后随 welcome 分支一起消失，不占用会话中布局。
 const companySuggestions = ['统计一下最近能耗情况', '帮我看看最近夜间哪个场所耗电异常', '帮我设个定时任务', '帮我整理一下最近一周的告警并产出报告']
@@ -159,7 +160,7 @@ const input = ref('')
 const composerReference = ref(null)
 const editingTurn = ref(null)
 let composerStash = ''
-let incomingReference, incomingHistoryPrompt, composerHydrated = false
+let incomingReference, incomingHistoryPrompt, incomingContext, composerHydrated = false
 watch(composerReference, value => { if (draftScope.value) preserveComposerReference(draftScope.value, props.source, value) }, { flush: 'sync' })
 watch(input, value => {
  if (draftScope.value && !editingTurn.value) preserveComposerDraft(draftScope.value, props.source, value)
@@ -204,6 +205,7 @@ function clearIdentityView() {
  conversationId.value = ''; turns.value = []; regionChanges.value = []; draftBaselines.clear()
  sheetDraftId.value = ''; sheetError.value = ''; isRunning.value = false; phase.value = ''
  editingTurn.value = null; composerStash = ''; input.value = ''; composerReference.value = null
+ incomingContext = null; contextDelivery.invalidate()
  composerHydrated = false; readingHydrated = false; nearBottom.value = true; restoredScrollTop.value = 0; currentScrollTop = 0
  inboxOpen.value = false; tasksOpen.value = false; closeCompanyTask(); ++inboxCountRequest; inboxUnreadCount.value = 0
 }
@@ -301,6 +303,16 @@ watch(mutating, schedule)
 watch(() => turns.value.map(turn => [turn.draft?.draftId, turn.draft?.status, ...tasksOf(turn).map(task => `${task.changeId || task.cancellationId || task.taskId}:${task.status}`)].join(':')).join('|'), () => schedule())
 // 外部注入的引用/预填：hydration 前暂存到 incoming*，由 restore 的消费块统一落地；
 // 已 hydration 则直接进输入区（浮层打开携带上下文的路径）。
+const contextDelivery = createContextDelivery({
+ read: () => ({ text: input.value, reference: composerReference.value, editing: Boolean(editingTurn.value), scope: contextSourceScope() }),
+ write: value => { cancelEdit(); input.value = value.text; composerReference.value = value.reference; nextTick(() => composer.value?.focus?.()) },
+ confirm: () => new Promise(resolve => uni.showModal({ title: '已有未发送内容', content: '是否一起替换为这条告警及预置问题？取消会保留原草稿和引用。', confirmText: '替换', cancelText: '保留草稿', success: result => resolve(result.confirm), fail: () => resolve(false) })),
+ isActive: scope => !disposed && scope === contextSourceScope(),
+})
+function applyContext(payload) {
+ if (!composerHydrated) incomingContext = payload
+ else void contextDelivery.receive(payload)
+}
 function setReference(reference) {
  if (!reference) return
  if (!composerHydrated) incomingReference = reference
@@ -335,6 +347,9 @@ async function restore() {
    if (savedDraft !== null && !editingTurn.value) input.value = savedDraft
    const savedReference = takeComposerReference(scope, props.source)
    if (savedReference !== undefined) composerReference.value = savedReference
+   const paired = incomingContext
+   incomingContext = null
+   if (paired) { incomingReference = null; incomingHistoryPrompt = '' }
    if (incomingReference) { composerReference.value = incomingReference; incomingReference = null }
    if (incomingHistoryPrompt) {
     const prompt = incomingHistoryPrompt; incomingHistoryPrompt = ''
@@ -342,6 +357,7 @@ async function restore() {
     else uni.showModal({ title: '已有未发送内容', content: '是否改用所选历史查询问题？取消会保留原草稿。', confirmText: '使用此问题', cancelText: '保留草稿', success: result => { if (result.confirm && !disposed && scope === getAgentStorageScope()) { cancelEdit(); input.value = prompt } } })
    }
    composerHydrated = true
+   if (paired) void contextDelivery.receive(paired)
   }
   markAgentEntry(props.source, 'restore-requested')
   const restored = await restoreConversation(props.source)
@@ -841,7 +857,7 @@ function openMenu() {
   else if (event === 'open-inbox') openInbox()
  })
 }
-defineExpose({ openMenu, openInbox, clearHistory, openRegion, setReference, prefill, openTasks: () => { tasksOpen.value = true } })
+defineExpose({ openMenu, openInbox, clearHistory, openRegion, setReference, prefill, applyContext, openTasks: () => { tasksOpen.value = true } })
 </script>
 <style scoped lang="scss">
 @import "../../styles/tokens";
