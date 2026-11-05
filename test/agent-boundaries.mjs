@@ -23,6 +23,22 @@ const privatePageModules = new Set([
 const errors = []
 const files = []
 
+// These backend-only roots and migration artifacts must not be copied into the miniapp.
+// Check the filesystem as well as imports: orphan files can otherwise pass every Vue build.
+const backendOnlyPaths = [
+  'src/main/java',
+  'internal/controller',
+  '0001-business-fact-storage.md',
+  'tools/migration-ticket-21.mjs',
+  'docs/migration/ticket-21-local-evidence.md',
+  'docs/migration/ticket-21-fixture.jsonl',
+]
+for (const relative of backendOnlyPaths) {
+  if (fs.existsSync(path.join(repo, relative))) {
+    errors.push(`${relative}: backend-owned artifact belongs in iot-agent-backend, not the miniapp`)
+  }
+}
+
 function walk(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name)
@@ -107,5 +123,5 @@ if (errors.length) {
   console.error(errors.map(error => `✖ ${error}`).join('\n'))
   process.exitCode = 1
 } else {
-  console.log(`Agent boundaries OK (${files.length} source files; no API barrel imports, prototype imports, or cycles)`)
+  console.log(`Agent boundaries OK (${files.length} source files; no backend-owned residue, API barrel imports, prototype imports, or cycles)`)
 }

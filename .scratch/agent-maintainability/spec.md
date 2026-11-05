@@ -61,3 +61,22 @@ Status: done
 实测完成：`2f2f084`经正式导出工具生成`b6e43c9`，550个程序文件、禁止路径0；在导出目录运行324项Agent测试及179个源文件依赖边界检查均通过。以`54eac47`为第一父提交保留原GitLab分支历史，将已核对的精确路径切换到该导出树，生成`c2d1f47`；提交树与导出逐字一致，已普通push到`origin/iot-agent-linglv`。
 
 客户既有CRLF文件保持原字节；提交前空白检查显式识别CRLF行尾，未为过检查反向修改客户源码。GitLab的`新世纪办公室`未推送。完整`main`继续对应`github/main`，纯源码`iot-agent-linglv`对应`origin/iot-agent-linglv`，两种不同内容的树不互设上游，避免pull时重新混入内部资料。
+
+## 后续：前端后端残留清理
+
+2026-11-05按用户要求检查受控源码与前端根结构。确认下列6个文件均由`3121adb`（2026-11-02，`wip: checkpoint before dashboard redesign`）引入，与当前uni-app构建、路由、依赖及前端API调用无关；它们不是运行于小程序的后端，只是误入仓库的源码／资料副本。前一次交付只做导出排除，本次才从前端源树删除。
+
+| 删除项 | 归属证据 |
+| --- | --- |
+| `src/main/java/ltd/qianc/iotagent/agent/internal/controller/AgentToolBridgeController.java` | Spring内部工具控制器；同级后端有权威实现，前端无Java构建入口或消费者 |
+| `internal/controller/HealthController.java` | Spring健康检查；同级后端`health/internal/controller`有权威实现 |
+| `0001-business-fact-storage.md` | MySQL／Redis／Pi SQLite的后端存储ADR；权威文档在同级后端`docs/adr` |
+| `tools/migration-ticket-21.mjs` | 后端数据迁移规划工具；LSP确认所有导出仅在自身使用，权威工具在同级后端`tools` |
+| `docs/migration/ticket-21-local-evidence.md` | 后端迁移证据副本，与后端同名文档SHA-256一致 |
+| `docs/migration/ticket-21-fixture.jsonl` | 后端迁移样例副本，与后端同名样例SHA-256一致 |
+
+两个Java目录链及根`src/`、`internal/`已在文件删除后用`rmdir`仅移除空目录。后端原文件没有修改或反向同步；基线保留在`checkpoint/frontend-backend-residue-2095872`。未跟踪`local:/`、内部历史计划与研究材料未清理；客户2023年引入的uniCloud云函数、2026-10-19引入的H5播放器服务及其回归测试保留，前端联调说明`docs/migration/iot-agent-local-miniapp.md`保留。
+
+`test/agent-boundaries.mjs`增加后端专属路径检查：即使文件未被Vue导入，也会拒绝这些后端根结构和迁移副本。删除前同一`npm run lint:boundaries`实际报出上述6项，删除后通过；既有export-ignore和交付禁止规则继续保留，用于拦截再次误拷，而不是悬空业务引用。未新增“断言源码文本”的单元测试。
+
+验证：324项Agent回归、179个源文件边界与Agent格式检查通过，官方微信开发编译`DONE Build complete`。既有客户非Agent页Vue default-export／sourcemap、img选择器和鸿蒙提示未改动。真实微信同一账号打开公司概览，334台目录、环境、100条安全记录、通知与昨日123.49度正常显示，自动化异常0；[界面截图](./evidence/BACKEND-CLEAN-01/overview.png)。未创建任务、下发控制或改动后端进程。本轮为仓库归属清理，不宣称修复未复现的线上业务故障；不包含再次远端推送。
