@@ -18,9 +18,18 @@
     <scroll-view v-else class="arrangements-scroll" scroll-y enhanced :show-scrollbar="false">
      <TaskCalendarView v-if="source === 'company' && view === 'calendar'" ref="calendar" @issue="showIssue" :active="open && view === 'calendar' && !selectedTask && !selectedPlan" :date="selectedDate" :refresh-key="refreshKey" source="company" @date-change="selectedDate = $event" @select-task="openTask" />
      <template v-else>
-
+     <button v-if="view === 'all' && source === 'company'" class="plan-strip" hover-class="plan-strip--pressed" @tap="view = 'plans'">
+      <view class="strip-icon"><uni-icons type="reload" size="15" color="var(--agent-accent-deep)" /></view>
+      <view class="strip-copy">
+       <text class="strip-title">周期任务</text>
+       <text v-if="plansError" class="strip-meta strip-meta--fail">未能加载</text>
+       <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已开启 {{ enabledPlansCount }}</text>
+       <text v-else class="strip-meta">读取中…</text>
+      </view>
+      <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
+     </button>
      <view v-if="view === 'plans'" class="plans-head"><text class="plans-title">周期任务</text><button v-if="pausablePlans.length" class="plans-pause-all" :disabled="planLoading" @tap="pauseAllPlans">全部暂停</button></view>
-     <view v-else class="list-summary"><text>{{ listSummary }}</text><view class="summary-side"><text>{{ view === 'all' ? '' : listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text></view></view>
+     <view v-else-if="view !== 'all'" class="list-summary"><text>{{ listSummary }}</text><view class="summary-side"><text>{{ listLoaded ? `${visibleRows.length} 项` : '正在读取' }}</text></view></view>
      <view v-if="loading && !listLoaded" class="state-message">加载中…</view>
      <view v-else-if="error && !visibleRows.length" class="state-message"><TaskErrorNotice :message="error" @details="showIssue" /><button @tap="load">重试</button></view>
      <view v-else-if="!visibleRows.length && view !== 'all'" class="state-message">{{ emptyText }}</view>
@@ -29,34 +38,34 @@
       <view v-if="!agendaHasDays && !agenda.later.length" class="state-message">{{ emptyText }}</view>
       <template v-else>
       <view v-if="!agendaHasDays" class="day-empty">近 10 天暂无任务</view>
-      <view v-for="day in agendaHasDays ? agenda.days : []" :key="day.date" class="agenda-day">
-       <view class="agenda-rail"><text class="day-num">{{ railNum(day.date) }}</text><text class="day-wd">{{ railText(day.date) }}</text></view>
-       <view class="agenda-rows">
-        <button v-for="task in day.rows" :key="taskKey(task)" class="task-row task-row--agenda" @tap="openTask(task)">
-         <text class="row-clock">{{ taskDayTime(task, day.date) }}</text>
-         <view class="row-copy">
-          <view class="row-heading"><text class="row-title">{{ task.label || '任务安排' }}</text><text class="task-status" :class="'tone-' + taskTone(task.status)">{{ taskStatus(task.status) }}</text></view>
-          <text v-if="task.repeat || task.occurrence" class="row-subtitle">{{ repeatText(task.repeat) || '按周期执行' }}</text>
-         </view>
-        </button>
-        <text v-if="!day.rows.length" class="day-empty">暂无任务</text>
-       </view>
-      </view>
-      <view v-if="agenda.later.length" class="agenda-day">
-       <view class="agenda-rail"><text class="day-num day-num--later">更晚</text></view>
-       <view class="agenda-rows">
-        <button v-for="item in agenda.later" :key="taskKey(item.task)" class="task-row task-row--agenda" @tap="openTask(item.task)">
-         <view class="row-clock row-clock--later"><text>{{ item.date.slice(5) }}</text><text>{{ taskDayTime(item.task, item.date) }}</text></view>
-         <view class="row-copy">
-          <view class="row-heading"><text class="row-title">{{ item.task.label || '任务安排' }}</text><text class="task-status" :class="'tone-' + taskTone(item.task.status)">{{ taskStatus(item.task.status) }}</text></view>
-          <text v-if="item.task.repeat || item.task.occurrence" class="row-subtitle">{{ repeatText(item.task.repeat) || '按周期执行' }}</text>
-         </view>
-        </button>
-       </view>
-      </view>
+      <template v-for="day in agendaHasDays ? agenda.days : []" :key="day.date">
+       <view v-if="day.rows.length" class="day-head"><text class="day-title">{{ dayHead(day.date) }}</text><text class="day-count">{{ day.rows.length }} 项</text></view>
+       <button v-for="task in day.rows" :key="taskKey(task)" class="task-card" @tap="openTask(task)">
+        <text class="card-clock">{{ taskDayTime(task, day.date) }}</text>
+        <view class="row-copy">
+         <view class="row-heading"><text class="row-title">{{ task.label || '任务安排' }}</text></view>
+         <text v-if="agendaSubtitle(task)" class="row-subtitle">{{ agendaSubtitle(task) }}</text>
+         <text class="task-chip" :class="'chip-' + taskTone(task.status)">{{ taskStatus(task.status) }}</text>
+        </view>
+        <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
+       </button>
+      </template>
+      <template v-if="agenda.later.length">
+       <view class="day-head"><text class="day-title">更晚</text><text class="day-count">{{ agenda.later.length }} 项</text></view>
+       <button v-for="item in agenda.later" :key="taskKey(item.task)" class="task-card" @tap="openTask(item.task)">
+        <view class="card-clock card-clock--later"><text>{{ item.date.slice(5) }}</text><text>{{ taskDayTime(item.task, item.date) }}</text></view>
+        <view class="row-copy">
+         <view class="row-heading"><text class="row-title">{{ item.task.label || '任务安排' }}</text></view>
+         <text v-if="agendaSubtitle(item.task)" class="row-subtitle">{{ agendaSubtitle(item.task) }}</text>
+         <text class="task-chip" :class="'chip-' + taskTone(item.task.status)">{{ taskStatus(item.task.status) }}</text>
+        </view>
+        <uni-icons type="right" size="13" color="var(--agent-text-faint)" />
+       </button>
+      </template>
       <view v-if="moreLoading || moreError || hasMore" class="list-footer"><TaskErrorNotice v-if="moreError" :message="moreError" summary="更晚的任务暂未加载" @details="showIssue" /><button v-if="moreError" @tap="loadMore">重试</button><button v-else-if="!moreLoading" @tap="loadMore">加载更晚任务</button><text v-else>加载中…</text></view>
       </template>
      </template>
+
 
      <template v-else-if="view === 'plans'">
       <view v-for="plan in plans" :key="plan.planId" class="plan-card">
@@ -174,10 +183,11 @@ const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.
 const agenda = computed(() => agendaGroups(tasks.value, taskToday(), 10))
 const agendaHasDays = computed(() => agenda.value.days.some(day => day.rows.length))
 const pausablePlans = computed(() => plans.value.filter(plan => plan?.status === 'enabled' && plan.canPause))
+const enabledPlansCount = computed(() => plans.value.filter(plan => planIsEnabled(plan)).length)
 const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '任务安排' : '周期任务')
 const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无周期任务')
-function railNum(date) { const today = taskToday(); return date.slice(5, 7) === today.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
-function railText(date) { const today = taskToday(); return date === today ? '今天' : date === shiftDate(today, 1) ? '明天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
+function dayHead(date) { const today = taskToday(); return date === today ? `今天 · ${Number(date.slice(5, 7))}月${Number(date.slice(8))}日` : date === shiftDate(today, 1) ? `明天 · ${Number(date.slice(5, 7))}月${Number(date.slice(8))}日` : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]} · ${Number(date.slice(5, 7))}月${Number(date.slice(8))}日` }
+function agendaSubtitle(task) { const requirements = taskRequirementsText(task); return requirements || (task.repeat || task.occurrence ? repeatText(task.repeat) || '按周期执行' : '') }
 let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, moreRequest = 0, loadedScope = '', pageVisible = true
 
 function resetPlanSwitch() { planSwitchRevision.value += 1 }
@@ -565,17 +575,28 @@ button::after { border:0; }
 .list-footer { padding:16px 0 22px; text-align:center; color:$agent-color-text-faint; font-size:11px; }
 .list-error { color:$agent-color-error; }
 .detail-error { display:block; flex-shrink:0; padding:8px 18px 0; color:$agent-color-error; font-size:11px; text-align:center; }
-.agenda-day { display:flex; gap:10px; padding-top:8px; }
-.agenda-rail { width:32px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding-top:14px; }
-.day-num { font-size:15px; font-weight:700; color:$agent-color-text-secondary; line-height:1.2; }
-.day-num--later { font-size:$agent-font-size-compact; color:$agent-color-text-muted; }
-.day-wd { font-size:10px; color:$agent-color-text-muted; }
-.agenda-rows { min-width:0; flex:1; }
+.plan-strip { width:100%; display:flex; align-items:center; gap:10px; margin:2px 0 8px; padding:10px 12px; border-radius:$agent-radius-medium; background:$agent-color-tint; text-align:left; }
+.plan-strip::after { border:0; }
+.plan-strip--pressed { background:$agent-color-line; }
+.strip-icon { width:30px; height:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:10px; background:$agent-color-line; }
+.strip-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
+.strip-title { color:$agent-color-text-secondary; font-size:13px; font-weight:600; }
+.strip-meta { color:$agent-color-text-muted; font-size:11px; }
+.strip-meta--fail { color:$agent-color-error; }
+.day-head { display:flex; align-items:baseline; justify-content:space-between; padding:14px 2px 2px; }
+.day-title { color:$agent-color-text-primary; font-size:15px; font-weight:600; }
+.day-count { color:$agent-color-text-muted; font-size:11px; }
 .day-empty { display:block; padding:14px 0; border-bottom:1px solid $agent-color-line; color:$agent-color-text-faint; font-size:11px; }
-.task-row--agenda { min-height:0; gap:10px; }
-.row-clock { width:46px; flex-shrink:0; align-self:flex-start; padding-top:2px; font-size:11px; color:$agent-color-text-secondary; line-height:1.4; }
-.row-clock--later { display:flex; flex-direction:column; gap:3px; }
-.row-clock--later text:first-child { font-weight:600; }
+.task-card { width:100%; display:flex; align-items:center; gap:12px; margin-top:8px; padding:14px; border:1px solid $agent-color-line; border-radius:14px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); box-sizing:border-box; text-align:left; }
+.task-card:active { background:$agent-color-surface-page; }
+.card-clock { width:46px; flex-shrink:0; align-self:flex-start; padding-top:2px; color:$agent-color-accent-deep; font-size:15px; font-weight:600; line-height:1.3; }
+.card-clock--later { display:flex; flex-direction:column; gap:3px; font-size:$agent-font-size-compact; color:$agent-color-text-secondary; font-weight:400; }
+.card-clock--later text:first-child { font-weight:600; }
+.task-chip { display:inline-flex; align-items:center; align-self:flex-start; margin-top:5px; padding:3px 10px; border-radius:999px; background:$agent-color-tint; color:$agent-color-text-muted; font-size:10px; }
+.task-chip.chip-ok { background:$agent-color-success-faint; color:$agent-color-success; }
+.task-chip.chip-active { background:$agent-color-accent-faint; color:$agent-color-accent-deep; }
+.task-chip.chip-warn { background:$agent-color-warning-faint; color:$agent-color-warning-deep; }
+.task-chip.chip-fail { background:$agent-color-error-faint; color:$agent-color-error; }
 .inbox-entry { position:relative; flex-shrink:0; }
 .inbox-badge { position:absolute; top:-4px; right:-3px; min-width:15px; height:15px; padding:0 4px; border-radius:8px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:$agent-color-badge; color:#fff; font-size:9px; line-height:1; pointer-events:none; }
 .header-actions { display:flex; align-items:center; gap:$agent-space-small; flex-shrink:0; }

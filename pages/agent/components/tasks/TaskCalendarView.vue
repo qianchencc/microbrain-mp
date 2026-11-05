@@ -1,7 +1,7 @@
 <template>
  <view class="task-calendar">
   <RegionCalendar :date="selected" :today="today" :max-date="maxDate" :marks="marks" :compact="compact" @select="selectDate" @month-change="changeMonth" />
-  <view class="date-summary"><text>{{ selected === today ? '今天' : selected }} · 任务</text><text>{{ loading && !loaded ? '正在读取' : loaded ? `${dayTasks.length} 项` : '' }}</text></view>
+  <view class="date-summary"><text class="date-title">{{ dateHead }}</text><text class="date-count">{{ loading && !loaded ? '正在读取' : loaded ? `${dayTasks.length} 项` : '' }}</text></view>
   <view v-if="!loaded && !error" class="calendar-state">正在读取日程…</view>
   <view v-else-if="loaded && !error && !dayTasks.length" class="calendar-state">这一天暂无任务</view>
   <button v-for="task in visibleTasks" :key="task.taskId || task.id" class="calendar-task" @tap="$emit('select-task', task)">
@@ -32,7 +32,12 @@ const maxDate = computed(() => shiftDate(today.value, 365))
 const window = computed(() => calendarWindow(month.value))
 const marks = computed(() => taskCalendarMarks(tasks.value, window.value.from, window.value.to))
 const dayTasks = computed(() => tasksOnDate(tasks.value, selected.value, props.compact))
-const visibleTasks = computed(() => props.compact ? dayTasks.value.slice(0, 2) : dayTasks.value)
+const dateHead = computed(() => {
+ const date = selected.value, [m, d] = [Number(date.slice(5, 7)), Number(date.slice(8))]
+ if (date === today.value) return `今天 · ${m}月${d}日`
+ if (date === shiftDate(today.value, 1)) return `明天 · ${m}月${d}日`
+ return `周${'日一二三四五六'[new Date(`${date}T00:00:00+08:00`).getDay()]} · ${m}月${d}日`
+})
 let generation = 0, timer = 0, visible = true, loadedScope = ''
 function clock(task) { return taskDayTime(task, selected.value) }
 function selectDate(date) { selected.value = date; emit('date-change', date) }
@@ -116,19 +121,20 @@ view,text { font-size:inherit; line-height:inherit; }
 button { margin:0; padding:0; border:0; background:transparent; line-height:1.4; }
 button::after { border:0; }
 .task-calendar { flex-shrink:0; }
-.date-summary { padding:10px 16px; display:flex; justify-content:space-between; color:$agent-color-text-muted; font-size:11px; border-top:1px solid $agent-color-line; }
+.date-summary { padding:10px 16px; display:flex; justify-content:space-between; align-items:baseline; border-top:1px solid $agent-color-line; }.date-title { color:$agent-color-text-primary; font-size:15px; font-weight:600; }.date-count { color:$agent-color-text-muted; font-size:11px; }
 .calendar-state { padding:22px 16px; color:$agent-color-text-muted; font-size:$agent-font-size-compact; text-align:center; }
 .calendar-error { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:$agent-color-text-muted; font-size:$agent-font-size-compact; }
 .error-actions { display:flex; align-items:center; gap:12px; flex-shrink:0; }
 .error-actions button { display:flex; align-items:center; justify-content:center; min-height:32px; padding:4px; font-size:$agent-font-size-compact; }
 .error-detail { color:$agent-color-text-muted; }.error-retry { color:$agent-color-accent; }
 .error-actions button:active { opacity:.65; }
-.calendar-task { width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; text-align:left; border-top:1px solid $agent-color-line; }
-.task-clock { width:58px; flex-shrink:0; align-self:flex-start; font-size:11px; color:$agent-color-text-secondary; display:flex; flex-direction:column; gap:5px; }
-.repeat-tag { color:$agent-color-text-muted; font-size:10px; }
+.calendar-task { width:100%; box-sizing:border-box; display:flex; align-items:center; gap:12px; margin:8px 16px 0; padding:14px; text-align:left; border:1px solid $agent-color-line; border-radius:14px; background:linear-gradient(var(--agent-surface),var(--agent-surface-page)); }
+.calendar-task:active { background:$agent-color-surface-page; }
+.task-clock { width:46px; flex-shrink:0; align-self:flex-start; font-size:15px; font-weight:600; color:$agent-color-accent-deep; display:flex; flex-direction:column; gap:5px; }
+.repeat-tag { color:$agent-color-text-muted; font-size:10px; font-weight:400; }
 .task-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
 .task-name { white-space:normal; word-break:break-word; font-size:13px; font-weight:600; color:$agent-color-text-primary; }
-.task-state { font-size:11px; color:$agent-color-text-muted; }
-.task-state.abnormal { color:$agent-color-warning-deep; }.task-state.executing { color:$agent-color-accent; }
+.task-state { display:inline-flex; align-items:center; align-self:flex-start; margin-top:1px; padding:3px 10px; border-radius:999px; background:$agent-color-tint; color:$agent-color-text-muted; font-size:10px; }
+.task-state.abnormal { background:$agent-color-warning-faint; color:$agent-color-warning-deep; }.task-state.executing { background:$agent-color-accent-faint; color:$agent-color-accent-deep; }
 .all-tasks { padding:12px; text-align:center; color:$agent-color-accent; font-size:$agent-font-size-compact; }
 </style>
