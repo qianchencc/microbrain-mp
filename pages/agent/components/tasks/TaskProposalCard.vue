@@ -1,6 +1,6 @@
 <template>
  <view class="task-card">
-  <view class="task-head"><text class="task-kicker">{{ isCancellation ? '取消任务' : task.repeat ? '重复安排' : '定时任务' }}</text><text class="task-state" :class="state">{{ stateText }}</text></view>
+  <view class="task-head"><text class="task-kicker">{{ isCancellation ? '取消任务' : task.repeat ? '周期任务' : '定时任务' }}</text><text class="task-state" :class="state">{{ stateText }}</text></view>
   <text class="task-name">{{ task.label }}</text>
   <text v-if="task.repeat" class="task-repeat">{{ repeatText(task.repeat) }}</text>
   <text v-if="task.repeat && isCreated && (task.nextCheckpointAt || task.nextAt)" class="task-interval">{{ nextLabel }} · {{ taskTime(task.nextCheckpointAt || task.nextAt) }}</text>
@@ -45,10 +45,10 @@
   <text v-if="isCancellation" class="task-note">已做的操作保持原样</text>
   <view v-if="state === 'pending_confirmation'" class="task-actions">
    <button class="task-secondary" hover-class="task-quiet--pressed" :disabled="busy" @tap="$emit('discard')">放弃</button>
-   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy || isConfirming || needsDecision" :loading="isConfirming" @tap="$emit('confirm')">{{ needsDecision ? '等待补充' : task.confirmation?.status === 'recovering' ? '正在核实' : isConfirming ? '正在创建' : isCancellation ? '确认取消' : task.repeat ? '创建重复安排' : '创建任务' }}</button>
+   <button class="task-primary" :class="{ destructive: isCancellation }" hover-class="task-primary--pressed" :disabled="busy || isConfirming || needsDecision" :loading="isConfirming" @tap="$emit('confirm')">{{ needsDecision ? '等待补充' : task.confirmation?.status === 'recovering' ? '正在核实' : isConfirming ? '正在创建' : isCancellation ? '确认取消' : task.repeat ? '创建周期任务' : '创建任务' }}</button>
   </view>
   <view v-else-if="isCreated" class="task-created">
-   <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看重复安排' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="var(--agent-accent-deep)" /></button>
+   <button class="task-link" @tap="$emit('open')">{{ task.repeat ? '查看周期任务' : source === 'company' ? '查看任务安排' : '在区域面板查看' }} <uni-icons type="right" size="13" color="var(--agent-accent-deep)" /></button>
    <button v-if="task.latestTask" class="task-link" @tap="$emit('open', task.latestTask)">{{ task.latestTask.report ? '查看最近一次报告' : '查看本次任务' }} <uni-icons type="right" size="13" color="var(--agent-accent-deep)" /></button>
   </view>
   <text v-else class="task-ended">{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text>

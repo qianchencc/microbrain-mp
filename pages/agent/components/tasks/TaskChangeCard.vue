@@ -49,8 +49,8 @@ const scopeText = computed(() => {
  return '本任务'
 })
 const operationText = computed(() => {
- if (props.change.operation === 'delete') return props.change.target?.type === 'task_plan' ? '删除重复安排' : '删除任务'
- return ({ edit: '调整安排', pause: '暂停重复安排', resume: '恢复重复安排', skip: '跳过本次安排' })[props.change.operation] || '任务变更'
+ if (props.change.operation === 'delete') return props.change.target?.type === 'task_plan' ? '删除周期任务' : '删除任务'
+ return ({ edit: '调整安排', pause: '暂停周期任务', resume: '恢复周期任务', skip: '跳过本次安排' })[props.change.operation] || '任务变更'
 })
 const confirmText = computed(() => ({ edit: '确认修改', pause: '确认暂停', resume: '确认恢复', delete: '确认删除', skip: '确认跳过' })[props.change.operation] || '确认变更')
 const statusText = computed(() => ({ pending_confirmation: '待确认', confirmed: '已确认', cancelled: '已放弃', expired: '已过期' })[state.value] || '已结束')
@@ -59,7 +59,7 @@ const changesFutureOnly = computed(() => props.change.operation === 'edit' && sc
 const operationEffect = computed(() => ({
  pause: '确认后暂停重复，以后不再执行；已经生成的任务继续。',
  resume: '确认后从下一次安排继续；不补做过去的安排。',
- delete: '确认后删除重复安排，以后不再执行；已经生成的任务与历史报告保留。',
+ delete: '确认后删除周期任务，以后不再执行；已经生成的任务与历史报告保留。',
  skip: '确认后仅跳过这一次安排，其他日期与周期规则保持不变。',
 })[props.change.operation] || '')
 const versions = computed(() => [

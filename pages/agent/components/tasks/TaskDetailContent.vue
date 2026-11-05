@@ -34,7 +34,7 @@
    <text v-if="detail.report?.summary" class="task-when">{{ detail.report.summary.devicesText }}</text>
    <view v-if="detail.rulesText" class="task-rules"><text>{{ detail.rulesText }}</text></view>
    <view v-if="plan && !sampleTask" class="plan-toggle-row">
-    <view class="plan-toggle-copy"><text class="plan-toggle-title">重复安排</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
+    <view class="plan-toggle-copy"><text class="plan-toggle-title">周期任务</text><text class="plan-toggle-note">{{ planIsEnabled(plan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
     <view v-if="!planCanToggle(plan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(plan)">
      <switch :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :color="AGENT_COLORS.accentDeep" disabled />
     </view>
@@ -184,7 +184,7 @@ async function togglePlanStatus(value, enabled) {
  if (!value?.planId || !planCanToggle(value) || cancelling.value) return
  const action = ++planStatusRequest, operation = enabled ? 'resume' : 'pause', planId = value.planId, version = value.version
  const source = props.source, scope = getAgentStorageScope()
- const title = operation === 'resume' ? '继续执行' : '暂停重复安排'
+ const title = operation === 'resume' ? '继续执行' : '暂停周期任务'
  const content = operation === 'resume'
   ? resumeContent(value)
   : '只暂停以后的安排；已经安排的本次任务会继续，已做的操作保持原样。'
@@ -281,7 +281,7 @@ async function load(silent = false) {
   if (planId) {
    const result = await getTaskPlan(planId, props.source)
    if (current === requestId && pageVisible && props.active && activePlanId.value === planId && scope === getAgentStorageScope()) {
-    if (!result?.plan) { plan.value = null; error.value = '重复安排不存在或没有查看权限'; return }
+    if (!result?.plan) { plan.value = null; error.value = '周期任务不存在或没有查看权限'; return }
     error.value = ''
     plan.value = result.plan
    }
@@ -304,7 +304,7 @@ async function load(silent = false) {
   let currentScope = ''
   try { currentScope = getAgentStorageScope() } catch { /* 失效身份不得保留旧报告 */ }
   if (cause.data || !scope || scope !== currentScope) { task.value = null; plan.value = null; currentStates.value = {} }
-  error.value = cause.message || (planId ? '重复安排读取失败：未取得具体原因' : '任务读取失败：未取得具体原因')
+  error.value = cause.message || (planId ? '周期任务读取失败：未取得具体原因' : '任务读取失败：未取得具体原因')
  } }
  finally { if (!silent && current === requestId) loading.value = false }
  if (loaded) {

@@ -319,6 +319,6 @@ export function taskDetailView(task) {
  const nextLabel = (task.phases || []).some(phase => phase?.read?.ac?.cadenceMinutes) ? '下一次检查' : '下一次执行'
  return { ...task, phases, previewPhases, rulesText, presentationStatus, occurrenceText: task.occurrence ? task.occurrence.virtual ? '以后的安排' : '本次任务' : '', progressText: `已结束${finished.length}次${executing.length ? ` · 正在做${executing.length}次` : ''} · 还有${pending.length}次安排`, whenText, report, repeatText: repeatText(task.repeat), nextText: nextAt ? taskTime(nextAt) : '', nextLabel, createdText: taskTime(task.createdAt),
   statusText: taskStatusText(presentationStatus),
-  sourceText: task.agentSource === 'company' ? task.source?.type === 'recurring_plan' ? '公司重复安排' : '公司定时任务'
-   : task.source?.type === 'recurring_plan' ? '重复安排' : task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? '即时操作' : '定时任务' }
+  sourceText: task.agentSource === 'company' ? task.source?.type === 'recurring_plan' ? '公司周期任务' : '公司定时任务'
+   : task.source?.type === 'recurring_plan' ? '周期任务' : task.source?.type === 'sample' ? '本地演示记录' : task.source?.type === 'immediate_draft' ? '即时操作' : '定时任务' }
 }

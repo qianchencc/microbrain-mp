@@ -21,7 +21,7 @@
      <button v-if="view === 'all' && source === 'company'" class="plan-strip" hover-class="plan-strip--pressed" @tap="view = 'plans'">
       <view class="strip-icon"><uni-icons type="reload" size="15" color="var(--agent-accent-deep)" /></view>
       <view class="strip-copy">
-       <text class="strip-title">重复安排</text>
+       <text class="strip-title">周期任务</text>
        <text v-if="plansError" class="strip-meta strip-meta--fail">未能加载</text>
        <text v-else-if="plansLoaded" class="strip-meta">{{ plans.length }} 项 · 已开启 {{ enabledPlansCount }}</text>
        <text v-else class="strip-meta">读取中…</text>
@@ -114,7 +114,7 @@
       <text class="summary-note">{{ planAccessSummary(selectedPlan) }}</text>
       <TaskErrorNotice v-if="selectedPlan.pauseReason" :message="selectedPlan.pauseReason" summary="安排已暂停" @details="showIssue" />
       <view class="plan-toggle-row">
-       <view class="plan-toggle-copy"><text class="plan-toggle-title">重复安排</text><text class="plan-toggle-note">{{ planIsEnabled(selectedPlan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
+       <view class="plan-toggle-copy"><text class="plan-toggle-title">周期任务</text><text class="plan-toggle-note">{{ planIsEnabled(selectedPlan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限' }}</text></view>
        <view v-if="!planCanToggle(selectedPlan)" class="plan-switch-wrap plan-switch-wrap--disabled" @tap.stop="explainPlanAccess(selectedPlan)">
         <switch :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`" :checked="planIsEnabled(selectedPlan)" :color="AGENT_COLORS.accentDeep" disabled />
        </view>
@@ -158,7 +158,7 @@ const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 const views = computed(() => props.source === 'company' ? [{ value: 'all', label: '任务安排' }, { value: 'calendar', label: '日历' }] : [
  { value: 'upcoming', label: '待执行' },
  { value: 'results', label: '执行结果' },
- { value: 'plans', label: '重复安排' },
+ { value: 'plans', label: '周期任务' },
 ])
 const view = ref(props.source === 'company' ? 'all' : 'upcoming')
 const tasks = ref([]), plans = ref([]), issue = ref(null), operationError = ref('')
@@ -173,14 +173,14 @@ const plansLoaded = ref(false)
 const selectedTask = ref(null), selectedPlan = ref(null), planDetailError = ref(''), returnPlan = ref(null), content = ref(null), navigation = ref({ title: '', canBack: false })
 const selectedTaskId = computed(() => selectedTask.value?.taskId || selectedTask.value?.id || '')
 const stackedView = computed(() => props.source === 'company' && (view.value === 'inbox' || view.value === 'plans'))
-const sheetTitle = computed(() => selectedTask.value ? '任务详情' : selectedPlan.value || (props.source === 'company' && view.value === 'plans') ? '重复安排' : props.source === 'company' ? '任务管理' : '我的安排')
+const sheetTitle = computed(() => selectedTask.value ? '任务详情' : selectedPlan.value || (props.source === 'company' && view.value === 'plans') ? '周期任务' : props.source === 'company' ? '任务管理' : '我的安排')
 const visibleRows = computed(() => view.value === 'plans' ? plans.value : tasks.value)
 const agenda = computed(() => agendaGroups(tasks.value, taskToday(), 10))
 const agendaHasDays = computed(() => agenda.value.days.some(day => day.rows.length))
 const enabledPlansCount = computed(() => plans.value.filter(plan => planIsEnabled(plan)).length)
 const pausablePlans = computed(() => plans.value.filter(plan => plan?.status === 'enabled' && plan.canPause))
-const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '任务安排' : '周期安排')
-const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无重复安排')
+const listSummary = computed(() => view.value === 'upcoming' ? '未来 30 天' : view.value === 'results' ? '最近 30 天' : view.value === 'all' ? '任务安排' : '周期任务')
+const emptyText = computed(() => view.value === 'upcoming' ? '未来 30 天没有待执行安排' : view.value === 'results' ? '最近 30 天没有执行结果' : view.value === 'all' ? '暂无任务安排' : '暂无周期任务')
 function railNum(date) { const today = taskToday(); return date.slice(5, 7) === today.slice(5, 7) ? String(Number(date.slice(8))) : date.slice(5) }
 function railText(date) { const today = taskToday(); return date === today ? '今天' : date === shiftDate(today, 1) ? '明天' : `周${WEEKDAYS[new Date(`${date}T00:00:00+08:00`).getDay()]}` }
 let requestId = 0, planRequest = 0, planStatusRequest = 0, plansRequest = 0, unreadRequest = 0, moreRequest = 0, loadedScope = '', pageVisible = true
@@ -241,7 +241,7 @@ async function togglePlanStatus(plan, enabled) {
  if (!plan?.planId || !planCanToggle(plan) || planLoading.value) return
  const action = ++planStatusRequest, operation = enabled ? 'resume' : 'pause'
  const source = props.source, scope = getAgentStorageScope(), planId = plan.planId, version = plan.version
- const title = operation === 'resume' ? '继续执行' : '暂停重复安排'
+ const title = operation === 'resume' ? '继续执行' : '暂停周期任务'
  const content = operation === 'resume'
   ? resumeContent(plan)
   : '只暂停以后的安排；已经安排的本次任务会继续，已做的操作保持原样。'
@@ -272,8 +272,8 @@ async function pauseAllPlans() {
  const pausable = pausablePlans.value
  if (!pausable.length || planLoading.value) return
  const skipped = plans.value.filter(plan => plan?.status === 'enabled' && plan.nextAt && !plan.canPause).length
- const confirmed = await new Promise(resolve => uni.showModal({ title: '暂停全部重复安排',
-  content: `将暂停 ${pausable.length} 个已开启重复安排，只影响以后的安排；已经安排的本次任务会继续，已做的操作保持原样。${skipped ? `另有 ${skipped} 项不能暂停，保持不变。` : ''}`,
+ const confirmed = await new Promise(resolve => uni.showModal({ title: '暂停全部周期任务',
+  content: `将暂停 ${pausable.length} 个已开启周期任务，只影响以后的安排；已经安排的本次任务会继续，已做的操作保持原样。${skipped ? `另有 ${skipped} 项不能暂停，保持不变。` : ''}`,
   confirmText: '全部暂停', confirmColor: AGENT_COLORS.error,
   success: result => resolve(result.confirm), fail: () => resolve(false) }))
  if (!confirmed || action !== planStatusRequest || !props.open || source !== props.source || scope !== getAgentStorageScope()) return
@@ -323,7 +323,7 @@ async function loadPlans(force = true) {
    plansLoaded.value = true; plansError.value = ''
   }
  } catch (cause) {
-  if (current === plansRequest && props.open) plansError.value = cause.message || '重复安排暂不可用'
+  if (current === plansRequest && props.open) plansError.value = cause.message || '周期任务暂不可用'
  } finally { if (current === plansRequest) plansLoading.value = false }
 }
 
@@ -419,7 +419,7 @@ async function openPlan(plan) {
   }
  } catch (cause) {
   if (current === planRequest && props.open) {
-   planDetailError.value = cause.message || '重复安排读取失败，请刷新后重试'
+   planDetailError.value = cause.message || '周期任务读取失败，请刷新后重试'
    uni.showToast({ title: planDetailError.value, icon: 'none' })
   }
  }
