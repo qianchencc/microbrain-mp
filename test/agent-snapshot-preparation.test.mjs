@@ -105,6 +105,38 @@ test('任务读取范围准备中不会伪造空未读数，完成后自动交�
  assert.equal(painted.unreadCount, 1)
 })
 
+test('任务现在状态准备中不冒充未知，完成后交付开关事实且再次读取仍询问后端', async t => {
+ const first = { states: [{ id: 'light-1', state: true }], observedAt: '2026-11-05T02:45:01Z' }
+ const next = { states: [{ id: 'light-1', state: false }], observedAt: '2026-11-05T02:46:01Z' }
+ const { client, calls } = await setup(t, (_options, count, reply) => reply(count === 1 ? preparing : count === 2 ? first : next))
+ let painted
+ const result = client.getTaskLightingStates('task-existing').then(value => { painted = value; return value })
+ await flush()
+ assert.equal(painted, undefined)
+ await advance(t)
+ assert.deepEqual(await result, first)
+ assert.deepEqual(await client.getTaskLightingStates('task-existing'), next)
+ assert.equal(calls.length, 3)
+})
+
+test('任务详情关闭后不再重试状态准备，迟到状态也不能交付给下一身份', async t => {
+ const { client, calls } = await setup(t, (_options, _count, reply) => reply(preparing))
+ let active = true
+ const closed = client.getTaskLightingStates('task-existing', 'office', { isActive: () => active }).catch(error => error)
+ await flush()
+ active = false
+ await advance(t)
+ assert.equal((await closed).code, 'AGENT_READ_INVALIDATED')
+ assert.equal(calls.length, 1)
+ let replyLate
+ globalThis.uni.request = options => { replyLate = data => options.success({ statusCode: 200, data }) }
+ const old = client.getTaskLightingStates('task-existing').catch(error => error)
+ await flush()
+ globalThis.snapshotTestScope = 'different-member'
+ replyLate({ states: [{ id: 'light-1', state: true }] })
+ assert.equal((await old).code, 'AGENT_READ_INVALIDATED')
+})
+
 test('页面隐藏和组件关闭停止后续准备中请求，不产生无限轮询', async t => {
  const { client, calls, hide } = await setup(t, (_options, _count, reply) => reply(preparing))
  const first = client.getCompanyDevices().catch(error => error)

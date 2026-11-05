@@ -25,11 +25,9 @@
   <view v-else-if="detail" class="task-detail">
    <button v-if="returnPlan" class="plan-back" @tap="returnToPlan"><uni-icons type="back" size="13" color="var(--agent-text-muted)" /> 返回周期安排</button>
    <view class="task-heading"><text class="task-name">{{ detail.label }}</text><button v-if="taskNeedsDetails(detail.presentationStatus)" class="state-tag result-link" :class="detail.presentationStatus" @tap="showTaskIssue">{{ detail.statusText }} ›</button><text v-else class="state-tag" :class="detail.presentationStatus">{{ detail.statusText }}</text></view>
-   <text v-if="detail.occurrenceText" class="task-when">{{ detail.occurrenceText }}</text>
    <text class="task-when">{{ whenLine }}</text>
    <text v-if="loading" class="task-when">正在更新…</text>
    <text v-if="detail.nextText && !detail.occurrence?.virtual" class="task-when">{{ detail.nextLabel }}：{{ detail.nextText }}</text>
-   <text v-if="detail.phases.length > 1" class="task-progress">{{ detail.progressText }}</text>
    <text v-if="detail.report?.summary" class="task-when">{{ detail.report.summary.devicesText }}</text>
    <view v-if="detail.rulesText" class="task-rules"><text>{{ detail.rulesText }}</text></view>
    <view v-if="plan && !sampleTask" class="plan-toggle-row">
@@ -40,7 +38,7 @@
     <switch v-else :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`" :checked="planIsEnabled(plan)" :color="AGENT_COLORS.accentDeep" :disabled="cancelling" @change="togglePlanStatus(plan, $event.detail.value)" />
    </view>
    <TaskErrorNotice v-if="plan?.pauseReason" :message="plan.pauseReason" summary="安排已暂停" @details="showIssue" />
-   <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>现在状态 · {{ currentLoading ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="var(--agent-accent-deep)" /></button></view>
+   <view v-if="lightIds.length && !sampleTask" class="current-observation"><text>{{ currentLoading && Object.keys(currentStates).length ? '上次状态' : '现在状态' }} · {{ currentLoading && !Object.keys(currentStates).length ? '读取中' : currentSummary || '未知' }}</text><button aria-label="刷新设备状态" :disabled="currentLoading" @tap="stateRefresh.run()"><uni-icons :class="{ spinning: currentLoading }" type="refreshempty" size="16" color="var(--agent-accent-deep)" /></button></view>
    <TaskErrorNotice v-if="actionError" :message="actionError" summary="这次操作未完成" @details="showIssue" />
    <view class="records-heading"><text class="section-title">{{ detail.interval || detail.phases.some(p => p.readAc) ? '检查记录' : '操作记录' }}</text><button v-if="detail.phases.length > 3" class="records-toggle" @tap="allPhases = !allPhases">{{ allPhases ? '收起记录' : `查看全部${detail.phases.length}次` }} ›</button></view>
    <view v-for="(phase, index) in visiblePhases" :key="phase.id" class="phase">
@@ -250,7 +248,9 @@ const whenLine = computed(() => {
  if (!detail.value) return ''
  // 同日区间只留时刻（日期已在 Sheet 副标题）；跨日保留完整起止。
  const when = detail.value.whenText.replace(/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}) 至 (\d{2}:\d{2})$/, '$1 至 $2')
- return [when, detail.value.repeatText].filter(Boolean).join(' · ')
+ const parts = [detail.value.occurrenceText, when, detail.value.repeatText]
+ if (detail.value.phases.length > 1) parts.push(detail.value.progressText)
+ return parts.filter(Boolean).join(' · ')
 })
 const reportLink = computed(() => props.source === 'company' ? (detail.value?.phases || []).filter(phase => phase.report?.reportId).at(-1)?.report || null : null)
 // 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于保留原取消权限。
@@ -315,7 +315,7 @@ async function load(silent = false) {
     loaded = true
     if (props.source === 'office' && result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
      if (!silent) void stateRefresh.auto()
-     else if (result.task.phases.some(phase => ['pending', 'executing'].includes(previousPhases.get(phase.id)) && !['pending', 'executing'].includes(phase.status))) stateRefresh.after(1000)
+     else if (result.task.phases.some(phase => ['pending', 'executing'].includes(previousPhases.get(phase.id)) && previousPhases.get(phase.id) !== phase.status)) stateRefresh.after(1000)
     }
    }
   }
@@ -334,10 +334,12 @@ async function load(silent = false) {
 async function loadCurrentStates(taskId = activeTaskId.value) {
  const current = ++currentRequestId
  if (!pageVisible || !props.active || !taskId || props.sampleTask || props.source !== 'office') return
+ const source = props.source, scope = getAgentStorageScope()
+ const isActive = () => current === currentRequestId && pageVisible && props.active && activeTaskId.value === taskId && props.source === source && scope === getAgentStorageScope()
  currentLoading.value = true
  try {
-  const result = await getTaskLightingStates(taskId, props.source)
-  if (current === currentRequestId && pageVisible && props.active && activeTaskId.value === taskId) {
+  const result = await getTaskLightingStates(taskId, source, { isActive })
+  if (isActive()) {
    currentStates.value = Object.fromEntries((result.states || []).map(state => [state.id, state]))
   }
  } catch { if (current === currentRequestId) currentStates.value = {} }
@@ -411,7 +413,6 @@ defineExpose({ returnToPlan, back })
 .task-heading { display:flex; align-items:flex-start; gap:12px; }
 .task-heading .task-name { min-width:0; flex:1; }
 .task-heading .state-tag { margin:0; }
-.task-progress { display:block; margin-top:16px; color:var(--agent-text-secondary); font-size:12px; }
 .task-rules { margin-top:14px; padding:12px 13px; border-radius:12px; background:var(--agent-tint); color:var(--agent-text-secondary); font-size:12px; line-height:1.65; }
 .records-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; }
 .records-heading .section-title { margin:0; }
@@ -464,7 +465,7 @@ button::after { border:0; }
 .plan-toggle-title { color:var(--agent-text-secondary); font-size:12px; font-weight:600; }
 .plan-toggle-note { color:var(--agent-text-muted); font-size:10px; }
 .plan-pause-reason { display:block; margin-top:6px; color:var(--agent-warning); font-size:11px; }
-.current-observation { min-height:32px; margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--agent-text-secondary); font-size:11px; }
+.current-observation { min-height:32px; margin-top:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 12px; border-radius:10px; background:var(--agent-tint); color:var(--agent-text-secondary); font-size:11px; }
 .current-observation button { width:32px; height:32px; margin:0; display:flex; align-items:center; justify-content:center; }
 .current-observation button[disabled] { opacity:.5; }
 .current-error { display:block; color:var(--agent-error); font-size:11px; }
