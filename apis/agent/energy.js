@@ -5,4 +5,4 @@ export {
   getEnergyHistory,
   getCompanyEnergyDaily,
   getCompanyMeterReport,
-} from './index.js'
+} from './index.js';

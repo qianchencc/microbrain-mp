@@ -30,3 +30,11 @@ Agent 页面已经是客户小程序的生产主线，但当前 117 个文件把
 新模块不依赖 Vue 或 uni 全局；生产使用 `reactive` 创建可观察展示状态，测试使用普通对象。页面只读取展示事实并调用行为，不接管内部请求序号、队列或确认集合。业务成功仍以服务端返回为准，断流不等于取消；已有结果的失败刷新不更新原始数据时间、不补零。
 
 状态转换回归分别在 `test/agent-{plan-management,conversation-operations,energy-panel,company-overview}.test.mjs`，通过公开入口执行；边界检查阻止 Vue 绕过入口直接导入这四个实现。实施及真实小程序证据见[维护性票据](../../.scratch/agent-maintainability/issues/01-readable-deep-modules.md)。
+
+### 源码阅读与排版
+
+`pages/agent/.prettierrc.json` 固定100列目标宽度、两空格缩进、单引号、保留分号和逐行属性。模板多语句事件处理必须保留分号，否则 uni-app 微信编译会把展开的语句解析失败；不按纯浏览器 Vue 的可运行性推断微信端兼容。
+
+安装项目开发依赖后，使用 `npm run format:agent` 整理，`npm run format:agent:check` 检查。范围只含 `pages/agent` 生产 Vue／JS／MJS／样式及 `apis/agent`，显式排除原型；不运行全仓格式化。Prettier固定3.6.2，并按已有Yarn锁文件约定落锁。
+
+排版与行为迁移独立提交。长模板和样式展开会增加总行数，不以总行数评价维护性；应看规则是否有唯一归属、调用方是否还要组织内部请求、是否可从公开入口验证，以及主要真实界面是否仍可完成业务。

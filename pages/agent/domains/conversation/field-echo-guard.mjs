@@ -6,24 +6,28 @@
 // （典型：发送后清空 '' 与初始 '' 相同）返回 [shown, value] 两步——Vue 对同值
 // prop 不重渲染，必须先写当前显示值制造 diff，原生层才收到目标值。
 export function fieldWriteSteps(shown, written, target) {
- if (target === shown) return []
- return target === written ? [shown, target] : [target]
+  if (target === shown) return [];
+  return target === written ? [shown, target] : [target];
 }
 
 export function createFieldEchoGuard(initial = '') {
- let lastText = initial
- return {
-  track(value) { lastText = value },
-  peek() { return lastText },
-  plan(target, written) {
-   const steps = fieldWriteSteps(lastText, written, target)
-   if (steps.length) lastText = target
-   return steps
-  },
-  shouldWrite(value) {
-   if (value === lastText) return false
-   lastText = value
-   return true
-  },
- }
+  let lastText = initial;
+  return {
+    track(value) {
+      lastText = value;
+    },
+    peek() {
+      return lastText;
+    },
+    plan(target, written) {
+      const steps = fieldWriteSteps(lastText, written, target);
+      if (steps.length) lastText = target;
+      return steps;
+    },
+    shouldWrite(value) {
+      if (value === lastText) return false;
+      lastText = value;
+      return true;
+    },
+  };
 }

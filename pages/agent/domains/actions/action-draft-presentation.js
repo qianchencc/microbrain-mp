@@ -8,7 +8,9 @@ const DRAFT_RAIL_LIMIT = 4;
 export function createDraftBaseline(draft) {
   return {
     selectedActionIds: [...(draft?.selectedActionIds ?? [])],
-    commands: Object.fromEntries((draft?.actions ?? []).map((action) => [action.id, { ...action.command }])),
+    commands: Object.fromEntries(
+      (draft?.actions ?? []).map((action) => [action.id, { ...action.command }])
+    ),
   };
 }
 
@@ -16,7 +18,11 @@ export function createDraftBaseline(draft) {
 export function draftBaselineChanged(draft, baseline) {
   if (!draft || !baseline) return false;
   const selected = new Set(draft.selectedActionIds ?? []);
-  if (selected.size !== baseline.selectedActionIds.length || baseline.selectedActionIds.some((id) => !selected.has(id))) return true;
+  if (
+    selected.size !== baseline.selectedActionIds.length ||
+    baseline.selectedActionIds.some((id) => !selected.has(id))
+  )
+    return true;
   return (draft.actions ?? []).some((action) => {
     const original = baseline.commands[action.id];
     if (!original) return true;
@@ -25,8 +31,10 @@ export function draftBaselineChanged(draft, baseline) {
   });
 }
 
-
-export function computeDeviceGrid(viewportWidth, { inlinePadding = 20, cardWidth = 119, gap = 12 } = {}) {
+export function computeDeviceGrid(
+  viewportWidth,
+  { inlinePadding = 20, cardWidth = 119, gap = 12 } = {}
+) {
   const availableWidth = Math.max(cardWidth, viewportWidth - inlinePadding * 2);
   const columns = Math.max(1, Math.floor((availableWidth + gap) / (cardWidth + gap)));
   return { columns, trackWidth: columns * cardWidth + (columns - 1) * gap };
@@ -42,7 +50,8 @@ const GROUP_GAP = 20;
 export function remainingBelowFold(groups, columns, scrollTop, viewportHeight) {
   if (!viewportHeight) return 0;
   const bottom = scrollTop + viewportHeight;
-  let y = 0, remaining = 0;
+  let y = 0,
+    remaining = 0;
   for (const group of groups) {
     const rows = Math.ceil(group.items.length / columns);
     for (let row = 0; row < rows; row++) {
@@ -72,31 +81,31 @@ export function firstRowBelowFold(groups, columns, scrollTop, viewportHeight) {
 
 export function createDraftRailItems(actions) {
   if (actions.length <= DRAFT_RAIL_LIMIT) {
-    return actions.map((action, index) => ({ kind: "action", action, index }));
+    return actions.map((action, index) => ({ kind: 'action', action, index }));
   }
 
   return [
     ...actions.slice(0, DRAFT_RAIL_LIMIT - 1).map((action, index) => ({
-      kind: "action",
+      kind: 'action',
       action,
       index,
     })),
-    { kind: "overflow", hiddenCount: actions.length - (DRAFT_RAIL_LIMIT - 1) },
+    { kind: 'overflow', hiddenCount: actions.length - (DRAFT_RAIL_LIMIT - 1) },
   ];
 }
 
 export function createDraftGroups(
   actions,
   selectedActionIds,
-  { filter = "all", groupBy = "location" } = {},
+  { filter = 'all', groupBy = 'location' } = {}
 ) {
   const selectedIds = new Set(selectedActionIds);
   const groups = new Map();
 
   actions.forEach((action, index) => {
     const selected = selectedIds.has(action.id);
-    if (filter === "selected" && !selected) return;
-    if (filter === "unselected" && selected) return;
+    if (filter === 'selected' && !selected) return;
+    if (filter === 'unselected' && selected) return;
 
     const label = draftGroupLabel(action, groupBy, selected);
     const group = groups.get(label) ?? { key: label, label, items: [] };
@@ -108,13 +117,20 @@ export function createDraftGroups(
 }
 
 function draftGroupLabel(action, groupBy, selected) {
-  if (groupBy === "kind") return action.kind === "lighting" ? "照明" : action.kind === "ac" ? "中央空调" : action.kind === "access" ? "门禁" : "其他设备";
-  if (groupBy === "selection") return selected ? "已选择" : "未选择";
-  if (groupBy === "operation") {
-    if (action.kind === "access") return "开门一次";
-    if (action.command?.closeOrOpen === 1) return "打开";
-    if (action.command?.closeOrOpen === 0) return "关闭";
-    return "其他操作";
+  if (groupBy === 'kind')
+    return action.kind === 'lighting'
+      ? '照明'
+      : action.kind === 'ac'
+        ? '中央空调'
+        : action.kind === 'access'
+          ? '门禁'
+          : '其他设备';
+  if (groupBy === 'selection') return selected ? '已选择' : '未选择';
+  if (groupBy === 'operation') {
+    if (action.kind === 'access') return '开门一次';
+    if (action.command?.closeOrOpen === 1) return '打开';
+    if (action.command?.closeOrOpen === 0) return '关闭';
+    return '其他操作';
   }
-  return action.location?.trim() || "未标注区域";
+  return action.location?.trim() || '未标注区域';
 }

@@ -28,46 +28,66 @@ const OUTCOME_CLASSES = {
 };
 
 function receiptEvidence(draft, result) {
-  const counts = { dispatched: 0, applied: 0, partial: 0, satisfied: 0, unknown: 0, refused: 0, skipped: 0 }
-  const kinds = new Map((draft?.actions || []).map(action => [action.id, action.kind]))
+  const counts = {
+    dispatched: 0,
+    applied: 0,
+    partial: 0,
+    satisfied: 0,
+    unknown: 0,
+    refused: 0,
+    skipped: 0,
+  };
+  const kinds = new Map((draft?.actions || []).map((action) => [action.id, action.kind]));
   for (const receipt of result?.receipts || []) {
-    if (!receipt || receipt.outcome === 'UNSELECTED') continue
-    const fields = receipt.fields?.length ? receipt.fields : receipt.response?.fields
-    const records = Array.isArray(fields) && fields.length ? fields : [receipt]
+    if (!receipt || receipt.outcome === 'UNSELECTED') continue;
+    const fields = receipt.fields?.length ? receipt.fields : receipt.response?.fields;
+    const records = Array.isArray(fields) && fields.length ? fields : [receipt];
     for (const record of records) {
-      let outcome = String(record?.outcome || '').trim().toUpperCase()
-      if (outcome === 'UNSELECTED') continue
-      const access = kinds.get(receipt.actionId) === 'access'
-      if (access && outcome === 'DEVICE_APPLIED') outcome = 'ACCEPTED'
-      else if (!access && outcome === 'ACCEPTED' && result.readback?.[receipt.actionId] === 'confirmed') outcome = 'DEVICE_APPLIED'
-      const category = Object.keys(OUTCOME_CLASSES).find(key => OUTCOME_CLASSES[key].includes(outcome))
-      counts[category || 'unknown'] += 1
+      let outcome = String(record?.outcome || '')
+        .trim()
+        .toUpperCase();
+      if (outcome === 'UNSELECTED') continue;
+      const access = kinds.get(receipt.actionId) === 'access';
+      if (access && outcome === 'DEVICE_APPLIED') outcome = 'ACCEPTED';
+      else if (
+        !access &&
+        outcome === 'ACCEPTED' &&
+        result.readback?.[receipt.actionId] === 'confirmed'
+      )
+        outcome = 'DEVICE_APPLIED';
+      const category = Object.keys(OUTCOME_CLASSES).find((key) =>
+        OUTCOME_CLASSES[key].includes(outcome)
+      );
+      counts[category || 'unknown'] += 1;
     }
   }
-  return counts
+  return counts;
 }
 
 // 旧记录缺 message 时的兜底：从逐条回执推导，聚合状态只做最后线索。
 function evidenceNotice(draft, result, status) {
-  const evidence = receiptEvidence(draft, result)
-  const dispatched = evidence.dispatched + evidence.applied + evidence.partial
-  const refused = evidence.refused + evidence.skipped
+  const evidence = receiptEvidence(draft, result);
+  const dispatched = evidence.dispatched + evidence.applied + evidence.partial;
+  const refused = evidence.refused + evidence.skipped;
   // 未知传输不是已下发证据：零受理而存在未知时只说结果未知（可附未受理项），不说部分已下发。
-  if (!dispatched && evidence.unknown) return { kind: 'attention', text: refused ? '下发结果未知，有未受理项' : '下发结果未知' }
-  if (dispatched && evidence.unknown) return { kind: 'attention', text: '部分指令已下发，其余下发结果未知' }
-  if (dispatched && refused) return { kind: 'attention', text: '部分指令已下发，其余未受理' }
-  if (evidence.partial) return { kind: 'attention', text: '部分已下发，未全部成功' }
-  if (!dispatched && evidence.satisfied && refused) return { kind: 'attention', text: '无需操作，有未受理项' }
-  if (refused) return { kind: 'attention', text: '未受理' }
-  if (evidence.applied && !evidence.dispatched) return { kind: 'sent', text: '已完成' }
-  if (dispatched) return { kind: 'sent', text: '已下发' }
-  if (evidence.satisfied) return { kind: 'sent', text: '无需操作' }
-  const text = STATUS_NOTICES[status]
-  return text ? { kind: toneFor(status), text } : null
+  if (!dispatched && evidence.unknown)
+    return { kind: 'attention', text: refused ? '下发结果未知，有未受理项' : '下发结果未知' };
+  if (dispatched && evidence.unknown)
+    return { kind: 'attention', text: '部分指令已下发，其余下发结果未知' };
+  if (dispatched && refused) return { kind: 'attention', text: '部分指令已下发，其余未受理' };
+  if (evidence.partial) return { kind: 'attention', text: '部分已下发，未全部成功' };
+  if (!dispatched && evidence.satisfied && refused)
+    return { kind: 'attention', text: '无需操作，有未受理项' };
+  if (refused) return { kind: 'attention', text: '未受理' };
+  if (evidence.applied && !evidence.dispatched) return { kind: 'sent', text: '已完成' };
+  if (dispatched) return { kind: 'sent', text: '已下发' };
+  if (evidence.satisfied) return { kind: 'sent', text: '无需操作' };
+  const text = STATUS_NOTICES[status];
+  return text ? { kind: toneFor(status), text } : null;
 }
 
 // 未知与不完整结果需要说明，但不是仍在执行；已下发与无需操作使用中性确认色。
-const toneFor = status =>
+const toneFor = (status) =>
   ['PARTIALLY_ACCEPTED', 'REJECTED', 'INTERRUPTED'].includes(status) ? 'attention' : 'sent';
 
 /**

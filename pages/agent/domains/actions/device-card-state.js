@@ -1,7 +1,7 @@
 import { acSummary } from './ac-draft.js';
 
 export function stateText(action, state) {
-  if (action.kind === "access") return "门状态未知";
+  if (action.kind === 'access') return '门状态未知';
   if (state == null) return '状态未知';
   if (action.kind !== 'ac') return state === true ? '开启' : '关闭';
   return acSummary(state) || '状态未知';
@@ -25,11 +25,18 @@ export function reduceCardHold(state, event) {
 export function receiptPhase(action, outcome, readback) {
   if (outcome === 'UNSELECTED') return 'unselected';
   if (outcome === 'ALREADY_SATISFIED' || outcome === 'NO_CHANGE') return 'complete';
-  if (outcome === 'UNKNOWN' || outcome === 'TIMEOUT' || outcome === 'DISPATCHED_UNKNOWN' || outcome === 'INTERRUPTED') return 'unknown';
+  if (
+    outcome === 'UNKNOWN' ||
+    outcome === 'TIMEOUT' ||
+    outcome === 'DISPATCHED_UNKNOWN' ||
+    outcome === 'INTERRUPTED'
+  )
+    return 'unknown';
   // 空调参数级部分受理保持可见：不是全部成功，也不是整体失败。
   if (outcome === 'PARTIALLY_ACCEPTED') return 'partial';
   // 门禁只有「已下发」一层：开门无物理回执，受理即终态，绝不宣称已开门。
-  if (action.kind === 'access') return outcome === 'ACCEPTED' || outcome === 'DEVICE_APPLIED' ? 'accepted' : 'failed';
+  if (action.kind === 'access')
+    return outcome === 'ACCEPTED' || outcome === 'DEVICE_APPLIED' ? 'accepted' : 'failed';
   if (outcome === 'DEVICE_APPLIED') return 'complete';
   if (outcome !== 'ACCEPTED') return 'failed';
   return readback === 'confirmed' ? 'complete' : 'accepted';

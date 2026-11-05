@@ -21,8 +21,8 @@ export {
   taskDayTime,
   TASK_ALL_CHUNK_DAYS,
   TASK_ALL_MAX_DAYS,
-} from '../domains/tasks/task-calendar.mjs'
-export { shiftDate } from '../domains/regions/region-calendar.mjs'
+} from '../domains/tasks/task-calendar.mjs';
+export { shiftDate } from '../domains/regions/region-calendar.mjs';
 export {
   taskDetailView,
   proposalDeviceLayout,
@@ -38,7 +38,7 @@ export {
   readAcView,
   mergeTaskPlan,
   energyImpactView,
-} from '../domains/tasks/task-detail-view.mjs'
+} from '../domains/tasks/task-detail-view.mjs';
 export {
   taskStatusText,
   taskStatusTone,
@@ -46,6 +46,6 @@ export {
   taskResultStatus,
   planPresentation,
   taskResultLabel,
-} from '../domains/tasks/task-presentation.mjs'
-export { deviceTimelineItems } from '../domains/tasks/device-timeline-view.mjs'
-export { createPlanManagement } from '../domains/tasks/plan-management.mjs'
+} from '../domains/tasks/task-presentation.mjs';
+export { deviceTimelineItems } from '../domains/tasks/device-timeline-view.mjs';
+export { createPlanManagement } from '../domains/tasks/plan-management.mjs';

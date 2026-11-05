@@ -6,23 +6,23 @@
 // dart-sass 不支持 rgba($list, α)，SCSS 里禁止直接 rgba($agent-*-rgb, …)。
 
 /* ── 品牌与强调 ─────────────────────────────── */
-$agent-color-accent: #466eae;        // 强调蓝：主读数、链接、激活态、主要按钮
-$agent-color-accent-deep: #315a80;   // 深石蓝：标题强调、深色图钉、品牌球
-$agent-color-accent-faint: #eaf1fc;  // 浅蓝底：强调态卡面/底色块
+$agent-color-accent: #466eae; // 强调蓝：主读数、链接、激活态、主要按钮
+$agent-color-accent-deep: #315a80; // 深石蓝：标题强调、深色图钉、品牌球
+$agent-color-accent-faint: #eaf1fc; // 浅蓝底：强调态卡面/底色块
 
 /* ── 表面与氛围 ─────────────────────────────── */
-$agent-color-surface-page: #f3f6fa;  // 页面底色
-$agent-color-tint: #e6eef8;          // 浅蓝灰内容底：卡内分块、图表底
-$agent-color-surface: #ffffff;       // 卡片白
+$agent-color-surface-page: #f3f6fa; // 页面底色
+$agent-color-tint: #e6eef8; // 浅蓝灰内容底：卡内分块、图表底
+$agent-color-surface: #ffffff; // 卡片白
 
 /* ── 文字 ──────────────────────────────────── */
-$agent-color-text-primary: #263332;  // 一级文字
-$agent-color-text-secondary: #516b85;// 二级文字/数值
-$agent-color-text-muted: #718496;    // 弱化文字
-$agent-color-text-faint: #8b9ba8;    // 最弱提示/禁用/图标灰
+$agent-color-text-primary: #263332; // 一级文字
+$agent-color-text-secondary: #516b85; // 二级文字/数值
+$agent-color-text-muted: #718496; // 弱化文字
+$agent-color-text-faint: #8b9ba8; // 最弱提示/禁用/图标灰
 
 /* ── 线条 ──────────────────────────────────── */
-$agent-color-line: #e2e9f0;          // 分隔线/描边
+$agent-color-line: #e2e9f0; // 分隔线/描边
 
 /* ── 状态语义（不可替代，告警不混用品牌色） ── */
 $agent-color-success: #3f8a66;
@@ -32,7 +32,7 @@ $agent-color-warning-deep: #8e650f;
 $agent-color-warning-faint: #f6eed6;
 $agent-color-error: #a15343;
 $agent-color-error-faint: #f4e5e0;
-$agent-color-badge: #b4553f;         // 未读角标
+$agent-color-badge: #b4553f; // 未读角标
 
 /* ── 图表 ──────────────────────────────────── */
 $agent-color-chart: #a8c4e8;
@@ -44,7 +44,9 @@ $agent-ink-rgb: 38, 51, 50;
 $agent-accent-rgb: 70, 110, 174;
 $agent-surface-rgb: 243, 246, 250;
 $agent-color-mask: rgba(0, 0, 0, 0.4);
-$agent-shadow-card: 0 1px 4px rgba(49, 90, 128, 0.05), 0 0 0 0.5px rgba(49, 90, 128, 0.04);
+$agent-shadow-card:
+  0 1px 4px rgba(49, 90, 128, 0.05),
+  0 0 0 0.5px rgba(49, 90, 128, 0.04);
 $agent-shadow-float: 0 6px 16px rgba(49, 90, 128, 0.12);
 
 /* ── 尺寸 ──────────────────────────────────── */

@@ -24,5 +24,5 @@ export const AGENT_COLORS = {
   badge: '#b4553f',
   chart: '#a8c4e8',
   chartDeep: '#719ed8',
-  mask: 'rgba(0, 0, 0, 0.4)'
-}
+  mask: 'rgba(0, 0, 0, 0.4)',
+};

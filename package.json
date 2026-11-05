@@ -5,7 +5,9 @@
   "scripts": {
     "menu": "node createMenu.mjs",
     "test:agent": "node --test test/agent-*.test.mjs",
-    "lint:boundaries": "node test/agent-boundaries.mjs"
+    "lint:boundaries": "node test/agent-boundaries.mjs",
+    "format:agent": "prettier --config pages/agent/.prettierrc.json --write \"pages/agent/**/*.{vue,js,mjs,scss,css}\" \"!pages/agent/prototypes/**\" \"apis/agent/**/*.{js,mjs}\"",
+    "format:agent:check": "prettier --config pages/agent/.prettierrc.json --check \"pages/agent/**/*.{vue,js,mjs,scss,css}\" \"!pages/agent/prototypes/**\" \"apis/agent/**/*.{js,mjs}\""
   },
   "dependencies": {
     "crypto-js": "^4.1.1",
@@ -14,6 +16,7 @@
   },
   "devDependencies": {
     "chalk": "^5.0.1",
-    "fs": "^0.0.1-security"
+    "fs": "^0.0.1-security",
+    "prettier": "3.6.2"
   }
 }

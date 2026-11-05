@@ -19,4 +19,4 @@ export {
   getLatestSafetyEvent,
   getEnvironmentHistory,
   getVideoStream,
-} from './index.js'
+} from './index.js';

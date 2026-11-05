@@ -8,4 +8,4 @@ export {
   revalidateAction,
   restoreAction,
   cancelAction,
-} from './index.js'
+} from './index.js';

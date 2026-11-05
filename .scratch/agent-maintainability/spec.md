@@ -1,6 +1,6 @@
 # Agent 源码可读性与深模块改进
 
-Status: ready-for-agent
+Status: done
 
 ## 用户决定
 
@@ -39,3 +39,15 @@ Status: ready-for-agent
 先保留行为回归，再逐域实现。最终一次全套 Agent 测试、依赖边界检查、官方微信开发构建；在真实微信同一账号检查公司概览、办公室对话恢复、任务列表／详情和能耗面板主要只读路径，证据与未验项分开记录。
 
 改动按领域闭环提交；格式化独立提交；不包含既有无关工作内容。评估中发现的交付杂物单独记录，不在本轮未经确认删除。
+
+## 实施结果
+
+逻辑提交 `f67701b`：四个行为模块完成迁移。公开入口为 `createPlanManagement`／`planPresentation`、`createConversationOperations`、`createEnergyPanel`、`createCompanyOverview`；内部队列、确认集合和请求纪元不向视图暴露。任务状态规则统一，视图保留交互及展示组合，不把深模块当成“大文件分家”。
+
+排版提交独立：固定Prettier3.6.2、Agent局部配置与限定范围命令，保留分号以满足uni-app模板事件编译；客户非Agent页面与既有原型不格式化。61个生产Vue文件中超过180字符的行，从评估基线613行降为1行（内嵌SVG字符串，未为行宽拆改其内容）；这是阅读指标，不当作架构深度或性能提升指标。
+
+最终验证：324项Agent回归、179个源文件依赖边界、格式检查及官方微信编译通过。[真实微信记录](./evidence/REF-01/result.md)覆盖概览、列表、周期计划详情、已完成任务报告、能耗选日及重开、纯问候流式回复与会话恢复；有副作用与故障注入场景未冒充前端已验收。
+
+预期维护效果：展示调整留在Vue；周期状态只改一处；会话确认与选区同步、能耗历史准备、概览缓存／身份失效分别在一个行为模块内修改和验证。不是承诺客户必然认可，也不是对API总入口、全部页面或全部性能问题的一次性改造。
+
+另记交付风险：此前评估发现`0001-business-fact-storage.md`、`internal/controller/HealthController.java`、`src/main/java/ltd/qianc/iotagent/agent/internal/controller/AgentToolBridgeController.java`可进入当前归档。未在本轮删除、修改或交付；正式客户交付仍应单独检查纯源码边界。

@@ -25,4 +25,4 @@ export {
   discardTaskChange,
   confirmTaskCancellation,
   discardTaskCancellation,
-} from './index.js'
+} from './index.js';

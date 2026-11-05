@@ -1,2 +1,2 @@
 // Video adapter entrypoint. The uni-app video player depends on runtime aliases and stays out of pure observation projections.
-export { openVideoPlayer, videoPlayerReady } from '../domains/video/video-player.js'
+export { openVideoPlayer, videoPlayerReady } from '../domains/video/video-player.js';
