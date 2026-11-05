@@ -41,7 +41,7 @@ import TaskDetailSheet from './components/tasks/TaskDetailSheet.vue'
 import { acknowledgeRegion, focusRegion, focusRegionId, loadRegionFocus, selectFocusRegion, queueComposePrefill } from './lib/region-focus.mjs'
 import { localDate } from './lib/region.mjs'
 import { taskNeedsDetails } from './lib/tasks.mjs'
-import { calendarWindow, shiftDate, validCalendarDate, regionTimelineItems } from './lib/region.mjs'
+import { calendarWindow, shiftDate, validCalendarDate, regionTimelineItems, regionSampleTasks, regionSampleTaskDetail } from './lib/region.mjs'
 import AssistantNav from './components/shared/AssistantNav.vue'
 import { backToParent, previousPageLabel, returnToOfficeConversation } from './lib/navigation.mjs'
 const backLabel = ref('办公室 Agent')
