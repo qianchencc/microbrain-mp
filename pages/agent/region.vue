@@ -119,8 +119,12 @@ async function loadSample() {
   if (current !== requestId || region !== focusRegionId.value || scope !== getAgentStorageScope() || !sampleMode.value) return false
   sampleTasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
   return true
- } catch (cause) { if (current === requestId && scope === getAgentStorageScope()) error.value = cause.message || '演示设备目录暂不可用'; return false }
- finally { if (current === requestId) loading.value = false }
+ } catch (cause) {
+  if (current !== requestId || scope !== getAgentStorageScope()) return false
+  // 设备目录挂了不出错误卡:样例是纯本地展示,用通用设备兜底照常渲染。
+  sampleTasks.value = regionSampleTasks(sampleDate.value, region, [])
+  return true
+ } finally { if (current === requestId) loading.value = false }
 }
 async function loadVisibleTimeline() {
  const region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()

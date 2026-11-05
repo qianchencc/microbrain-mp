@@ -1,10 +1,18 @@
 // Local workbench preview data. Task IDs are never persisted or executable.
+// 设备目录失败时用通用设备兜底:样例是纯展示数据,不该因真实接口挂掉而整个消失。
+const SAMPLE_FALLBACK_DEVICES = [
+ { id: 'sample-light-1', kind: 'lighting', name: '办公区照明A', location: '开放办公区' },
+ { id: 'sample-light-2', kind: 'lighting', name: '办公区照明B', location: '开放办公区' },
+ { id: 'sample-light-3', kind: 'lighting', name: '会议室照明', location: '会议室' },
+ { id: 'sample-light-4', kind: 'lighting', name: '走廊照明', location: '走廊' },
+ { id: 'sample-ac-1', kind: 'ac', name: '办公区空调', location: '开放办公区' },
+]
 export function regionSampleTasks(date, regionId, devices) {
+ const roster = Array.isArray(devices) && devices.length ? devices : SAMPLE_FALLBACK_DEVICES
  const at = time => `${date}T${time}:00+08:00`
- const lights = devices.filter(device => device.kind === 'lighting').slice(0, 4)
- const ac = devices.find(device => device.kind === 'ac')
+ const lights = roster.filter(device => device.kind === 'lighting').slice(0, 4)
+ const ac = roster.find(device => device.kind === 'ac')
  const action = (device, target, outcome) => ({ id: device.id, kind: device.kind, name: device.name, target, outcome })
- const phase = (id, time, status, actions) => ({ id: `sample-phase-${id}`, at: at(time), status, devices: actions })
  const task = (id, label, status, creatorName, phases) => ({
   id: `sample-${id}`, label, status, version: 1, regionIds: [regionId], createdAt: at('07:00'), phases,
   devices: [...new Map(phases.flatMap(item => item.devices).map(device => [device.id, {
