@@ -25,6 +25,7 @@ export {
 export { shiftDate } from '../domains/regions/region-calendar.mjs'
 export {
   taskDetailView,
+  proposalDeviceLayout,
   taskExecutionSummaryView,
   taskPlanSnapshot,
   taskNavigation,

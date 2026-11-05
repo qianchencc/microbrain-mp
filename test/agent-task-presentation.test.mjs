@@ -1,6 +1,31 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { taskDetailView, taskExecutionSummaryView, taskLabel, taskSettled, taskCalendarMarks, deviceTimelineItems } from '../pages/agent/lib/tasks.mjs'
+import * as taskViews from '../pages/agent/lib/tasks.mjs'
+
+test('确认单仅共享相同成员和一致指令的设备清单，阶段差异与原始动作保留', () => {
+ const devices = [
+  { deviceId: 'a', deviceName: '照明开关-26楼-3回路格栅灯', kind: 'lighting' },
+  { deviceId: 'b', deviceName: '照明开关-26楼-2回路格栅灯', kind: 'lighting' },
+ ]
+ const phase = (power, members = devices) => ({ actions: members.map(d => ({ ...d, command: { closeOrOpen: power } })),
+  preflight: { includedScopes: devices.map(d => d.deviceName), excludedScopes: [], excludedCount: 0 } })
+ const phases = [phase(1), phase(0, [...devices].reverse())]
+ const original = JSON.stringify(phases)
+ const layout = taskViews.proposalDeviceLayout(phases)
+ assert.deepEqual(layout.sharedActions.map(d => d.deviceId), ['a', 'b'])
+ assert.deepEqual(layout.scopes, [[], []], '逐设备名单不是另一份范围摘要')
+ assert.equal(JSON.stringify(phases), original, '仅做展示，不裁剪未来控制动作')
+ assert.equal(taskViews.proposalDeviceLayout([phase(1), phase(0, [devices[0]])]).sharedActions, null)
+ const mixed = phase(0); mixed.actions[0].command.closeOrOpen = 1
+ assert.equal(taskViews.proposalDeviceLayout([phase(1), mixed]).sharedActions, null)
+ const excluded = phase(0); excluded.preflight.excludedScopes = ['会议室']; excluded.preflight.excludedCount = 1
+ assert.equal(taskViews.proposalDeviceLayout([phase(1), excluded]).sharedActions, null)
+ const read = { ...phase(0), read: { alertDays: 1 } }
+ assert.equal(taskViews.proposalDeviceLayout([phase(1), read]).sharedActions, null)
+ const scoped = phase(1); scoped.preflight.includedScopes = ['26楼已核验照明范围']
+ assert.deepEqual(taskViews.proposalDeviceLayout([scoped]).scopes, [['26楼已核验照明范围']])
+})
 
 test('同一任务在详情与日程使用普通词，待确认结果不会变成完成', () => {
  const device = outcome => ({ id: outcome, kind: 'ac', name: '空调', outcome, target: { power: 'off' }, details: { receipt: 'ACCEPTED' } })

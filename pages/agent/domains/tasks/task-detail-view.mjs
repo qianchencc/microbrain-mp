@@ -5,6 +5,39 @@ import { taskStatusText, taskStatusTone, taskResultStatus, deviceResultView, dev
 
 export const executionResult = device => deviceResultView(device).text
 
+// Sharing is a display projection only: exact identities, scope facts and uniform
+// per-phase commands must agree; mixed/read phases keep their independent lists.
+export function proposalDeviceLayout(phases = []) {
+ const scopes = phases.map(phase => {
+  const names = new Set((phase.actions || []).flatMap(action => [action.deviceId, action.deviceName]))
+  return (phase.preflight?.includedScopes || []).filter(scope => !names.has(scope))
+ })
+ const stable = value => {
+  if (Array.isArray(value)) return value.map(stable)
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])]))
+  return value
+ }
+ const signature = value => JSON.stringify(stable(value))
+ const first = phases[0]?.actions || []
+ if (phases.length < 2 || !first.length) return { sharedActions: null, scopes }
+ const ids = new Set(first.map(action => action.deviceId))
+ if (ids.has(undefined) || ids.has('') || ids.size !== first.length) return { sharedActions: null, scopes }
+ const scopeKey = index => signature({ scopes: [...scopes[index]].sort(),
+  excluded: [...(phases[index].preflight?.excludedScopes || [])].sort(),
+  excludedCount: phases[index].preflight?.excludedCount || 0 })
+ const commonScope = scopeKey(0)
+ const kinds = new Map(first.map(action => [action.deviceId, action.kind]))
+ const shared = phases.every((phase, index) => {
+  const actions = phase.actions || []
+  if (phase.read || actions.length !== ids.size || scopeKey(index) !== commonScope) return false
+  const members = new Set(actions.map(action => action.deviceId))
+  if (members.size !== ids.size || actions.some(action => !ids.has(action.deviceId) || kinds.get(action.deviceId) !== action.kind)) return false
+  const command = signature({ kind: actions[0].kind, command: actions[0].command })
+  return actions.every(action => signature({ kind: action.kind, command: action.command }) === command)
+ })
+ return { sharedActions: shared ? first : null, scopes }
+}
+
 export function repeatText(repeat) {
  if (!repeat) return ''
  const days = ['日', '一', '二', '三', '四', '五', '六', '日']

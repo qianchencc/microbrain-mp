@@ -5,15 +5,22 @@
   <text v-if="task.repeat" class="task-repeat">{{ repeatText(task.repeat) }}</text>
   <text v-if="task.repeat && isCreated && (task.nextCheckpointAt || task.nextAt)" class="task-interval">{{ nextLabel }} · {{ taskTime(task.nextCheckpointAt || task.nextAt) }}</text>
   <text v-if="task.interval" class="task-interval">{{ intervalText }}</text>
+  <view v-if="sharedActions" class="shared-devices">
+   <view class="shared-head"><text>共用设备 · {{ sharedActions.length }} 台</text><button class="names-toggle" :aria-expanded="fullNames" @tap="fullNames = !fullNames">{{ fullNames ? '简短名称' : '完整名称' }}</button></view>
+   <text v-if="deviceLayout.scopes[0]?.length" class="shared-scope">{{ deviceLayout.scopes[0].join('、') }}</text>
+   <text v-if="phasesShown[0].preflight?.excludedScopes?.length" class="shared-scope">不操作 · {{ phasesShown[0].preflight.excludedScopes.join('、') }} · {{ phasesShown[0].preflight.excludedCount }} 台</text>
+   <view v-for="action in sharedActions.slice(0, sharedExpanded ? Infinity : ROW_LIMIT)" :key="action.deviceId" class="task-device shared-device">
+    <view class="device-cell"><image v-if="artworkOf(action)" class="device-art" :src="artworkOf(action)" mode="aspectFit" /><text class="device-name">{{ fullNames ? action.deviceName : deviceDisplayName(action.deviceName) }}</text></view>
+   </view>
+   <button v-if="sharedActions.length > ROW_LIMIT" class="phase-more" :aria-expanded="sharedExpanded" @tap="sharedExpanded = !sharedExpanded">{{ sharedExpanded ? '收起设备' : `还有 ${sharedActions.length - ROW_LIMIT} 台 · 展开` }}</button>
+  </view>
   <view class="task-phases">
   <view v-for="(phase, index) in phasesShown" :key="phase.at" class="task-phase">
     <view class="phase-time"><view class="phase-node" :class="{ ending: !task.interval && index === 1 }" /><text>{{ phaseTitle(index) }} · {{ taskTime(phase.at) }}</text></view>
-    <template v-if="phase.preflight">
-     <text class="device-location preflight-line">范围 · {{ phase.preflight.includedScopes.join('、') }}</text>
-     <text v-if="phase.preflight.excludedScopes.length" class="device-location preflight-line">保留 · {{ phase.preflight.excludedScopes.join('、') }} · {{ phase.preflight.excludedCount }} 台</text>
-     <view class="device-target preflight-line preflight-counts"><text>目标 {{ phase.preflight.targetCount }} 台</text><text>无需调整 {{ phase.preflight.alreadySatisfiedCount }}</text><text>需要调整 {{ phase.preflight.needsDispatchCount }}</text><text>暂未读到状态 {{ phase.preflight.unreadableCount }}</text></view>
-     <text class="device-location preflight-line">检查时间 {{ taskTime(phase.preflight.observedAt) }} · 到时重新读取状态</text>
-    </template>
+    <text v-if="!sharedActions && deviceLayout.scopes[index]?.length" class="device-location preflight-line">范围 · {{ deviceLayout.scopes[index].join('、') }}</text>
+    <text v-if="!sharedActions && phase.preflight?.excludedScopes?.length" class="device-location preflight-line">不操作 · {{ phase.preflight.excludedScopes.join('、') }} · {{ phase.preflight.excludedCount }} 台</text>
+    <text v-if="sharedActions" class="phase-target">{{ targetText(phase.actions[0].kind, phase.actions[0].command) }} · 上述 {{ sharedActions.length }} 台</text>
+    <text v-if="phase.preflight?.unreadableCount" class="preflight-warning">提案时有 {{ phase.preflight.unreadableCount }} 台未读到状态</text>
     <view v-for="action in actionsOf(phase, index)" :key="action.deviceId" class="task-device">
      <view class="device-cell"><image v-if="artworkOf(action)" class="device-art" :src="artworkOf(action)" mode="aspectFit" /><text class="device-name">{{ action.deviceName }}</text></view><text class="device-target">{{ targetText(action.kind, action.command) }}</text>
     </view>
@@ -60,18 +67,20 @@
 <script setup>
 import { computed, ref } from 'vue'
 import TaskErrorNotice from './TaskErrorNotice.vue'
-import { readAcView, readAgentView, readTargetText, repeatText, taskTime, targetText, taskStatusText } from '../../lib/tasks.mjs'
-import { resolveDeviceArtwork } from '../../device-art/catalog.js'
+import { readAcView, readAgentView, readTargetText, repeatText, taskTime, targetText, taskStatusText, proposalDeviceLayout } from '../../lib/tasks.mjs'
+import { resolveDeviceArtwork, deviceDisplayName } from '../../device-art/catalog.js'
 
 // 单 phase 动作与待读设备共用 4 行预算；公司级任务的长清单默认收成尾巴可展开。
 const ROW_LIMIT = 4
 const expandedPhases = ref([])
+const sharedExpanded = ref(false)
+const fullNames = ref(false)
 const isExpanded = index => expandedPhases.value.includes(index)
 function togglePhase(index) {
  expandedPhases.value = isExpanded(index) ? expandedPhases.value.filter(value => value !== index) : [...expandedPhases.value, index]
 }
 function actionsOf(phase, index) {
- return (phase.actions || []).slice(0, isExpanded(index) ? Infinity : ROW_LIMIT)
+ return sharedActions.value ? [] : (phase.actions || []).slice(0, isExpanded(index) ? Infinity : ROW_LIMIT)
 }
 function readDevicesOf(phase, index) {
  const budget = isExpanded(index) ? Infinity : ROW_LIMIT - Math.min((phase.actions || []).length, ROW_LIMIT)
@@ -79,7 +88,7 @@ function readDevicesOf(phase, index) {
 }
 function phaseRest(phase, index) {
  if (isExpanded(index)) return 0
- const total = (phase.actions || []).length + (props.source === 'company' ? phase.read?.devices?.length || 0 : 0)
+ const total = (sharedActions.value ? 0 : phase.actions?.length || 0) + (props.source === 'company' ? phase.read?.devices?.length || 0 : 0)
  return Math.max(0, total - ROW_LIMIT)
 }
 
@@ -94,6 +103,8 @@ const acWindow = computed(() => {
  return { ...readAcOf(phases[0]), count: phases.length }
 })
 const phasesShown = computed(() => acWindow.value ? [props.task.phases[0]] : props.task.phases || [])
+const deviceLayout = computed(() => proposalDeviceLayout(phasesShown.value))
+const sharedActions = computed(() => deviceLayout.value.sharedActions)
 const isCancellation = computed(() => props.task.kind === 'cancellation')
 const needsDecision = computed(() => props.task.confirmation?.status === 'needs_decision')
 const isConfirming = computed(() => props.confirming || props.task.confirmation?.status === 'recovering')
@@ -144,13 +155,19 @@ view,text,input { font-size:inherit; line-height:inherit; }
 .task-device { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:4px 0 4px 16px; font-size:$agent-font-size-compact; line-height:1.4; }
 .device-cell { display:flex; align-items:center; gap:6px; flex:1; min-width:0; }
 .device-art { width:18px; height:18px; flex-shrink:0; }
-.device-name { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.device-name { flex:1; min-width:0; white-space:normal; overflow-wrap:anywhere; }
 .device-target { flex-shrink:0; max-width:100%; color:$agent-color-text-secondary; }
 .read-window { display:block; margin:2px 0 3px 16px; color:$agent-color-warning-deep; font-size:10px; }
 .device-location { width:100%; margin-left:16px; color:$agent-color-text-muted; font-size:10px; }
 .preflight-line { display:block; width:auto; margin:3px 0 3px 16px; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
-.preflight-counts { display:flex; flex-wrap:wrap; gap:2px 10px; }
-.preflight-counts text { white-space:nowrap; }
+.shared-devices { margin-top:10px; padding:9px 3px; }
+.shared-head { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:600; }
+.names-toggle { margin:0; padding:6px; background:transparent; color:$agent-color-accent; font-size:11px; }
+.names-toggle::after { border:0; }
+.shared-scope { display:block; margin:4px 0; font-size:11px; line-height:1.5; }
+.shared-device { padding-left:0; }
+.phase-target { display:block; margin-left:16px; font-size:13px; font-weight:600; }
+.preflight-warning { display:block; margin:5px 0 0 16px; color:$agent-color-warning-deep; font-size:11px; }
 .phase-more { width:100%; min-height:34px; margin-top:5px; display:flex; align-items:center; justify-content:center; gap:5px; color:$agent-color-accent; font-size:11px; font-weight:600; border-radius:0; }
 .phase-more--pressed { background:$agent-color-tint; }
 .caret-up { transform:rotate(180deg); }

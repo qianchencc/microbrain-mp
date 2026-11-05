@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-05",
+  "surface": "real WeChat DevTools, current account, Office conversation",
+  "backend": { "java": 3381, "node": 3382, "changedEntries": 5, "otherReleaseEntriesPreserved": true },
+  "passed": [
+    "Four devices displayed once for the two control phases",
+    "Both phase times and opposite control goals remain visible",
+    "Entire proposal-time reference section removed",
+    "Full-name toggle exposes all four complete names",
+    "New real-model reply is one confirmation sentence, without repeating roster or schedule"
+  ],
+  "reply": "请核对卡片，确认后才会创建任务。",
+  "screenshots": {
+    "final": "final-without-reference.png",
+    "initialReplyStillRepeated": "new-reply.png"
+  },
+  "safety": { "taskCreationConfirmed": false, "deviceExecutionConfirmed": false },
+  "engineering": {
+    "frontendFocused": { "passed": 4, "failed": 0 },
+    "frontendFullAtRunTime": { "passed": 302, "failed": 1, "unrelatedFailure": "latest-alert launch parameters under concurrent work" },
+    "backendFullAtRunTime": { "passed": 574, "skipped": 25, "failed": 0 },
+    "finalJavaCompileAndProjectionSmoke": "passed",
+    "wechatDevelopmentCompile": "passed"
+  },
+  "notAccepted": ["physical-device execution", "real-device WeChat", "all model reply scenarios"]
+}
