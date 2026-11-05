@@ -110,8 +110,6 @@
     <text class="report-summary">{{ latestReport.outcomeText }} · {{ latestReport.checkpoints }} 次记录 · {{ latestReport.devicesVisible }} 台设备</text>
     <button class="latest-report-link" @tap="openLatestReport">查看最近一次报告</button>
    </view>
-   <button class="more-info" @tap="moreInfo = !moreInfo">更多信息 {{ moreInfo ? '⌃' : '›' }}</button>
-   <view v-if="moreInfo" class="source"><text>{{ detail.creator?.displayName || '成员' }} 创建 · {{ detail.createdText }}</text><text>{{ detail.sourceText }}</text><text v-if="detail.source?.conversationId" selectable>对话编号 {{ detail.source.conversationId }}</text></view>
    <view v-if="!sampleTask" class="reference-actions"><button class="task-reference" @tap="referenceCurrent">{{ plan ? '询问这个计划' : '引用任务并询问' }}</button></view>
    <button v-if="!sampleTask && !loading && (detail.canCancel || (task?.occurrence?.virtual && detailMine && task.status !== 'cancelled'))" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="task?.occurrence?.virtual ? cancelPeriod('occurrence') : deleteTask()">{{ task?.occurrence ? '取消本次' : '取消任务' }}</button>
    <button v-if="!sampleTask && (plan?.canManage || (task?.occurrence && detailMine))" class="task-delete" :disabled="cancelling" :loading="cancelling" @tap="cancelPeriod('all')">取消全部</button>
@@ -138,7 +136,7 @@ const activeTaskId = ref(''), activePlanId = ref('')
 const loading = ref(false), error = ref(''), actionError = ref(''), cancelling = ref(false), planSwitchRevision = ref(0)
 const detailFresh = ref(false)
 const currentStates = ref({}), currentLoading = ref(false)
-const expandedPhases = ref([]), allPhases = ref(false), moreInfo = ref(false), energyBasis = ref(false), issue = ref(null)
+const expandedPhases = ref([]), allPhases = ref(false), energyBasis = ref(false), issue = ref(null)
 const visiblePhases = computed(() => allPhases.value ? detail.value?.phases : detail.value?.previewPhases)
 
 function showIssue(value) { issue.value = value }
@@ -264,7 +262,7 @@ onShow(() => {
  pageVisible = true
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 失效身份不保留上一人的报告 */ }
- if (scope !== detailScope) { ++planStatusRequest; task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; allPhases.value = false; moreInfo.value = false; energyBasis.value = false; issue.value = null; cancelling.value = false; planSwitchRevision.value += 1 }
+ if (scope !== detailScope) { ++planStatusRequest; task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; allPhases.value = false; energyBasis.value = false; issue.value = null; cancelling.value = false; planSwitchRevision.value += 1 }
  if (wasHidden && props.active) { load(true); startPolling() }
  wasHidden = false
 })
@@ -276,7 +274,7 @@ async function load(silent = false) {
  let loaded = false
  let scope = ''
  try { scope = getAgentStorageScope() } catch { /* 接口仍负责展示身份错误 */ }
- if (scope !== detailScope) { task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; allPhases.value = false; moreInfo.value = false; energyBasis.value = false; issue.value = null }
+ if (scope !== detailScope) { task.value = null; plan.value = null; returnPlan.value = null; currentStates.value = {}; expandedPhases.value = []; allPhases.value = false; energyBasis.value = false; issue.value = null }
  detailScope = scope
  if (!pageVisible || !props.active || (!taskId && !planId)) return
  if (!silent) {
@@ -385,7 +383,7 @@ watch(() => [props.active, props.taskId, props.planId, props.sampleTask, props.s
  if (props.source !== 'office') currentStates.value = {}
  observedTaskId = activeTaskId.value || activePlanId.value
  actionError.value = ''
- expandedPhases.value = []; allPhases.value = false; moreInfo.value = false; energyBasis.value = false; issue.value = null
+ expandedPhases.value = []; allPhases.value = false; energyBasis.value = false; issue.value = null
  if (props.active) {
   load()
   startPolling()
@@ -405,11 +403,10 @@ defineExpose({ returnToPlan, back })
 .task-rules { margin-top:14px; padding:12px 13px; border-radius:12px; background:var(--agent-tint); color:var(--agent-text-secondary); font-size:12px; line-height:1.65; }
 .records-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; }
 .records-heading .section-title { margin:0; }
-.records-toggle,.more-info { min-height:44px; margin:0; color:var(--agent-text-muted); font-size:12px; }
+.records-toggle { min-height:44px; margin:0; color:var(--agent-text-muted); font-size:12px; }
 .result-link { min-height:44px; margin:0; padding:0 4px; display:flex; align-items:center; color:var(--agent-warning-deep); }
 .phase-head .result-link { margin-inline-start:auto; }
 .task-heading .result-link { flex-shrink:0; padding:0 14px; border:1px solid rgba(var(--agent-shadow-rgb),.16); border-radius:999px; box-shadow:0 1px 2px rgba(var(--agent-shadow-rgb),.07); }
-.more-info { margin-top:16px; }
 
 .reference-actions { margin-top:16px; display:flex; flex-direction:column; gap:8px; }.task-reference { min-height:42px; width:100%; display:flex; align-items:center; justify-content:center; border:1px solid var(--agent-line); border-radius:9px; background:linear-gradient(var(--agent-surface),var(--agent-tint)); color:var(--agent-accent-deep); font-size:12px; }.task-reference.secondary { background:transparent; color:var(--agent-text-muted); }
 view,text,input { font-size:inherit; line-height:inherit; }
@@ -549,7 +546,6 @@ button::after { border:0; }
 .energy-device-after.after-muted { color:var(--agent-warning-deep); }
 .energy-devices-more { display:block; padding:7px 0 0; color:var(--agent-text-muted); font-size:9px; }
 .report-note { display:block; margin-top:5px; color:var(--agent-text-muted); font-size:11px; }
-.source { display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid var(--agent-line); color:var(--agent-text-muted); font-size:11px; }
 .task-delete { width:100%; height:38px; margin:18px 0 0; border:1px solid var(--agent-error-faint); border-radius:8px; background:#fff; color:var(--agent-error); font-size:12px; line-height:36px; }
 .task-delete[disabled] { opacity:.55; }
 .action-error { display:block; margin-top:10px; color:var(--agent-error); font-size:11px; }
