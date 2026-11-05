@@ -26,7 +26,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
-import { listRegionTimeline, listRegionCalendar, listRegionDevices } from '@/apis/agent/observations'
+import { listRegionTimeline, listRegionCalendar } from '@/apis/agent/observations'
 import { isDev } from '@/config/settings'
 import { getAgentStorageScope } from '@/utils/agent-session'
 import RegionChip from './components/regions/RegionChip.vue'
@@ -110,21 +110,11 @@ async function loadDay(d, { silent = false, force = false } = {}) {
   return false
  } finally { if (d === date.value && region === focusRegionId.value && scope === getAgentStorageScope() && token === dayReq[d]) loading.value = false }
 }
-async function loadSample() {
- const region = focusRegionId.value, scope = getAgentStorageScope(), current = ++requestId
- loading.value = true; error.value = ''; sampleTasks.value = []
- try {
-  if (!region) return false
-  const result = await listRegionDevices(region, { isActive: () => current === requestId && visible && sampleMode.value && region === focusRegionId.value })
-  if (current !== requestId || region !== focusRegionId.value || scope !== getAgentStorageScope() || !sampleMode.value) return false
-  sampleTasks.value = regionSampleTasks(sampleDate.value, region, result.devices || [])
-  return true
- } catch (cause) {
-  if (current !== requestId || scope !== getAgentStorageScope()) return false
-  // 设备目录挂了不出错误卡:样例是纯本地展示,用通用设备兜底照常渲染。
-  sampleTasks.value = regionSampleTasks(sampleDate.value, region, [])
-  return true
- } finally { if (current === requestId) loading.value = false }
+function loadSample() {
+ // 纯前端演示:不拉任何接口,通用设备直接生成。
+ loading.value = false; error.value = ''
+ sampleTasks.value = regionSampleTasks(sampleDate.value, focusRegionId.value, [])
+ return true
 }
 async function loadVisibleTimeline() {
  const region = focusRegionId.value, selectedDate = date.value, scope = getAgentStorageScope()

@@ -129,10 +129,21 @@ function resetStack() {
  clearPaneTimer('device'); clearPaneTimer('task')
 }
 
+const sampleDevices = computed(() => [...new Map((props.sampleTasks || []).flatMap(task => task.devices || []).map(device => [device.id, device])).values()])
+
 async function loadDirectory(preserveNavigation = false) {
  preserveNavigation = preserveNavigation === true && isAgentStorageScope(loadedScope) && props.regionId === loadedRegionId
  const current = ++directoryRequest, regionId = props.regionId
  if (!preserveNavigation) resetStack()
+ // 纯前端演示:设备清单从样例任务直接取,不拉接口。
+ if (props.sampleMode) {
+  ++stateRequest; stateLoading.value = false; error.value = ''; stateError.value = ''
+  devices.value = sampleDevices.value
+  if (activeDeviceId.value && !devices.value.some(device => device.id === activeDeviceId.value)) resetStack()
+  loadedRegionId = regionId; loadedScope = 'sample'; loadedAt = Date.now()
+  emit('count', devices.value.length)
+  return
+ }
  let scope
  try { scope = getAgentStorageScope() } catch (cause) {
   ++stateRequest; devices.value = []; readings.value = {}; loading.value = false; stateLoading.value = false; emit('count', null)
