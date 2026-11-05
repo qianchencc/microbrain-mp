@@ -55,9 +55,9 @@
       <text v-if="phase.report.status === 'partial'" class="phase-report-tag">部分完成</text>
       <uni-icons type="right" size="12" color="var(--agent-text-faint)" />
      </button>
-     <button v-if="phase.devices.length > 1 || phase.observations?.length" class="phase-devices" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
+     <button v-if="phase.devices.length > 1 || phase.observations?.length" class="phase-devices" :class="{ attached: expandedPhases.includes(phase.id) && phase.observations?.length }" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
       <view class="phase-avatars"><view v-for="device in phase.devices.slice(0, 5)" :key="device.id" class="phase-avatar"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="12" color="var(--agent-text-muted)" /></view></view>
-      <text class="phase-device-count">{{ phase.devices.length }} 台设备</text><uni-icons :type="expandedPhases.includes(phase.id) ? 'down' : 'right'" size="13" color="var(--agent-text-muted)" />
+      <text class="phase-device-count">{{ expandedPhases.includes(phase.id) ? '收起' : (phase.observations?.length && phase.devices.length <= 1 ? '查看详情' : phase.devices.length + ' 台设备') }}</text><uni-icons :type="expandedPhases.includes(phase.id) ? 'up' : 'down'" size="13" color="var(--agent-text-muted)" />
      </button>
      <view v-if="(phase.devices.length <= 1 || expandedPhases.includes(phase.id)) && !phase.observations?.some(block => block.type === 'ac_inspection')" class="device-list">
       <view v-for="device in phase.devices" :key="device.id" class="device-row">
@@ -481,6 +481,7 @@ button::after { border:0; }
 .phase-report-title { flex:1; min-width:0; color:var(--agent-text-secondary); font-size:12px; font-weight:600; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .phase-report-tag { flex-shrink:0; color:var(--agent-warning); font-size:10px; }
 .phase-devices { width:100%; min-height:38px; margin:9px 0 0; padding:5px 9px; border:1px solid var(--agent-line); border-radius:8px; display:flex; align-items:center; gap:8px; background:var(--agent-surface-page); text-align:left; }
+.phase-devices.attached { margin-top:-1px; border-top:1px dashed var(--agent-line); border-radius:0 0 8px 8px; }
 .phase-avatars { display:flex; align-items:center; flex-shrink:0; padding-left:5px; }
 .phase-avatar { width:22px; height:22px; margin-left:-5px; border:1px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--agent-tint); }
 .phase-avatar image { width:22px; height:22px; }
