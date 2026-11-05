@@ -318,7 +318,11 @@ async function load(silent = false) {
     loaded = true
     if (props.source === 'office' && result.task.phases.some(phase => phase.devices.some(device => device.kind === 'lighting'))) {
      if (!silent) void stateRefresh.auto()
-     else if (result.task.phases.some(phase => ['pending', 'executing'].includes(previousPhases.get(phase.id)) && previousPhases.get(phase.id) !== phase.status)) stateRefresh.after(1000)
+     else if (result.task.phases.some(phase => previousPhases.get(phase.id) !== phase.status)) {
+      ++currentRequestId
+      currentLoading.value = true
+      stateRefresh.after(1000)
+     }
     }
    }
   }
