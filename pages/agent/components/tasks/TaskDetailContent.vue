@@ -48,7 +48,7 @@
     <view class="phase-rail"><view class="phase-node" :class="['tone-' + phase.tone, { ending: !detail.interval && detail.phases.length > 1 && index === 1 }]" /><view v-if="index < detail.phases.length - 1" class="phase-link"><view class="phase-link-fill" :style="{ height: phase.link + '%' }" /></view></view>
     <view class="phase-main">
      <view class="phase-head"><text class="phase-time">{{ phase.clock }}</text><text class="phase-title">{{ phase.title }}</text><button v-if="taskNeedsDetails(phase.presentationStatus) || phase.failureReason" class="phase-status result-link" :class="'tone-' + phase.tone" :aria-label="`${phase.clock} ${phase.statusText}，查看原因`" @tap="showPhaseIssue(phase)">{{ phase.statusText }} ›</button><text v-else class="phase-status" :class="'tone-' + phase.tone">{{ phase.statusText }}</text></view>
-     <ObservationCard v-if="phase.observations?.length && expandedPhases.includes(phase.id)" :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" />
+     <view v-if="phase.observations?.length" class="phase-reveal" :class="{ open: expandedPhases.includes(phase.id) }" :aria-hidden="!expandedPhases.includes(phase.id)"><view class="phase-reveal-inner"><ObservationCard :observation="{ observedAt: phase.endedAt || phase.at, blocks: phase.observations }" :source="source" :show-issue="showIssue" inline-playback read-only @select-alert="$emit('select-alert', $event)" @browse-alerts="$emit('browse-alerts')" /></view></view>
      <button v-if="phase.report" class="phase-report" :aria-label="`打开检查报告 ${phase.report.title || ''}`" @tap="emit('open-report', phase.report)">
       <uni-icons type="compose" size="13" color="var(--agent-accent-deep)" />
       <text class="phase-report-title">{{ phase.report.title || '检查报告' }}</text>
@@ -57,14 +57,14 @@
      </button>
      <button v-if="phase.devices.length > 1 || phase.observations?.length" class="phase-devices" :class="{ attached: expandedPhases.includes(phase.id) && phase.observations?.length }" :aria-label="`${expandedPhases.includes(phase.id) ? '收起' : '展开'} ${phase.devices.length} 台设备`" :aria-expanded="expandedPhases.includes(phase.id)" @tap="togglePhase(phase.id)">
       <view class="phase-avatars"><view v-for="device in phase.devices.slice(0, 5)" :key="device.id" class="phase-avatar"><image v-if="device.artwork" :src="device.artwork" mode="aspectFit" /><uni-icons v-else type="gear" size="12" color="var(--agent-text-muted)" /></view></view>
-      <text class="phase-device-count">{{ expandedPhases.includes(phase.id) ? '收起' : (phase.observations?.length && phase.devices.length <= 1 ? '查看详情' : phase.devices.length + ' 台设备') }}</text><uni-icons :type="expandedPhases.includes(phase.id) ? 'up' : 'down'" size="13" color="var(--agent-text-muted)" />
+      <text class="phase-device-count">{{ expandedPhases.includes(phase.id) ? '收起' : (phase.observations?.length && phase.devices.length <= 1 ? '查看详情' : phase.devices.length + ' 台设备') }}</text><uni-icons type="down" size="13" color="var(--agent-text-muted)" :class="{ 'caret-flip': expandedPhases.includes(phase.id) }" />
      </button>
-     <view v-if="(phase.devices.length <= 1 || expandedPhases.includes(phase.id)) && !phase.observations?.some(block => block.type === 'ac_inspection')" class="device-list">
+     <view v-if="!phase.observations?.some(block => block.type === 'ac_inspection')" class="phase-reveal" :class="{ open: phase.devices.length <= 1 || expandedPhases.includes(phase.id) }"><view class="phase-reveal-inner"><view class="device-list">
       <view v-for="device in phase.devices" :key="device.id" class="device-row">
        <text class="device-name">{{ device.name }}</text><text class="target">{{ device.targetText }}</text><button v-if="device.resultTone === 'warn' && phase.status !== 'cancelled'" class="result result-link" :class="device.resultTone" @tap="showIssue({ title: `${device.name} · ${device.resultText}`, reason: device.resultReason })">{{ device.resultText }} ›</button><text v-else class="result" :class="device.resultTone">{{ device.resultText }}</text>
        <text v-if="device.kind === 'lighting' && currentStates[device.id]" class="current-device">现态：{{ currentStates[device.id].state === true ? '开启' : currentStates[device.id].state === false ? '关闭' : '未知' }}</text>
       </view>
-     </view>
+     </view></view></view>
     </view>
    </view>
    <view v-if="detail.report" class="task-report">
@@ -482,6 +482,12 @@ button::after { border:0; }
 .phase-report-tag { flex-shrink:0; color:var(--agent-warning); font-size:10px; }
 .phase-devices { width:100%; min-height:38px; margin:9px 0 0; padding:5px 9px; border:1px solid var(--agent-line); border-radius:8px; display:flex; align-items:center; gap:8px; background:var(--agent-surface-page); text-align:left; }
 .phase-devices.attached { margin-top:-1px; border-top:1px dashed var(--agent-line); border-radius:0 0 8px 8px; }
+.phase-reveal { display:grid; grid-template-rows:0fr; transition:grid-template-rows 240ms cubic-bezier(.23,1,.32,1); }
+.phase-reveal.open { grid-template-rows:1fr; }
+.phase-reveal-inner { min-height:0; overflow:hidden; }
+.phase-devices .caret-flip { transform:rotate(180deg); }
+.phase-devices uni-icons { transition:transform 240ms cubic-bezier(.23,1,.32,1); }
+@media(prefers-reduced-motion:reduce) { .phase-reveal,.phase-devices uni-icons { transition:none; } }
 .phase-avatars { display:flex; align-items:center; flex-shrink:0; padding-left:5px; }
 .phase-avatar { width:22px; height:22px; margin-left:-5px; border:1px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--agent-tint); }
 .phase-avatar image { width:22px; height:22px; }
