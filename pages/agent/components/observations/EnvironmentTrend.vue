@@ -1,61 +1,52 @@
 <template>
  <view class="trend">
-  <SlidingSegments class="metrics" tone="glass" :options="metricOptions" :model-value="metricKey" @update:model-value="metricKey = $event; selectedId = ''" />
-  <view class="hero">
-   <view><text class="hero-label">{{ metric?.label || '读数' }}</text><text class="hero-value">{{ latest ? latest.value : '—' }}<text class="hero-unit">{{ metric?.unit || '' }}</text></text></view>
-   <view class="peak"><text v-if="metric?.peak">峰值 {{ metric.peak.value }}{{ metric?.unit || '' }}</text><text>{{ metric?.peak ? fmtDateTime(metric.peak.at) : '暂无有效采样' }}</text></view>
-  </view>
+  <SlidingSegments :model-value="metricKey" tone="glass" :options="metricOptions" @update:modelValue="metricKey = $event; selectedId = ''" />
+  <view class="hero"><view><text class="hlabel">{{ metric?.label || '观测' }}趋势</text><text class="number">{{ latest?.value ?? '—' }}<text class="unit">{{ metric?.unit || '' }}</text></text></view><view class="peak"><text>峰值 {{ metric?.peak?.value ?? '—' }}{{ metric?.unit || '' }}</text><text>{{ metric?.peak ? fmtDateTime(metric.peak.at) : '暂无有效采样' }}</text></view></view>
   <view class="plot" @tap="selectPoint"><image class="chart" :src="chart.src" mode="scaleToFill" /></view>
-  <view class="axis"><text v-for="tick in axisTicks" :key="tick.at" :style="{ left: tick.x + '%' }">{{ tick.label }}</text></view>
-  <view v-if="secondaries.length" class="side-cards">
-   <view v-for="item in secondaries" :key="item.key" class="side-card"><text class="side-label">{{ item.label }}</text><text class="side-value">{{ item.value }}<text v-if="item.unit" class="side-unit">{{ item.unit }}</text></text></view>
-  </view>
-  <view class="readout"><text>{{ selected ? fmtDateTime(selected.recordedAt) : '点击图形查看采样' }}</text><text>{{ selected ? (selected.values[metricKey] ?? '缺测') + (metric?.unit || '') : coverageText }}</text></view>
+  <view class="axis-time" :class="{ ticks: axisTicks.length > 2 }"><text v-for="(tick, i) in axisTicks" :key="i" :style="axisTicks.length > 2 ? { left: tick.left + '%' } : {}">{{ tick.label }}</text></view>
+  <view class="foot"><text>{{ selected ? fmtDateTime(selected.recordedAt) : '点击图形查看采样' }}</text><text>{{ selected ? (selected.values[metricKey] ?? '缺测') + (metric?.unit || '') : coverageLine }}</text></view>
  </view>
 </template>
 <script setup>
-import { computed, getCurrentInstance, ref } from 'vue'
+import { computed, getCurrentInstance, ref, watch } from 'vue'
 import { fmtDateTime } from '../../lib/observations.mjs'
 import { trendLineChart } from '../../lib/energy.mjs'
 import SlidingSegments from '../shared/SlidingSegments.vue'
 const props = defineProps({ report: { type: Object, required: true } })
 const metricKey = ref('temp'), selectedId = ref('')
-const metric = computed(() => props.report.metrics.find(item => item.key === metricKey.value))
+const metric = computed(() => props.report.metrics.find(item => item.key === metricKey.value) || props.report.metrics[0])
 const metricOptions = computed(() => props.report.metrics.map(item => ({ value: item.key, label: item.label })))
+watch(() => props.report.metrics, list => { if (list?.length && !list.some(item => item.key === metricKey.value)) metricKey.value = list[0].key })
 const selected = computed(() => props.report.samples.find(item => item.id === selectedId.value))
 const points = computed(() => props.report.samples.filter(item => Number.isFinite(item.values[metricKey.value])))
+const latest = computed(() => { const last = points.value.at(-1); return last ? { value: last.values[metricKey.value] } : null })
 const range = computed(() => ({ start: Date.parse(props.report.window.from), duration: Math.max(1, Date.parse(props.report.window.to) - Date.parse(props.report.window.from)) }))
-const latest = computed(() => points.value.length ? { value: points.value.at(-1).values[metricKey.value], at: points.value.at(-1).recordedAt } : null)
-const latestOf = key => {
- const list = props.report.samples.filter(item => Number.isFinite(item.values[key]))
- return list.length ? { value: list.at(-1).values[key], unit: props.report.metrics.find(m => m.key === key)?.unit || '' } : null
-}
-const secondaries = computed(() => props.report.metrics.filter(item => item.key !== metricKey.value).map(item => { const last = latestOf(item.key); return { key: item.key, label: item.label, value: last?.value ?? '—', unit: last?.unit || item.unit || '' } }))
-const coverageText = computed(() => {
- const coverage = props.report.coverage
- if (!coverage?.readSamples) return `${metric.value?.count || 0} 个有效采样`
- return `已读取 ${coverage.readSamples} 条采样${coverage.complete ? ' · 期间数据完整' : ''}`
+const coverageLine = computed(() => {
+ const cov = props.report.coverage
+ const count = cov?.readSamples ?? metric.value?.count ?? 0
+ return count ? `已读取 ${count} 条采样${cov ? (cov.complete ? ' · 期间数据完整' : ' · 部分采样未到齐') : ` · ${count} 个有效采样`}` : `${metric.value?.count || 0} 个有效采样`
 })
 const chart = computed(() => trendLineChart(points.value.map(item => ({ at: item.recordedAt, value: item.values[metricKey.value], ref: item })), {
  from: range.value.start,
  to: range.value.start + range.value.duration,
  selected: selected.value
 }))
-/* x 轴刻度：跨天按自然日「M/D + 12:00」、短窗按四分点 HH:mm；位置复用图表 xOf 几何。 */
 const axisTicks = computed(() => {
- const { start, duration } = range.value
- const xPct = at => Math.max(0, Math.min(100, (chart.value.xOf(at) / chart.value.width) * 100))
- const DAY = 86400000
- if (duration > DAY * 1.5) {
-  const ticks = []
-  for (let t = start; t <= start + duration; t += DAY / 2) {
-   const d = new Date(t)
-   const hour = d.getHours()
-   ticks.push({ at: t, x: xPct(d.toISOString()), label: hour < 12 ? `${d.getMonth() + 1}/${d.getDate()}` : '12:00' })
-  }
-  return ticks.filter(t => t.x > 4 && t.x < 96)
+ const DAY = 864e5, { start, duration } = range.value
+ const hour = v => String(v).padStart(2, '0') + ':00'
+ if (duration <= DAY) return [
+  { label: fmtDateTime(props.report.window.from).slice(11) },
+  { label: fmtDateTime(props.report.window.to).slice(11) }
+ ]
+ const ticks = []
+ // 北京时间边界：(t + 8h) 对齐 UTC 日界
+ for (let t = Math.ceil((start + 8 * 36e5) / DAY) * DAY - 8 * 36e5; t <= start + duration; t += DAY) {
+  const d = new Date(t)
+  ticks.push({ at: t, label: `${d.getMonth() + 1}/${d.getDate()}` })
+  const noon = t + 12 * 36e5
+  if (noon < start + duration - 3 * 36e5) ticks.push({ at: noon, label: hour(12) })
  }
- return [0, 1, 2, 3, 4].map(i => { const t = start + duration * i / 4; const d = new Date(t); return { at: t, x: i * 25, label: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` } })
+ return ticks.filter(t => t.at >= start && t.at <= start + duration).map(t => ({ ...t, left: (chart.value.xOf(t.at) / chart.value.width) * 100 }))
 })
 const instance = getCurrentInstance()
 function selectPoint(event) {
@@ -73,20 +64,8 @@ function selectPoint(event) {
 view, text, input { font-size:inherit;line-height:inherit; }
 .trend { color:var(--agent-text-secondary);font-size:$agent-font-size-compact; }
 button { margin:0;padding:0;background:transparent;line-height:1.3; }button::after { border:0; }
-.metrics { margin:14px 0 16px; }
-.hero { display:flex;justify-content:space-between;align-items:flex-end;margin:2px 0 12px; }
-.hero-label { display:block;font-size:11px;color:var(--agent-text-muted); }
-.hero-value { display:block;color:var(--agent-accent-deep);font-size:32px;line-height:1.2;font-weight:650;font-variant-numeric:tabular-nums; }
-.hero-unit { font-size:14px;font-weight:400;margin-left:4px;color:var(--agent-text-muted); }
-.peak { text-align:right;color:var(--agent-text-muted);font-size:10.5px;line-height:1.7; }
+.hero { display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin:16px 0 10px; }.hlabel { display:block;color:var(--agent-text-primary);font-size:14px;font-weight:600; }.number { display:block;margin-top:3px;color:var(--agent-accent-deep);font-size:32px;line-height:1.25;font-weight:600; }.unit { font-size:13px;margin-left:4px;font-weight:400; }.peak { display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;color:var(--agent-text-muted);font-size:11px;line-height:1.6; }
 .plot { position:relative;height:154px; }.chart { width:100%;height:100%; }
-.axis { position:relative;height:16px;margin:2px 0 4px;padding-left:32px; }
-.axis text { position:absolute;transform:translateX(-50%);color:var(--agent-text-muted);font-size:9.5px;white-space:nowrap; }
-.side-cards { display:flex;gap:9px;margin-top:12px; }
-.side-card { flex:1;min-width:0;padding:11px 12px;border:1px solid var(--agent-line);border-radius:12px;background:var(--agent-surface); }
-.side-label { display:block;font-size:10px;color:var(--agent-text-muted); }
-.side-value { display:block;margin-top:3px;color:var(--agent-accent-deep);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums; }
-.side-unit { font-size:10px;font-weight:400;margin-left:3px;color:var(--agent-text-muted); }
-.readout { display:flex;justify-content:space-between;gap:$agent-space-small;margin:12px 0 2px;padding-top:10px;border-top:1px solid var(--agent-line);color:var(--agent-text-secondary);font-size:11px; }
-.pressed { opacity:.7; }
+.axis-time { display:flex;justify-content:space-between;position:relative;padding-left:32px;min-height:14px;color:var(--agent-text-muted);font-size:10px; }.axis-time.ticks { padding-left:0; }.axis-time.ticks text { position:absolute;transform:translateX(-50%);white-space:nowrap; }
+.foot { display:flex;justify-content:space-between;gap:$agent-space-small;margin:14px 0 0;padding:11px 0 0;border-top:1px solid var(--agent-line);color:var(--agent-text-muted);font-size:11px; }.pressed { opacity:.7; }
 </style>
