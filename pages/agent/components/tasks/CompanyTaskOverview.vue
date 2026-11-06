@@ -56,7 +56,9 @@
         :key="day.finished ? day.date + ':done' : day.date"
         class="agenda-day"
       >
-        <view class="agenda-rail"
+        <view
+          class="agenda-rail"
+          :class="{ 'rail-today': day.date === today }"
           ><text class="rail-num">{{ railNum(day.date) }}</text
           ><text class="rail-wd">{{ railText(day.date) }}</text></view
         >
@@ -381,23 +383,39 @@ button::after {
   padding: 10px 0 0;
 }
 .agenda-rail {
-  width: 30px;
+  width: 38px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* 对齐首行任务的文本中线，而不是悬在 day 块左上角 */
-  padding-top: 9px;
+  justify-content: center;
+  /* 日期徽章：圆角浅蓝底块，数字居上、星期居下，与首行任务文本对齐 */
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 7px 0 6px;
+  border-radius: 10px;
+  background: $agent-color-tint;
+  box-shadow: inset 0 0 0 .5px rgba(var(--agent-shadow-rgb), .10), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.agenda-rail.rail-today {
+  background: linear-gradient(155deg, $agent-color-accent, $agent-color-accent-deep);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 3px 8px rgba(var(--agent-shadow-rgb), .18);
 }
 .rail-num {
   font-size: 15px;
   font-weight: 700;
-  color: $agent-color-text-primary;
+  color: $agent-color-accent-deep;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 .rail-wd {
-  font-size: 10px;
+  font-size: 9px;
   color: $agent-color-text-muted;
+  margin-top: 1px;
+}
+.agenda-rail.rail-today .rail-num,
+.agenda-rail.rail-today .rail-wd {
+  color: #fff;
 }
 .agenda-rows {
   min-width: 0;
