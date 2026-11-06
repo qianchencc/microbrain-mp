@@ -71,3 +71,12 @@ Suggested skills：后续任务展示用better-writing／better-layout→impleme
 - 当前真实计划仅 1 台设备。巡检规则差异与第 5 项展开／收起通过真实小程序内临时、已取消状态的隔离组件样例验证，[规则](../.scratch/task-change-card/evidence/RELATED-REPAIR-01/component-rules.png)／[展开](../.scratch/task-change-card/evidence/RELATED-REPAIR-01/component-expanded.png)；该样例不调用写接口，结束后已恢复真实卡片。报告日报／周报、环比／同比另经同一组件脚本验证。此两类完整业务路径未验收，不把组件验证当作真实任务案例通过。
 - 共用规则投影及其导出作为本次必要依赖一并纳入提交；混合检查频率按原始 `cadenceMinutes` 分组，不再引用展示对象中不存在的字段，避免其他频率／控制阶段被误计为检查次数。新增回归先失败后通过，最终编译后的真实小程序内隔离组件显示“每 30 分钟检查一次 · 共 2 次检查”和独立的“每 60 分钟检查一次”，3 个控制阶段未被计入：[混合频率](../.scratch/task-change-card/evidence/RELATED-REPAIR-01/component-cadence.png)。样例已恢复，不作为真实业务验收。
 - 本轮不修改后端／模型／配置，不创建真实任务、发送通知或执行设备动作。独立双轴审查代理因未配置模型启动失败，不声明已完成独立审查。
+
+## 2026-11-06：空修改与改时绑定保留
+
+- 本轮原始同文案不是前端样式问题：真实 `propose_task_change` 只提交 ID、类型和 `operation=edit`，漏了 `template`，因此前后快照都还是10:26；模型正文却声称13:30。后端现在拒绝缺失／空修改及无实际定义变化，不再生成这种差异卡。
+- 公司／办公室工具与共享指令约束 edit 内容、跨轮时间承接及按真实 `before/after` 答复。仅改时间由后端复用完整原阶段；重传相同设备与指令也保留原控制绑定，不让平铺指令别名、阶段 ID、运行元数据或等价时区写法伪造变化。报告、核验和目标等实际修改仍可提案。
+- 同账号真实小程序重走“先说明下午1:30、再只选择下一次”两轮；旧提案正常过期后，未重复时间、未改变 TTL，通过正常输入再次生成待确认卡。最终界面显示仅本次：当前 `2026-11-09 10:26`，提案 `2026-11-09 13:30`，同一设备开启动作；前后完整动作及控制绑定、读取要求、周期一致。[最终截图](../../iot-agent-backend/.scratch/task-change-empty/evidence/CHANGE-EMPTY-01/after.png)／[业务结果](../../iot-agent-backend/.scratch/task-change-empty/evidence/CHANGE-EMPTY-01/result.json)。
+- 原计划只读复查仍为版本2、enabled、10:26，未确认提案、未下发控制或请求通知。排期重评估／当天是否执行逻辑未改，真实确认后的执行不在本轮验收范围。中间丢失绑定的两张测试提案已放弃。
+- 后端提交 `0c3b3e0`、`c0b2b53`。隔离已提交源码加本次增量的 `mvn -q verify`：663项，635通过、28跳过、0失败／错误；匹配原运行基线的任务管理18项全部通过。本轮无前端源码变更，不以单测或HTTP成功替代上述真实界面证据。
+- 本地Java3381采用 `var/task-change-empty-20261106-144714/backend.jar`，SHA-256 `f8d291084fdc304a6b6223efb5b443510246362b9e1e2d3d4c716ba99e5afead`；以原命名修复产物为基线，仅更新 `TaskFacade.class`、工具定义与共享指令，实际jar资源内容及公开构造签名已校验。原回退产物保留，Node3382与配置不改，未发布生产或推送远端。启动、打包与验收过程中的失败均见[工程记录](../../iot-agent-backend/.scratch/task-change-empty/evidence/CHANGE-EMPTY-01/engineering.json)，不隐藏失败。[修复票据](../../iot-agent-backend/.scratch/task-change-empty/issues/01-edit-content.md)。
