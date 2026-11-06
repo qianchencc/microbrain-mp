@@ -54,3 +54,9 @@ Suggested skills：后续任务展示用better-writing／better-layout→impleme
 - 用户补充发现名称仍含旧时间后，修改工具的 `template.label` 改为必填并要求核对新安排；`TaskFacade.changedPayload` 同步新名称的 `label/title`。新增回归先因旧 `title` 失败，修复后任务管理12项、Agent事件17项通过，覆盖确认前不写计划、确认后名称与新时间一起保存。
 - 同账号真实小程序再次输入相同改时请求，未额外提示名称：卡片标题及提案名称已显示“工作日每天09:30开启26楼运营部过道2回路格栅灯”，当前名称仍为10:26，设备、动作与周期保留。[最终完整卡片](../.scratch/task-change-card/evidence/CHANGE-CARD-01/renamed-card.png)。确认后的真实执行未验收，本轮未点击确认。
 - 名称修复后的本地Java3381产物为 `var/task-change-name-20261106-100241/backend.jar`（SHA-256 `0036ee35820f0c29f0d89821df6389aac64585551735df1f3c24c7be9153b6d8`）；以上一修改卡产物为基线，只更新 `TaskFacade.class`、共享任务指令与工具定义。启动后首次前端请求遇到“数据准备中”，缓存就绪后重新提交成功，失败记录未隐藏。
+
+## 2026-11-06：放弃回执即时更新
+
+- 修复 `conversation-operations.taskCommand` 漏写成功回执状态的问题：使用后端返回的状态更新当前提案，失败仍保留待确认并显示简短 toast，不提前假定放弃成功，也不依赖关闭重开。
+- 回归覆盖等待响应时不提前取消、响应更新当前渲染对象、同任务其他提案不受影响、完成后不重复提交、无需历史重载；新增回归修复前失败，修复后前端333项通过，180文件边界与微信开发编译通过。
+- 同账号微信开发者工具生成待确认修改卡，触发真实卡片的放弃事件并请求本地后端；未关闭悬浮窗、未重载对话，同一卡片由待确认变为已放弃、确认／放弃按钮消失，显示“本次提案已放弃”。卡片UID71、对话UID17保持，悬浮窗始终打开。证据：[操作前](../.scratch/task-change-card/evidence/DISCARD-01/before.png)／[操作后](../.scratch/task-change-card/evidence/DISCARD-01/after.png)。未确认任务、未下发设备控制；本轮不修改后端。
