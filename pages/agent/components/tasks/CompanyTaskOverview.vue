@@ -124,6 +124,8 @@
 </template>
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import DeviceSheet from '../shared/DeviceSheet.vue';
+import TaskIssueDetails from './TaskIssueDetails.vue';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import {
   peekAgentNotifications,
@@ -132,6 +134,7 @@ import {
   readAgentTasks,
 } from '@/apis/agent/tasks';
 import { getAgentStorageScope } from '@/utils/agent-session';
+import { showAgentError } from '@/utils/agent-error';
 import {
   shiftDate,
   agendaPreview,
@@ -235,6 +238,7 @@ async function load(force = false) {
       loaded.value = false;
     }
     error.value = cause.message || '任务暂不可用';
+    showAgentError(cause, { fallback: '任务暂不可用' });
   } finally {
     if (current === generation) {
       loading.value = false;
@@ -382,7 +386,8 @@ button::after {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 2px;
+  /* 对齐首行任务的文本中线，而不是悬在 day 块左上角 */
+  padding-top: 9px;
 }
 .rail-num {
   font-size: 15px;
