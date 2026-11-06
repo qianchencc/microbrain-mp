@@ -15,7 +15,10 @@
       change.label || change.after?.label || change.before?.label || '任务安排'
     }}</text>
 
-    <view class="change-versions">
+    <view
+      v-if="canReview"
+      class="change-versions"
+    >
       <view
         v-for="version in versions"
         :key="version.key"
@@ -49,19 +52,25 @@
         /></view>
       </view>
     </view>
+    <text
+      v-else
+      class="change-note"
+    >
+      变更信息不完整，暂不能确认。请重新提出修改，以核对当前安排、提案安排和影响范围。
+    </text>
 
     <text
-      v-if="operationEffect"
+      v-if="canReview && operationEffect"
       class="change-effect"
       >{{ operationEffect }}</text
     >
     <text
-      v-if="changesFutureOnly"
+      v-if="canReview && changesFutureOnly"
       class="change-note"
       >仅影响未来周期安排；已生成任务与历史记录不变。</text
     >
     <text
-      v-else-if="change.operation === 'delete' && scopeText === '本任务'"
+      v-else-if="canReview && change.operation === 'delete' && scopeText === '本任务'"
       class="change-note"
       >已完成的阶段和历史结果保持原样。</text
     >
@@ -80,8 +89,8 @@
         class="change-confirm"
         :class="{ destructive: change.operation === 'delete' }"
         hover-class="change-confirm--pressed"
-        :disabled="busy"
-        @tap="$emit('confirm')"
+        :disabled="busy || !canReview"
+        @tap="canReview && !busy && $emit('confirm')"
         >{{ confirmText }}</button
       >
     </view>
@@ -102,8 +111,23 @@ defineEmits(['confirm', 'discard']);
 
 const state = computed(() => String(props.change.status || '').toLowerCase());
 const pending = computed(() => state.value === 'pending_confirmation');
+const canReview = computed(() => {
+  const { target, before, after, operation } = props.change;
+  const hasTarget =
+    (target?.type === 'task' && Boolean(target.taskId)) ||
+    (['task_plan', 'plan'].includes(target?.type) && Boolean(target.planId));
+  const hasArrangement = (value) =>
+    Boolean(
+      value?.label &&
+        Array.isArray(value.phases) &&
+        value.phases.length &&
+        value.phases.every((phase) => Number.isFinite(Date.parse(phase?.at)))
+    );
+  return hasTarget && hasArrangement(before) && (operation !== 'edit' || hasArrangement(after));
+});
 const scopeText = computed(() => {
-  if (props.change.target?.type === 'task_plan') return '整个周期';
+  if (!['task', 'task_plan', 'plan'].includes(props.change.target?.type)) return '范围未提供';
+  if (['task_plan', 'plan'].includes(props.change.target.type)) return '整个周期';
   if (
     props.change.operation === 'skip' ||
     String(props.change.target?.taskId || '').startsWith('occurrence:') ||
@@ -115,7 +139,7 @@ const scopeText = computed(() => {
 });
 const operationText = computed(() => {
   if (props.change.operation === 'delete')
-    return props.change.target?.type === 'task_plan' ? '删除周期任务' : '删除任务';
+    return ['task_plan', 'plan'].includes(props.change.target?.type) ? '删除周期任务' : '删除任务';
   return (
     { edit: '调整安排', pause: '暂停周期任务', resume: '恢复周期任务', skip: '跳过本次安排' }[
       props.change.operation
@@ -172,7 +196,7 @@ const versions = computed(() => [
           key: 'after',
           label: '提案安排',
           template: props.change.after,
-          targets: targetSummary(props.change.after),
+          targets: targetSummary(props.change.after, props.change.before),
         },
       ]
     : []),
@@ -187,11 +211,16 @@ function scheduleText(template) {
   return times.length ? `时间 · ${times.join('、')}` : '时间未提供';
 }
 
-function targetSummary(template) {
+function targetSummary(template, previous) {
   const items = [];
   for (const phase of template?.phases || []) {
     for (const action of phase.actions || []) {
-      const name = action.deviceName || action.name || action.deviceId || '设备';
+      const name =
+        action.deviceName ||
+        action.name ||
+        previousActionName(action, previous) ||
+        action.deviceId ||
+        '设备';
       items.push(`${name} · ${targetText(action.kind, action.command || action.target)}`);
     }
     for (const device of phase.read?.devices || []) {
@@ -210,6 +239,17 @@ function targetSummary(template) {
     items: unique.length ? unique.slice(0, 4) : ['无设备目标'],
     omitted: Math.max(0, unique.length - 4),
   };
+}
+
+function previousActionName(action, previous) {
+  if (!action.deviceId) return '';
+  for (const phase of previous?.phases || []) {
+    const match = (phase.actions || []).find(
+      (item) => item.deviceId === action.deviceId && item.kind === action.kind
+    );
+    if (match?.deviceName || match?.name) return match.deviceName || match.name;
+  }
+  return '';
 }
 </script>
 
