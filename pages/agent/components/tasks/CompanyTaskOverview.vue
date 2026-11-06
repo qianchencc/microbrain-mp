@@ -389,9 +389,8 @@ button::after {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* 日期徽章：圆角浅蓝底块，数字居上、星期居下，与首行任务文本对齐 */
-  align-self: flex-start;
-  margin-top: 4px;
+  /* 日期徽章：在整组任务行间垂直居中，作为日期锚点而非贴顶贴纸 */
+  align-self: center;
   padding: 7px 0 6px;
   border-radius: 10px;
   background: $agent-color-tint;
