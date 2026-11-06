@@ -87,3 +87,14 @@ test('流程结束不冒充目标确认，读取不足不当作执行失败，�
  assert.match(rules, /每 30 分钟/)
  assert.match(rules, /每 60 分钟/)
 })
+
+test('混合检查频率按对应检查点计数，不把其他频率或控制阶段算入', () => {
+ const phases = [30, 30, 60].map(cadenceMinutes => ({
+  read: { ac: { mode: 'inspect', cadenceMinutes } },
+ }))
+ phases.push({ actions: [] }, { actions: [] }, { actions: [] })
+ const lines = taskViews.taskRequirementLines({ phases })
+ assert.ok(lines.includes('每 30 分钟检查一次 · 共 2 次检查'))
+ assert.ok(lines.includes('每 60 分钟检查一次'))
+ assert.equal(lines.some(line => /共 3 次检查/.test(line)), false)
+})

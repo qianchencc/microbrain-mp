@@ -397,6 +397,49 @@ export function readTargetText(kind, read) {
   );
 }
 
+// Proposal and detail cards share the same compact, user-facing requirement lines.
+// They are facts only; phase/device details remain available through the card expansion.
+export function taskRequirementLines(task) {
+  const requirements = new Set();
+  let explicitControl = false;
+  for (const phase of task?.phases || []) {
+    const agent = readAgentView(phase?.read?.agent);
+    if (agent) {
+      if (agent.objective) requirements.add(agent.objective);
+      if (agent.periodText) requirements.add(agent.periodText);
+      if (agent.comparisonText) requirements.add(agent.comparisonText);
+      continue;
+    }
+    const ac = readAcView(phase?.read?.ac);
+    if (ac) {
+      requirements.add(ac.criteriaText || ac.summary);
+      if (ac.cadenceText) {
+        const count = (task?.phases || []).filter(
+          (item) => item?.read?.ac?.cadenceMinutes === phase.read.ac.cadenceMinutes
+        ).length;
+        requirements.add(`${ac.cadenceText}${count > 1 ? ` · 共 ${count} 次检查` : ''}`);
+      } else requirements.add(ac.scheduleText);
+      requirements.add(ac.limitText);
+      continue;
+    }
+    for (const device of phase?.devices || []) {
+      if (device?.target?.observe === true) {
+        const text =
+          device.kind === 'energy' ? '读取电表数据' : readTargetText(device.kind, device.target);
+        if (text) requirements.add(text);
+      } else if (
+        device?.target &&
+        typeof device.target === 'object' &&
+        Object.keys(device.target).length
+      ) {
+        explicitControl = true;
+      }
+    }
+  }
+  if (!requirements.size && explicitControl) requirements.add('按计划时间执行');
+  return [...requirements].filter(Boolean);
+}
+
 // 只展示接口可见的阶段要求，不从模板还原被授权裁剪的指令。
 export function taskRequirementsText(task) {
   const requirements = new Set();

@@ -265,31 +265,35 @@ export const discardTask = (taskId, source = 'office') =>
     withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/discard`, source),
     'POST'
   );
-export const confirmTaskChange = (changeId, source = 'office') =>
+export const confirmTaskChange = (changeId, version, source = 'office') =>
   request(
     withConversationSource(`/agent/task-changes/${encodeURIComponent(changeId)}/confirm`, source),
-    'POST'
+    'POST',
+    { version }
   );
-export const discardTaskChange = (changeId, source = 'office') =>
+export const discardTaskChange = (changeId, version, source = 'office') =>
   request(
     withConversationSource(`/agent/task-changes/${encodeURIComponent(changeId)}/discard`, source),
-    'POST'
+    'POST',
+    { version }
   );
-export const confirmTaskCancellation = (cancellationId, source = 'office') =>
+export const confirmTaskCancellation = (cancellationId, version, source = 'office') =>
   request(
     withConversationSource(
       `/agent/task-cancellations/${encodeURIComponent(cancellationId)}/confirm`,
       source
     ),
-    'POST'
+    'POST',
+    { version }
   );
-export const discardTaskCancellation = (cancellationId, source = 'office') =>
+export const discardTaskCancellation = (cancellationId, version, source = 'office') =>
   request(
     withConversationSource(
       `/agent/task-cancellations/${encodeURIComponent(cancellationId)}/discard`,
       source
     ),
-    'POST'
+    'POST',
+    { version }
   );
 export const listDeviceTimeline = (deviceId, date) =>
   request(

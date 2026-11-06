@@ -32,6 +32,7 @@ export {
   taskTime,
   repeatText,
   taskRequirementsText,
+  taskRequirementLines,
   targetText,
   readTargetText,
   readAgentView,

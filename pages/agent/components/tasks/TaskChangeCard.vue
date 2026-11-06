@@ -29,17 +29,37 @@
         <text class="version-title">{{ version.template?.label || '未命名安排' }}</text>
         <text class="version-line">{{ scheduleText(version.template) }}</text>
         <text class="version-line">{{ repeatText(version.template?.repeat) || '不重复' }}</text>
+        <view
+          v-if="version.rules.length"
+          class="version-rules"
+        >
+          <text
+            v-for="rule in version.rules"
+            :key="rule"
+            class="version-rule"
+            >{{ rule }}</text
+          >
+        </view>
         <view class="target-list">
           <text
-            v-for="target in version.targets.items"
+            v-for="target in version.targets.slice(
+              0,
+              expandedVersions.includes(version.key) ? Infinity : 4
+            )"
             :key="target"
             class="target-item"
             >{{ target }}</text
           >
-          <text
-            v-if="version.targets.omitted"
+          <button
+            v-if="version.targets.length > 4"
             class="target-more"
-            >另有 {{ version.targets.omitted }} 项</text
+            :aria-expanded="expandedVersions.includes(version.key)"
+            @tap="toggleTargets(version.key)"
+            >{{
+              expandedVersions.includes(version.key)
+                ? '收起设备'
+                : `还有 ${version.targets.length - 4} 项 · 展开全部`
+            }}</button
           >
         </view>
         <view
@@ -103,11 +123,24 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { readTargetText, repeatText, taskTime, targetText } from '../../lib/tasks.mjs';
+import { computed, ref } from 'vue';
+import {
+  readAcView,
+  readTargetText,
+  repeatText,
+  taskRequirementLines,
+  taskTime,
+  targetText,
+} from '../../lib/tasks.mjs';
 
 const props = defineProps({ change: { type: Object, required: true }, busy: Boolean });
 defineEmits(['confirm', 'discard']);
+const expandedVersions = ref([]);
+function toggleTargets(key) {
+  expandedVersions.value = expandedVersions.value.includes(key)
+    ? expandedVersions.value.filter((item) => item !== key)
+    : [...expandedVersions.value, key];
+}
 
 const state = computed(() => String(props.change.status || '').toLowerCase());
 const pending = computed(() => state.value === 'pending_confirmation');
@@ -189,6 +222,7 @@ const versions = computed(() => [
     label: '当前安排',
     template: props.change.before,
     targets: targetSummary(props.change.before),
+    rules: rulesFor(props.change.before),
   },
   ...(props.change.operation === 'edit'
     ? [
@@ -197,10 +231,20 @@ const versions = computed(() => [
           label: '提案安排',
           template: props.change.after,
           targets: targetSummary(props.change.after, props.change.before),
+          rules: rulesFor(props.change.after),
         },
       ]
     : []),
 ]);
+
+function rulesFor(template) {
+  const rules = new Set(taskRequirementLines(template));
+  for (const phase of template?.phases || []) {
+    const ac = readAcView(phase.read?.ac);
+    if (ac?.criteriaText) rules.add(ac.actionText);
+  }
+  return [...rules];
+}
 
 function scheduleText(template) {
   if (!template) return '时间未提供';
@@ -235,10 +279,8 @@ function targetSummary(template, previous) {
     else if (phase.read?.alertDays) items.push(`安全台账 · 近 ${phase.read.alertDays} 天`);
   }
   const unique = [...new Set(items)];
-  return {
-    items: unique.length ? unique.slice(0, 4) : ['无设备目标'],
-    omitted: Math.max(0, unique.length - 4),
-  };
+  if (unique.length) return unique;
+  return rulesFor(template).length ? [] : ['无设备目标'];
 }
 
 function previousActionName(action, previous) {
@@ -363,6 +405,22 @@ button::after {
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+.version-rules {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 1px solid $agent-color-line;
+  border-radius: 10px;
+}
+.version-rule {
+  display: block;
+  color: $agent-color-text-secondary;
+  font-size: 11px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.version-rule + .version-rule {
+  margin-top: 3px;
+}
 .target-list {
   display: flex;
   flex-direction: column;
@@ -377,7 +435,18 @@ button::after {
   overflow-wrap: anywhere;
 }
 .target-more {
-  color: $agent-color-text-muted;
+  align-self: flex-start;
+  min-height: 36px;
+  margin: 3px 0 0;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: transparent;
+  color: $agent-color-accent;
+  font-size: 11px;
+  line-height: 36px;
+}
+.target-more::after {
+  border: 0;
 }
 .change-arrow {
   height: 14px;

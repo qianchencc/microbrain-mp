@@ -275,19 +275,22 @@ export function createConversationOperations({
     state.busy = true;
     state.error = '';
     state.recovery = '';
-    if (!discard) {
-      state.confirmingTaskId = key;
-      confirming.add(key);
-      confirmationVersion += 1;
-    }
+    if (!discard) state.confirmingTaskId = key;
+    confirming.add(key);
+    confirmationVersion += 1;
     changed();
     let resync = false;
     try {
       const result = changeId
-        ? await api[discard ? 'discardTaskChange' : 'confirmTaskChange'](changeId, ticket.source)
+        ? await api[discard ? 'discardTaskChange' : 'confirmTaskChange'](
+            changeId,
+            task.version,
+            ticket.source
+          )
         : cancellationId
           ? await api[discard ? 'discardTaskCancellation' : 'confirmTaskCancellation'](
               cancellationId,
+              task.version,
               ticket.source
             )
           : discard

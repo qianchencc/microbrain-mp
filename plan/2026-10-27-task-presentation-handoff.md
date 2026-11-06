@@ -60,3 +60,14 @@ Suggested skills：后续任务展示用better-writing／better-layout→impleme
 - 修复 `conversation-operations.taskCommand` 漏写成功回执状态的问题：使用后端返回的状态更新当前提案，失败仍保留待确认并显示简短 toast，不提前假定放弃成功，也不依赖关闭重开。
 - 回归覆盖等待响应时不提前取消、响应更新当前渲染对象、同任务其他提案不受影响、完成后不重复提交、无需历史重载；新增回归修复前失败，修复后前端333项通过，180文件边界与微信开发编译通过。
 - 同账号微信开发者工具生成待确认修改卡，触发真实卡片的放弃事件并请求本地后端；未关闭悬浮窗、未重载对话，同一卡片由待确认变为已放弃、确认／放弃按钮消失，显示“本次提案已放弃”。卡片UID71、对话UID17保持，悬浮窗始终打开。证据：[操作前](../.scratch/task-change-card/evidence/DISCARD-01/before.png)／[操作后](../.scratch/task-change-card/evidence/DISCARD-01/after.png)。未确认任务、未下发设备控制；本轮不修改后端。
+
+## 2026-11-06：提案版本、旧快照与完整审阅修复
+
+- 修改与取消提案的确认／放弃四个 API 统一传递卡片的 `version`，参数顺序与既有任务确认一致为 `(id, version, source)`；不再让版本大于 1 的正常提案落入后端兼容默认版本 1。任务执行、后端版本校验和权限逻辑未改。
+- 放弃开始与结束都参与既有快照隔离：在途操作阻止普通对话恢复，跨越操作起止的旧快照失效；失败仍保留后端最后确认状态并解除忙碌，不在前端假定放弃成功。新增成功／失败两分支回归修复前失败、修复后通过。
+- 修改卡前后各自复用任务要求投影，显示空调检查／自动调整的条件、频率、限制和动作，以及报告要求、统计期间、比较项。设备目标不再永久截断，两侧独立“展开全部／收起设备”，完整名称与动作保持。
+- 工程验证：Agent 335 项、180 文件边界及相关文件格式检查通过，微信开发版编译成功；编译仍有既存 `pages/check/detail/index.vue` default export／sourcemap、uniCloud 未关联及平台兼容提示，不记为本轮修复。版本 7 的四条提案操作在隔离传输校验中均使用正确版本并正常收口。
+- 同账号真实微信开发者工具生成版本 2 的修改提案，触发真实卡片放弃事件并请求本地 Java3381；同一卡片 UID82、对话 UID17、浮层保持打开，无关闭重开／历史重载，状态从 `PENDING_CONFIRMATION` 变为 `CANCELLED`，确认／放弃按钮消失并显示“本次提案已放弃”。[放弃前](../.scratch/task-change-card/evidence/RELATED-REPAIR-01/version2-before.png)／[放弃后](../.scratch/task-change-card/evidence/RELATED-REPAIR-01/version2-after.png)。只读复查原计划仍为版本 2、10:26 开灯、enabled，未确认修改或下发控制。
+- 当前真实计划仅 1 台设备。巡检规则差异与第 5 项展开／收起通过真实小程序内临时、已取消状态的隔离组件样例验证，[规则](../.scratch/task-change-card/evidence/RELATED-REPAIR-01/component-rules.png)／[展开](../.scratch/task-change-card/evidence/RELATED-REPAIR-01/component-expanded.png)；该样例不调用写接口，结束后已恢复真实卡片。报告日报／周报、环比／同比另经同一组件脚本验证。此两类完整业务路径未验收，不把组件验证当作真实任务案例通过。
+- 共用规则投影及其导出作为本次必要依赖一并纳入提交；混合检查频率按原始 `cadenceMinutes` 分组，不再引用展示对象中不存在的字段，避免其他频率／控制阶段被误计为检查次数。新增回归先失败后通过，最终编译后的真实小程序内隔离组件显示“每 30 分钟检查一次 · 共 2 次检查”和独立的“每 60 分钟检查一次”，3 个控制阶段未被计入：[混合频率](../.scratch/task-change-card/evidence/RELATED-REPAIR-01/component-cadence.png)。样例已恢复，不作为真实业务验收。
+- 本轮不修改后端／模型／配置，不创建真实任务、发送通知或执行设备动作。独立双轴审查代理因未配置模型启动失败，不声明已完成独立审查。

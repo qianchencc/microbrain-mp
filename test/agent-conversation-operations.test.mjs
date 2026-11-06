@@ -210,3 +210,25 @@ test('放弃回执立即结束当前修改卡，无需重开对话且不影响�
   await model.discardTask(currentTask);
   assert.equal(requests, 1);
 });
+
+test('放弃开始和结束都隔离旧快照，失败后仍可恢复真实状态', async () => {
+  for (const failure of [false, true]) {
+    const response = deferred();
+    const { model, context } = fixture({ discardTaskChange: () => response.promise });
+    const task = { changeId: 'change', status: 'PENDING_CONFIRMATION', version: 2 };
+    context.turns = [{ tasks: [task] }];
+    const before = model.snapshotFence();
+    const work = model.discardTask(task);
+    assert.equal(model.snapshotCurrent(before), false);
+    assert.equal(model.canRestore(false), false);
+    const during = model.snapshotFence();
+    assert.equal(task.status, 'PENDING_CONFIRMATION');
+    if (failure) response.reject(new Error('offline'));
+    else response.resolve({ status: 'CANCELLED' });
+    await work;
+    assert.equal(model.snapshotCurrent(during), false);
+    assert.equal(model.canRestore(false), true);
+    assert.equal(task.status, failure ? 'PENDING_CONFIRMATION' : 'CANCELLED');
+    assert.equal(model.state.busy, false);
+  }
+});
