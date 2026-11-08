@@ -242,12 +242,6 @@ export const markNotificationSeen = (id, source = 'office') =>
   );
 export const markAllNotificationsSeen = (source = 'office') =>
   request(withConversationSource('/agent/notifications/seen-all', source), 'POST');
-export const getTaskLightingStates = (taskId, source = 'office', options) =>
-  ordinaryRead(
-    withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/lighting-states`, source),
-    undefined,
-    options
-  );
 export const cancelTask = (taskId, version, source = 'office') =>
   request(
     withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/cancel`, source),

@@ -143,26 +143,6 @@
           summary="安排已暂停"
           @details="showIssue"
         />
-        <view
-          v-if="lightIds.length && !sampleTask"
-          class="current-observation"
-          ><text
-            >{{ currentLoading && Object.keys(currentStates).length ? '上次状态' : '现在状态' }} ·
-            {{
-              currentLoading && !Object.keys(currentStates).length
-                ? '读取中'
-                : currentSummary || '未知'
-            }}</text
-          ><button
-            aria-label="刷新设备状态"
-            :disabled="currentLoading"
-            @tap="stateRefresh.run()"
-            ><uni-icons
-              :class="{ spinning: currentLoading }"
-              type="refreshempty"
-              size="16"
-              color="var(--agent-accent-deep)" /></button
-        ></view>
         <TaskErrorNotice
           v-if="actionError"
           :message="actionError"
@@ -326,17 +306,6 @@
                       class="result"
                       :class="device.resultTone"
                       >{{ device.resultText }}</text
-                    >
-                    <text
-                      v-if="device.kind === 'lighting' && currentStates[device.id]"
-                      class="current-device"
-                      >现态：{{
-                        currentStates[device.id].state === true
-                          ? '开启'
-                          : currentStates[device.id].state === false
-                            ? '关闭'
-                            : '未知'
-                      }}</text
                     >
                   </view>
                 </view></view
@@ -537,7 +506,6 @@ import {
   cancelTask,
   cancelTaskPlan,
   getTaskDetail,
-  getTaskLightingStates,
   getTaskPlan,
   setTaskPlanStatus,
 } from '@/apis/agent/tasks';
@@ -551,7 +519,6 @@ import {
 } from '../../lib/tasks.mjs';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { getAgentStorageScope } from '@/utils/agent-session';
-import { createStateRefresh } from '../../lib/actions.mjs';
 import ObservationCard from '../observations/ObservationCard.vue';
 import TaskIssueDetails from './TaskIssueDetails.vue';
 import TaskErrorNotice from './TaskErrorNotice.vue';
@@ -589,8 +556,6 @@ const loading = ref(false),
   ownActionError = ref(''),
   cancelling = ref(false);
 const detailFresh = ref(false);
-const currentStates = ref({}),
-  currentLoading = ref(false);
 const planControls = createPlanManagement({
   createState: reactive,
   readContext: () => ({
@@ -741,33 +706,8 @@ function phaseNote(phase) {
 const detailMine = computed(() =>
   Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId)
 );
-const lightIds = computed(() =>
-  props.source === 'office'
-    ? [
-        ...new Set(
-          (detail.value?.phases || []).flatMap((phase) =>
-            phase.devices.filter((device) => device.kind === 'lighting').map((device) => device.id)
-          )
-        ),
-      ]
-    : []
-);
-const currentSummary = computed(() => {
-  const known = lightIds.value.filter((id) => typeof currentStates.value[id]?.state === 'boolean');
-  const on = known.filter((id) => currentStates.value[id].state).length;
-  const unknown = lightIds.value.length - known.length;
-  return [
-    on && `${on} 开启`,
-    known.length - on && `${known.length - on} 关闭`,
-    unknown && `${unknown} 未知`,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-});
 let requestId = 0,
-  currentRequestId = 0,
   refreshTimer,
-  observedTaskId = '',
   pageVisible = true,
   wasHidden = false,
   detailScope = '';
@@ -782,11 +722,8 @@ onHide(() => {
   pageVisible = false;
   wasHidden = true;
   clearInterval(refreshTimer);
-  stateRefresh.cancel();
   ++requestId;
-  ++currentRequestId;
   loading.value = false;
-  currentLoading.value = false;
   cancelling.value = false;
   planControls.invalidate();
 });
@@ -803,7 +740,6 @@ onShow(() => {
     task.value = null;
     plan.value = null;
     returnPlan.value = null;
-    currentStates.value = {};
     expandedPhases.value = [];
     allPhases.value = false;
     energyBasis.value = false;
@@ -836,7 +772,6 @@ async function load(silent = false) {
     task.value = null;
     plan.value = null;
     returnPlan.value = null;
-    currentStates.value = {};
     expandedPhases.value = [];
     allPhases.value = false;
     energyBasis.value = false;
@@ -892,32 +827,13 @@ async function load(silent = false) {
       ) {
         if (!result?.task) {
           task.value = null;
-          currentStates.value = {};
           error.value = '任务不存在或没有查看权限';
           return;
         }
-        const previousPhases = new Map(
-          (task.value?.phases || []).map((phase) => [phase.id, phase.status])
-        );
         error.value = '';
         task.value = result.task;
         detailFresh.value = true;
         loaded = true;
-        if (
-          props.source === 'office' &&
-          result.task.phases.some((phase) =>
-            phase.devices.some((device) => device.kind === 'lighting')
-          )
-        ) {
-          if (!silent) void stateRefresh.auto();
-          else if (
-            result.task.phases.some((phase) => previousPhases.get(phase.id) !== phase.status)
-          ) {
-            ++currentRequestId;
-            currentLoading.value = true;
-            stateRefresh.after(1000);
-          }
-        }
       }
     }
   } catch (cause) {
@@ -931,7 +847,6 @@ async function load(silent = false) {
       if (cause.data || !scope || scope !== currentScope) {
         task.value = null;
         plan.value = null;
-        currentStates.value = {};
       }
       error.value =
         cause.message ||
@@ -952,34 +867,6 @@ async function load(silent = false) {
       emit('loaded', taskId);
   }
 }
-async function loadCurrentStates(taskId = activeTaskId.value) {
-  const current = ++currentRequestId;
-  if (!pageVisible || !props.active || !taskId || props.sampleTask || props.source !== 'office')
-    return;
-  const source = props.source,
-    scope = getAgentStorageScope();
-  const isActive = () =>
-    current === currentRequestId &&
-    pageVisible &&
-    props.active &&
-    activeTaskId.value === taskId &&
-    props.source === source &&
-    scope === getAgentStorageScope();
-  currentLoading.value = true;
-  try {
-    const result = await getTaskLightingStates(taskId, source, { isActive });
-    if (isActive()) {
-      currentStates.value = Object.fromEntries(
-        (result.states || []).map((state) => [state.id, state])
-      );
-    }
-  } catch {
-    if (current === currentRequestId) currentStates.value = {};
-  } finally {
-    if (current === currentRequestId) currentLoading.value = false;
-  }
-}
-const stateRefresh = createStateRefresh(() => loadCurrentStates(activeTaskId.value));
 function openLatestReport() {
   if (!plan.value?.latestTask?.id) return;
   returnPlan.value = plan.value;
@@ -1039,15 +926,9 @@ watch(
   () => {
     planControls.invalidate();
     clearInterval(refreshTimer);
-    stateRefresh.cancel();
-    ++currentRequestId;
-    currentLoading.value = false;
     activeTaskId.value = props.taskId || '';
     activePlanId.value = props.planId || '';
     returnPlan.value = null;
-    if (observedTaskId !== activeTaskId.value || props.sampleTask) currentStates.value = {};
-    if (props.source !== 'office') currentStates.value = {};
-    observedTaskId = activeTaskId.value || activePlanId.value;
     actionError.value = '';
     expandedPhases.value = [];
     allPhases.value = false;
@@ -1066,8 +947,6 @@ watch(
 );
 onUnmounted(() => {
   clearInterval(refreshTimer);
-  stateRefresh.cancel();
-  ++currentRequestId;
   ++requestId;
   planControls.invalidate();
 });
@@ -1425,48 +1304,6 @@ button::after {
   color: var(--agent-warning);
   font-size: 11px;
 }
-.current-observation {
-  min-height: 32px;
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 12px;
-  border-radius: 10px;
-  background: var(--agent-tint);
-  color: var(--agent-text-secondary);
-  font-size: 11px;
-}
-.current-observation button {
-  width: 32px;
-  height: 32px;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.current-observation button[disabled] {
-  opacity: 0.5;
-}
-.current-error {
-  display: block;
-  color: var(--agent-error);
-  font-size: 11px;
-}
-.spinning {
-  animation: state-spin 900ms linear infinite;
-}
-@keyframes state-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .spinning {
-    animation: none;
-  }
-}
 .section-title {
   display: block;
   margin: 18px 0 9px;
@@ -1725,11 +1562,6 @@ button::after {
 .result {
   grid-column: 1/-1;
   font-size: 12px;
-}
-.current-device {
-  grid-column: 1/-1;
-  color: var(--agent-text-secondary);
-  font-size: 10px;
 }
 .result.ok {
   color: var(--agent-success);

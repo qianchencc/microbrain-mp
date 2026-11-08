@@ -15,7 +15,6 @@ export {
   readAgentNotifications,
   peekAgentNotifications,
   getTaskDetail,
-  getTaskLightingStates,
   markNotificationSeen,
   markAllNotificationsSeen,
   cancelTask,
