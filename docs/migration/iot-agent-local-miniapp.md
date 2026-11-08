@@ -1,6 +1,6 @@
 # Local Java Agent profile and mini-program route matrix
 
-This is a develop-only acceptance profile. It does not change login, SSO, customer gateway, video playback, trial, or release.
+This is a develop-only acceptance profile. It does not change login, SSO, trial, or release.
 
 ## Enable and restore
 
@@ -10,11 +10,26 @@ The selected local profile is:
 
 | traffic | origin |
 | --- | --- |
-| Agent | `http://127.0.0.1:3205/api` |
+| Agent | `http://127.0.0.1:3381/api` |
 | login / SSO / customer gateway | existing `https://ncim.577119.com` origins |
-| video player / video API | existing develop `mp-video.qianc.ltd` origins |
+| video player | `https://ncim.577119.com/owner/h5player/index.html` |
+| video API | `http://127.0.0.1:3381/api` — same Java backend as Agent |
 
 The mini-program sends `Authorization: <customer token>` and `Tenantcode: <district.id>` on every Agent request. JSON requests add `content-type: application/json`; conversation streaming additionally requests `application/x-ndjson` behavior through the existing chunked `wx.request` path. Conversation `source` is a query parameter and is also sent in the create body. No page supplies credentials.
+
+The hosted player is static UI, not a choice of business backend. Keep its `api`
+parameter on the selected Agent backend; do not switch it to the customer gateway
+merely to make requests same-origin. For this desktop Developer Tools profile,
+set external Java configuration `agent.video.allowed-origin` to the exact player
+origin `https://ncim.577119.com`. Only video GET/OPTIONS use this CORS allowance;
+the actual GET still requires the existing user session. Loopback is not a
+real-device endpoint; no public tunnel is established by this profile.
+
+2026-11-08 verification: the real mini-program WebView reached local Java for the
+reported camera/window after this routing/CORS correction. Playback remains
+**unaccepted**: the customer recording-query action returned `code:200` with
+`content:{result:true,url:null}`. Do not replace the requested window or claim
+there is no recording. [Redacted evidence](../../.scratch/video-playback-local-api/evidence/COMP-VID-02/result.json).
 
 ## Matrix
 
@@ -76,7 +91,7 @@ There are no page-used Agent exports mapped to a missing local Java public route
 
 ## Manual Developer Tools prerequisites
 
-1. Start the Java backend on loopback port `3205` with its normal local configuration and identity verifier; do not expose it publicly.
+1. Start the Java backend on loopback port `3381` with its normal local configuration and identity verifier; do not expose it publicly.
 2. In WeChat Developer Tools, enable **不校验合法域名、web-view（业务域名）、TLS 版本以及 HTTPS 证书** for this local acceptance project.
 3. Use a desktop Developer Tools run (the `127.0.0.1` endpoint is not a real-device endpoint), complete the existing customer login/session initialization, and ensure a district is loaded before opening Agent.
 4. Set `USE_LOCAL_DEVELOP_AGENT` to `true`, rebuild the develop target, then inspect the Java request logs for the real `Authorization` and `Tenantcode` headers. Do not paste token values into docs or screenshots.
