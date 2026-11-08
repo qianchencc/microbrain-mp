@@ -31,6 +31,20 @@ reported camera/window after this routing/CORS correction. Playback remains
 `content:{result:true,url:null}`. Do not replace the requested window or claim
 there is no recording. [Redacted evidence](../../.scratch/video-playback-local-api/evidence/COMP-VID-02/result.json).
 
+2026-11-09 loading improvement: Java reuses the complete Company video-only
+authorization scope for 60 seconds, isolated by tenant, principal and credential
+digest. Every live/playback/retry still requests a new stream URL; control
+authorization is unchanged. No timeout extension, old stream URL, or replacement
+recording window is used.
+
+The customer H5 against local Java rendered real tea-room video: initial recording
+6.1s, switch to live 2.1s, switch to recording 2.6s, replay 2.5s (one observed
+sequence, not a latency guarantee). One separate attempt received a WebSocket
+handshake but no binary media before SDK receive-timeout `0x12f900009`.
+The reported freight-lift window still returned `VIDEO_RECORDING_UNAVAILABLE`.
+Developer Tools automation was unresponsive, so mini-program business acceptance
+remains pending. [H5 screenshots and redacted timings](../../.scratch/video-playback-local-api/evidence/COMP-VID-01/result.json).
+
 ## Matrix
 
 Status `verified` means the Java public controller route and the mini-program method/payload shape were checked against the source at the time of this document. It is not a claim that a real Developer Tools request has succeeded. A route requiring an unavailable adapter must still fail closed with the backend's error response. Cache rows describe client behavior, not a second backend route.
