@@ -73,7 +73,11 @@
           class="recording"
         >
           <text class="recording-name">{{ block.report.name }}</text
-          ><text class="meta">{{ block.report.location }}</text>
+          ><text
+            v-if="hasDistinctVideoLocation(block.report)"
+            class="meta"
+            >{{ block.report.location }}</text
+          >
           <text class="recording-window"
             >{{ fmtShanghaiDateTime(block.report.beginTime) }} —
             {{ fmtShanghaiDateTime(block.report.endTime) }}</text
@@ -110,7 +114,11 @@
               :class="dotOf(d.online)"
             />
             <text class="nm">{{ d.name }}</text>
-            <text class="loc">{{ d.location }}</text>
+            <text
+              v-if="hasDistinctVideoLocation(d)"
+              class="loc"
+              >{{ d.location }}</text
+            >
             <view class="video-actions"
               ><button
                 class="vbtn"
@@ -557,6 +565,10 @@ async function viewLive(report) {
   } finally {
     fetchingId.value = '';
   }
+}
+function hasDistinctVideoLocation(device) {
+  const location = device.location?.trim();
+  return Boolean(location && location !== device.name?.trim());
 }
 
 function alertsMeta(block) {

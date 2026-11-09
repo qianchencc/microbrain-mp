@@ -1,0 +1,69 @@
+{
+  "cases": [
+    {
+      "case": "list",
+      "question": "查看26楼全部监控画面入口",
+      "videoCards": [
+        {
+          "count": "13 台",
+          "visibleNames": [
+            "监控-26楼货梯",
+            "监控-26楼厕所走廊",
+            "监控-26楼未来智城办公区",
+            "监控-26楼直播间",
+            "监控-26楼党员活动室",
+            "监控-26楼前台走廊2"
+          ],
+          "distinctLocations": 0
+        }
+      ],
+      "screenshot": "list.png"
+    },
+    {
+      "case": "single",
+      "question": "再看看26楼货梯监控",
+      "videoCards": [
+        {
+          "count": "1 台",
+          "visibleNames": [
+            "监控-26楼货梯"
+          ],
+          "distinctLocations": 0
+        }
+      ],
+      "screenshot": "single.png"
+    }
+  ],
+  "verification": {
+    "backend": {
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "frontendTestsPassed": 368,
+    "boundaryFiles": 186,
+    "wechatCompile": "passed",
+    "realDevice": "not verified",
+    "playback": "not exercised"
+  },
+  "runtime": {
+    "jar": "var/video-selection-final-20261109-164743/backend.jar",
+    "sha256": "47ca02243c2fb1aa3fa3455bad56bf06be2ee83e491ee6032b65497b339af26e"
+  },
+  "instructionUpdate": {
+    "activeFields": [
+      "companyBaseInstructions"
+    ],
+    "beforeRevision": 18,
+    "nonVideoTextUnchanged": true,
+    "revision": 19,
+    "savedFields": [
+      "companyBaseInstructions"
+    ]
+  },
+  "limits": [
+    "名称清单请求曾返回文字表格；已验收明确画面入口请求，未宣称所有清单问法均生成卡片。",
+    "未排查模型耗时，未修改播放器，未执行控制、任务确认或通知。"
+  ]
+}
