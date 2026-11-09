@@ -60,6 +60,21 @@ test('recording controls pause, preview without seeking, then seek in the same s
  assert.equal(new URL(p.requests.at(-1).url).searchParams.get('beginTime'), '2026-10-08T00:00:00+08:00')
 })
 
+test('a frame callback cannot enable recording controls before SDK startup completes', async () => {
+ let finishStart
+ const p = player({ mode: 'playback', play: (_url, _options, callbacks) => {
+  callbacks.firstFrameDisplay(0, 640, 368)
+  return new Promise(resolve => { finishStart = resolve })
+ } })
+ await flush()
+ assert.equal(p.elements.get('btnPause').disabled, true)
+ assert.notEqual(p.elements.get('footState').textContent, '录像播放中')
+ finishStart()
+ await flush()
+ assert.equal(p.elements.get('btnPause').disabled, false)
+ assert.equal(p.elements.get('footState').textContent, '录像播放中')
+})
+
 test('a rejected seek shows a retryable error and does not move the recording position', async () => {
  const p = player({ mode: 'playback', seek: async () => { throw '0x01730ec1' } }); await flush()
  const range = p.elements.get('playbackSeek'); range.value = '3600'
@@ -139,7 +154,7 @@ test('playback preserves its recording window and uses verified SDK playback arg
  p.instances[1].callbacks.StreamEnd(); await flush()
  assert.equal(p.elements.get('footState').textContent, '回放结束')
  const wrongMode = player({ mode: 'playback', fetch: async () => ({ ok: true, json: async () => ({ url: 'wss://private.test/live', mode: 'live' }) }) }); await flush()
- assert.equal(wrongMode.instances[0].url, undefined)
+ assert.equal(wrongMode.instances.some(instance => instance.url), false)
  assert.match(wrongMode.elements.get('errSub').textContent, /窗口与所选期间不一致/)
 })
 
@@ -217,9 +232,7 @@ test('return during stream fetch prevents late playback, and failed fetching all
  p.elements.get('btnBack').listeners.click()
  complete({ ok: true, json: async () => ({ url: 'wss://private.test/late' }) }); await flush()
  assert.equal(p.requests[0].init.signal.aborted, true)
- assert.equal(p.instances.length, 1)
- assert.equal(p.instances[0].url, undefined)
- assert.equal(p.instances[0].stops, 1)
+ assert.equal(p.instances.some(instance => instance.url), false)
  const unavailable = player({ fetch: async () => ({ ok: false, status: 503, json: async () => ({ code: 'VIDEO_STREAM_UNAVAILABLE' }) }) }); await flush()
  assert.equal(unavailable.elements.get('footState').textContent, '不可用')
  assert.equal(unavailable.elements.get('errTitle').textContent, '视频取流暂不可用')

@@ -4,10 +4,10 @@
 
 - Ship index.html and player.js together. Update the player.js content hash in index.html whenever the script changes; unversioned files were cached for four hours by the development CDN. SDK assets must be same-origin under /owner/static/h5player/ for worker/wasm loading.
 - Navigate before fetching. source/device/session remain explicit on every retry; never share Company and Office catalogs or place WSS in navigation/history/observation cards.
-- Prepare SDK before requesting a short-lived stream. Only firstFrameDisplay means playing. Return waits for JS_Stop; a broken SDK has a bounded return fallback. Hide/unload aborts requests and releases the instance.
+- Preload the SDK main script before requesting a short-lived stream. After backend response/window validation, create the instance and call JS_Play. Mark playing and enable controls after its first-frame promise resolves; firstFrameDisplay only records dimensions. Return waits for JS_Stop with a bounded fallback. Hide/unload aborts requests and releases the instance.
 - Do not log credentials, stream URLs or SDK payloads. The existing WebView injects token/tenantCode; immediately remove secrets from H5 browser history. A changed miniapp identity clears the old WebView.
-- Public development proxies must require caller authorization; never fall back to the real development identity for anonymous external traffic.
-- Gate actual controls on SDK evidence. Live and playback differ; a successful WSS response alone is not decoded video. Latest playback acceptance: plan/2026-10-27-safety-playback-improvement-handoff.md (native 1920×1080 frames, burned timestamp, retry and stop; phone WebView return unverified). Live evidence: plan/2026-10-09-shared-video-live-handoff.md.
+
+- Gate actual controls on SDK evidence. WSS success alone is not decoded video. Latest local mini-program live/playback/return evidence: docs/migration/iot-agent-local-miniapp.md, “Customer monitor flow alignment”. This does not establish cold-first reliability, all cameras, public deployment or physical-device acceptance.
 
 - Playback uses JS_Play(url, { playURL: url, mode: 1 }, 0, sdkPlaybackTime(beginTime), sdkPlaybackTime(endTime)). This customer SDK/media chain accepts Shanghai-clock YYYY-MM-DDTHH:mm:ssZ markers; convert only the SDK arguments, keeping API/business instants intact. Real pantry frames confirmed the requested time with this format; +08:00 arguments reproducibly failed with 0x01730ec1. Keep the same window on retry; never label a recording LIVE. Evidence: plan/2026-10-09-video-sdk-time-contract-handoff.md.
 

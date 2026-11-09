@@ -171,24 +171,6 @@
    deadline = setTimeout(() => failAttempt('TIMEOUT'), 20000);
    phase = 'sdk'; await loadSdk();
    if (closed || current !== generation) return;
-   const stage = document.querySelector('.stage-wrap'), rect = stage.getBoundingClientRect();
-   const height = Math.min(stage.clientHeight || rect.height, (stage.clientWidth || rect.width) * 9 / 16), width = height * 16 / 9;
-   $('playWnd').style.width = Math.floor(width) + 'px'; $('playWnd').style.height = Math.floor(height) + 'px';
-   const instance = new window.JSPlugin({ szId: 'playWnd', iWidth: Math.floor(width), iHeight: Math.floor(height), iMaxSplit: 1, iCurrentSplit: 1,
-    szBasePath: sdkPath, oStyle: { borderWidth: 0, background: 'transparent' }, openDebug: false });
-   plugin = instance;
-   await instance.JS_SetWindowControlCallback({ pluginErrorHandler: (_index, code, detail) => failAttempt(code, detail), firstFrameDisplay: (_index, frameWidth, frameHeight) => {
-    if (closed || current !== generation) return;
-    phase = 'playing';
-    clearTimeout(deadline);
-    $('playWnd').dataset.frameWidth = String(frameWidth); $('playWnd').dataset.frameHeight = String(frameHeight);
-    $('footTime').textContent = playback ? '录像回放' : '实时预览'; setState('playing');
-   }, StreamEnd: () => {
-    if (closed || current !== generation) return;
-    if (playback) { ++generation; void stop().catch(() => {}); setState('ended'); }
-    else failAttempt('STREAM_ENDED');
-   } });
-   if (closed || current !== generation) return;
    aborter = new AbortController();
    phase = 'fetching';
    setState('fetching', playback ? '获取录像流地址' : '获取视频流地址');
@@ -205,12 +187,32 @@
    if (playback && (stream.mode !== 'playback' || Date.parse(stream.beginTime) !== Date.parse(beginTime) || Date.parse(stream.endTime) !== Date.parse(endTime))) throw new Error('VIDEO_WINDOW_MISMATCH');
    if (!stream.url) throw new Error('STREAM_UNAVAILABLE');
    if (closed || current !== generation) return;
+   // Customer monitor flow: validated address, then SDK instance, then JS_Play.
+   phase = 'sdk'; setState('preparing', '准备播放器');
+   const stage = document.querySelector('.stage-wrap'), rect = stage.getBoundingClientRect();
+   const height = Math.min(stage.clientHeight || rect.height, (stage.clientWidth || rect.width) * 9 / 16), width = height * 16 / 9;
+   $('playWnd').style.width = Math.floor(width) + 'px'; $('playWnd').style.height = Math.floor(height) + 'px';
+   const instance = new window.JSPlugin({ szId: 'playWnd', iWidth: Math.floor(width), iHeight: Math.floor(height), iMaxSplit: 1, iCurrentSplit: 1,
+    szBasePath: sdkPath, oStyle: { borderWidth: 0, background: 'transparent' }, openDebug: false });
+   plugin = instance;
+   await instance.JS_SetWindowControlCallback({ pluginErrorHandler: (_index, code, detail) => failAttempt(code, detail), firstFrameDisplay: (_index, frameWidth, frameHeight) => {
+    if (closed || current !== generation) return;
+    $('playWnd').dataset.frameWidth = String(frameWidth); $('playWnd').dataset.frameHeight = String(frameHeight);
+   }, StreamEnd: () => {
+    if (closed || current !== generation) return;
+    if (playback) { ++generation; void stop().catch(() => {}); setState('ended'); }
+    else failAttempt('STREAM_ENDED');
+   } });
+   if (closed || current !== generation) return;
    setState('connecting', '正在建立播放通道');
    phase = 'connecting';
    if (playback) await instance.JS_Play(stream.url, { playURL: stream.url, mode: 1 }, 0, sdkPlaybackTime(beginTime), sdkPlaybackTime(endTime));
    else await instance.JS_Play(stream.url, { playURL: stream.url, mode: 0 }, 0);
    // stop() owns release when an attempt is superseded; do not issue a second JS_Stop.
    if (closed || current !== generation) return;
+   phase = 'playing';
+   clearTimeout(deadline);
+   $('footTime').textContent = playback ? '录像回放' : '实时预览'; setState('playing');
    if (playback) { void readPosition(instance, current); clockTimer = setInterval(() => { void readPosition(instance, current); }, 500); }
   } catch (error) {
    failAttempt(error);

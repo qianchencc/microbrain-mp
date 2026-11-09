@@ -110,6 +110,38 @@ live failure and the original freight recording window remain unaccepted;
 browser H5 evidence does not close mini-program/real-device acceptance.
 [Local screenshots and sanitized protocol evidence](../../.scratch/video-playback-local-api/evidence/COMP-VID-01/optimization-20261109/result.json).
 
+### Customer monitor flow alignment (2026-11-09)
+
+The player now follows the observed “智慧监控” integration order: validate the
+backend stream response and recording window, construct `JSPlugin`, then call
+`JS_Play`. SDK main-script preloading remains before the request. Only startup
+promise fulfillment marks playing and enables recording controls;
+`firstFrameDisplay` only records dimensions. This reuses the customer SDK and
+calling sequence, not a business page hidden in the supplied SDK directory.
+Authentication, fresh stream addresses, recording windows, serialized release
+and both existing timeouts are unchanged; no automatic retry was added.
+
+The same-account mini-program now has actual local-player evidence: freight
+live rendered on a fresh route without reconnect, and tea-room recording
+rendered with on-camera time advancing inside the original
+2026-11-08 23:25–23:55 Shanghai window. The actual WebView retained the exact
+Agent credential and used local9419 for both page and API. The home page was
+restored after acceptance; workspace LAN configuration and Java were not changed.
+
+Browser observations additionally show freight playback state at about5.4s and
+tea recording at about8.4s, with real successive frames, pause/resume, and
+recording → live → the original recording window. These are sampled observations,
+not native first-frame timings or a latency guarantee. Canonical regression
+tests passed16/16; standalone tests passed13/13.
+
+This accepts those local mini-program playback samples, **not** all cameras,
+cold-first reliability, physical devices or the public player. The original
+freight recording window previously returned no playable address and remains
+unaccepted; it was not replaced.
+[Ticket and native screenshots](../../.scratch/video-playback-local-api/issues/01-customer-player-flow.md),
+[sanitized runtime results](../../.scratch/video-playback-local-api/evidence/COMP-VID-01/customer-flow-alignment-20261109/result.json).
+
+
 
 ## Matrix
 
