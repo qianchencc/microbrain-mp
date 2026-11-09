@@ -17,6 +17,21 @@ The selected local profile is:
 
 The mini-program sends `Authorization: <customer token>` and `Tenantcode: <district.id>` on every Agent request. JSON requests add `content-type: application/json`; conversation streaming additionally requests `application/x-ndjson` behavior through the existing chunked `wx.request` path. Conversation `source` is a query parameter and is also sent in the create body. No page supplies credentials.
 
+The video WebView must use `getAgentSession()`'s complete authorization and tenant,
+exactly as Agent requests do. Stripping the token with `getTokenId()` and rebuilding
+the scheme in H5 changed `bearer …` to `Bearer …`; the Java identity cache keys the
+complete credential string, so this caused another cold verification and a first
+`503 ACCOUNT_IDENTITY_PREPARING`. Other customer H5 pages retain their bare-token
+contract. No authentication bypass, automatic retry or timeout extension is added.
+
+2026-11-09 correction: the compiled mini-program emitted the exact Agent
+credential; its resulting public-player URL rendered on first browser entry
+(HTTP200, about5.1s, actual image). The native post-fix screenshot command then
+stalled and the IDE returned to its home page, so mini-program business acceptance
+is not claimed. This fixes the extra cold identity check, **not** the independently
+observed SDK `009` no-media failure.
+[Credential comparison, original503 and actual playback evidence](../../.scratch/video-playback-local-api/evidence/COMP-VID-01/first-play-investigation-20261109.json).
+
 The hosted player is static UI, not a choice of business backend. Keep its `api`
 parameter on the selected Agent backend; do not switch it to the customer gateway
 merely to make requests same-origin. For this desktop Developer Tools profile,

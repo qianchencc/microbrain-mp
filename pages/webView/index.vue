@@ -7,7 +7,7 @@
 <script>
 	import { getTokenId, checkToken } from '@/utils/auth'
 	import { useUserStoreHook } from '@/store/modules/user'
-	import { getAgentStorageScope } from '@/utils/agent-session'
+	import { getAgentSession, getAgentStorageScope } from '@/utils/agent-session'
 	import { videoPageUrl } from './video-query.mjs'
 	// import { joinGroup } from '@/apis/group/index.js'
 	import { DOMAIN } from '@/config/settings'
@@ -40,8 +40,10 @@
 			await checkToken()
 			if (this.assistantVideo) this.videoScope = getAgentStorageScope()
 			if (!option.noToken) {
-				option.token = getTokenId()
-				option.tenantCode = useUserStoreHook().getDistrict.id
+				// 视频与 Agent 使用同一凭据串，不因重建 Bearer 前缀触发另一份身份核验缓存。
+				const videoSession = this.assistantVideo ? getAgentSession() : null
+				option.token = videoSession ? videoSession.authorization : getTokenId()
+				option.tenantCode = videoSession ? videoSession.tenantCode : useUserStoreHook().getDistrict.id
 				option.timestamp = new Date().getTime()
 			}
 			// 额外参数, 请encodeURIComponent
