@@ -15,6 +15,14 @@ The selected local profile is:
 | video player | `https://ncim.577119.com/owner/h5player/index.html` |
 | video API | `http://127.0.0.1:3381/api` — same Java backend as Agent |
 
+2026-11-09 desktop network recovery: the running mini-program still selected an
+old DHCP LAN address after the host changed networks. Both `develop.local` API
+entries now use `http://127.0.0.1:3381/api`; login, player hosting, trial/release
+and the backend process are unchanged. Recompilation restored the same-account
+company overview's environment, catalog, safety, notifications and energy reads.
+[Actual mini-program evidence](../../.scratch/local-endpoint-recovery/issues/01-stale-lan-endpoint.md).
+This loopback profile is for desktop Developer Tools, not a phone.
+
 The mini-program sends `Authorization: <customer token>` and `Tenantcode: <district.id>` on every Agent request. JSON requests add `content-type: application/json`; conversation streaming additionally requests `application/x-ndjson` behavior through the existing chunked `wx.request` path. Conversation `source` is a query parameter and is also sent in the create body. No page supplies credentials.
 
 The video WebView must use `getAgentSession()`'s complete authorization and tenant,
