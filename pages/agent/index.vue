@@ -22,6 +22,7 @@
       <template #title
         ><RegionChip
           ref="regionChip"
+          style="flex: 1; min-width: 0"
           nav
       /></template>
     </AgentHeader>

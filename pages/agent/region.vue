@@ -5,6 +5,7 @@
       @back="goBack"
       ><template #title
         ><RegionChip
+          style="flex: 1; min-width: 0"
           workbench
           nav /></template
     ></AssistantNav>
