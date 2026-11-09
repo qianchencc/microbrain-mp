@@ -13,6 +13,11 @@
           ><text>{{ blockLabel(block) }}</text
           ><text class="count">{{ blockCount(block) }}</text></view
         >
+        <text
+          v-if="block.type === 'video' && stateObservationLabel(observation)"
+          class="meta"
+          >{{ stateObservationLabel(observation) }}</text
+        >
 
         <button
           v-if="block.type === 'report_artifact'"
@@ -72,13 +77,6 @@
           <text class="recording-window"
             >{{ fmtShanghaiDateTime(block.report.beginTime) }} —
             {{ fmtShanghaiDateTime(block.report.endTime) }}</text
-          >
-          <text
-            v-if="block.report.safetyContext"
-            class="meta"
-            >{{ block.report.safetyContext.label }} ·
-            {{ fmtShanghaiDateTime(block.report.safetyContext.occurredAt)
-            }}<text>；{{ block.report.safetyContext.basis }}</text></text
           >
           <button
             class="omore"
@@ -166,6 +164,11 @@
               class="meta"
               >{{ d.reading ? '读数不全' : '读数未知' }}</text
             >
+            <text
+              v-if="stateObservationLabel(observation, d.deviceId)"
+              class="meta"
+              >{{ stateObservationLabel(observation, d.deviceId) }}</text
+            >
           </view>
         </template>
 
@@ -184,7 +187,15 @@
               <text class="loc">{{ d.location }}</text>
               <text class="epower">{{ energyPowerText(d.reading) }}</text>
             </view>
+            <template v-if="observation.status || observation.cache">
+              <text
+                v-if="stateObservationLabel(observation, d.deviceId)"
+                class="meta"
+                >{{ stateObservationLabel(observation, d.deviceId) }}</text
+              >
+            </template>
             <text
+              v-else
               class="meta"
               :class="{ stale: staleOf(d.reading) }"
               >最新已知读数<text v-if="fmtDateTime(d.reading?.readTime)">
@@ -205,7 +216,7 @@
           >
             <view class="dot warn" />
             <text class="nm">{{ d.name }}</text>
-            <text class="loc">{{ d.location || '当前位置未核验' }}</text>
+            <text class="loc">{{ d.location }}</text>
             <text class="meta meta--wide">{{ safetySubtypeText(d.subtype) }}台账</text>
           </view>
         </template>
@@ -270,12 +281,6 @@
                 v-if="a.recordedDeviceName && a.recordedDeviceName !== a.deviceName"
                 class="at"
                 >记录名称：{{ a.recordedDeviceName }}</text
-              ><text
-                v-if="a.currentDevice && (!a.currentDevice.name || !a.currentDevice.location)"
-                class="at"
-                >{{
-                  !a.currentDevice.name ? '当前名称未核验 · 显示记录名称' : '当前位置未核验'
-                }}</text
               ><text class="at">{{ fmtDateTime(a.occurredAt) || '记录时间未知' }}</text></view
             >
             <uni-icons
@@ -388,6 +393,7 @@ import {
   environmentSource,
   fmtDateTime,
   fmtShanghaiDateTime,
+  stateObservationLabel,
   safetySubtypeText,
   videoOnline,
   videoViewLabel,

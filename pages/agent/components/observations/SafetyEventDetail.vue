@@ -13,11 +13,6 @@
           ><text class="event-chip">{{ ledgerShort }}</text></view
         >
         <text class="event-name">{{ record.deviceName || '设备名称未提供' }}</text>
-        <text
-          v-if="record.currentDevice && !record.currentDevice.name"
-          class="event-note"
-          >当前名称未核验，显示告警记录名称</text
-        >
         <view class="event-field"
           ><text>{{ record.currentDevice ? '当前位置' : '此前位置' }}</text
           ><text>{{
@@ -41,9 +36,10 @@
                   : '未提供'
           }}</text></view
         >
-        <text class="event-observed"
-          >{{ verified ? '最新读取于' : '此前读取于' }}
-          {{ fmtDateTime(observedAt) || '时间未提供' }}</text
+        <text
+          v-if="fmtDateTime(observedAt)"
+          class="event-observed"
+          >{{ verified ? '最新读取于' : '此前读取于' }} {{ fmtDateTime(observedAt) }}</text
         >
       </view>
       <view
@@ -110,8 +106,7 @@
               src="/static/device-art/video-dome-camera.png"
               mode="aspectFit"
             /><view class="camera-info"
-              ><text class="camera-name">{{ camera.name }}</text
-              ><text class="camera-note">依据：{{ camera.safetyContext.basis }}</text
+              ><text class="camera-name">{{ camera.name || '监控名称未提供' }}</text
               ><view class="camera-actions"
                 ><button
                   :disabled="!playerReady || openingVideo"
@@ -168,7 +163,9 @@ import VideoPlaybackForm from './VideoPlaybackForm.vue';
 import { openVideoPlayer, videoPlayerReady } from '../../lib/video.mjs';
 import { fmtDateTime, safetySubtypeText, safetyEventReference } from '../../lib/observations.mjs';
 import { getSafetyEvent, getSafetyEventCameras } from '@/apis/agent/observations';
-import { getAgentStorageScope, isAgentStorageScope } from '@/utils/agent-session';
+import { getAgentStorageScope } from '@/utils/agent-session';
+import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from '../../lib/reads.mjs';
 
 const props = defineProps({ snapshot: { type: Object, required: true }, active: Boolean });
 const emit = defineEmits(['reference']);
@@ -204,28 +201,28 @@ async function openLive(camera) {
     openingVideo.value = false;
   }
 }
-let cameraRequest = 0,
-  cameraScope = '';
+let cameraScope = '';
 const ledgerShort = computed(
   () =>
     ({ gas: '燃气台账', smoke: '烟感台账', flooding: '水浸台账' })[record.value.ledger] ||
     '安全台账'
 );
 const reference = computed(() => safetyEventReference(props.snapshot.record));
-let requestId = 0,
-  visible = true,
+let visible = true,
   referenceScope = '';
+const reads = useViewReads(
+  () => props.active,
+  () => reference.value
+);
 function invalidate() {
-  ++cameraRequest;
+  reads.invalidate();
   cameraLoading.value = false;
-  ++requestId;
   loading.value = false;
   verified.value = false;
   referenceAllowed.value = false;
 }
 async function load() {
   if (loading.value) return;
-  const current = ++requestId;
   verified.value = false;
   error.value = '';
   if (!props.active || !visible) return;
@@ -235,98 +232,93 @@ async function load() {
     return;
   }
   loading.value = true;
-  let scope;
-  try {
-    scope = getAgentStorageScope();
-    referenceScope = scope;
-    referenceAllowed.value = true;
-    const result = await getSafetyEvent(target, {
-      isActive: () => current === requestId && visible && props.active,
-    });
-    if (current !== requestId || !visible || !props.active || scope !== getAgentStorageScope())
-      return;
-    const next = safetyEventReference(result.record);
-    if (
-      !next ||
-      next.eventId !== target.eventId ||
-      next.ledger !== target.ledger ||
-      next.deviceId !== target.deviceId
-    )
-      throw new Error('返回的记录身份不匹配，请重试');
-    record.value = result.record;
-    observedAt.value = result.observedAt;
-    verified.value = true;
-    void findCameras();
-  } catch (cause) {
-    if (current === requestId && visible && props.active) {
-      if (
-        !isAgentStorageScope(scope) ||
-        [401, 403].includes(cause.status) ||
-        ['SAFETY_EVENT_UNAVAILABLE', 'UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code)
-      ) {
-        record.value = {};
-        referenceAllowed.value = false;
-      }
-      error.value = cause.message || '记录暂不可用，请稍后重试';
+  await reads.run(
+    'record',
+    async (options) => {
+      referenceScope = getAgentStorageScope();
+      referenceAllowed.value = true;
+      const result = await getSafetyEvent(target, options);
+      requireRecord(result, target);
+      return result;
+    },
+    {
+      data: (result) => {
+        record.value = result.record;
+        observedAt.value = result.observedAt;
+        verified.value = true;
+        void findCameras();
+      },
+      denied: clearDenied,
+      error: (cause) => {
+        if (cause.data?.code === 'SAFETY_EVENT_UNAVAILABLE') clearDenied();
+        showAgentError(cause, { fallback: '记录读取失败，请重试' });
+        error.value = '读取失败';
+      },
+      finish: () => {
+        loading.value = false;
+      },
     }
-  } finally {
-    if (current === requestId) loading.value = false;
-  }
+  );
 }
 async function findCameras() {
   if (cameraLoading.value || !referenceAllowed.value || referenceScope !== getAgentStorageScope())
     return;
-  const current = ++cameraRequest,
-    scope = getAgentStorageScope(),
+  const scope = getAgentStorageScope(),
     target = reference.value;
   cameraLoading.value = true;
   cameraError.value = '';
-  cameraNote.value = '';
   if (cameraScope !== scope) {
     cameras.value = [];
     selectedCamera.value = null;
   }
-  try {
-    const result = await getSafetyEventCameras(target, {
-      isActive: () => current === cameraRequest && visible && props.active,
-    });
-    if (current !== cameraRequest || !visible || !props.active || scope !== getAgentStorageScope())
-      return;
-    const next = safetyEventReference(result.record);
-    if (
-      !next ||
-      next.eventId !== target.eventId ||
-      next.ledger !== target.ledger ||
-      next.deviceId !== target.deviceId
-    )
-      throw new Error('返回的记录身份不匹配');
-    ++requestId;
-    loading.value = false;
-    record.value = result.record;
-    observedAt.value = result.observedAt;
-    verified.value = true;
-    cameraScope = scope;
-    cameras.value = result.candidates;
-    cameraNote.value = result.note;
-    if (cameras.value.length) void reveal('event-camera-list');
-  } catch (cause) {
-    if (current === cameraRequest) {
-      if (
-        !isAgentStorageScope(scope) ||
-        [401, 403].includes(cause.status) ||
-        ['UNAUTHORIZED', 'FORBIDDEN', 'SAFETY_EVENT_UNAVAILABLE'].includes(cause.data?.code)
-      ) {
-        record.value = {};
-        cameras.value = [];
-        selectedCamera.value = null;
-        referenceAllowed.value = false;
-        verified.value = false;
-      }
-      cameraError.value = cause.message || '候选监控暂不可用，请重试';
+  await reads.run(
+    'cameras',
+    async (options) => {
+      const result = await getSafetyEventCameras(target, options);
+      requireRecord(result, target);
+      return result;
+    },
+    {
+      data: (result) => {
+        reads.invalidate('record');
+        loading.value = false;
+        record.value = result.record;
+        observedAt.value = result.observedAt;
+        verified.value = true;
+        cameraScope = scope;
+        cameras.value = result.candidates;
+        // 候选依据/默认回放窗口说明不再展示；仅保留「未找到候选」类提示与错误。
+        cameraNote.value = result.note?.includes('记录时位置未核验') ? '' : (result.note ?? '');
+        if (cameras.value.length) void reveal('event-camera-list');
+      },
+      denied: clearDenied,
+      error: (cause) => {
+        if (cause.data?.code === 'SAFETY_EVENT_UNAVAILABLE') clearDenied();
+        showAgentError(cause, { fallback: '监控读取失败，请重试' });
+        cameraError.value = '监控暂不可用';
+      },
+      finish: () => {
+        cameraLoading.value = false;
+      },
     }
-  } finally {
-    if (current === cameraRequest) cameraLoading.value = false;
-  }
+  );
+}
+function requireRecord(result, target) {
+  const next = safetyEventReference(result.record);
+  if (
+    !next ||
+    next.eventId !== target.eventId ||
+    next.ledger !== target.ledger ||
+    next.deviceId !== target.deviceId
+  )
+    throw new Error('返回的记录身份不匹配，请重试');
+}
+function clearDenied() {
+  record.value = {};
+  cameras.value = [];
+  selectedCamera.value = null;
+  referenceAllowed.value = false;
+  verified.value = false;
 }
 async function openRecording(window) {
   if (!selectedCamera.value || cameraScope !== getAgentStorageScope() || openingVideo.value) return;
@@ -372,7 +364,7 @@ onShow(() => {
   visible = true;
   if (cameraScope && cameraScope !== getAgentStorageScope()) {
     cameras.value = [];
-    selectedCamera.value = null;
+    cameraError.value = '';
     cameraNote.value = '';
   }
   if (props.active) void load();
@@ -457,12 +449,6 @@ button::after {
 .event-field text:last-child {
   text-align: right;
   overflow-wrap: anywhere;
-}
-.event-note {
-  display: block;
-  margin-top: 18px;
-  color: var(--agent-warning-deep);
-  font-size: $agent-font-size-compact;
 }
 .event-observed {
   display: block;

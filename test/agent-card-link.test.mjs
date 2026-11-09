@@ -26,7 +26,7 @@ test('消息卡片：预填问题去空白并拒绝超长或控制字符', () =>
 	assert.equal(parseAgentContext({ prompt: enc('  查询告警  ') }).prompt, '查询告警')
 	assert.equal(parseAgentContext({ prompt: enc('x'.repeat(201)) }).prompt, '')
 	assert.equal(parseAgentContext({ prompt: enc('第一行\n第二行') }).prompt, '')
-	assert.ok(toasts.includes('预置问题无效或超过200字'))
+	assert.ok(toasts.includes('预置问题无效'))
 })
 
 test('消息卡片：参数未被编码时按原文保留，而不是丢掉引用', () => {
@@ -44,7 +44,7 @@ test('消息卡片：办公室直达链不消费公司 prompt', () => {
 test('消息卡片：超长告警引用被拒收', () => {
 	const context = parseAgentContext({ alertPrompt: enc('警'.repeat(2001)) })
 	assert.equal(context.reference, null)
-	assert.ok(toasts.includes('告警引用无效或超过2000字'))
+	assert.ok(toasts.includes('告警引用无效'))
 })
 
 test('消息卡片：三元组生成安全台账引用并带标签', () => {
@@ -66,12 +66,12 @@ test('消息卡片：结构化引用优先于 alertPrompt', () => {
 test('消息卡片：三元组缺 eventId 时退化为原文引用', () => {
 	const context = parseAgentContext({ alertLedger: 'gas', alertDeviceId: 'd1', alertLabel: enc('燃气 · 一层厨房 · 10:02') })
 	assert.deepEqual(context.reference, { type: 'customer_alert', content: '燃气 · 一层厨房 · 10:02' })
-	assert.ok(toasts.includes('缺少告警记录标识，按原文引用'))
+	assert.ok(toasts.includes('告警标识缺失，按原文引用'))
 })
 
 test('消息卡片：台账类型非法或标识超长时拒收结构化引用', () => {
 	assert.equal(parseAgentContext({ alertLedger: 'water', alertEventId: 'e1', alertDeviceId: 'd1' }).reference, null)
-	assert.ok(toasts.includes('告警台账类型无效'))
+	assert.ok(toasts.includes('告警类型无效'))
 	assert.equal(parseAgentContext({ alertLedger: 'gas', alertEventId: 'e'.repeat(301), alertDeviceId: 'd1' }).reference, null)
-	assert.ok(toasts.includes('告警标识超过300字'))
+	assert.ok(toasts.includes('告警标识过长'))
 })

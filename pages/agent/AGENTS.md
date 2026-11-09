@@ -16,7 +16,7 @@
 - 环境历史「向公司 Agent 询问此期间」附结构化`environment_window`引用（`from`/`to`取服务端报告窗口，客户端只带展示`label`），输入区显示引用条；发送时Runtime按当前Company授权重读同一窗口，不信任客户端样本，也不把引用当操作授权。空草稿仍预填问题，已有草稿只询问是否替换、不清掉引用；Office、无时区或反向窗口分别400。电表历史仍是提示词，不在同一改动内。见`plan/2026-10-27-environment-history-quote-reference.md`。
 - 客户告警跳转的alertPrompt只进入Company；草稿与引用分开保存，编辑/重试用原turn.reference，当前输入的新引用保持不动。run.started携带原引用供恢复；入口与验收边界见 `plan/2026-10-04-customer-alert-reference-handoff.md`，客户正式回调契约仍待对接。
 - 安全台账结构化引用与上述自由文本桥分开：事件身份是 ledger＋eventId，并核对 deviceId；共用 SafetyEventDetail 即时展示带读取时间的快照，稳定身份可立即引用，后台更新不阻塞按钮；发送消息时 Runtime 再按当前目录核验记录，引用本身不代表核验成功或控制授权。仪表盘保留列表节点，返回详情用显式 display:none/block；首次挂载必须触发读取。网络错误保留标注过的旧快照，401/404 清理记录并禁用引用，迟到响应核对 requestId/身份/active。现行行为见 `plan/2026-10-08-independent-reads-lan-handoff.md`。
-- 消防搬迁资料：`currentDevice`表示本次核验的当前名称/安装位置，空字段显示未核验；`recordedDeviceName`保留告警原名称。列表重新打开静默更新，摄像头查询返回的同事件资料同步详情，入口明确“按当前位置查找监控”，不把当前位置解释为记录时位置。
+- 消防搬迁资料：`currentDevice`表示本次核验的当前名称/安装位置，空字段显示未核验；`recordedDeviceName`保留告警原名称。列表重新打开静默更新，摄像头查询返回的同事件资料同步详情，入口明确“按当前位置查找监控”，不把当前位置解释为记录时位置。安全详情/列表/告警行不再展示“当前位置未核验”“显示记录名称”“当前名称未核验”及候选依据/默认回放窗口说明等次级注记；位置仅在已核验时显示，未核验不补占位文案。`cameraNote` 仅保留「未找到候选」类提示与错误，`cameraError`/`cameraNote` 状态与重置需成对维护。
 
 - 微信分块事件的 `data` 是 `ArrayBuffer`，中文 UTF-8 字节可能跨 chunk；所有 NDJSON 解析继续复用 `apis/agent/ndjson.mjs`。
 - 正文事件是 `message.delta`（增量，后端已合并，带 `phase`）+ `message.completed`（权威终稿）+ `message.reclassified`；终稿覆盖累积文本。`phase:'draft'` 的增量以过程权重实时落在答复位（`draftText` 条目），无工具调用时由 completed 原地沉淀为终稿色，带工具调用时由 reclassified 折叠为处理记录里的「检索思路」行——已渲染内容不删除、不移位、不重打。一轮答复按事件序渲染为有序条目流（`turn.items`：正文/草稿/观察卡/操作卡/任务卡），卡片可先落位、终稿随后；`tool.started` 对旧协议无 phase 的未收正文同样折叠为思路行而非丢弃。
@@ -61,7 +61,8 @@
 - Agent `list_tasks` 只读查询授权区域的某一天；取消必须先列出准确任务，再生成独立 `task.cancellation.proposed` 卡。卡片 `cancellationId` 与目标 `taskId` 不同；会话恢复按前者去重，保留原创建收据。确认调用取消提案接口，放弃/新消息/过期只退役提案；任务状态由真实 Task 详情驱动。
 - 区域列表的 `attention` 只表示当前身份尚未查看的部分完成/失败/未核验任务，不能拿运行中状态或装饰圆点充当提示。进入/切换真实区域调用 `acknowledgeRegion`，只有服务端确认后清除本地提示；样例模式不得更新真实水位。工作台可见时常态 30 秒、任务执行中 5 秒刷新，隐藏后停止；小程序交互验收由用户完成。
 - Task 详情独立读取当前授权照明现态，显示在执行收据之外；Office `switchStatus` 缺少执行时上报时间，当前显示“开启”不能把历史 `unconfirmed` 改成 `verified/completed`。现态读取失败不应抹掉任务收据。草案卡也只能根据本次回执及执行时回读决定结果标签，不能根据后来刷新到的现态把 `ACCEPTED` 改成“已达到目标”；所有现态查询不得用执行快照覆盖。
-- 现态手动与执行后的延迟刷新共用 `state-refresh.mjs`，只读设备状态；常驻界面不展示查询时间或“上报时间未知”。本轮边界与验证见 `plan/2026-09-28-device-state-receipt-separation.md`。
+- 现态手动与执行后的延迟刷新共用`state-refresh.mjs`，只读设备状态，不等于定时轮询。2026-11-06按用户最新决定：不显示未知采样/同步/读数时间、旧状态一类辅助注记，缺时间保留null、不补当前时间；实际读取失败与影响计算的缺数仍如实表达。首页环境卡不单列采样行，详情仅显示确有值的真实时间；HTTP、NDJSON恢复、区域与草案仍保留`status/missingDeviceIds/observedAtByDevice/cache`，当前状态不改写历史回执。微信真实界面验收见后端`.scratch/local-data-sync/`，编译/夹具不能代替。
+- 环境历史合页与选中身份统一经`domains/observations/environment-history.mjs`：来源ID不足以唯一标识样本，须保留时间、代码及缺ID命名空间。未知时间不画成当前点，明确null值保留为曲线断点，分页未完/缺行/质量异常不得被合页改成完整。只有完整覆盖且确实无样本才显示无采样；实际错误与质量原因可提示，不追加后台更新注记。工程/微信验收边界见后端`.scratch/local-data-sync/issues/06-environment-history.md`。
 - 工作台只在真实时间轴成功返回且完成视图更新后调用 `acknowledgeRegion`；加载失败、样例模式、隐藏页面或被新请求替代的结果不得清除异常提示。
 - `TaskDetailContent` 根节点是 `height:0;flex:1` 的 scroll-view，必须经宿主类（`content-host`/`task-content-host`，`flex:1;min-height:0;display:flex`）挂进 flex 容器；直接放进普通容器会塌成 0 高、详情空白（2026-09-28 抽屉栈重构踩过）。抽屉内 列表→设备→任务 三级导航栈见 `plan/2026-09-28-region-chrome-nav-motion.md`。
 - 任务报告的节能行沿 `report.summary.energyImpact` 投影：只有至少一台设备实际调温后，服务端才生成节能块；全程关机、非制冷、已满足、只读巡检、调温前失败/取消时 `energyImpact` 为 `null`，详情和通知不显示该行。`basis:"assumption"` 的估算由服务端按各设备首次调温检查点记录的调前 `setpoint` 与公开假设参数（节电率/单台功率/电价）确定性计算，窗口截至 `min(任务区间终点, 报告生成时间)`；`energyImpactView` 按原型 `proto-energy-estimate.html` A 变体投影为节能卡：`hero`（≈度数大数字、说明脚注）+ 三格事实 + `formula` 公式与依据说明 + 设备调温前后行（`ac_inspection` 块聚合，adjusted 优先，before 取首次出现的调前 `setpoint`，超过 6 台折叠为「见检查点明细」）；`unavailable` 态走同款卡片版式（口径缺失徽标、纳入/调节/无需三格、已确认事实行）。估算标记与非实测说明常驻，详细公式由“计算说明”展开；`measured`/`statistics` 仍为单行口径文字。已调温但基线缺失或时长不足时显示明确的不可估算原因，不得由前端或模型补数字。
@@ -86,6 +87,7 @@
 - 安全历史列表与详情共用单层 Sheet，历史组件宿主也须 `flex:1;min-height:0;display:flex`，否则筛选可见而 scroll-view 高度为零。三类独立台账及旧 flooding 引用规则见 `plan/2026-10-09-safety-history-handoff.md`；目录/摘要失败不应禁用独立历史入口。列表通过统一缓存复用60秒；重读已加载范围时仍按每页20条沿游标读取，不能把已加载总条数改作首屏limit，否则详情返回无法复用分页缓存。见 `plan/2026-10-26-safety-ledger-cache-diagnosis-handoff.md`。
 
 - 修改页面返回、Sheet、搜索、参数或日历时先读 `plan/2026-10-07-assistant-navigation-improvement-spec.md` 与对应 handoff。三个路由共用 `AssistantNav`；实际历史决定上一页，无历史由 `navigation.mjs` redirect 到默认父页。工作台新建任务定位 Office，source 在页面创建时固定。
+- 修改普通读取、取消、缓存作废或错误通知时，沿用 `lib/reads.mjs` 与既有领域入口；先读 [ADR0008 普通读取的视图归属](../../docs/adr/0008-agent-page-deep-module-architecture.md#2026-11-07普通读取的视图归属)。成功、失败、收尾统一提交，领域读取模型不直接通知；控制及会话流保留业务生命周期。
 - `NativeBackBoundary` 只承接微信返回，视觉仍由 DeviceSheet 的 transform/opacity 绘制。设备抽屉统一消费 日历→设备/任务 pane→搜索→关闭；日历通过暴露的 dismiss 方法交给所属抽屉，避免再独立挂返回容器。左侧返回退局部一层，右侧 X 关闭整层。
 - onHide 暂停请求/刷新并保留浏览位置；onUnload 释放。恢复前与异步响应写入前都复核身份 scope；换身份立即清除旧会话、任务、目录和编辑状态。同身份的旧内容只用于退出动画/暂存，授权拒绝应清除，网络失败须显示重试。
 - 对话阅读位置、原新消息草稿和正在编辑的旧消息分开，按 scope+source 存 app globalData，并以 conversationId/turnId 校验恢复。参数脏值离开需明确放弃；保存返回原搜索/列表，失败留在原处。确认失败保留面板并读取权威回执。

@@ -1,4 +1,5 @@
 import { STRIP_PAGE_DAYS, mergeStripDays } from '../energy/energy-daily-view.mjs';
+import { createReadScope } from '../../../../utils/agent-read-scope.mjs';
 
 const failureMessage = (cause, fallback) =>
   cause?.data?.cache?.lastError?.message || cause?.data?.message || cause?.message || fallback;
@@ -36,9 +37,9 @@ export function createCompanyOverview({
     error: '',
   });
   let requestId = 0,
-    unreadRequest = 0,
     scope = '',
     visible = false;
+  const reads = createReadScope({ identity, ready: api.ready, active: () => visible });
   function allLoaded() {
     Object.assign(state, {
       loading: false,
@@ -48,7 +49,7 @@ export function createCompanyOverview({
     });
   }
   function reset() {
-    ++unreadRequest;
+    reads.invalidate('unread');
     Object.assign(state, emptyData());
     effects.reset();
   }
@@ -69,25 +70,32 @@ export function createCompanyOverview({
   }
   async function refreshUnread(force = false) {
     if (!visible || !scope) return;
-    const current = ++unreadRequest,
-      savedScope = scope;
-    const active = () => current === unreadRequest && visible && savedScope === identity();
     const saved = api.peekUnread({ source: 'company', limit: 1 });
     if (saved) {
       state.simpleUnread = Number(saved.unreadCount) || 0;
       state.simpleUnreadError = '';
       state.simpleUnreadLoaded = true;
     }
-    try {
-      const unread = await api.unread({ source: 'company', limit: 1, force });
-      if (!active()) return;
-      state.simpleUnread = Number(unread.unreadCount) || 0;
-      state.simpleUnreadError = '';
-    } catch (cause) {
-      if (active()) state.simpleUnreadError = cause?.message || '暂不可用';
-    } finally {
-      if (active()) state.simpleUnreadLoaded = true;
-    }
+    await reads.run(
+      'unread',
+      (options) => api.unread({ source: 'company', limit: 1, force }, options),
+      {
+        data: (unread) => {
+          state.simpleUnread = Number(unread.unreadCount) || 0;
+          state.simpleUnreadError = '';
+        },
+        denied: () => {
+          state.simpleUnread = 0;
+          state.simpleUnreadLoaded = false;
+        },
+        error: (cause) => {
+          state.simpleUnreadError = cause?.message || '暂不可用';
+        },
+        finish: () => {
+          state.simpleUnreadLoaded = true;
+        },
+      }
+    );
   }
   function syncUnread(count) {
     state.simpleUnread = Number(count) || 0;
@@ -124,7 +132,12 @@ export function createCompanyOverview({
       return;
     const stale = ['environment', 'alerts', 'devices', 'energyDaily'].some((area) => {
       const section = state.sectionCache[area];
-      return Boolean(section?.lastError) || Boolean(section?.status && section.status !== 'fresh');
+      const quality = state.snapshot?.stateQuality?.[area];
+      return (
+        Boolean(section?.lastError) ||
+        Boolean(section?.status && section.status !== 'fresh') ||
+        Boolean(quality?.status && !['available', 'empty'].includes(quality.status))
+      );
     });
     cache.write({
       snapshot: state.snapshot,
@@ -142,8 +155,12 @@ export function createCompanyOverview({
     });
   }
   function applySection(section, result) {
-    const { cache: sectionCache, ...body } = result;
-    state.sectionCache = { ...state.sectionCache, [section]: sectionCache || null };
+    const { cache: projectionCache, ...body } = result;
+    const quality = body.stateQuality?.[section];
+    state.sectionCache = {
+      ...state.sectionCache,
+      [section]: quality?.cache || projectionCache || null,
+    };
     if (section === 'devices') {
       state.catalogDevices = body.devices || [];
       state.devicesLoaded = true;
@@ -172,13 +189,15 @@ export function createCompanyOverview({
       ...previousBody,
       ...body,
       devices,
-      [section + 'ObservedAt']: body.observedAt,
+      stateQuality: { ...previous.stateQuality, ...body.stateQuality },
+      [section + 'ObservedAt']: quality ? quality.observedAt : body.observedAt,
       errors,
     };
     if (!state.loadedSections.includes(section)) state.loadedSections.push(section);
   }
   async function load(force = false) {
     const current = ++requestId;
+    reads.invalidate();
     try {
       await api.ready();
       const nextScope = identity();
@@ -208,73 +227,60 @@ export function createCompanyOverview({
         error: '',
       });
       let criticalRemaining = 3;
-      const active = () => {
-        if (current !== requestId || !visible) return false;
-        try {
-          if (identity() === nextScope) return true;
-        } catch {
-          /* Scope loss invalidates every section, not just the failed request. */
-        }
-        invalidate();
-        ++requestId;
-        reset();
-        allLoaded();
-        state.error = '登录身份已变化，请重新读取';
-        return false;
-      };
-      await Promise.allSettled(
-        ['environment', 'alerts', 'devices', 'energyDaily'].map(async (section) => {
-          try {
-            const options = { force: force === true, isActive: active };
-            const result =
-              section === 'devices'
-                ? await api.devices(options)
+      await Promise.all(
+        ['environment', 'alerts', 'devices', 'energyDaily'].map((section) =>
+          reads.run(
+            section,
+            (options) => {
+              const requestOptions = { ...options, force: force === true };
+              return section === 'devices'
+                ? api.devices(requestOptions)
                 : section === 'energyDaily'
-                  ? await api.energy({ days: STRIP_PAGE_DAYS }, options)
-                  : await api.dashboard(section, options);
-            if (active()) applySection(section, result);
-          } catch (cause) {
-            if (!active()) return;
-            if (
-              [401, 403].includes(cause.status) ||
-              cause.code === 'AGENT_READ_INVALIDATED' ||
-              ['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code)
-            ) {
-              invalidate();
-              reset();
-              ++requestId;
-              state.error = cause.message;
-              allLoaded();
-              return;
+                  ? api.energy({ days: STRIP_PAGE_DAYS }, requestOptions)
+                  : api.dashboard(section, requestOptions);
+            },
+            {
+              data: (result) => applySection(section, result),
+              denied: (cause) => {
+                if (current !== requestId) return;
+                invalidate();
+                reads.invalidate();
+                reset();
+                ++requestId;
+                if (visible) state.error = cause.message;
+                allLoaded();
+              },
+              error: (cause) => {
+                if (['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) {
+                  state.error = cause.message;
+                  return;
+                }
+                if (section === 'devices')
+                  state.devicesError = failureMessage(cause, '设备目录暂不可用');
+                else if (section === 'energyDaily')
+                  state.energyError = failureMessage(cause, '暂不可用');
+                else {
+                  state.sectionErrors[section] = failureMessage(cause, '暂不可用');
+                  if (state.snapshot)
+                    state.snapshot = {
+                      ...state.snapshot,
+                      errors: [
+                        ...state.snapshot.errors.filter((row) => row.area !== section),
+                        { area: section, message: state.sectionErrors[section] },
+                      ],
+                    };
+                }
+              },
+              finish: () => {
+                if (section !== 'energyDaily' && --criticalRemaining === 0) state.loading = false;
+              },
             }
-            if (['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code)) {
-              state.error = cause.message;
-              return;
-            }
-            if (section === 'devices')
-              state.devicesError = failureMessage(cause, '设备目录暂不可用');
-            else if (section === 'energyDaily')
-              state.energyError = failureMessage(cause, '暂不可用');
-            else {
-              state.sectionErrors[section] = failureMessage(cause, '暂不可用');
-              if (state.snapshot)
-                state.snapshot = {
-                  ...state.snapshot,
-                  errors: [
-                    ...state.snapshot.errors.filter((row) => row.area !== section),
-                    { area: section, message: state.sectionErrors[section] },
-                  ],
-                };
-            }
-          } finally {
-            if (current === requestId && section !== 'energyDaily' && --criticalRemaining === 0)
-              state.loading = false;
-          }
-        })
+          )
+        )
       );
       if (current === requestId && visible) saveCache();
       if (current === requestId && !state.snapshot && !state.error)
-        state.error = '公司数据暂不可用，请重试';
+        state.error = '公司数据暂不可用';
     } catch (cause) {
       if (current === requestId && visible) {
         ++requestId;
@@ -283,7 +289,7 @@ export function createCompanyOverview({
         reset();
         state.error =
           cause.message === 'request:fail'
-            ? '公司数据暂不可用，请检查网络后重试'
+            ? '网络异常，稍后重试'
             : cause.message || '公司数据暂不可用';
       }
     } finally {
@@ -306,7 +312,7 @@ export function createCompanyOverview({
   function hide() {
     visible = false;
     ++requestId;
-    ++unreadRequest;
+    reads.invalidate();
     allLoaded();
   }
   return { state, load, show, hide, identityChanged, refreshUnread, syncUnread, invalidate };

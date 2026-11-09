@@ -44,6 +44,11 @@
       class="note"
       >{{ historyNote }}</text
     >
+    <text
+      v-if="stateError || stateObservationLabel(stateSnapshot)"
+      class="note"
+      >{{ stateError || stateObservationLabel(stateSnapshot) }}</text
+    >
     <view class="rail-frame"
       ><scroll-view
         scroll-x
@@ -127,6 +132,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { readDeviceStates } from '@/apis/agent/actions';
+import { useViewReads } from '../../lib/reads.mjs';
 import {
   operationLabel,
   receiptPhase,
@@ -134,9 +140,11 @@ import {
   executionNotice,
 } from '../../lib/actions.mjs';
 import { receiptText } from '../../lib/conversation.mjs';
+import { stateObservationLabel } from '../../lib/observations.mjs';
 import DeviceActionCard from './DeviceActionCard.vue';
 const props = defineProps({
   source: { type: String, default: 'office' },
+  active: { type: Boolean, default: true },
   draft: { type: Object, required: true },
   result: Object,
   busy: Boolean,
@@ -153,8 +161,10 @@ const emit = defineEmits([
   'browse',
 ]);
 const scopeOpen = ref(false),
-  states = ref({}),
+  stateSnapshot = ref(null),
+  stateError = ref(''),
   stateLoading = ref(false);
+const states = computed(() => stateSnapshot.value?.states || {});
 const pending = computed(() => props.draft.status === 'PENDING_CONFIRMATION');
 // 执行中只认草案权威状态；终态文案以规范化 result.message 为准，旧记录按状态真实兜底。
 const notice = computed(() => executionNotice(props.draft, props.result));
@@ -209,31 +219,50 @@ function phase(action) {
       ? 'expired'
       : 'pending';
 }
+const reads = useViewReads(
+  () => props.active,
+  () => [props.source, props.draft.draftId]
+);
 async function refresh() {
-  const current = ++stateRequest,
-    draftId = props.draft.draftId;
-  stateLoading.value = true;
-  try {
-    const snapshot = await readDeviceStates(draftId, props.source, {
-      isActive: () => current === stateRequest && props.draft.draftId === draftId,
-    });
-    if (current === stateRequest && props.draft.draftId === draftId)
-      states.value =
-        snapshot.deviceStates || (!Array.isArray(snapshot.states) ? snapshot.states : {}) || {};
-  } catch {
-    if (current === stateRequest) states.value = {};
-  } finally {
-    if (current === stateRequest) stateLoading.value = false;
-  }
+  await reads.run(
+    'states',
+    (options) => readDeviceStates(props.draft.draftId, props.source, options),
+    {
+      start: () => {
+        stateLoading.value = true;
+        stateError.value = '';
+      },
+      data: (snapshot) => {
+        stateSnapshot.value = snapshot;
+      },
+      denied: () => {
+        stateSnapshot.value = null;
+      },
+      error: (cause) => {
+        stateSnapshot.value = null;
+        stateError.value = cause.message || '设备状态读取失败';
+      },
+      finish: () => {
+        stateLoading.value = false;
+      },
+    }
+  );
 }
-let stateRequest = 0;
 const stateRefresh = createStateRefresh(refresh);
+watch(reads.isActive, (active) => {
+  if (active) stateRefresh.auto();
+  else {
+    stateRefresh.cancel();
+    stateLoading.value = false;
+  }
+});
 watch(
   () => props.result,
   (result) => {
     if (result) {
-      ++stateRequest;
-      states.value = {};
+      reads.invalidate();
+      stateSnapshot.value = null;
+      stateError.value = '';
       stateLoading.value = false;
       stateRefresh.after(1000);
     }
@@ -245,7 +274,7 @@ watch(pending, (value) => {
 onMounted(() => stateRefresh.auto());
 onUnmounted(() => {
   stateRefresh.cancel();
-  ++stateRequest;
+  reads.invalidate();
 });
 </script>
 <style scoped>

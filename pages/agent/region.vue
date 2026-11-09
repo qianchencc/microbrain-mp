@@ -33,7 +33,7 @@
     <text
       v-if="sampleMode && !error"
       class="sample-notice"
-      >本地演示记录 · 未写入设备或运行库</text
+      >本地演示记录</text
     >
     <view class="timeline-body">
       <RegionTimeline
@@ -111,6 +111,7 @@
           ><TaskErrorNotice
             v-else
             :message="error"
+            summary="读取失败"
             @details="issue = $event"
           /><button
             v-if="error"
@@ -198,6 +199,8 @@ import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app';
 import { listRegionTimeline, listRegionCalendar } from '@/apis/agent/observations';
 import { isDev } from '@/config/settings';
 import { getAgentStorageScope } from '@/utils/agent-session';
+import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from './lib/reads.mjs';
 import RegionChip from './components/regions/RegionChip.vue';
 import RegionTimeline from './components/regions/RegionTimeline.vue';
 import DeviceSheet from './components/shared/DeviceSheet.vue';
@@ -240,7 +243,6 @@ const windowStart = ref(''),
   windowDays = ref(1);
 const dayTasks = ref({}),
   dayDone = new Set(),
-  dayReq = {},
   dayLoadedAt = {};
 const windowDates = computed(() =>
   windowStart.value
@@ -310,12 +312,15 @@ let viewScope = '';
 let initialRegion = '',
   initialDate = '',
   initialTaskId = '',
-  requestId = 0,
-  calendarRequest = 0,
   loadId = 0,
   visible = false,
   loadingDirectory = false,
   refreshTimer;
+const reads = useViewReads(
+  () => visible,
+  () => focusRegionId.value
+);
+const directoryReads = useViewReads(() => visible);
 onLoad((query) => {
   backLabel.value = previousPageLabel(getCurrentPages(), '办公室 Agent');
   initialRegion = query.regionId || '';
@@ -337,64 +342,52 @@ function ensureWindow() {
   }
 }
 async function loadDay(d, { silent = false, force = false } = {}) {
-  const region = focusRegionId.value,
-    scope = getAgentStorageScope();
+  const region = focusRegionId.value;
   if (!region || sampleMode.value) return false;
   if (!force && dayDone.has(d) && Date.now() - (dayLoadedAt[d] || 0) < DAY_STALE_MS) {
     if (d === date.value) loading.value = false;
     return true;
   }
-  const token = (dayReq[d] = (dayReq[d] || 0) + 1);
   const selected = d === date.value;
   if (selected && !silent) {
     error.value = '';
     loading.value = true;
   }
-  try {
-    const result = await listRegionTimeline(region, d);
-    if (token !== dayReq[d] || region !== focusRegionId.value || scope !== getAgentStorageScope())
-      return false;
-    const next = result.tasks || [];
-    if (selected) {
-      const previous = new Map(
-        (dayTasks.value[d] || []).flatMap((task) =>
-          task.phases.map((phase) => [phase.id, phase.status])
-        )
-      );
-      if (
-        next.some((task) =>
-          task.phases.some(
-            (phase) =>
-              ['pending', 'executing'].includes(previous.get(phase.id)) &&
-              !['pending', 'executing'].includes(phase.status)
+  const outcome = await reads.run(`day:${d}`, (options) => listRegionTimeline(region, d, options), {
+    data: (result) => {
+      const next = result.tasks || [];
+      if (d === date.value) {
+        const previous = new Map(
+          (dayTasks.value[d] || []).flatMap((task) =>
+            task.phases.map((phase) => [phase.id, phase.status])
+          )
+        );
+        if (
+          next.some((task) =>
+            task.phases.some(
+              (phase) =>
+                ['pending', 'executing'].includes(previous.get(phase.id)) &&
+                !['pending', 'executing'].includes(phase.status)
+            )
           )
         )
-      )
-        deviceRefreshSignal.value++;
-      error.value = '';
-    }
-    dayTasks.value = { ...dayTasks.value, [d]: next };
-    dayDone.add(d);
-    dayLoadedAt[d] = Date.now();
-    return true;
-  } catch (cause) {
-    if (
-      token === dayReq[d] &&
-      region === focusRegionId.value &&
-      scope === getAgentStorageScope() &&
-      d === date.value
-    )
+          deviceRefreshSignal.value++;
+        error.value = '';
+      }
+      dayTasks.value = { ...dayTasks.value, [d]: next };
+      dayDone.add(d);
+      dayLoadedAt[d] = Date.now();
+    },
+    error: (cause) => {
+      if (d !== date.value) return;
       error.value = cause.message || '任务记录暂不可用';
-    return false;
-  } finally {
-    if (
-      d === date.value &&
-      region === focusRegionId.value &&
-      scope === getAgentStorageScope() &&
-      token === dayReq[d]
-    )
-      loading.value = false;
-  }
+      showAgentError(cause, { fallback: '任务记录暂不可用' });
+    },
+    finish: () => {
+      if (d === date.value) loading.value = false;
+    },
+  });
+  return outcome.status === 'value';
 }
 function loadSample() {
   // 纯前端演示:不拉任何接口,通用设备直接生成。
@@ -462,37 +455,26 @@ function extendBottom() {
   void loadDay(next, { silent: true });
 }
 function loadCalendar(month = calendarMonth.value || date.value.slice(0, 7), silent = false) {
-  const current = ++calendarRequest,
-    region = focusRegionId.value,
-    scope = getAgentStorageScope();
-  if (!silent) {
-    calendarMarks.value = [];
-    calendarError.value = '';
-  }
-  if (!region) return;
+  const region = focusRegionId.value;
+  if (!region || sampleMode.value) return;
   const { from, to } = calendarWindow(month);
-  if (sampleMode.value) return;
-  listRegionCalendar(region, from, to)
-    .then((result) => {
-      if (
-        current === calendarRequest &&
-        region === focusRegionId.value &&
-        scope === getAgentStorageScope()
-      ) {
+  void reads.run('calendar', (options) => listRegionCalendar(region, from, to, options), {
+    start: () => {
+      if (!silent) {
+        calendarMarks.value = [];
         calendarError.value = '';
-        calendarMarks.value = result.days || [];
       }
-    })
-    .catch((cause) => {
-      if (
-        current === calendarRequest &&
-        region === focusRegionId.value &&
-        scope === getAgentStorageScope()
-      ) {
-        if (!silent) calendarMarks.value = [];
-        calendarError.value = cause.message || '日历读取失败：未取得具体原因';
-      }
-    });
+    },
+    data: (result) => {
+      calendarError.value = '';
+      calendarMarks.value = result.days || [];
+    },
+    error: (cause) => {
+      if (!silent) calendarMarks.value = [];
+      calendarError.value = cause.message || '日历读取失败：未取得具体原因';
+      showAgentError(cause, { fallback: '日历读取失败' });
+    },
+  });
 }
 function onCalendarMonth(month) {
   calendarMonth.value = month;
@@ -538,11 +520,16 @@ async function load() {
   loadingDirectory = true;
   loading.value = !tasks.value.length;
   error.value = '';
-  ++requestId;
   now.value = new Date().toISOString();
   try {
-    await loadRegionFocus({ isActive: () => currentLoad === loadId && visible });
-    if (currentLoad !== loadId || !visible) return;
+    const directory = await directoryReads.run('directory', loadRegionFocus, {
+      error: (cause) => {
+        error.value = cause.message || '区域暂不可用';
+        showAgentError(cause, { fallback: '区域暂不可用' });
+        loading.value = false;
+      },
+    });
+    if (directory.status !== 'value' || currentLoad !== loadId) return;
     if (initialRegion) {
       if (!selectFocusRegion(initialRegion)) initialTaskId = '';
       initialRegion = '';
@@ -571,14 +558,6 @@ async function load() {
       initialTaskId = '';
       if (item) openTask(item);
       else uni.showToast({ title: '记录已变化或当前无权查看', icon: 'none' });
-    }
-  } catch (cause) {
-    if (currentLoad === loadId) {
-      error.value =
-        cause.message === 'request:fail'
-          ? '区域暂不可用，请检查网络后重试'
-          : cause.message || '区域暂不可用';
-      loading.value = false;
     }
   } finally {
     if (currentLoad === loadId) {
@@ -658,8 +637,6 @@ onShow(() => {
 onHide(() => {
   visible = false;
   clearTimeout(refreshTimer);
-  ++requestId;
-  ++calendarRequest;
   ++loadId;
 });
 onUnload(() => {
@@ -667,8 +644,6 @@ onUnload(() => {
   clearTimeout(refreshTimer);
   deviceDrawerOpen.value = false;
   selectedTaskId.value = '';
-  ++requestId;
-  ++calendarRequest;
   ++loadId;
 });
 </script>

@@ -70,7 +70,7 @@ export function createNdjsonStreamDecoder(onEvent) {
 
   return {
     push(buffer) {
-      if (ended) throw new Error('NDJSON stream has ended');
+      if (ended) throw new Error('数据流已结束');
       pendingText += decode(buffer, false);
       flushLines(false);
     },

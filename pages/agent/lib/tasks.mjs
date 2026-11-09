@@ -6,6 +6,7 @@ export {
   taskLabel,
   taskAbnormal,
   tasksOnDate,
+  calendarVisibleTasks,
   taskCalendarMarks,
   mergeDayTasks,
   calendarPollDelay,

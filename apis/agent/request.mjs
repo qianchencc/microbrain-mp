@@ -1,8 +1,6 @@
 export function httpError(status, data, operation = '业务请求失败') {
   const message =
-    typeof data?.message === 'string' && data.message.trim()
-      ? data.message
-      : `${operation}：HTTP ${status}，服务端未返回具体原因`;
+    typeof data?.message === 'string' && data.message.trim() ? data.message : operation;
   const error = new Error(message);
   error.status = status;
   error.data = data;
@@ -51,9 +49,7 @@ export function requestJson(url, method, data, header, timeout) {
         }
       },
       fail: (error) => {
-        const failure = new Error(
-          error.errMsg || '网络请求失败：未取得服务端响应，网络层未提供具体原因'
-        );
+        const failure = new Error(error.errMsg || '网络请求失败');
         failure.transport = true;
         reject(failure);
       },
@@ -122,7 +118,7 @@ export async function recoverDraftRequest(url, method, data, header, timeout, is
     return requestJson(url, method, data, header, timeout);
   }
   throw httpError(409, {
-    message: '草案已变化，已保留当前状态；请核对后重新确认',
+    message: '草案已变化，请重新确认',
     recovery: { draft: snapshot },
   });
 }

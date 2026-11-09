@@ -39,7 +39,7 @@ test('非 200 使用服务端错误文字且不打开文件；缺 tempFilePath �
   })), error => error.message === reason)
   await assert.rejects(downloadReportFile({ reportId: 'r-1' }, adapters({
    downloadFile: options => options.success({ statusCode: 200 }),
-  })), /服务端未返回有效的PDF文件/)
+  })), /文件无效/)
  } finally { globalThis.uni = original }
  assert.equal(opened.length, 0, '失败响应不调用 openDocument')
 })
@@ -66,7 +66,7 @@ test('非法格式与缺 id 直接拒绝，不发起下载', async () => {
  const requested = []
  await assert.rejects(downloadReportFile({ reportId: 'r-1', format: 'csv' }, adapters({
   downloadFile: options => { requested.push(1); options.success({ statusCode: 200, tempFilePath: '/tmp/f' }) },
- })), /不支持的导出格式/)
+ })), /格式不支持/)
  await assert.rejects(downloadReportFile({}, adapters()), /报告标识/)
  assert.equal(requested.length, 0)
 })
@@ -76,5 +76,5 @@ test('openDocument 同步抛错使 Promise 有界拒绝，不悬挂', async () =
   openDocument: () => { throw new Error('openDocument 不可用') },
  })), /openDocument 不可用/)
  await assert.rejects(downloadReportFile({ reportId: 'r-1' },
-  { baseUrl: 'x', getHeaders: () => ({}), getScope: () => 's' }), /不支持打开/, '缺少适配器直接拒绝')
+ { baseUrl: 'x', getHeaders: () => ({}), getScope: () => 's' }), /仅支持小程序内查看/, '缺少适配器直接拒绝')
 })

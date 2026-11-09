@@ -223,6 +223,7 @@
 import { computed, reactive, ref, toRefs, watch, nextTick, onBeforeUnmount } from 'vue';
 import { onHide, onShow } from '@dcloudio/uni-app';
 import { getCompanyEnergyDaily, getCompanyMeterReport } from '@/apis/agent/energy';
+import { showAgentError } from '@/utils/agent-error';
 import {
   getAgentStorageScope,
   isAgentStorageScope,
@@ -262,6 +263,7 @@ const panel = createEnergyPanel({
   read: () => props,
   api: { ready: waitForAgentSession, daily: getCompanyEnergyDaily, meter: getCompanyMeterReport },
   identity: { current: getAgentStorageScope, isCurrent: isAgentStorageScope },
+  notice: (cause, fallback) => showAgentError(cause, { fallback }),
   position: (kind, value) => {
     if (kind === 'prepend') stripRef.value?.didPrepend(value);
     else nextTick(() => stripRef.value?.centerOn(value));
@@ -369,16 +371,15 @@ const vsToday = computed(() => comparePct(todayUsage.value, selectedDay.value?.e
 const cacheNote = computed(() => {
   const cache = report.value?.cache;
   if (!cache || cache.status !== 'stale') return '';
-  if (cache.lastError?.message) return cache.lastError.message;
-  return '';
+  return cache.lastError?.message ? '上次更新未成功' : '';
 });
-// 历史补块按日期保留 cache 元数据：完整 stale body 的用量继续显示，但失败与原始
-// updatedAt 要提示；同块 fresh 返回时只清掉该块日期上的旧失败。
+// 历史补块按日期保留 cache 元数据：完整 stale body 的用量继续显示，但失败要以
+// 固定短标签提示（原文只留在缓存元数据）；同块 fresh 返回时只清掉该块日期上的旧失败。
 const historyNote = computed(() => {
   const failure = historyCacheFailure(historyCache.value);
   if (!failure?.messages?.length) return '';
   const range = failure.from === failure.to ? failure.from : `${failure.from}–${failure.to}`;
-  return `${range} 历史补块读取失败：${failure.messages.join('；')}`;
+  return `${range} 历史补块读取失败`;
 });
 const footnote = computed(() => {
   if (!report.value) return '';

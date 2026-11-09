@@ -46,6 +46,7 @@
         class="message"
         ><TaskErrorNotice
           :message="error"
+          summary="读取失败"
           @details="showIssue"
         /><button @tap="load()">重新加载</button
         ><button
@@ -82,7 +83,7 @@
             class="state-tag result-link"
             :class="detail.presentationStatus"
             @tap="showTaskIssue"
-            >{{ detail.statusText }} ›</button
+            >{{ detail.statusText }}</button
           ><text
             v-else
             class="state-tag"
@@ -110,12 +111,7 @@
           v-if="plan && !sampleTask"
           class="plan-toggle-row"
         >
-          <view class="plan-toggle-copy"
-            ><text class="plan-toggle-title">周期任务</text
-            ><text class="plan-toggle-note">{{
-              planIsEnabled(plan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限'
-            }}</text></view
-          >
+          <view class="plan-toggle-copy"><text class="plan-toggle-title">周期任务</text></view>
           <view
             v-if="!planCanToggle(plan)"
             class="plan-switch-wrap plan-switch-wrap--disabled"
@@ -519,6 +515,8 @@ import {
 } from '../../lib/tasks.mjs';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { getAgentStorageScope } from '@/utils/agent-session';
+import { useViewReads } from '../../lib/reads.mjs';
+import { showAgentError } from '@/utils/agent-error';
 import ObservationCard from '../observations/ObservationCard.vue';
 import TaskIssueDetails from './TaskIssueDetails.vue';
 import TaskErrorNotice from './TaskErrorNotice.vue';
@@ -706,11 +704,20 @@ function phaseNote(phase) {
 const detailMine = computed(() =>
   Boolean(detail.value?.source?.draftId || detail.value?.source?.conversationId)
 );
-let requestId = 0,
-  refreshTimer,
+let refreshTimer,
   pageVisible = true,
   wasHidden = false,
   detailScope = '';
+const reads = useViewReads(
+  () => props.active,
+  () => [props.source, activeTaskId.value, activePlanId.value]
+);
+function clearReadData() {
+  task.value = null;
+  plan.value = null;
+  returnPlan.value = null;
+  detailFresh.value = false;
+}
 function startPolling() {
   clearInterval(refreshTimer);
   if (props.active && pageVisible && !props.sampleTask)
@@ -722,7 +729,7 @@ onHide(() => {
   pageVisible = false;
   wasHidden = true;
   clearInterval(refreshTimer);
-  ++requestId;
+  reads.invalidate();
   loading.value = false;
   cancelling.value = false;
   planControls.invalidate();
@@ -758,10 +765,8 @@ function togglePhase(id) {
     : [...expandedPhases.value, id];
 }
 async function load(silent = false) {
-  const current = ++requestId,
-    taskId = activeTaskId.value,
+  const taskId = activeTaskId.value,
     planId = activePlanId.value;
-  let loaded = false;
   let scope = '';
   try {
     scope = getAgentStorageScope();
@@ -798,33 +803,21 @@ async function load(silent = false) {
     return;
   }
   if (!silent) loading.value = true;
-  try {
-    if (planId) {
-      const result = await getTaskPlan(planId, props.source);
-      if (
-        current === requestId &&
-        pageVisible &&
-        props.active &&
-        activePlanId.value === planId &&
-        scope === getAgentStorageScope()
-      ) {
-        if (!result?.plan) {
-          plan.value = null;
-          error.value = '周期任务不存在或没有查看权限';
+  await reads.run(
+    'detail',
+    async (options) => ({
+      ...(planId
+        ? await getTaskPlan(planId, props.source, options)
+        : await getTaskDetail(taskId, props.source, options)),
+      publish: options.publish,
+    }),
+    {
+      data: async (result) => {
+        if (planId) {
+          plan.value = result?.plan || null;
+          error.value = result?.plan ? '' : '周期任务不存在或没有查看权限';
           return;
         }
-        error.value = '';
-        plan.value = result.plan;
-      }
-    } else {
-      const result = await getTaskDetail(taskId, props.source);
-      if (
-        current === requestId &&
-        pageVisible &&
-        props.active &&
-        activeTaskId.value === taskId &&
-        scope === getAgentStorageScope()
-      ) {
         if (!result?.task) {
           task.value = null;
           error.value = '任务不存在或没有查看权限';
@@ -833,39 +826,21 @@ async function load(silent = false) {
         error.value = '';
         task.value = result.task;
         detailFresh.value = true;
-        loaded = true;
-      }
+        await nextTick();
+        result.publish(() => emit('loaded', taskId));
+      },
+      denied: clearReadData,
+      error: (cause) => {
+        error.value =
+          cause.message ||
+          (planId ? '周期任务读取失败：未取得具体原因' : '任务读取失败：未取得具体原因');
+        showAgentError(cause, { fallback: planId ? '周期任务读取失败' : '任务读取失败' });
+      },
+      finish: () => {
+        loading.value = false;
+      },
     }
-  } catch (cause) {
-    if (current === requestId && pageVisible && scope === detailScope) {
-      let currentScope = '';
-      try {
-        currentScope = getAgentStorageScope();
-      } catch {
-        /* 失效身份不得保留旧报告 */
-      }
-      if (cause.data || !scope || scope !== currentScope) {
-        task.value = null;
-        plan.value = null;
-      }
-      error.value =
-        cause.message ||
-        (planId ? '周期任务读取失败：未取得具体原因' : '任务读取失败：未取得具体原因');
-    }
-  } finally {
-    if (!silent && current === requestId) loading.value = false;
-  }
-  if (loaded) {
-    await nextTick();
-    if (
-      current === requestId &&
-      pageVisible &&
-      props.active &&
-      activeTaskId.value === taskId &&
-      scope === getAgentStorageScope()
-    )
-      emit('loaded', taskId);
-  }
+  );
 }
 function openLatestReport() {
   if (!plan.value?.latestTask?.id) return;
@@ -877,7 +852,7 @@ function openLatestReport() {
 }
 function returnToPlan() {
   if (!returnPlan.value) return;
-  ++requestId;
+  reads.invalidate('detail');
   plan.value = returnPlan.value;
   returnPlan.value = null;
   task.value = null;
@@ -916,6 +891,7 @@ async function deleteTask() {
     emit('dismiss');
   } catch (cause) {
     actionError.value = cause.message || '取消失败，请刷新后重试';
+    showAgentError(cause, { fallback: '取消失败' });
     await load(true);
   } finally {
     cancelling.value = false;
@@ -938,7 +914,7 @@ watch(
       load();
       startPolling();
     } else {
-      ++requestId;
+      reads.invalidate();
       loading.value = false;
       cancelling.value = false;
     } // 保留关闭动画的结果快照；下次打开由 load 重新读取。
@@ -947,7 +923,7 @@ watch(
 );
 onUnmounted(() => {
   clearInterval(refreshTimer);
-  ++requestId;
+  reads.invalidate();
   planControls.invalidate();
 });
 function back() {
@@ -1015,10 +991,11 @@ defineExpose({ returnToPlan, back });
 }
 .task-heading .result-link {
   flex-shrink: 0;
-  padding: 0 14px;
-  border: 1px solid rgba(var(--agent-shadow-rgb), 0.16);
-  border-radius: 999px;
-  box-shadow: 0 1px 2px rgba(var(--agent-shadow-rgb), 0.07);
+  min-height: 0;
+  margin: 0;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .reference-actions {
@@ -1293,10 +1270,6 @@ button::after {
   color: var(--agent-text-secondary);
   font-size: 12px;
   font-weight: 600;
-}
-.plan-toggle-note {
-  color: var(--agent-text-muted);
-  font-size: 10px;
 }
 .plan-pause-reason {
   display: block;

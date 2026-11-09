@@ -84,11 +84,7 @@ export {
   meterReportHistoryQuery,
   meterReportPowerFactor,
 } from '../domains/energy/meter-report-view.mjs';
-export {
-  meterPanelQuery,
-  meterPanelScopes,
-  createMeterPanelLoader,
-} from '../domains/energy/meter-panel-view.mjs';
+export { meterPanelQuery, meterPanelScopes } from '../domains/energy/meter-panel-view.mjs';
 export {
   energyHistoryBlock,
   energyMeterSetChanged,

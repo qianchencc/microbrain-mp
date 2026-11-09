@@ -15,6 +15,11 @@
         ><text class="hero-name">{{ device.name }}</text
         ><text class="hero-location">{{ device.kindLabel }} · {{ device.location }}</text
         ><text class="hero-state">{{ device.detail }}</text>
+        <text
+          v-if="device.stateNote"
+          class="hero-location"
+          >{{ device.stateNote }}</text
+        >
         <view
           v-if="nextAction"
           class="hero-next"
@@ -28,7 +33,7 @@
     <text
       v-if="sampleMode"
       class="sample-label"
-      >本地演示记录 · 未写入设备或运行库</text
+      >本地演示记录</text
     >
     <view class="timeline-area">
       <RegionTimeline
@@ -74,6 +79,7 @@
             ><TaskErrorNotice
               v-else
               :message="error"
+              summary="读取失败"
               @details="$emit('issue', $event)"
             /><button
               v-if="error"
@@ -92,8 +98,10 @@
   </view>
 </template>
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { listDeviceCalendar, listDeviceTimeline } from '@/apis/agent/observations';
+import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from '../../lib/reads.mjs';
 import { deviceTimelineItems, targetText } from '../../lib/tasks.mjs';
 import {
   calendarWindow,
@@ -112,6 +120,7 @@ const props = defineProps({
   sampleMode: Boolean,
   sampleDate: String,
   sampleTasks: { type: Array, default: () => [] },
+  active: { type: Boolean, default: true },
 });
 const emit = defineEmits(['task', 'issue']);
 const timeline = ref(null);
@@ -146,11 +155,12 @@ const nextAction = computed(() => {
     target: targetText(event.device?.kind, event.target),
   };
 });
-let timelineRequest = 0,
-  calendarRequest = 0;
+const reads = useViewReads(
+  () => props.active,
+  () => props.device.id
+);
 async function loadTimeline() {
-  const current = ++timelineRequest,
-    deviceId = props.device.id,
+  const deviceId = props.device.id,
     date = selectedDate.value;
   events.value = [];
   error.value = '';
@@ -160,19 +170,24 @@ async function loadTimeline() {
     loading.value = false;
     return;
   }
-  try {
-    const result = await listDeviceTimeline(deviceId, date);
-    if (current === timelineRequest) events.value = result.events || [];
-  } catch (cause) {
-    if (current === timelineRequest)
+  await reads.run('timeline', (options) => listDeviceTimeline(deviceId, date, options), {
+    data: (result) => {
+      events.value = result.events || [];
+    },
+    denied: () => {
+      events.value = [];
+    },
+    error: (cause) => {
       error.value = cause.message || '设备记录读取失败：网络层未提供具体原因';
-  } finally {
-    if (current === timelineRequest) loading.value = false;
-  }
+      showAgentError(cause, { fallback: '设备记录暂不可用' });
+    },
+    finish: () => {
+      loading.value = false;
+    },
+  });
 }
 async function loadCalendar() {
-  const current = ++calendarRequest,
-    deviceId = props.device.id;
+  const deviceId = props.device.id;
   marks.value = [];
   calendarError.value = '';
   const { from, to } = calendarWindow(month.value);
@@ -191,13 +206,18 @@ async function loadCalendar() {
         : [];
     return;
   }
-  try {
-    const result = await listDeviceCalendar(deviceId, from, to);
-    if (current === calendarRequest) marks.value = result.days || [];
-  } catch (cause) {
-    if (current === calendarRequest)
+  await reads.run('calendar', (options) => listDeviceCalendar(deviceId, from, to, options), {
+    data: (result) => {
+      marks.value = result.days || [];
+    },
+    denied: () => {
+      marks.value = [];
+    },
+    error: (cause) => {
       calendarError.value = cause.message || '设备日期标记读取失败：网络层未提供具体原因';
-  }
+      showAgentError(cause, { fallback: '设备日期标记暂不可用' });
+    },
+  });
 }
 watch(
   () => [props.device.id, selectedDate.value, props.sampleMode, props.sampleTasks],
@@ -218,10 +238,6 @@ function openTask(item) {
   if (props.sampleMode && !sampleTask) return;
   emit('task', { taskId: item.taskId, sampleTask });
 }
-onBeforeUnmount(() => {
-  ++timelineRequest;
-  ++calendarRequest;
-});
 </script>
 <style scoped lang="scss">
 @import '../../styles/tokens';

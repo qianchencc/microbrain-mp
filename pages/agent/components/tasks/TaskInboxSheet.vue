@@ -18,6 +18,14 @@
           size="15"
           color="var(--agent-text-muted)" /></button
     ></template>
+    <template #header-right
+      ><RefreshButton
+        v-if="!navigation.canBack"
+        label="刷新通知"
+        :loading="refreshing"
+        :disabled="refreshing"
+        @tap="content?.refresh()"
+    /></template>
     <TaskInboxContent
       ref="content"
       class="inbox-host"
@@ -25,6 +33,7 @@
       :source="source"
       @navigation="navigation = $event"
       @unread-count="onUnread"
+      @busy="refreshing = $event"
       @reference="$emit('reference', $event)"
     />
   </DeviceSheet>
@@ -32,12 +41,14 @@
 <script setup>
 import { computed, ref } from 'vue';
 import DeviceSheet from '../shared/DeviceSheet.vue';
+import RefreshButton from '../shared/RefreshButton.vue';
 import TaskInboxContent from './TaskInboxContent.vue';
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } });
 const emit = defineEmits(['close', 'unread-count', 'reference']);
 const content = ref(null),
   navigation = ref({ title: '', canBack: false }),
-  lastUnread = ref(0);
+  lastUnread = ref(0),
+  refreshing = ref(false);
 const sourceLabel = computed(() => (props.source === 'company' ? '公司' : '办公室'));
 function onUnread(count) {
   lastUnread.value = Number(count) || 0;

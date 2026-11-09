@@ -1,5 +1,6 @@
 import { planPresentation } from './task-presentation.mjs';
 import { taskTime } from './task-detail-view.mjs';
+import { showAgentError } from '../../../../utils/agent-error.mjs';
 
 // The view supplies its current identity and selection, not request epochs.
 // All modal, version, stale-response and recovery rules live here.
@@ -57,7 +58,7 @@ export function createPlanManagement({
     const operation = enabled ? 'resume' : 'pause';
     const title = enabled ? '继续执行' : '暂停周期任务';
     const content = enabled
-      ? `下一次执行：${plan.resumeNextAt ? taskTime(plan.resumeNextAt) : '暂无以后的安排'}。将重新核验当前设备权限和操作范围，从下一次安排继续，不补做过去的安排。`
+      ? `下一次执行：${plan.resumeNextAt ? taskTime(plan.resumeNextAt) : '暂无以后的安排'}。继续前会重新核验设备权限，不补做过期安排。`
       : '只暂停以后的安排；已经安排的本次任务会继续，已做的操作保持原样。';
     const accepted = await confirm({ title, content, confirmText: title, destructive: !enabled });
     if (!current(ticket, plan)) return;
@@ -85,6 +86,7 @@ export function createPlanManagement({
       if (cause.data?.recovery?.plan) updatePlan(cause.data.recovery.plan);
       state.revision += 1;
       state.error = cause.message || '状态更新失败，请刷新后重试';
+      showAgentError(cause, { fallback: '状态更新失败' });
     } finally {
       if (ticket.sequence === sequence) state.busy = false;
     }
@@ -126,9 +128,10 @@ export function createPlanManagement({
       if (!current(ticket)) return;
       state.revision += 1;
       changed('pause-all');
-      if (failures.length)
+      if (failures.length) {
         state.error = `已暂停${paused}项，${failures.length}项未暂停。\n\n${failures.join('\n\n')}`;
-      else notify(`已暂停${paused}项`);
+        showAgentError(null, { fallback: '部分安排未暂停' });
+      } else notify(`已暂停${paused}项`);
     } finally {
       if (ticket.sequence === sequence) state.busy = false;
     }
@@ -160,6 +163,7 @@ export function createPlanManagement({
       if (!current(ticket)) return false;
       if (cause.data?.recovery?.plan) updatePlan(cause.data.recovery.plan);
       state.error = cause.message || '取消失败，请刷新后重试';
+      showAgentError(cause, { fallback: '取消失败' });
       return false;
     } finally {
       if (ticket.sequence === sequence) state.busy = false;

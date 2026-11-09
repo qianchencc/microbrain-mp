@@ -1,3 +1,5 @@
+import { cancelRead, readIdentityChanged } from '../../utils/agent-read-scope.mjs';
+
 // 身份隔离的 Agent 读取快照：Company 概览/统计/安全台账、两端任务与周期安排列表、通知列表。
 // 不接入控制、草案、回执、会话或视频地址；stale 快照不得支撑确认、执行、已读或控制。
 const FRESH_MS = 60_000,
@@ -75,13 +77,12 @@ export function createAgentReadCache(getScope, now = Date.now) {
     const force = options === true || options.force === true;
     const requestScope = scope(),
       version = generation;
+    if (options.isActive?.() === false) throw cancelRead('inactive');
     const saved = peek(key, options);
     if (!force && saved?.fresh) return saved.value;
     let job = jobs.get(key);
-    // 单飞任务绑定发起它的活动周期；App 隐藏或换页后该任务已失活（其 load 下一次
-    // 看到的活动为 false）。新页面不能并入等待中的旧任务，否则两者一起
-    // AGENT_READ_INVALIDATED。淘汰后旧任务照常被其消费者放弃、不写回结果。
-    if (job && options.activity != null && job.activity !== options.activity) {
+    // The transport may be shared; every consumer owns its own visible lifetime.
+    if (job && ![...job.consumers].some((consumer) => consumer?.() !== false)) {
       job.invalidated = true;
       jobs.delete(key);
       job = null;
@@ -92,10 +93,8 @@ export function createAgentReadCache(getScope, now = Date.now) {
           load({ isActive: () => [...job.consumers].some((consumer) => consumer?.() !== false) })
         )
         .then((value) => {
-          if (scope() !== requestScope || version !== generation)
-            throw Object.assign(new Error('读取已失效，请重新读取当前身份数据'), {
-              code: 'AGENT_READ_INVALIDATED',
-            });
+          if (scope() !== requestScope) throw readIdentityChanged();
+          if (version !== generation || job.invalidated) throw cancelRead('superseded');
           if (
             !job.invalidated &&
             !['preparing', 'unavailable'].includes(value?.status) &&
@@ -120,13 +119,14 @@ export function createAgentReadCache(getScope, now = Date.now) {
           if (jobs.get(key) === job) jobs.delete(key);
         });
       job.consumers = new Set();
-      job.activity = options.activity;
       jobs.set(key, job);
     }
     const consumer = options.isActive;
     job.consumers.add(consumer);
     try {
-      return copy(await job);
+      const value = await job;
+      if (consumer?.() === false) throw cancelRead('inactive');
+      return copy(value);
     } finally {
       job.consumers.delete(consumer);
     }

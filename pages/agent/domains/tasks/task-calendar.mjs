@@ -49,6 +49,10 @@ export function tasksOnDate(tasks, date, priority = false) {
         (priority ? rank(a) - rank(b) : 0) || Date.parse(taskStart(a)) - Date.parse(taskStart(b))
     );
 }
+
+// 日历条紧凑模式最多露出两条，其余走「全部 N 项」入口。
+export const calendarVisibleTasks = (dayTasks, compact) =>
+  compact ? dayTasks.slice(0, 2) : dayTasks;
 export function taskCalendarMarks(tasks, from, to) {
   const marks = [];
   for (let date = from; date <= to; date = shiftDate(date, 1)) {

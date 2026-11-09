@@ -53,12 +53,16 @@
                 size="28"
                 color="var(--agent-text-faint)" /><view
                 class="lamp"
-                :class="{ observe: READ_ONLY_KINDS.has(device.kind) }"
+                :class="{ observe: OBSERVE_KINDS.has(device.kind) }"
             /></view>
             <view class="dcopy">
               <text class="dname">{{ device.name }}</text>
               <text class="dloc">{{ locationText(device) }}</text>
-              <text class="dstate">{{ stateLabel(device) }}</text>
+              <text
+                v-if="stateLabel(device)"
+                class="dstate"
+                >{{ stateLabel(device) }}</text
+              >
             </view>
           </view>
         </view>
@@ -74,7 +78,7 @@
 </template>
 <script setup>
 import { computed, ref } from 'vue';
-import { resolveDeviceArtwork } from '../../device-art/catalog.js';
+import { resolveDeviceArtwork, safetySubtypeOfName } from '../../device-art/catalog.js';
 
 const props = defineProps({ devices: { type: Array, default: () => [] }, kind: String });
 
@@ -85,7 +89,7 @@ const modes = [
 const groupBy = ref('location');
 const collapsed = ref(new Set());
 
-const READ_ONLY_KINDS = new Set(['environment', 'energy', 'safety', 'video']);
+const OBSERVE_KINDS = new Set(['environment', 'energy', 'safety', 'video']);
 const SUBTYPE_LABEL = { gas: '燃气', smoke: '烟感', water: '水浸', flooding: '水浸' };
 // 上游 installAddress 为空、location 与设备名相同（"类型-位置-回路"结构）：
 // 取"类型-其后除末段"作为空间分组，无短横线的名字剥掉尾部类型词。
@@ -105,9 +109,11 @@ function locationKey(device) {
   return stripped || '未标位置';
 }
 function stateLabel(device) {
-  if (device.kind === 'safety' && device.subtype)
-    return `只读观察 · ${SUBTYPE_LABEL[device.subtype] || device.subtype}`;
-  return READ_ONLY_KINDS.has(device.kind) ? '只读观察' : '可控制';
+  if (device.kind === 'safety') {
+    const subtype = device.subtype || safetySubtypeOfName(device.name);
+    return subtype ? SUBTYPE_LABEL[subtype] || subtype : '';
+  }
+  return OBSERVE_KINDS.has(device.kind) ? '' : '可控制';
 }
 // 设备图与区域抽屉共用 catalog；保留 subtype，消防设备按实际类别选图。
 function artOf(device) {
@@ -124,7 +130,7 @@ function locationText(device) {
 const groups = computed(() => {
   const map = new Map();
   for (const device of props.devices) {
-    const key = groupBy.value === 'location' ? locationKey(device) : stateLabel(device);
+    const key = groupBy.value === 'location' ? locationKey(device) : stateLabel(device) || '其他';
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(device);
   }

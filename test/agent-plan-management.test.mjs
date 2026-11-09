@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as tasks from '../pages/agent/lib/tasks.mjs'
+// plan-management 失败路径会调用 showAgentError 弹 toast；node 环境补一个空实现。
+globalThis.uni = { showToast() {} }
 
 const deferred = () => {
   let resolve

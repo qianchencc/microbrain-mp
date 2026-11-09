@@ -2,11 +2,15 @@
 export {
   fmtDateTime,
   fmtShanghaiDateTime,
+  stateObservationLabel,
   ageHint,
   videoOnline,
   videoStateText,
   videoViewLabel,
   environmentCells,
+  pm25Zone,
+  pm25ZoneTone,
+  humidityZone,
   environmentSource,
   energyPowerText,
   energyCurrentCells,
@@ -29,3 +33,11 @@ export {
   environmentHistoryPrompt,
   environmentWindowReference,
 } from '../domains/observations/environment-reference.mjs';
+export {
+  environmentSampleIdentity,
+  environmentTrendPoints,
+  mergeEnvironmentHistory,
+  environmentHistoryNotice,
+  environmentWindowLabel,
+  environmentTrendTicks,
+} from '../domains/observations/environment-history.mjs';

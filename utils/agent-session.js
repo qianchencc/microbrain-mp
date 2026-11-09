@@ -1,6 +1,7 @@
 import { getToken, isTokenExpired } from '@/utils/auth'
 import { useUserStoreHook } from '@/store/modules/user'
 import SHA256 from 'crypto-js/sha256'
+import { watch } from 'vue'
 
 const POLL_MS = 50
 const DEFAULT_TIMEOUT_MS = 15000
@@ -16,12 +17,12 @@ function readSnapshot() {
 export function getAgentSession() {
 	const { token, district } = readSnapshot()
 	if (!token || isTokenExpired()) {
-		const error = new Error('客户登录已失效，请重新登录')
+		const error = new Error('登录已失效，请重新登录')
 		error.code = 'AGENT_SESSION_EXPIRED'
 		throw error
 	}
 	if (!district?.id) {
-		const error = new Error('客户园区信息尚未准备完成')
+		const error = new Error('园区信息准备中')
 		error.code = 'AGENT_SESSION_NOT_READY'
 		throw error
 	}
@@ -44,6 +45,12 @@ export function getAgentStorageScope() {
 	return SHA256(JSON.stringify([session.tenantCode, session.authorization])).toString()
 }
 
+// Keep credential-bearing change signals inside the session boundary.
+export function watchAgentIdentity(onChange) {
+	const user = useUserStoreHook()
+	return watch(() => [user.token, user.getDistrict?.id, user.authorized], onChange, { flush: 'sync' })
+}
+
 // Response/error handlers must also work after logout, when reading the scope
 // throws. A failed identity comparison is not a second rejected UI promise.
 export function isAgentStorageScope(scope) {
@@ -62,5 +69,5 @@ export async function waitForAgentSession(timeout = DEFAULT_TIMEOUT_MS) {
 			await sleep(POLL_MS)
 		}
 	}
-	throw lastError || new Error('客户会话初始化超时')
+	throw lastError || new Error('会话初始化超时')
 }

@@ -36,7 +36,7 @@
         <view class="headline">
           <view
             ><text class="page-title">公司总览</text
-            ><text class="date">{{ dateLine }} · 公司设备与环境</text></view
+            ><text class="date">{{ dateLine }}</text></view
           >
           <button
             class="refresh"
@@ -50,39 +50,30 @@
               color="var(--agent-text-secondary)"
           /></button>
         </view>
-        <view
-          v-if="error"
-          class="notice"
-          ><text>{{ error }}</text
-          ><button @tap="load(true)">重试</button></view
-        >
-        <view
-          v-else-if="snapshot?.errors?.length"
-          class="notice"
-          ><text>部分观测暂不可用</text><button @tap="showErrors">查看</button></view
-        >
 
         <button
           class="hero"
           hover-class="pressed"
           @tap="openObservation('environment')"
         >
-          <text class="hero-label">环境传感器 · 查看趋势 ›</text>
-          <text class="hero-temperature"
-            >{{ metricValue(environment?.reading?.temp) }}<text class="hero-unit"> °C</text></text
+          <view class="hero-top"
+            ><text class="hero-label">环境传感器 · 查看趋势 ›</text
+            ><text class="hero-temperature"
+              >{{ metricValue(environment?.reading?.temp) }}<text class="hero-unit"> °C</text></text
+            ><text
+              v-if="envNote || !environment?.reading"
+              class="hero-note"
+              :class="{ 'status-error': envFailure }"
+              >{{
+                envNote ||
+                (loading ? '正在更新环境读数' : envError ? '环境读数暂不可用' : '暂无环境读数')
+              }}</text
+            ></view
           >
           <text class="hero-meta"
-            >湿度 {{ metricValue(environment?.reading?.humidity) }}% · PM2.5
-            {{ metricValue(environment?.reading?.pm25) }}</text
-          >
-          <text
-            v-if="envNote || !environment?.reading"
-            class="hero-note"
-            :class="{ 'status-error': envFailure }"
-            >{{
-              envNote ||
-              (loading ? '正在更新环境读数' : envError ? '环境读数暂不可用' : '暂无环境读数')
-            }}</text
+            >湿度 {{ metricValue(environment?.reading?.humidity) }}%{{ humidityZoneText }}</text
+          ><text class="hero-meta"
+            >PM2.5: {{ metricValue(environment?.reading?.pm25) }} µg/m³{{ pm25ZoneText }}</text
           >
           <image
             class="hero-image"
@@ -168,7 +159,7 @@
               /><text class="device-name">{{ cell.label }}</text>
               <text class="device-count">{{
                 devicesLoaded
-                  ? (kindCounts[cell.kind] ?? 0) + ' 台 · 只读目录'
+                  ? (kindCounts[cell.kind] ?? 0) + ' 台'
                   : devicesError
                     ? '暂不可用'
                     : '读取中'
@@ -292,7 +283,11 @@
       tall
       compact-header
       :title="drawerTitle"
-      :meta="drawerDevices.length + ' 台 · 只读目录'"
+      :meta="
+        [drawerDevices.length + ' 台', directorySyncLabel(sectionCache.devices)]
+          .filter(Boolean)
+          .join(' · ')
+      "
       @close="drawerKind = ''"
     >
       <CompanyDeviceDrawer
@@ -327,18 +322,21 @@ import {
 import { getCompanyEnergyDaily } from '@/apis/agent/energy';
 import { peekAgentNotifications, readAgentNotifications } from '@/apis/agent/tasks';
 import { waitForAgentSession, getAgentStorageScope } from '@/utils/agent-session';
+import { showAgentError } from '@/utils/agent-error';
 import { useUserStoreHook } from '@/store/modules/user';
+import { useViewReads } from './lib/reads.mjs';
 import AssistantNav from './components/shared/AssistantNav.vue';
 import { backToParent } from './lib/navigation.mjs';
 import { shiftDate, shanghaiToday } from './lib/energy.mjs';
-import { metricValue, createCompanyOverview } from './lib/dashboard.mjs';
+import { metricValue, directorySyncLabel, createCompanyOverview } from './lib/dashboard.mjs';
+import { pm25Zone, humidityZone } from './lib/observations.mjs';
 import TaskListSheet from './components/tasks/TaskListSheet.vue';
 import CompanyTaskOverview from './components/tasks/CompanyTaskOverview.vue';
 import DeviceSheet from './components/shared/DeviceSheet.vue';
 import ObservationCard from './components/observations/ObservationCard.vue';
 import SafetyEventDetail from './components/observations/SafetyEventDetail.vue';
-import SafetyHistoryList from './components/observations/SafetyHistoryList.vue';
 import EnvironmentHistoryView from './components/observations/EnvironmentHistoryView.vue';
+import SafetyHistoryList from './components/observations/SafetyHistoryList.vue';
 import MeterHistoryView from './components/observations/MeterHistoryView.vue';
 import CompanyEnergySheet from './components/energy/CompanyEnergySheet.vue';
 import CompanyDeviceDrawer from './components/shared/CompanyDeviceDrawer.vue';
@@ -431,12 +429,17 @@ const {
   simpleUnreadError,
 } = toRefs(overview.state);
 const { load, invalidate: invalidateCompanyDashboard, syncUnread: syncSimpleUnread } = overview;
-// 分区失败原因只留错误本体：「正在后台更新/沿用上次数据」这类次级状态不再单列小字，
-// pill 上的数值与读取中已自解释；真错误由分区空态/sheet 说明承载。
-const sectionNote = (area) =>
-  sectionErrors.value[area] || sectionCache.value[area]?.lastError?.message || '';
+// 分区失败不再把后端原文带进页面：真错误发生时 toast，卡片内联只留固定短标签。
 const sectionFailure = (area) =>
   sectionErrors.value[area] || sectionCache.value[area]?.lastError?.message || '';
+// 错误即时 toast 一次；页内不再常驻错误条，分区降级由各卡片固定短标签承载，
+// 完整原因只在对应 sheet 的说明里出现。
+watch(error, (value) => {
+  if (value) showAgentError(value, { fallback: '公司数据暂不可用' });
+});
+watch(snapshot, (value) => {
+  if (value?.errors?.length) showAgentError('部分数据暂不可用', { fallback: '部分数据暂不可用' });
+});
 const tasksMounted = ref(false),
   observationMounted = ref(false),
   energyMounted = ref(false),
@@ -462,6 +465,10 @@ const dateLine = computed(() => {
   const today = shanghaiToday();
   return `${Number(today.slice(5, 7))}月${Number(today.slice(8))}日 · 周${WEEKDAYS[new Date(today + 'T00:00:00Z').getUTCDay()]}`;
 });
+
+const zoneSuffix = (zone) => (zone ? ` · ${zone}` : '');
+const humidityZoneText = computed(() => zoneSuffix(humidityZone(environment.value?.reading?.humidity)));
+const pm25ZoneText = computed(() => zoneSuffix(pm25Zone(environment.value?.reading?.pm25)));
 
 /* 设备目录计数 + 单类设备抽屉 */
 // 设备目录同样按分区保留后端 lastError 与原始 updatedAt；失败不清空已加载目录。
@@ -538,7 +545,7 @@ const energyFailure = computed(
     sectionCache.value.energyDaily?.lastError?.message ||
     ''
 );
-const energyNote = computed(() => sectionNote('energyDaily') || energyError.value);
+const energyNote = computed(() => (energyFailure.value ? '暂不可用' : ''));
 function openEnergy(date) {
   energyFocusDate.value = date || latestCompleteDay.value || '';
   if (date) selectedStripDate.value = date;
@@ -557,7 +564,7 @@ const alertsUnavailable = computed(
 );
 
 // Notification and section lifetimes are owned together by the overview module.
-const envNote = computed(() => sectionNote('environment'));
+const envNote = computed(() => (sectionFailure('environment') ? '环境读取失败' : ''));
 const envFailure = computed(() => sectionFailure('environment'));
 const envError = computed(
   () =>
@@ -565,14 +572,13 @@ const envError = computed(
     Boolean(envFailure.value || snapshot.value?.errors?.some((row) => row.area === 'environment'))
 );
 const simpleEnergy = computed(() => {
-  if (energyError.value && !energyReport.value)
-    return { warn: true, pill: '暂不可用', status: '读取失败', value: '—' };
+  if (energyError.value && !energyReport.value) return { status: '读取失败', value: '—' };
   const usable = [...(energyReport.value?.days || [])].reverse().filter((day) => day.usage != null);
   const latest = usable.find((day) => day.complete);
   if (!latest)
     return energyLoading.value
-      ? { warn: false, pill: '读取中', status: '更新中', value: '—' }
-      : { warn: false, pill: '正常', status: '暂无数据', value: '—' };
+      ? { status: '更新中', value: '—' }
+      : { status: '暂无数据', value: '—' };
   const prev = usable.find((day) => day !== latest && day.complete && day.date < latest.date);
   const delta = prev?.usage ? Math.round(((latest.usage - prev.usage) / prev.usage) * 100) : null;
   const unit = energyReport.value?.basis?.unit === 'kWh' ? ' 度' : '';
@@ -581,10 +587,7 @@ const simpleEnergy = computed(() => {
       ? '昨日'
       : `${Number(latest.date.slice(5, 7))}月${Number(latest.date.slice(8))}日`;
   const high = delta != null && delta > 10;
-  const stale = Boolean(energyFailure.value);
   return {
-    warn: high || stale,
-    pill: stale ? '沿用' : high ? '注意' : '正常',
     status: high ? '偏高' : '平稳',
     value: `${dayText} ${Number(latest.usage).toLocaleString()}${unit}${delta != null ? ` ${delta >= 0 ? '↑' : '↓'}${Math.abs(delta)}%` : ''}`,
   };
@@ -597,18 +600,14 @@ const simpleSafety = computed(() => {
   return { status: alerts?.records?.length ? '有历史记录' : '暂无记录' };
 });
 const simpleInbox = computed(() => {
-  if (!simpleUnreadLoaded.value)
-    return { warn: false, pill: '读取中', status: '更新中', value: '任务与报告' };
-  if (simpleUnreadError.value)
-    return { warn: true, pill: '暂不可用', status: '读取失败', value: '任务与报告' };
+  if (!simpleUnreadLoaded.value) return { status: '更新中', value: '任务与报告' };
+  if (simpleUnreadError.value) return { status: '读取失败', value: '任务与报告' };
   if (simpleUnread.value > 0)
     return {
-      warn: true,
-      pill: '待查看',
       status: `${simpleUnread.value > 99 ? '99+' : simpleUnread.value} 条未读`,
       value: '任务与报告',
     };
-  return { warn: false, pill: '正常', status: '无未读', value: '任务与报告' };
+  return { status: '无未读', value: '任务与报告' };
 });
 const observationTitle = computed(
   () =>
@@ -628,6 +627,7 @@ const observation = computed(() => {
     return null;
   const type = observationType.value;
   return {
+    ...snapshot.value.stateQuality?.[type],
     observedAt: snapshot.value[type + 'ObservedAt'],
     blocks: [
       type === 'alerts'
@@ -649,13 +649,6 @@ function openObservation(type) {
   if (['alerts', 'environment', 'energy'].includes(type) || snapshot.value)
     observationType.value = type;
 }
-function showErrors() {
-  uni.showModal({
-    title: '部分数据暂不可用',
-    content: snapshot.value.errors.map((row) => row.message).join('\n'),
-    showCancel: false,
-  });
-}
 function observationBack() {
   if (selectedEvent.value) selectedEvent.value = null;
   else observationType.value = '';
@@ -668,6 +661,16 @@ const pageActive = ref(false);
 let pendingAgentOpen = null,
   latestAlertRequest = 0,
   latestAlertLoading = false;
+const alertReads = useViewReads(() => pageActive.value && agentFloat.value?.isOpen !== false);
+watch(
+  () => agentFloat.value?.isOpen,
+  (open) => {
+    if (!open && latestAlertLoading) {
+      latestAlertLoading = false;
+      uni.hideLoading();
+    }
+  }
+);
 function openCompanyAgent(payload = {}) {
   agentFloat.value?.open(payload);
 }
@@ -728,61 +731,44 @@ async function openPendingAgentLaunch() {
     (query.deviceId !== undefined &&
       (typeof query.deviceId !== 'string' || !query.deviceId.trim() || query.deviceId.length > 300))
   ) {
-    uni.showToast({ title: '告警入口的类型或设备标识无效', icon: 'none' });
+    uni.showToast({ title: '告警入口无效', icon: 'none' });
     return;
   }
-  let identity;
-  const isActive = () =>
-    visible &&
-    pageActive.value &&
-    agentFloat.value?.isOpen !== false &&
-    current === latestAlertRequest &&
-    identity === getAgentStorageScope();
-  try {
-    await waitForAgentSession();
-    if (!visible || current !== latestAlertRequest) return;
-    identity = getAgentStorageScope();
-    await agentFloat.value.open();
-    latestAlertLoading = true;
-    uni.showLoading({ title: `读取最新${names[query.type]}告警`, mask: false });
-    const result = await getLatestSafetyEvent(
-      { type: query.type, deviceId: query.deviceId, to: new Date().toISOString() },
-      { isActive }
-    );
-    if (!isActive()) return;
-    if (!result.record || !result.reference) {
-      uni.showModal({
-        title: `没有可引用的${names[query.type]}告警`,
-        content: '指定范围内未查到告警记录，不会改用其他设备或告警类型。',
-        showCancel: false,
-      });
-      return;
-    }
-    agentFloat.value.open({
-      reference: result.reference,
-      prompt: `请帮我核实这条${names[query.type]}告警，并给出处置建议。`,
-    });
-  } catch (error) {
-    if (current !== latestAlertRequest || !visible || error.code === 'AGENT_READ_INVALIDATED')
-      return;
-    uni.showModal({
-      title: '告警读取未完成',
-      content: error.message || '请稍后重试，不会改用其他设备或告警类型。',
-      confirmText: '重试',
-      cancelText: '留在助手',
-      success: (value) => {
-        if (value.confirm && identity && isActive()) {
-          pendingAgentOpen = query;
-          void openPendingAgentLaunch();
+  await agentFloat.value.open();
+  if (!visible || current !== latestAlertRequest) return;
+  await alertReads.run(
+    'latest-alert',
+    (options) =>
+      getLatestSafetyEvent(
+        { type: query.type, deviceId: query.deviceId, to: new Date().toISOString() },
+        options
+      ),
+    {
+      start: () => {
+        latestAlertLoading = true;
+        uni.showLoading({ title: `读取最新${names[query.type]}告警`, mask: false });
+      },
+      data: (result) => {
+        if (!result.record || !result.reference) {
+          showAgentError(`没有可引用的${names[query.type]}告警`, {
+            fallback: `暂无可引用的${names[query.type]}告警`,
+          });
+          return;
+        }
+        agentFloat.value.open({
+          reference: result.reference,
+          prompt: `请帮我核实这条${names[query.type]}告警，并给出处置建议。`,
+        });
+      },
+      error: (error) => showAgentError(error, { fallback: '告警读取失败，请重试' }),
+      finish: () => {
+        if (latestAlertLoading) {
+          latestAlertLoading = false;
+          uni.hideLoading();
         }
       },
-    });
-  } finally {
-    if (current === latestAlertRequest && latestAlertLoading) {
-      latestAlertLoading = false;
-      uni.hideLoading();
     }
-  }
+  );
 }
 onLoad((options) => {
   const launch = pickAgentLaunch('pages/agent/dashboard', options || {});
@@ -902,7 +888,8 @@ button::after {
 }
 .hero {
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   min-height: 178px;
   box-sizing: border-box;
@@ -912,14 +899,24 @@ button::after {
   overflow: hidden;
   background: linear-gradient(130deg, $agent-color-tint, $agent-color-surface);
 }
+.hero-top {
+  display: block;
+}
 .hero-label,
 .hero-temperature,
-.hero-meta,
 .hero-note {
   display: block;
   position: relative;
   z-index: 1;
   max-width: 66%;
+}
+.hero-meta {
+  margin-top: auto;
+  display: block;
+  position: relative;
+  z-index: 1;
+  color: $agent-color-text-muted;
+  font-size: 11px;
 }
 .hero-label {
   color: $agent-color-text-secondary;
@@ -1124,21 +1121,6 @@ button::after {
   opacity: 0.65;
 }
 
-.notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 12px;
-  color: $agent-color-warning-deep;
-  font-size: 10px;
-}
-.notice button {
-  min-height: 30px;
-  color: $agent-color-warning-deep;
-  text-decoration: underline;
-  flex-shrink: 0;
-}
 .observation-scroll {
   flex: 1;
   height: 0;

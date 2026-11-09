@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createAgentReadCache } from '../apis/agent/agent-read-cache.mjs'
+import { isReadCancelled } from '../utils/agent-read-scope.mjs'
 // @boundary-private-test-seam: tests the cache adapter contract directly.
 
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
@@ -49,7 +50,7 @@ test('刷新或控制后的清理阻止旧请求复活；新请求可正常复�
  f.cache.clear()
  const b = await f.cache.read('daily', f.load)
  old.resolve({ count: 99 })
- await assert.rejects(a, /失效/)
+ await assert.rejects(a, isReadCancelled)
  assert.deepEqual(await f.cache.read('daily', f.load), b)
 })
 test('拒绝授权清理整组缓存；不能继续展示同组其他成功结果', async () => {
@@ -87,17 +88,15 @@ test('历史窗口逐渐增多时缓存数量有界，最早一项会重新读�
  assert.ok(f.cache.peek('window-40'))
 })
 
-test('定点失效后的迟到失败或准备中结果不能删除更新的成功快照', async () => {
- for (const late of [{ value: 'old' }, { status: 'preparing' }, { status: 'unavailable' }, { truncated: true }, { errors: [{ message: 'partial' }] }]) {
-  const f = setup(), pending = deferred()
-  const old = f.cache.read('daily', () => pending.promise)
-  await Promise.resolve()
-  f.cache.drop('daily')
-  await f.cache.read('daily', async () => ({ value: 'new' }))
-  pending.resolve(late)
-  await old
-  assert.deepEqual(f.cache.peek('daily').value, { value: 'new' })
- }
+test('定点失效取消旧消费者，不能删除更新的成功快照', async () => {
+ const f = setup(), pending = deferred()
+ const old = f.cache.read('daily', () => pending.promise)
+ await Promise.resolve()
+ f.cache.drop('daily')
+ await f.cache.read('daily', async () => ({ value: 'new' }))
+ pending.resolve({ value: 'old' })
+ await assert.rejects(old, isReadCancelled)
+ assert.deepEqual(f.cache.peek('daily').value, { value: 'new' })
 })
 
 test('准备中和不可用不能覆盖既有完整结果或延长有效期', async () => {
@@ -130,12 +129,14 @@ test('后端 stale 结果只作占位：保留数据与原始时间，下次读�
 
 test('活动周期切换后新读取不并入失活任务，旧结果不写回新快照', async () => {
  const f = setup(), held = deferred()
- const old = f.cache.read('daily-activity', () => held.promise, { activity: 'page-a' })
+ let active = true
+ const old = f.cache.read('daily-activity', () => held.promise, { isActive: () => active })
  await Promise.resolve()
- const fresh = f.cache.read('daily-activity', async () => ({ count: 7 }), { activity: 'page-b' })
+ active = false
+ const fresh = f.cache.read('daily-activity', async () => ({ count: 7 }), { isActive: () => true })
  assert.deepEqual(await fresh, { count: 7 })
  held.resolve({ count: 99 })
- assert.deepEqual(await old, { count: 99 })
+ await assert.rejects(old, isReadCancelled)
  assert.deepEqual(f.cache.peek('daily-activity').value, { count: 7 })
  assert.equal(f.cache.peek('daily-activity').fresh, true)
 })

@@ -25,11 +25,6 @@
       <view class="inbox-tools"
         ><text class="inbox-count">{{ unreadCount }} 条未读</text
         ><button
-          class="inbox-refresh"
-          :disabled="loading || markingAll"
-          @tap="load(true, true)"
-          >刷新</button
-        ><button
           v-if="unreadCount || markingAll"
           class="inbox-markall"
           :loading="markingAll"
@@ -43,6 +38,7 @@
         class="markall-error"
         ><TaskErrorNotice
           :message="markAllError"
+          summary="未能全部标记已读"
           @details="showIssue"
         /><button @tap="retryMarkAllSeen">重试</button></view
       >
@@ -56,6 +52,7 @@
         class="state-message"
         ><TaskErrorNotice
           :message="error"
+          summary="读取失败"
           @details="showIssue"
         /><button @tap="load(true)">重试</button></view
       >
@@ -67,10 +64,10 @@
             ? nextCursor
               ? '已加载的消息中没有未读消息'
               : '没有未读消息'
-            : filter === 'abnormal'
+            : filter === 'read'
               ? nextCursor
-                ? '已加载的消息中没有待查看结果'
-                : '没有待查看结果消息'
+                ? '已加载的消息中没有已读消息'
+                : '没有已读消息'
               : '任务结束后，结果消息会出现在这里'
         }}</view
       >
@@ -135,6 +132,7 @@
         class="list-footer list-error"
         ><TaskErrorNotice
           :message="error"
+          summary="消息暂未更新"
           @details="showIssue"
         /><button @tap="load(false)">重试</button></view
       >
@@ -175,6 +173,7 @@
 import { computed, ref, watch } from 'vue';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { getAgentStorageScope } from '@/utils/agent-session';
+import { useViewReads } from '../../lib/reads.mjs';
 import {
   AGENT_NOTIFICATION_PAGE,
   markNotificationSeen,
@@ -185,6 +184,7 @@ import {
 import TaskResultContent from './TaskResultContent.vue';
 import TaskIssueDetails from './TaskIssueDetails.vue';
 import TaskErrorNotice from './TaskErrorNotice.vue';
+import { showAgentError } from '@/utils/agent-error';
 import {
   taskStatusText,
   taskStatusTone,
@@ -195,7 +195,7 @@ import SlidingSegments from '../shared/SlidingSegments.vue';
 import { fmtShanghaiDateTime } from '../../lib/observations.mjs';
 
 const props = defineProps({ open: Boolean, source: { type: String, default: 'office' } });
-const emit = defineEmits(['unread-count', 'reference', 'navigation', 'changed']);
+const emit = defineEmits(['unread-count', 'reference', 'navigation', 'changed', 'busy']);
 const notifications = ref([]),
   selected = ref(null),
   content = ref(null),
@@ -208,15 +208,11 @@ function showIssue(value) {
 const filters = [
   { value: 'all', label: '全部' },
   { value: 'unread', label: '未读' },
-  { value: 'abnormal', label: '待查看' },
+  { value: 'read', label: '已读' },
 ];
 const visibleNotifications = computed(() =>
   notifications.value.filter((item) =>
-    filter.value === 'unread'
-      ? !item.readAt
-      : filter.value === 'abnormal'
-        ? taskNeedsDetails(item.outcome)
-        : true
+    filter.value === 'unread' ? !item.readAt : filter.value === 'read' ? Boolean(item.readAt) : true
   )
 );
 watch(
@@ -238,10 +234,18 @@ const loading = ref(false),
   markError = ref(''),
   markAllError = ref(''),
   markingAll = ref(false);
-let requestId = 0,
-  bulkId = 0,
+let bulkId = 0,
   loadedScope = '',
   pageVisible = true;
+const reads = useViewReads(
+  () => props.open && !selected.value && !issue.value,
+  () => props.source
+);
+
+// 宿主标题栏的刷新图标只反映网络在途：批量已读期间也禁用，避免并发读取打乱批量代次。
+watch([loading, markingAll], ([pending, bulk]) => emit('busy', pending || bulk), {
+  immediate: true,
+});
 
 function safeScope() {
   try {
@@ -271,7 +275,7 @@ function resetIdentity() {
 }
 onHide(() => {
   pageVisible = false;
-  ++requestId;
+  reads.invalidate();
   invalidateBulk();
   loading.value = false;
   loadingMore.value = false;
@@ -315,76 +319,60 @@ function publishUnreadCount() {
 async function load(reset, force = false) {
   if (!props.open || !pageVisible || markingAll.value) return;
   if (!reset && (loading.value || loadingMore.value || !nextCursor.value)) return;
-  const current = reset ? ++requestId : requestId;
-  if (reset) {
-    loading.value = true;
-    loadingMore.value = false;
-    error.value = '';
-  } else {
-    loadingMore.value = true;
-    error.value = '';
-  }
-  let scope = '';
-  try {
-    scope = getAgentStorageScope();
-    const source = props.source;
-    if (scope !== loadedScope) {
-      resetIdentity();
-      loadedScope = scope;
-    }
-    const before = reset ? '' : nextCursor.value;
-    // 同身份快照先落位：通知中心重开不再空等 Runtime，随后按同一缓存口径对齐。
-    if (reset) {
-      const saved = peekAgentNotifications({ source, limit: AGENT_NOTIFICATION_PAGE });
-      if (saved) {
-        notifications.value = saved.notifications || [];
-        unreadCount.value = Number(saved.unreadCount) || 0;
-        nextCursor.value = saved.nextCursor || '';
-        loading.value = false;
+  await reads.run(
+    'list',
+    (options) => {
+      const scope = getAgentStorageScope(),
+        source = props.source;
+      if (scope !== loadedScope) {
+        resetIdentity();
+        loadedScope = scope;
+      }
+      const before = reset ? '' : nextCursor.value;
+      if (reset) {
+        const saved = peekAgentNotifications({ source, limit: AGENT_NOTIFICATION_PAGE });
+        if (saved) {
+          notifications.value = saved.notifications || [];
+          unreadCount.value = Number(saved.unreadCount) || 0;
+          nextCursor.value = saved.nextCursor || '';
+          loading.value = false;
+          publishUnreadCount();
+        }
+      }
+      return readAgentNotifications(
+        { source, limit: AGENT_NOTIFICATION_PAGE, before, force },
+        options
+      );
+    },
+    {
+      start: () => {
+        loading.value = reset;
+        loadingMore.value = !reset;
+        error.value = '';
+      },
+      data: (result) => {
+        const incoming = result.notifications || [];
+        if (reset) notifications.value = incoming;
+        else {
+          const combined = new Map(notifications.value.map((item) => [item.id, item]));
+          for (const item of incoming) combined.set(item.id, item);
+          notifications.value = [...combined.values()];
+        }
+        unreadCount.value = Number(result.unreadCount) || 0;
+        nextCursor.value = result.nextCursor || '';
         publishUnreadCount();
-      }
+      },
+      denied: resetIdentity,
+      error: (cause) => {
+        error.value = cause.message || '通知中心暂不可用';
+        showAgentError(cause, { fallback: '通知中心暂不可用' });
+      },
+      finish: () => {
+        loading.value = false;
+        loadingMore.value = false;
+      },
     }
-    const result = await readAgentNotifications({
-      source,
-      limit: AGENT_NOTIFICATION_PAGE,
-      before,
-      force,
-    });
-    if (
-      current !== requestId ||
-      !props.open ||
-      !pageVisible ||
-      source !== props.source ||
-      scope !== getAgentStorageScope()
-    )
-      return;
-    const incoming = result.notifications || [];
-    if (reset) notifications.value = incoming;
-    else {
-      const combined = new Map(notifications.value.map((item) => [item.id, item]));
-      for (const item of incoming) combined.set(item.id, item);
-      notifications.value = [...combined.values()];
-    }
-    unreadCount.value = Number(result.unreadCount) || 0;
-    nextCursor.value = result.nextCursor || '';
-    publishUnreadCount();
-  } catch (cause) {
-    if (current === requestId) {
-      let currentScope = '';
-      try {
-        currentScope = getAgentStorageScope();
-      } catch {
-        /* 失效身份不得保留旧列表 */
-      }
-      if (cause.data || !scope || scope !== currentScope) resetIdentity();
-      error.value = cause.message || '通知中心暂不可用';
-    }
-  } finally {
-    if (current === requestId) {
-      loading.value = false;
-      loadingMore.value = false;
-    }
-  }
+  );
 }
 
 function openReport(notification) {
@@ -396,6 +384,7 @@ function backToList() {
   selected.value = null;
   markError.value = '';
   navigation.value = { title: '', canBack: false };
+  if (props.open && pageVisible) void load(true);
 }
 function back() {
   if (issue.value) {
@@ -467,7 +456,7 @@ async function markAllSeen() {
   }
   const current = ++bulkId;
   // 批量操作开始即作废旧列表读取并清掉悬挂的加载标记，避免迟到的列表结果覆盖已读结果。
-  ++requestId;
+  reads.invalidate('list');
   loading.value = false;
   loadingMore.value = false;
   markingAll.value = true;
@@ -497,8 +486,10 @@ async function markAllSeen() {
       pageVisible &&
       source === props.source &&
       scope === safeScope()
-    )
+    ) {
       markAllError.value = cause.message || '暂时没能标记已读，请重试';
+      showAgentError(cause, { fallback: '暂时没能标记已读' });
+    }
   } finally {
     if (current === bulkId) {
       markingAll.value = false;
@@ -532,7 +523,7 @@ watch(
     if (value) void load(true);
     else {
       issue.value = null;
-      ++requestId;
+      reads.invalidate();
       invalidateBulk();
       loading.value = false;
       loadingMore.value = false;
@@ -600,14 +591,11 @@ button::after {
   color: $agent-color-text-muted;
   font-size: 11px;
 }
-.inbox-refresh,
 .inbox-markall {
+  margin-left: auto;
   padding: 4px 2px;
   color: $agent-color-accent;
   font-size: 12px;
-}
-.inbox-refresh {
-  margin-left: auto;
 }
 .notification-card {
   position: relative;

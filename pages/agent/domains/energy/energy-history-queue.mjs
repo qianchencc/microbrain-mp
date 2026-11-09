@@ -1,3 +1,5 @@
+import { isReadCancelled } from '../../../../utils/agent-read-scope.mjs';
+
 // 历史能耗补块的稳定日期划分与有限并发队列。
 // 历史月不会因窗口结束日改变而重新准备：整月读取（自然月天数，最多31天），
 // 只有最新未闭合月截止当前完整日。队列只保留仍被选中/可见范围需要的块；
@@ -126,7 +128,7 @@ export function createEnergyHistoryQueue({ concurrency = 2, load, onResult, onEr
     const stillWanted = wanted.has(item.key) && !item.cancelled;
     try {
       if (failure) {
-        if (stillWanted && failure?.code !== 'AGENT_READ_INVALIDATED') {
+        if (stillWanted && !isReadCancelled(failure)) {
           settled.add(item.key);
           onError?.(item.block, failure);
         }

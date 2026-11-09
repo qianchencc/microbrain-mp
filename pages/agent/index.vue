@@ -13,13 +13,17 @@
       tasks-enabled
       @open-tasks="conv?.openTasks()"
       @open-inbox="conv?.openInbox()"
-      @workbench="focusRegion && conv?.openRegion(focusRegion)"
+      @workbench="openWorkbench"
       :disabled="!connected"
       :error="hasError"
       @clear="conv?.clearHistory()"
       @back="returnToOffice"
     >
-      <template #title><RegionChip nav /></template>
+      <template #title
+        ><RegionChip
+          ref="regionChip"
+          nav
+      /></template>
     </AgentHeader>
     <AgentConversation
       v-if="!redirecting"
@@ -49,6 +53,7 @@ import { focusRegion } from './lib/region-focus.mjs';
 import { parseAgentContext, markAgentEntry } from './lib/conversation.mjs';
 
 const conv = ref(null),
+  regionChip = ref(null),
   pageActive = ref(false),
   redirecting = ref(false);
 const returnLabel = ref('总览');
@@ -95,6 +100,17 @@ onShow(() => {
 onHide(() => {
   pageActive.value = false;
 });
+function openWorkbench() {
+  if (!focusRegion.value) {
+    regionChip.value?.show();
+    return;
+  }
+  if (!conv.value) {
+    uni.showToast({ title: '正在恢复对话，请稍后重试', icon: 'none' });
+    return;
+  }
+  conv.value.openRegion(focusRegion.value);
+}
 function returnToOffice() {
   backToParent();
 }

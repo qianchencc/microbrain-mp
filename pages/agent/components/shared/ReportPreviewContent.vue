@@ -260,7 +260,9 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { onHide, onShow } from '@dcloudio/uni-app';
 import { getReportArtifact, downloadReportArtifact } from '@/apis/agent/reports';
+import { showAgentError } from '@/utils/agent-error';
 import { getAgentStorageScope } from '@/utils/agent-session';
+import { useViewReads } from '../../lib/reads.mjs';
 import { fmtShanghaiDateTime } from '../../lib/observations.mjs';
 import { meterReportEvidenceSections, meterReportSpanText } from '../../lib/energy.mjs';
 import { acInspectionSectionView } from '../../lib/reports.mjs';
@@ -286,6 +288,10 @@ function showIssue(value) {
 }
 let requestId = 0,
   pageVisible = true;
+const reads = useViewReads(
+  () => props.active,
+  () => [props.reportId, props.source]
+);
 
 const evidenceSections = computed(() =>
   evidence.value ? meterReportEvidenceSections(evidence.value) : []
@@ -340,26 +346,30 @@ function resetTransient() {
 }
 async function load() {
   if (!props.active || !props.reportId || !pageVisible) return;
-  const current = ++requestId,
-    id = props.reportId,
-    source = props.source,
-    scope = currentScope();
+  ++requestId; // A refreshed report also invalidates downloads/quotes started from the old view.
   clearContent();
   error.value = '';
   actionError.value = '';
-  try {
-    const result = await getReportArtifact(id, source);
-    if (!requestAlive(current, id, source, scope)) return;
-    if (!result?.report)
-      throw Object.assign(new Error('报告不存在或没有查看权限'), { status: 404 });
-    report.value = result.report;
-    emit('loaded', result.report);
-  } catch (cause) {
-    if (!requestAlive(current, id, source, scope)) return;
-    clearContent();
-    const status = statusOf(cause);
-    error.value = cause?.message || '报告暂不可用，请重试';
-  }
+  await reads.run(
+    'report',
+    async (options) => {
+      const result = await getReportArtifact(props.reportId, props.source, options);
+      if (!result?.report) throw Object.assign(new Error('报告不存在或无权限'), { status: 404 });
+      return result.report;
+    },
+    {
+      data: (value) => {
+        report.value = value;
+        emit('loaded', value);
+      },
+      denied: clearContent,
+      error: (cause) => {
+        clearContent();
+        error.value = cause?.message || '报告暂不可用';
+        showAgentError(cause, { fallback: '报告暂不可用' });
+      },
+    }
+  );
 }
 function openEvidence(report_) {
   evidence.value = report_;
@@ -384,19 +394,23 @@ async function quote() {
   try {
     const result = await getReportArtifact(id, source);
     if (!requestAlive(current, id, source, scope) || report.value?.id !== id) return;
-    if (!result?.report)
-      throw Object.assign(new Error('报告不存在或没有查看权限'), { status: 404 });
+    if (!result?.report) throw Object.assign(new Error('报告不存在或无权限'), { status: 404 });
     emit('reference', { type: 'report', reportId: result.report.id, label: result.report.title });
   } catch (cause) {
     if (!requestAlive(current, id, source, scope)) return;
     const status = statusOf(cause);
     if (status === 401 || status === 403 || status === 404) {
       clearContent();
-      error.value = cause?.message || '报告不存在或没有查看权限';
+      error.value = cause?.message || '报告不存在或无权限';
+      showAgentError(cause, { fallback: '报告不存在或无权限' });
     } else if (status === 503) {
       clearContent();
-      error.value = cause?.message || '暂时没能读取报告';
-    } else actionError.value = cause?.message || '引用失败，请重试';
+      error.value = cause?.message || '报告读取失败';
+      showAgentError(cause, { fallback: '报告读取失败' });
+    } else {
+      actionError.value = cause?.message || '引用失败，请重试';
+      showAgentError(cause, { fallback: '引用失败，请重试' });
+    }
   } finally {
     if (requestAlive(current, id, source, scope)) quoting.value = false;
   }
@@ -423,12 +437,16 @@ async function download(format = 'pdf') {
       cause?.data?.code === 'SCOPE_CHANGED'
     ) {
       clearContent();
-      error.value = cause?.message || '报告不存在或没有查看权限';
+      error.value = cause?.message || '报告不存在或无权限';
+      showAgentError(cause, { fallback: '报告不存在或无权限' });
     } else if (status === 503) {
       clearContent();
-      error.value = cause?.message || '暂时没能读取报告';
-    } else if (cause?.data?.code !== 'REPORT_VIEW_INACTIVE')
+      error.value = cause?.message || '报告读取失败';
+      showAgentError(cause, { fallback: '报告读取失败' });
+    } else if (cause?.data?.code !== 'REPORT_VIEW_INACTIVE') {
       actionError.value = cause?.message || '下载失败，请重试';
+      showAgentError(cause, { fallback: '下载失败，请重试' });
+    }
   } finally {
     if (requestAlive(current, id, source, scope)) downloading.value = '';
   }

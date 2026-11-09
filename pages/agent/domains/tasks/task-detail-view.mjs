@@ -70,7 +70,7 @@ export function repeatText(repeat) {
     repeat.frequency === 'daily'
       ? '每天'
       : repeat.frequency === 'weekdays'
-        ? '周一至周五 · 不含节假日调整'
+        ? '周一至周五'
         : repeat.frequency === 'monthly'
           ? `每月${repeat.dayOfMonth}日${repeat.dayOfMonth > 28 ? ' · 无此日期则跳过' : ''}`
           : `每周${[...(repeat.weekdays || [])]
@@ -401,7 +401,6 @@ export function readTargetText(kind, read) {
 // They are facts only; phase/device details remain available through the card expansion.
 export function taskRequirementLines(task) {
   const requirements = new Set();
-  let explicitControl = false;
   for (const phase of task?.phases || []) {
     const agent = readAgentView(phase?.read?.agent);
     if (agent) {
@@ -427,23 +426,15 @@ export function taskRequirementLines(task) {
         const text =
           device.kind === 'energy' ? '读取电表数据' : readTargetText(device.kind, device.target);
         if (text) requirements.add(text);
-      } else if (
-        device?.target &&
-        typeof device.target === 'object' &&
-        Object.keys(device.target).length
-      ) {
-        explicitControl = true;
       }
     }
   }
-  if (!requirements.size && explicitControl) requirements.add('按计划时间执行');
   return [...requirements].filter(Boolean);
 }
 
 // 只展示接口可见的阶段要求，不从模板还原被授权裁剪的指令。
 export function taskRequirementsText(task) {
   const requirements = new Set();
-  let explicitControl = false;
   for (const phase of task?.phases || []) {
     const agent = readAgentView(phase?.read?.agent);
     if (agent) {
@@ -466,15 +457,9 @@ export function taskRequirementsText(task) {
         const text =
           device.kind === 'energy' ? '读取电表数据' : readTargetText(device.kind, device.target);
         if (text) requirements.add(text);
-      } else if (
-        device?.target &&
-        typeof device.target === 'object' &&
-        Object.keys(device.target).length
-      )
-        explicitControl = true;
+      }
     }
   }
-  if (!requirements.size && explicitControl) requirements.add('按计划时间执行');
   return [...requirements].join('；');
 }
 

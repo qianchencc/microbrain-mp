@@ -237,7 +237,14 @@ export function applyEvent(turn, event, turns = [turn]) {
       return false;
     });
     if (blocks.length) {
-      const group = { observedAt: event.observedAt, blocks };
+      const group = {
+        observedAt: event.observedAt,
+        observedAtByDevice: event.observedAtByDevice,
+        status: event.status,
+        missingDeviceIds: event.missingDeviceIds,
+        cache: event.cache,
+        blocks,
+      };
       turn.observations.push(group);
       pushItem(turn, 'obs', { obs: group });
     }
@@ -311,7 +318,7 @@ export function applyEvent(turn, event, turns = [turn]) {
     turn.seconds = Math.max(1, Math.round((Date.now() - turn.startedAt) / 1000));
   }
   if (event.type === 'run.failed') {
-    turn.error = event.message || '本次回答未完成：服务端未返回具体原因';
+    turn.error = event.message || '回答未完成，请重试';
     for (const item of turn.activities) if (item.status === 'running') item.status = 'failed';
   }
   if (event.type === 'run.aborted') {
@@ -340,7 +347,7 @@ export function mergeTaskDetail(task, detail) {
 
 export function friendlyError(message) {
   const text = String(message || '');
-  return text || '本次回答未完成：未取得具体失败原因';
+  return text || '回答未完成，请重试';
 }
 
 export function restoreTurns(savedTurns = []) {

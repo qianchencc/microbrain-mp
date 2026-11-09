@@ -97,6 +97,31 @@ test('shared player retry keeps source and session, fetches a fresh URL and rele
  }
 })
 
+test('a stalled SDK release bounds retry without reusing the old session and can recover after cleanup', async t => {
+ t.mock.timers.enable({ apis: ['setTimeout'] })
+ let finishStop
+ const pendingStop = new Promise(resolve => { finishStop = resolve })
+ const p = player({ stop: () => pendingStop })
+ p.context.setTimeout = setTimeout
+ p.context.clearTimeout = clearTimeout
+ await flush()
+ const initialRequests = p.requests.length
+ void p.elements.get('btnRelink').listeners.click()
+ await flush()
+ t.mock.timers.tick(20000)
+ await flush()
+ assert.match(p.elements.get('errDetail')?.textContent || '', /SDK_STOP_TIMEOUT/)
+ assert.doesNotMatch(p.elements.get('errDetail')?.textContent || '', /上游播放|申请播放地址/)
+ assert.equal(p.requests.length, initialRequests, 'No new stream may be acquired before old SDK cleanup completes')
+ finishStop()
+ await flush()
+ await p.elements.get('btnRetry').listeners.click()
+ await flush()
+ assert.notEqual(p.instances[1].url, p.instances[0].url)
+ assert.equal(p.instances[0].stops, 1, 'A delayed completion must not stop the old instance twice')
+ assert.equal(p.elements.get('footState').textContent, '播放中')
+})
+
 test('playback preserves its recording window and uses verified SDK playback arguments, without LIVE labeling', async () => {
  const p = player({ mode: 'playback' }); await flush()
  const query = new URL(p.requests[0].url).searchParams

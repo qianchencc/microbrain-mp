@@ -68,25 +68,26 @@
  }
  function setState(value, sub) {
   state = value;
-  $('loadingView').classList.toggle('on', value === 'fetching' || value === 'connecting');
+  $('loadingView').classList.toggle('on', value === 'preparing' || value === 'fetching' || value === 'connecting');
   $('errorView').classList.toggle('on', value === 'failed');
   $('liveBadge').classList.toggle('on', value === 'playing');
-  $('footState').textContent = ({ fetching: '取流中', connecting: '接入中', playing: playback ? '录像播放中' : '播放中', paused: '已暂停', ended: '回放结束', failed: '不可用' })[value] || value;
+  $('footState').textContent = ({ preparing: '准备中', fetching: '取流中', connecting: '接入中', playing: playback ? '录像播放中' : '播放中', paused: '已暂停', ended: '回放结束', failed: '不可用' })[value] || value;
   if (sub) $('stateSub').textContent = sub;
   updateControls();
   if (value === 'playing') scheduleHide(); else { clearTimeout(hideTimer); showChrome(); }
- }
- function release(instance) {
-  try { return Promise.resolve(instance?.JS_Stop()); } catch (error) { return Promise.reject(error); }
  }
  function stop() {
   aborter?.abort(); aborter = null;
   clearTimeout(hideTimer); clearTimeout(deadline);
   clearInterval(clockTimer); clockTimer = null; ++clockRead; clockPending = 0; dragging = false; controlBusy = false; rate = 1;
   const instance = plugin; plugin = null;
-  const previous = stopping;
-  stopping = Promise.all([previous.catch(() => {}), release(instance)]).then(() => { if (!plugin) $('playWnd').innerHTML = ''; });
-  return stopping;
+  // Keep the actual cleanup promise: a timed-out waiter must never authorize a parallel SDK session.
+  if (instance) stopping = stopping.then(() => instance.JS_Stop()).then(() => { if (!plugin) $('playWnd').innerHTML = ''; });
+  let timer;
+  return Promise.race([
+   stopping.catch(() => { throw new Error('SDK_STOP_FAILED'); }),
+   new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('SDK_STOP_TIMEOUT')), 1500); }),
+  ]).finally(() => clearTimeout(timer));
  }
  function failure(cause, phase, detail, httpStatus) {
   // SDK可能直接拒绝一个字符串错误码；只保留可公开的码和状态，不展示原始消息/流地址。
@@ -95,18 +96,22 @@
   const status = key => /^(?:[\w .-]{1,60})$/.test(String(detail?.[key] ?? '')) ? String(detail[key]) : '';
   let title = phase === 'playing' ? '播放已中断' : '播放未能开始';
   let message = '播放器未能显示画面，可以重试或返回。';
-  let stage = ({ session: '检查会话和期间', sdk: '加载播放器', fetching: '申请播放地址', response: '读取取流响应', connecting: '建立播放通道', playing: '播放视频流' })[phase];
+  let stage = ({ session: '检查会话和期间', stopping: '结束上次播放', sdk: '加载播放器', fetching: '申请播放地址', response: '读取取流响应', connecting: '建立播放通道', playing: '播放视频流' })[phase];
   const fetching = phase === 'fetching' || phase === 'response';
   const known = {
    SESSION_REQUIRED: ['会话或设备范围无法核验', '请返回原页面后重新进入播放器。'],
    INVALID_VIDEO_WINDOW: ['录像期间无效', '结束须晚于开始，单次最多三天。请返回调整期间。'],
    SDK_UNAVAILABLE: ['播放器组件未加载', '播放器资源未能加载，请检查网络后重试。'],
+   SDK_STOP_TIMEOUT: ['上次播放结束超时', '旧播放会话尚未释放，请稍后重试或返回重新进入。'],
+   SDK_STOP_FAILED: ['上次播放结束失败', '无法确认旧播放会话已释放，请返回后重新进入。'],
    VIDEO_STREAM_BUSY: ['上游取流暂不可用', '上游暂未提供播放地址，请稍后重试。'],
    VIDEO_RECORDING_UNAVAILABLE: ['未取得可播放录像', '所选窗口未取得播放地址，可调整期间或稍后重试；录像是否存在仍需平台核实。'],
    VIDEO_WINDOW_MISMATCH: ['录像窗口核验未通过', '返回的录像窗口与所选期间不一致，已停止播放。请返回重新选择。'],
    STREAM_UNAVAILABLE: ['未取得播放地址', '本次未返回可用播放地址，可以重试；取流失败不代表摄像头离线。'],
    VIDEO_STREAM_UNAVAILABLE: ['视频取流暂不可用', '取流服务未能提供播放地址，请稍后重试或返回。'],
-   TIMEOUT: [fetching ? '取流请求超时' : '等待视频画面超时', fetching ? '取流请求未在20秒内完成，可以重试或返回。' : '未在20秒内显示视频首帧，可以重试或返回。'],
+   TIMEOUT: phase === 'sdk'
+    ? ['播放器准备超时', '播放器未能就绪，请重试或返回。']
+    : [fetching ? '取流请求超时' : '等待视频画面超时', fetching ? '取流请求未能及时完成，可以重试或返回。' : '未在20秒内显示视频首帧，可以重试或返回。'],
    CONTROL_TIMEOUT: ['播放控制未完成', '本次控制未及时返回，已结束旧会话。请重新播放。'],
    RATE_CONTROL_FAILED: ['倍速切换未完成', '已结束旧会话，请重新播放恢复1倍速。'],
    STREAM_ENDED: ['实时画面已中断', '播放通道已结束，可以重新连接或返回。'],
@@ -150,18 +155,20 @@
  }
  async function play() {
   const current = ++generation;
-  let phase = 'session', httpStatus = 0;
+  let phase = 'stopping', httpStatus = 0;
   const failAttempt = (cause, detail) => {
    if (closed || current !== generation) return;
    const result = failure(cause, phase, detail, httpStatus);
    ++generation; void stop().catch(() => {}); fail(result);
   };
-  setState('fetching', playback ? '获取录像流地址' : '获取视频流地址');
+  setState('preparing', '准备播放器');
   try {
    await stop();
    if (closed || current !== generation) return;
+   phase = 'session';
    if (!deviceId || !['office', 'company'].includes(source) || !token || !tenantCode) throw new Error('SESSION_REQUIRED');
    if (!['live', 'playback'].includes(mode) || (playback && (!Number.isFinite(Date.parse(beginTime)) || !Number.isFinite(Date.parse(endTime)) || Date.parse(endTime) <= Date.parse(beginTime) || Date.parse(endTime) - Date.parse(beginTime) > 3*86400000))) throw new Error('INVALID_VIDEO_WINDOW');
+   deadline = setTimeout(() => failAttempt('TIMEOUT'), 20000);
    phase = 'sdk'; await loadSdk();
    if (closed || current !== generation) return;
    const stage = document.querySelector('.stage-wrap'), rect = stage.getBoundingClientRect();
@@ -184,7 +191,7 @@
    if (closed || current !== generation) return;
    aborter = new AbortController();
    phase = 'fetching';
-   deadline = setTimeout(() => failAttempt('TIMEOUT'), 20000);
+   setState('fetching', playback ? '获取录像流地址' : '获取视频流地址');
    const params = new URLSearchParams({ source, mode });
    if (playback) { params.set('beginTime', beginTime); params.set('endTime', endTime); }
    const response = await fetch(api + '/agent/devices/' + encodeURIComponent(deviceId) + '/video-stream?' + params,
@@ -202,7 +209,8 @@
    phase = 'connecting';
    if (playback) await instance.JS_Play(stream.url, { playURL: stream.url, mode: 1 }, 0, sdkPlaybackTime(beginTime), sdkPlaybackTime(endTime));
    else await instance.JS_Play(stream.url, { playURL: stream.url, mode: 0 }, 0);
-   if (closed || current !== generation) { await release(instance).catch(() => {}); return; }
+   // stop() owns release when an attempt is superseded; do not issue a second JS_Stop.
+   if (closed || current !== generation) return;
    if (playback) { void readPosition(instance, current); clockTimer = setInterval(() => { void readPosition(instance, current); }, 500); }
   } catch (error) {
    failAttempt(error);

@@ -18,8 +18,7 @@
           <view
             v-if="!isCompany && regionsError"
             class="region-notice"
-            ><text>{{ regionsError }}</text
-            ><button @tap="reloadRegions">重新读取</button></view
+            ><text>区域暂不可用</text><button @tap="reloadRegions">重新读取</button></view
           >
           <view
             v-if="!conversationId && !errorMessage"
@@ -334,6 +333,8 @@ import {
   restoreAction,
 } from '@/apis/agent/actions';
 import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session';
+import { agentErrorText, showAgentError } from '@/utils/agent-error';
+import { provideReadActivity, useViewReads } from '../../lib/reads.mjs';
 import { conversationRecovery } from '@/apis/agent/conversation-view';
 import {
   createTurn,
@@ -380,6 +381,7 @@ import {
 // source: 'office' | 'company'；active: 宿主可见性（页面 onShow / 浮层展开），
 // false 等价页面 onHide——保留草稿、停轮询，但不中止在途流（收起≠销毁）。
 const props = defineProps({ source: { type: String, default: 'office' }, active: Boolean });
+provideReadActivity(() => props.active);
 const emit = defineEmits([
   'status',
   'running',
@@ -512,7 +514,6 @@ watch(
   },
   { flush: 'sync' }
 );
-let inboxCountRequest = 0;
 function referenceTask(reference) {
   composerReference.value = { ...reference };
   inboxOpen.value = false;
@@ -531,13 +532,14 @@ function setInboxUnreadCount(value) {
   inboxUnreadCount.value = Number(value) || 0;
 }
 async function refreshInboxCount() {
-  const current = ++inboxCountRequest;
-  try {
-    const result = await readAgentNotifications({ source: props.source, limit: 1 });
-    if (current === inboxCountRequest && !disposed) setInboxUnreadCount(result.unreadCount);
-  } catch {
-    /* 通知读取失败不影响会话 */
-  }
+  await viewReads.run(
+    'unread',
+    (options) => readAgentNotifications({ source: props.source, limit: 1 }, options),
+    {
+      data: (result) => setInboxUnreadCount(result.unreadCount),
+      denied: () => setInboxUnreadCount(0),
+    }
+  );
 }
 // 预取：进入 Agent 后把通知、任务首屏与周期安排按序读入同身份快照，打开 Sheet 直接落位。
 // 顺序执行避免同时压 Runtime 的授权读取；同键在途读取由快照合并，不会与用户打开的请求重复。
@@ -555,22 +557,14 @@ async function prewarmLists() {
   prewarmKey = key;
   const source = props.source,
     firstView = source === 'company' ? 'all' : 'upcoming';
-  const live = () => {
-    try {
-      return !disposed && source === props.source && getAgentStorageScope() === scope;
-    } catch {
-      return false;
-    }
-  };
-  try {
-    await readAgentNotifications({ source });
-    if (!live()) return;
-    await readAgentTasks({ source, ...taskListRange(firstView) });
-    if (!live()) return;
-    await readAgentPlans({ source });
-  } catch {
-    prewarmKey = '';
-  }
+  const outcome = await viewReads.run('prewarm', async (options) => {
+    await readAgentNotifications({ source }, options);
+    if (!options.isActive()) return;
+    await readAgentTasks({ source, ...taskListRange(firstView) }, options);
+    if (!options.isActive()) return;
+    await readAgentPlans({ source }, options);
+  });
+  if (outcome.status !== 'value') prewarmKey = '';
 }
 const draftScope = ref('');
 const input = ref('');
@@ -646,17 +640,29 @@ const operations = createConversationOperations({
     notice: (kind, message, draftId) => {
       if (kind === 'toast') uni.showToast({ title: message, icon: 'none' });
       else if (kind === 'confirmation') {
-        if (sheetDraftId.value === draftId) sheetError.value = message;
-      } else
-        uni.showModal({
-          title: kind === 'selection' ? '选择未保存' : '还原失败',
-          content: String(message),
-          showCancel: false,
-        });
+        // 草稿面板内联只留归并后的短文案，原文不再直渲。
+        if (sheetDraftId.value === draftId)
+          sheetError.value = agentErrorText(message, { fallback: '操作失败，请重试' });
+      } else showAgentError(message, { fallback: '操作失败，请重试' });
     },
   },
 });
 const errorMessage = toRef(operations.state, 'error');
+// 错误发生即 toast 一次；页内错误块只留固定短标签与重试，原文只进「查看原因」。
+watch(errorMessage, (value) => {
+  if (value) showAgentError(value);
+});
+// turn.error（run.failed / 回答流失败）同样只 toast 一次；气泡内只留短文案。
+let lastTurnError = '';
+watch(
+  () => turns.value.at(-1)?.error,
+  (value) => {
+    if (value && value !== lastTurnError) {
+      lastTurnError = value;
+      showAgentError(value, { fallback: '回答未完成，请重试', timeout: '回答超时，请重试' });
+    }
+  }
+);
 const recoveryMessage = toRef(operations.state, 'recovery');
 const isRunning = toRef(operations.state, 'running');
 const confirmingTaskId = toRef(operations.state, 'confirmingTaskId');
@@ -760,7 +766,7 @@ function clearIdentityView() {
   inboxOpen.value = false;
   tasksOpen.value = false;
   closeCompanyTask();
-  ++inboxCountRequest;
+  viewReads.invalidate();
   inboxUnreadCount.value = 0;
 }
 function preserveCurrentComposerDraft() {
@@ -823,7 +829,7 @@ function openSheetBrowser(turn) {
 }
 async function reconnectSheet() {
   await restore();
-  sheetError.value = errorMessage.value;
+  sheetError.value = agentErrorText(errorMessage.value, { fallback: '操作失败，请重试' });
 }
 function closeSheet() {
   sheetDraftId.value = '';
@@ -913,23 +919,32 @@ async function refreshScheduledTasks() {
   const active = turns.value
     .flatMap((turn) => tasksOf(turn))
     .filter((task) => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase()));
-  await Promise.allSettled(
-    active.map(async (task) => {
+  await Promise.all(
+    active.map((task) => {
       const id = task.repeat ? task.planId : task.taskId;
       if (!id) return;
-      const result = task.repeat
-        ? await getTaskPlan(id, props.source)
-        : await getTaskDetail(id, props.source);
-      const live = turns.value
-        .flatMap((turn) => tasksOf(turn))
-        .find(
-          (item) =>
-            (task.repeat ? item.planId === id : item.taskId === id) &&
-            !item.cancellationId &&
-            !item.changeId
-        );
-      if (live && result.plan) mergeTaskPlan(live, result.plan);
-      if (live && result.task) mergeTaskDetail(live, result.task);
+      return viewReads.run(
+        `task:${id}`,
+        (options) =>
+          task.repeat
+            ? getTaskPlan(id, props.source, options)
+            : getTaskDetail(id, props.source, options),
+        {
+          data: (result) => {
+            const live = turns.value
+              .flatMap((turn) => tasksOf(turn))
+              .find(
+                (item) =>
+                  (task.repeat ? item.planId === id : item.taskId === id) &&
+                  !item.cancellationId &&
+                  !item.changeId
+              );
+            if (live && result.plan) mergeTaskPlan(live, result.plan);
+            if (live && result.task) mergeTaskDetail(live, result.task);
+          },
+          denied: clearIdentityView,
+        }
+      );
     })
   );
   schedule();
@@ -1382,8 +1397,14 @@ function clearHistory() {
 }
 // 宿主驱动生命周期：active=true ↔ 页面 onShow / 浮层展开，false ↔ onHide / 收起。
 // 收起只停轮询保草稿，不碰在途流——流继续跑，回开时 restore 对齐。
+const viewReads = useViewReads(
+  () => props.active,
+  () => props.source
+);
 function reloadRegions() {
-  return loadRegionFocus({ isActive: () => props.active && visible && !disposed }).catch(() => {});
+  return viewReads.run('regions', loadRegionFocus, {
+    error: (cause) => showAgentError(cause, { fallback: '区域暂不可用' }),
+  });
 }
 function activate() {
   visible = true;

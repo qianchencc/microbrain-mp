@@ -18,7 +18,7 @@ export function createVoiceInput({ getManager, onPhase, onResult, onError }) {
     try {
       manager.stop();
     } catch {
-      fail('录音未完成，请重新按住说话');
+      fail('录音未完成，请重新按住');
     }
   }
   return {
@@ -27,7 +27,7 @@ export function createVoiceInput({ getManager, onPhase, onResult, onError }) {
       try {
         manager = getManager();
       } catch {
-        onError('当前版本暂未开通语音输入，请使用文字输入');
+        onError('当前版本暂不支持语音输入');
         return false;
       }
       active = true;
@@ -48,13 +48,13 @@ export function createVoiceInput({ getManager, onPhase, onResult, onError }) {
         const text = result.result?.trim();
         if (discard) return;
         if (text) onResult(text);
-        else onError('没有听清，请重新按住说话');
+        else onError('没有听清，请重新按住说话', { status: true });
       };
-      manager.onError = () => fail('语音识别失败，请重试或使用文字输入');
+      manager.onError = () => fail('识别失败，请重试');
       try {
         manager.start({ duration: 60000, lang: 'zh_CN' });
       } catch {
-        fail('无法启动录音，请检查麦克风权限');
+        fail('无法启动录音，请检查权限');
       }
       return active;
     },

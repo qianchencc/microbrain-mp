@@ -27,7 +27,18 @@
       >{{ intervalText }}</text
     >
     <view
-      v-if="sharedActions"
+      v-if="(state === 'pending_confirmation' || isCreated) && requirementLines.length"
+      class="task-rules"
+    >
+      <text
+        v-for="line in requirementLines"
+        :key="line"
+        class="task-rule"
+        >{{ line }}</text
+      >
+    </view>
+    <view
+      v-if="state === 'pending_confirmation' && sharedActions"
       class="shared-devices"
     >
       <view class="shared-head"
@@ -76,7 +87,10 @@
         }}</button
       >
     </view>
-    <view class="task-phases">
+    <view
+      v-if="state === 'pending_confirmation'"
+      class="task-phases"
+    >
       <view
         v-for="(phase, index) in phasesShown"
         :key="phase.at"
@@ -124,54 +138,6 @@
             /><text class="device-name">{{ action.deviceName }}</text></view
           ><text class="device-target">{{ targetText(action.kind, action.command) }}</text>
         </view>
-        <template v-if="source === 'company' && phase.read?.ac">
-          <text class="read-window">{{ readAcOf(phase).summary }}</text>
-          <text
-            v-if="readAcOf(phase).criteriaText"
-            class="read-window"
-            >{{ readAcOf(phase).criteriaText }}</text
-          >
-          <text
-            v-if="readAcOf(phase).cadenceText"
-            class="read-window"
-            >{{ readAcOf(phase).cadenceText
-            }}{{ acWindow ? ` · 共 ${acWindow.count} 次检查` : '' }}</text
-          >
-          <text
-            v-else
-            class="read-window"
-            >{{ readAcOf(phase).scheduleText }}</text
-          >
-          <text class="read-window">{{ readAcOf(phase).limitText }}</text>
-        </template>
-        <template v-else-if="source === 'company' && phase.read?.agent">
-          <text class="read-window">{{ readAgentOf(phase).objectiveText }}</text>
-          <text
-            v-if="readAgentOf(phase).periodText"
-            class="read-window"
-            >{{ readAgentOf(phase).periodText }}</text
-          >
-          <text
-            v-if="readAgentOf(phase).comparisonText"
-            class="read-window"
-            >{{ readAgentOf(phase).comparisonText }}</text
-          >
-        </template>
-        <text
-          v-else-if="source === 'company' && phase.read?.alertWindow === 'previous_day'"
-          class="read-window"
-          >安全台账 · 阶段计划日期的前一自然日（上海时间）</text
-        >
-        <text
-          v-else-if="source === 'company' && phase.read?.alertWindow === 'previous_week'"
-          class="read-window"
-          >安全台账 · 上一自然周，周一至周日（上海时间）</text
-        >
-        <text
-          v-else-if="source === 'company' && phase.read?.alertDays"
-          class="read-window"
-          >安全台账 · 近 {{ phase.read.alertDays }} 天</text
-        >
         <view
           v-for="device in readDevicesOf(phase, index)"
           :key="device.id"
@@ -276,7 +242,13 @@
     <text
       v-else
       class="task-ended"
-      >{{ state === 'expired' ? '提案已过期，请重新提出' : '本次提案已结束' }}</text
+      >{{
+        state === 'expired'
+          ? '提案已过期，请重新提出'
+          : state === 'cancelled'
+            ? '本次提案已放弃'
+            : '本次提案已结束'
+      }}</text
     >
     <text
       v-if="isConfirming && state === 'pending_confirmation'"
@@ -310,9 +282,9 @@ import { computed, ref } from 'vue';
 import TaskErrorNotice from './TaskErrorNotice.vue';
 import {
   readAcView,
-  readAgentView,
   readTargetText,
   repeatText,
+  taskRequirementLines,
   taskTime,
   targetText,
   taskStatusText,
@@ -360,7 +332,6 @@ const props = defineProps({
   confirming: Boolean,
 });
 defineEmits(['confirm', 'discard', 'open', 'issue']);
-const readAgentOf = (phase) => readAgentView(phase.read?.agent);
 const readAcOf = (phase) => readAcView(phase.read?.ac);
 // 频率展开后的检查点共享同一窗口与设备；提案只展示一份窗口事实，避免把 18–48 次检查铺成重复卡片。
 const acWindow = computed(() => {
@@ -379,6 +350,7 @@ const isConfirming = computed(
   () => props.confirming || props.task.confirmation?.status === 'recovering'
 );
 const state = computed(() => String(props.task.status || '').toLowerCase());
+const requirementLines = computed(() => taskRequirementLines(props.task));
 const nextLabel = computed(() =>
   (props.task.phases || []).some((phase) => phase?.read?.ac?.cadenceMinutes)
     ? '下一次检查'
@@ -517,6 +489,21 @@ input {
   color: $agent-color-text-muted;
   font-size: 11px;
 }
+.task-rules {
+  margin: 12px 3px 2px;
+  padding: 12px 13px;
+  border: 1px solid $agent-color-line;
+  border-radius: 12px;
+  color: $agent-color-text-secondary;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.task-rule {
+  display: block;
+}
+.task-rule + .task-rule {
+  margin-top: 3px;
+}
 .task-name + .task-phases,
 .task-interval + .task-phases {
   margin-top: 10px;
@@ -582,12 +569,6 @@ input {
   flex-shrink: 0;
   max-width: 100%;
   color: $agent-color-text-secondary;
-}
-.read-window {
-  display: block;
-  margin: 2px 0 3px 16px;
-  color: $agent-color-warning-deep;
-  font-size: 10px;
 }
 .device-location {
   width: 100%;

@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { registerHooks } from 'node:module'
 import { shiftDate, taskListRange } from '../pages/agent/lib/tasks.mjs'
+import { isReadCancelled } from '../utils/agent-read-scope.mjs'
 // @boundary-private-test-seam: isolates module-level cache behavior.
 
 let instance = 0
@@ -129,7 +130,7 @@ test('已读写入作废通知快照：作废前在途的列表读取不回写�
  assert.equal(pending.length, 1)
  await client.markNotificationSeen('n1', 'company')
  pending.shift()()
- assert.equal((await list).unreadCount, 7)
+ await assert.rejects(list, isReadCancelled)
  assert.equal(client.peekAgentNotifications({ source: 'company' }), null)
  assert.ok(client.peekAgentTasks({ source: 'company', ...RANGE }))
  assert.equal(calls.length, 3)

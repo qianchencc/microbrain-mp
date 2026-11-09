@@ -26,7 +26,12 @@
       <view class="hero-copy"
         ><text class="hero-name">{{ device.name }}</text
         ><text class="hero-location">{{ device.kindLabel }} · {{ device.location }}</text
-        ><text class="hero-state">{{ device.detail }}</text></view
+        ><text class="hero-state">{{ device.detail }}</text
+        ><text
+          v-if="device.stateNote"
+          class="hero-location"
+          >{{ device.stateNote }}</text
+        ></view
       >
     </view>
     <scroll-view
@@ -118,11 +123,6 @@
           class="obs-meta"
           :class="{ stale: isStale }"
           >读于 {{ energyTime }}<text v-if="energyAge"> · {{ energyAge }}</text></text
-        >
-        <text
-          v-else
-          class="obs-meta"
-          >读数时间未知</text
         >
       </view>
       <view

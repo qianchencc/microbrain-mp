@@ -1,11 +1,18 @@
 import { createServer } from 'node:http'
-import { readFile } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { readFile, stat } from 'node:fs/promises'
+import { resolve, sep } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { createGzip } from 'node:zlib'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
-const runtime = 'http://127.0.0.1:3210'
+const runtime = process.env.RUNTIME_ORIGIN || 'http://127.0.0.1:3210'
 const sdkOrigin = 'https://ncim.577119.com'
 const sdkPrefix = '/owner/static/h5player/'
+const sdkRoot = process.env.SDK_ROOT
+ ? pathToFileURL(resolve(process.env.SDK_ROOT) + sep)
+ : new URL('sdk/', import.meta.url)
 const files = new Map([
  ['/', ['index.html', 'text/html; charset=utf-8']],
  ['/index.html', ['index.html', 'text/html; charset=utf-8']],
@@ -39,13 +46,31 @@ createServer(async (request, response) => {
   if (url.pathname.startsWith(sdkPrefix) && /^\/owner\/static\/h5player\/[a-zA-Z0-9_./-]+$/.test(url.pathname)) {
    stage = 'sdk'
    try {
-    const content = await readFile(new URL('sdk/' + url.pathname.slice(sdkPrefix.length), import.meta.url))
-    const contentType = url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8'
-     : url.pathname.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream'
-    response.writeHead(200, { 'content-type': contentType, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' })
-    return response.end(request.method === 'HEAD' ? undefined : content)
+    const path = new URL('./' + url.pathname.slice(sdkPrefix.length), sdkRoot)
+    const metadata = await stat(path)
+    const etag = `W/"${metadata.size.toString(16)}-${metadata.mtimeMs.toString(16)}"`
+    const headers = {
+     'content-type': url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8'
+      : url.pathname.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream',
+     'cache-control': 'no-cache', 'referrer-policy': 'no-referrer',
+     etag, vary: 'Accept-Encoding',
+    }
+    if (String(request.headers['if-none-match'] || '').split(/\s*,\s*/).some(value => value === etag || value === '*')) {
+     response.writeHead(304, headers)
+     return response.end()
+    }
+    const gzip = metadata.size >= 1024 && String(request.headers['accept-encoding'] || '').split(',').some(value => {
+     const [encoding, ...parameters] = value.trim().split(';')
+     return encoding.trim().toLowerCase() === 'gzip' && !parameters.some(value => /^\s*q\s*=\s*0(?:\.0*)?\s*$/i.test(value))
+    })
+    response.writeHead(200, { ...headers, ...(gzip ? { 'content-encoding': 'gzip' } : { 'content-length': metadata.size }) })
+    if (request.method === 'HEAD') return response.end()
+    if (gzip) await pipeline(createReadStream(path), createGzip({ level: 5 }), response)
+    else await pipeline(createReadStream(path), response)
+    return
    } catch (error) {
     if (error.code !== 'ENOENT') throw error
+    if (process.env.SDK_ROOT) return json(response, 404, { code: 'SDK_RESOURCE_UNAVAILABLE', message: '本地 SDK 资源不存在，请检查完整资源目录' })
    }
    target = new URL(url.pathname, sdkOrigin)
   } else if (/^\/api\/agent\/devices\/[^/]+\/video-stream$/.test(url.pathname)) {

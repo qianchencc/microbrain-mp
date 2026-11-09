@@ -69,7 +69,7 @@ export function parseAgentContext(options = {}, { company = true } = {}) {
   }
   if (!company) return context;
   if (options.safetyReference !== undefined) {
-    const value = parseJson(options.safetyReference, '安全台账引用无效');
+    const value = parseJson(options.safetyReference, '台账引用无效');
     if (value !== undefined) {
       const ref = safetyEventReference(value);
       if (ref)
@@ -77,7 +77,7 @@ export function parseAgentContext(options = {}, { company = true } = {}) {
           ...ref,
           ...(typeof value.label === 'string' ? { label: value.label.slice(0, 300) } : {}),
         };
-      else uni.showToast({ title: '安全台账引用无效', icon: 'none' });
+      else uni.showToast({ title: '台账引用无效', icon: 'none' });
     }
   }
   if (options.environmentWindow) {
@@ -106,9 +106,9 @@ export function parseAgentContext(options = {}, { company = true } = {}) {
     const deviceId = param(options.alertDeviceId).trim();
     const label = param(options.alertLabel).trim().slice(0, 300);
     if (ledger && !isAlertLedger(ledger))
-      uni.showToast({ title: '告警台账类型无效', icon: 'none' });
+      uni.showToast({ title: '告警类型无效', icon: 'none' });
     else if (eventId.length > 300 || deviceId.length > 300)
-      uni.showToast({ title: '告警标识超过300字', icon: 'none' });
+      uni.showToast({ title: '告警标识过长', icon: 'none' });
     else if (isAlertLedger(ledger) && eventId && deviceId)
       context.reference = {
         type: 'safety_event',
@@ -119,20 +119,20 @@ export function parseAgentContext(options = {}, { company = true } = {}) {
       };
     else if (label) {
       context.reference = { type: 'customer_alert', content: label };
-      uni.showToast({ title: '缺少告警记录标识，按原文引用', icon: 'none' });
-    } else uni.showToast({ title: '告警引用缺少记录标识', icon: 'none' });
+      uni.showToast({ title: '告警标识缺失，按原文引用', icon: 'none' });
+    } else uni.showToast({ title: '告警引用无效', icon: 'none' });
   }
   // 预置问题：只填输入框等用户发送，不自动发起对话。
   if (options.prompt !== undefined) {
     const prompt = decodeParam(String(options.prompt)).trim();
     if (prompt && prompt.length <= 200 && !/[\u0000-\u001f]/.test(prompt)) context.prompt = prompt;
-    else if (prompt) uni.showToast({ title: '预置问题无效或超过200字', icon: 'none' });
+    else if (prompt) uni.showToast({ title: '预置问题无效', icon: 'none' });
   }
   // 卡片同时带结构化引用与 alertPrompt 时，结构化优先；alertPrompt 只在没有引用的旧路径生效。
   if (options.alertPrompt !== undefined && !context.reference) {
     const content = decodeParam(String(options.alertPrompt)).trim();
     if (content && content.length <= 2000) context.reference = { type: 'customer_alert', content };
-    else uni.showToast({ title: '告警引用无效或超过2000字', icon: 'none' });
+    else uni.showToast({ title: '告警引用无效', icon: 'none' });
   }
   return context;
 }

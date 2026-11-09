@@ -21,6 +21,7 @@ Architecture terms and the accepted Agent page module decision are in [GLOSSARY.
 
 - 以基础业务可靠闭环为目标，保持状态明确、设计简洁；不为未要求的边缘或高压场景增加复杂机制。
 - 任务和通知只向后端读写；前端快照仅作展示，不自行判定任务成功。生命周期变更对照[基础闭环设计](../iot-agent-backend/.scratch/agent-business-recovery/task-lifecycle.md)。
+- 公司设备目录的旧值展示使用后端 `cache.updatedAt` 标注同步时间；`stale` 保留待更新提示，不能把同步时间解释为设备采样时间，准备中不能展示成空目录。后端本地同步实施入口为 `../iot-agent-backend/.scratch/local-data-sync/`。
 
 ### Git 规范
 

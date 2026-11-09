@@ -1,4 +1,5 @@
 import { resolveDeviceArtwork } from '../../device-art/catalog.js';
+import { stateObservationLabel, pm25Zone, humidityZone } from '../../lib/observations.mjs';
 
 const kindNames = {
   lighting: '照明',
@@ -22,7 +23,7 @@ const kindOrder = {
 };
 const OBSERVE = 'observe';
 
-/** 只读观察类（视频/环境/能耗/消防）：分组并入“仅观察”，详情走观察 pane。 */
+/** 观察类（视频/环境/能耗/消防）：分组并入“仅观察”，详情走观察 pane。 */
 export const OBSERVATION_KINDS = ['video', 'environment', 'energy', 'safety'];
 export const isObservationKind = (kind) => OBSERVATION_KINDS.includes(kind);
 
@@ -59,11 +60,18 @@ function shortDateTime(iso) {
 function environmentDetail(reading) {
   if (!reading || typeof reading !== 'object') return '读数未知';
   const parts = [];
-  if (finite(reading.temp) !== null) parts.push(`${reading.temp}°C`);
-  if (finite(reading.humidity) !== null) parts.push(`湿度 ${reading.humidity}%`);
-  if (finite(reading.pm25) !== null) parts.push(`PM2.5 ${reading.pm25}`);
-  if (finite(reading.pm10) !== null) parts.push(`PM10 ${reading.pm10}`);
-  const detail = parts.slice(0, 3).join(' · ') || '读数不全';
+  if (finite(reading.temp) !== null) parts.push(`温度: ${reading.temp}°C`);
+  if (finite(reading.humidity) !== null) {
+    const zone = humidityZone(reading.humidity);
+    parts.push(`湿度: ${reading.humidity}%${zone ? ` · ${zone}` : ''}`);
+  }
+  if (finite(reading.pm25) !== null) {
+    const zone = pm25Zone(reading.pm25);
+    parts.push(`PM2.5: ${reading.pm25}µg/m³${zone ? ` · ${zone}` : ''}`);
+  }
+  if (finite(reading.pm101) !== null) parts.push(`PM10: ${reading.pm101}µg/m³`);
+  if (finite(reading.pm10) !== null) parts.push(`PM1.0: ${reading.pm10}µg/m³`);
+  const detail = parts.slice(0, 5).join(' · ') || '读数不全';
   return reading.source === 'shadow' ? `${detail} · 平台影子` : detail;
 }
 
@@ -147,6 +155,7 @@ export function regionDeviceGroups(devices, readings, mode, query) {
       artwork: art.src,
       artVariant: art.variant,
       ...state,
+      stateNote: device.kind === 'safety' ? '' : stateObservationLabel(readings[device.id], device.id),
       nameParts: highlightedParts(device.name, query),
       kindParts: highlightedParts(kind, query),
       locationParts: highlightedParts(location, query),

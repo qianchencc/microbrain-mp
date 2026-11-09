@@ -66,6 +66,11 @@ for (const file of files) {
     const isTest = relative.startsWith('test/')
     const privateTestSeam = isTest && source.includes('@boundary-private-test-seam')
     const normalized = specifier.split('?')[0]
+    if (/^pages\/agent\/domains\/(?:dashboard|energy|regions)\//.test(relative) &&
+      /(?:^|\/)utils\/agent-error(?:\.mjs|\.js)?$/.test(normalized) &&
+      /import\s*\{[^}]*\bshowAgentError\b[^}]*\}\s*from/.test(source)) {
+      errors.push(`${relative}: domain reads return failures; only the owning view may notify`)
+    }
     const isAgentBarrel = normalized === '@/apis/agent' || normalized === '@/apis/agent/index.js' || normalized.endsWith('/apis/agent/index.js')
     const isPrivateAgentAdapter = normalized.includes('/apis/agent/') && /(?:request|ndjson|agent-read-cache|report-download|conversation-source|idle-watchdog|stream-errors|index)\.(?:mjs|js)$/.test(normalized)
     const isPageCaller = relative.startsWith('pages/agent/components/') || relative.endsWith('.vue') || isTest

@@ -10,7 +10,11 @@
         hover-class="region-name--pressed"
         @tap="open = true"
         ><text>{{
-          regionsLoading && !regions.length ? '正在读取区域' : focusRegion?.name || '暂无可用区域'
+          regionsLoading && !regions.length
+            ? '正在读取区域'
+            : regionsError
+              ? '区域暂不可用'
+              : focusRegion?.name || '暂无可用区域'
         }}</text></button
       >
       <button
@@ -35,25 +39,24 @@
     v-if="regionsError && !nav"
     class="region-retry"
     @tap="reloadRegions"
-    >{{ regionsError }} · 重试</button
+    >区域暂不可用 · 重试</button
   >
   <DeviceSheet
     :open="open"
     title="关注区域"
-    subtitle="未指明地点时，优先在此区域查找设备"
     @close="open = false"
   >
     <view
-      v-if="!regions.length"
+      v-if="!regions.length || regionsError"
       class="region-empty"
       ><text>{{
-        regionsLoading ? '正在读取区域…' : regionsError ? regionsError : '暂无可用区域'
+        regionsLoading ? '正在读取区域…' : regionsError ? '区域暂不可用' : '暂无可用区域'
       }}</text
       ><button
-        v-if="regionsError"
+        v-if="!regionsLoading"
         class="region-retry"
         @tap="reloadRegions"
-        >重新读取</button
+        >{{ regionsError ? '重新读取' : '刷新区域' }}</button
       ></view
     >
     <scroll-view
@@ -74,7 +77,7 @@
             ><view
               v-if="region.attention"
               class="attention"
-              ><view class="attention-dot" /><text>有待查看的异常结果</text></view
+              ><view class="attention-dot" /><text>有异常结果</text></view
             ></view
           ><radio
             :value="region.id"
@@ -83,12 +86,12 @@
         /></label>
       </radio-group>
     </scroll-view>
-    <view class="sheet-note">打开区域即视为已查看最新结果；已读不代表异常已处置。</view>
   </DeviceSheet>
 </template>
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue';
-import { onHide, onShow } from '@dcloudio/uni-app';
+import { computed, ref, watch } from 'vue';
+import { useViewReads } from '../../lib/reads.mjs';
+import { showAgentError } from '@/utils/agent-error';
 import DeviceSheet from '../shared/DeviceSheet.vue';
 import {
   regions,
@@ -103,22 +106,22 @@ import { AGENT_COLORS as colors } from '../../styles/colors.js';
 defineProps({ workbench: Boolean, nav: Boolean });
 const emit = defineEmits(['open', 'change']);
 const open = ref(false);
-let alive = true,
-  visible = true;
-onHide(() => {
-  visible = false;
+const reads = useViewReads(
+  () => true,
+  () => open.value
+);
+watch(open, (value) => {
+  if (value) void reloadRegions();
 });
-onShow(() => {
-  visible = true;
-});
-onBeforeUnmount(() => {
-  alive = false;
+defineExpose({
+  show() {
+    open.value = true;
+  },
 });
 function reloadRegions() {
-  const sheetRead = open.value;
-  return loadRegionFocus({ isActive: () => alive && visible && (!sheetRead || open.value) }).catch(
-    () => {}
-  );
+  return reads.run('directory', loadRegionFocus, {
+    error: (cause) => showAgentError(cause, { fallback: '区域暂不可用' }),
+  });
 }
 const anyAttention = computed(() => regions.value.some((region) => region.attention));
 function choose(id) {
@@ -161,6 +164,8 @@ input {
 .region-chip {
   position: relative;
   display: flex;
+  flex: 1;
+  overflow: hidden;
   min-width: 0;
   max-width: 100%;
   border-radius: 16px;
@@ -197,6 +202,8 @@ button[disabled] {
 }
 .region-name {
   display: flex;
+  flex: 1;
+  overflow: hidden;
   align-items: center;
   gap: $agent-space-small;
   padding: 0 10px 0 13px;
@@ -273,11 +280,5 @@ button[disabled] {
   border-radius: 50%;
   background: var(--agent-warning);
   flex-shrink: 0;
-}
-.sheet-note {
-  margin: 2px 16px 10px;
-  font-size: 11px;
-  color: var(--agent-text-muted);
-  line-height: 1.5;
 }
 </style>

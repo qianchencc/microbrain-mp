@@ -20,6 +20,11 @@
         ><text>{{ metric?.peak ? fmtDateTime(metric.peak.at) : '暂无有效采样' }}</text></view
       ></view
     >
+    <text
+      v-if="windowText"
+      class="window"
+      >{{ windowText }}</text
+    >
     <view
       class="plot"
       @tap="selectPoint"
@@ -28,15 +33,18 @@
         :src="chart.src"
         mode="scaleToFill"
     /></view>
-    <view
-      class="axis-time"
-      :class="{ ticks: axisTicks.length > 2 }"
+    <view class="axis-time"
       ><text
         v-for="(tick, i) in axisTicks"
         :key="i"
-        :style="axisTicks.length > 2 ? { left: tick.left + '%' } : {}"
+        :style="{ left: tick.left + '%' }"
         >{{ tick.label }}</text
       ></view
+    >
+    <text
+      v-if="qualityNotice"
+      class="quality"
+      >{{ qualityNotice }}</text
     >
     <view class="foot"
       ><text>{{ selected ? fmtDateTime(selected.recordedAt) : '点击图形查看采样' }}</text
@@ -48,7 +56,15 @@
 </template>
 <script setup>
 import { computed, getCurrentInstance, ref, watch } from 'vue';
-import { fmtDateTime } from '../../lib/observations.mjs';
+import {
+  fmtDateTime,
+  fmtShanghaiDateTime,
+  environmentSampleIdentity,
+  environmentTrendPoints,
+  environmentHistoryNotice,
+  environmentWindowLabel,
+  environmentTrendTicks,
+} from '../../lib/observations.mjs';
 import { trendLineChart } from '../../lib/energy.mjs';
 import SlidingSegments from '../shared/SlidingSegments.vue';
 const props = defineProps({ report: { type: Object, required: true } });
@@ -67,10 +83,14 @@ watch(
       metricKey.value = list[0].key;
   }
 );
-const selected = computed(() => props.report.samples.find((item) => item.id === selectedId.value));
-const points = computed(() =>
-  props.report.samples.filter((item) => Number.isFinite(item.values[metricKey.value]))
+const selected = computed(() =>
+  props.report.samples.find((item) => environmentSampleIdentity(item) === selectedId.value)
 );
+const chartPoints = computed(() => environmentTrendPoints(props.report.samples, metricKey.value));
+const points = computed(() =>
+  chartPoints.value.filter((point) => point.value !== null).map((point) => point.ref)
+);
+const qualityNotice = computed(() => environmentHistoryNotice(props.report));
 const latest = computed(() => {
   const last = points.value.at(-1);
   return last ? { value: last.values[metricKey.value] } : null;
@@ -82,49 +102,22 @@ const range = computed(() => ({
 const coverageLine = computed(() => {
   const cov = props.report.coverage;
   const count = cov?.readSamples ?? metric.value?.count ?? 0;
-  return count
-    ? `已读取 ${count} 条采样${cov ? (cov.complete ? ' · 期间数据完整' : ' · 部分采样未到齐') : ` · ${count} 个有效采样`}`
-    : `${metric.value?.count || 0} 个有效采样`;
+  const incomplete = cov?.complete === false || props.report.nextPage != null;
+  const span =
+    incomplete && cov?.from && cov?.to
+      ? ` · 覆盖 ${fmtShanghaiDateTime(cov.from)} 至 ${fmtShanghaiDateTime(cov.to)}`
+      : '';
+  return `已读取 ${count} 条采样${span}`;
 });
 const chart = computed(() =>
-  trendLineChart(
-    points.value.map((item) => ({
-      at: item.recordedAt,
-      value: item.values[metricKey.value],
-      ref: item,
-    })),
-    {
-      from: range.value.start,
-      to: range.value.start + range.value.duration,
-      selected: selected.value,
-    }
-  )
+  trendLineChart(chartPoints.value, {
+    from: range.value.start,
+    to: range.value.start + range.value.duration,
+    selected: selected.value,
+  })
 );
-const axisTicks = computed(() => {
-  const DAY = 864e5,
-    { start, duration } = range.value;
-  const hour = (v) => String(v).padStart(2, '0') + ':00';
-  if (duration <= DAY)
-    return [
-      { label: fmtDateTime(props.report.window.from).slice(11) },
-      { label: fmtDateTime(props.report.window.to).slice(11) },
-    ];
-  const ticks = [];
-  // 北京时间边界：(t + 8h) 对齐 UTC 日界
-  for (
-    let t = Math.ceil((start + 8 * 36e5) / DAY) * DAY - 8 * 36e5;
-    t <= start + duration;
-    t += DAY
-  ) {
-    const d = new Date(t);
-    ticks.push({ at: t, label: `${d.getMonth() + 1}/${d.getDate()}` });
-    const noon = t + 12 * 36e5;
-    if (noon < start + duration - 3 * 36e5) ticks.push({ at: noon, label: hour(12) });
-  }
-  return ticks
-    .filter((t) => t.at >= start && t.at <= start + duration)
-    .map((t) => ({ ...t, left: (chart.value.xOf(t.at) / chart.value.width) * 100 }));
-});
+const windowText = computed(() => environmentWindowLabel(props.report.window));
+const axisTicks = computed(() => environmentTrendTicks(props.report.window));
 const instance = getCurrentInstance();
 function selectPoint(event) {
   if (!points.value.length) return;
@@ -141,7 +134,7 @@ function selectPoint(event) {
           ? item
           : best
       );
-      selectedId.value = nearest.id;
+      selectedId.value = environmentSampleIdentity(nearest);
     })
     .exec();
 }
@@ -211,19 +204,21 @@ button::after {
   width: 100%;
   height: 100%;
 }
+.window {
+  display: block;
+  margin: 12px 0 2px;
+  color: var(--agent-text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
 .axis-time {
-  display: flex;
-  justify-content: space-between;
   position: relative;
-  padding-left: 32px;
   min-height: 14px;
+  margin-top: 2px;
   color: var(--agent-text-muted);
   font-size: 10px;
 }
-.axis-time.ticks {
-  padding-left: 0;
-}
-.axis-time.ticks text {
+.axis-time text {
   position: absolute;
   transform: translateX(-50%);
   white-space: nowrap;
@@ -237,6 +232,13 @@ button::after {
   border-top: 1px solid var(--agent-line);
   color: var(--agent-text-muted);
   font-size: 11px;
+}
+.quality {
+  display: block;
+  margin-top: $agent-space-small;
+  color: var(--agent-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
 }
 .pressed {
   opacity: 0.7;

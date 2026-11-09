@@ -274,10 +274,11 @@ export function trendLineChart(points, options = {}) {
     span = Math.max(1, toMs(options.to) - from);
   const xOf = (at) => padLeft + ((toMs(at) - from) / span) * (width - padLeft - padRight);
 
-  const list = (Array.isArray(points) ? points : [])
+  const ordered = (Array.isArray(points) ? points : [])
     .map((p) => ({ at: toMs(p.at), value: finite(p.value) ? p.value : null, ref: p.ref ?? p }))
-    .filter((p) => Number.isFinite(p.at) && p.value !== null)
+    .filter((p) => Number.isFinite(p.at))
     .sort((a, b) => a.at - b.at);
+  const list = ordered.filter((p) => p.value !== null);
 
   const { lo, hi, ticks } = niceDomain(
     list.length ? Math.min(...list.map((p) => p.value)) : 0,
@@ -299,10 +300,17 @@ export function trendLineChart(points, options = {}) {
   const gapLimit = intervals.length >= 3 ? median * 2.5 : span * 0.2;
 
   const segments = [];
-  for (const p of list) {
-    const last = segments.at(-1);
-    if (last && p.at - last.at(-1).at <= gapLimit) last.push(p);
-    else segments.push([p]);
+  let segment = null;
+  for (const p of ordered) {
+    if (p.value === null) {
+      segment = null;
+      continue;
+    }
+    if (segment && p.at - segment.at(-1).at <= gapLimit) segment.push(p);
+    else {
+      segment = [p];
+      segments.push(segment);
+    }
   }
 
   let body = '';

@@ -140,6 +140,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { createVoiceInput } from '../../domains/conversation/voice-input.mjs';
 import { createFieldEchoGuard } from '../../domains/conversation/field-echo-guard.mjs';
 import { resolveKeyboardDock } from '../../domains/conversation/keyboard-dock.mjs';
+import { showAgentError } from '@/utils/agent-error';
 const props = defineProps({
   modelValue: { type: String, default: '' },
   disabled: Boolean,
@@ -201,7 +202,8 @@ const voice = createVoiceInput({
   onResult: (text) => {
     if (!props.disabled && !props.running) emit('voice', text);
   },
-  onError: (title) => uni.showToast({ title, icon: 'none' }),
+  onError: (title, { status } = {}) =>
+    status ? uni.showToast({ title, icon: 'none' }) : showAgentError(title, { fallback: title }),
 });
 function onInput(event) {
   echoGuard.track(event.detail.value);

@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { registerHooks } from 'node:module'
+import { monthlyEnergyWindows, readMonthlyEnergy } from '../pages/agent/lib/energy.mjs'
+import { createReadScope, isReadCancelled } from '../utils/agent-read-scope.mjs'
 
 let instance = 0
 // read-preparation 只注册一次 App hide 回调；记录该真实回调供后续用例触发。
@@ -65,7 +67,7 @@ test('已有结果在准备期间保留，有限准备超时后停止重读', as
  assert.equal(calls.length, stopped)
  await advance(t, 25_000)
  const next = client.getCompanyDevices({ isActive: () => false }).catch(error => error)
- assert.equal((await next).code, 'AGENT_READ_INVALIDATED')
+ assert.equal(isReadCancelled(await next), true)
  assert.equal(calls.length, stopped)
 })
 
@@ -109,12 +111,12 @@ test('页面隐藏和组件关闭停止后续准备中请求，不产生无限�
  const { client, calls, hide } = await setup(t, (_options, _count, reply) => reply(preparing))
  const first = client.getCompanyDevices().catch(error => error)
  await flush(); hide(); await advance(t)
- assert.equal((await first).code, 'AGENT_READ_INVALIDATED')
+ assert.equal(isReadCancelled(await first), true)
  assert.equal(calls.length, 1)
  let active = true
  const second = client.getEnvironmentHistory({ from: '2026-11-01', to: '2026-11-02' }, { isActive: () => active }).catch(error => error)
  await flush(); active = false; await advance(t)
- assert.equal((await second).code, 'AGENT_READ_INVALIDATED')
+ assert.equal(isReadCancelled(await second), true)
  await advance(t, 60_000)
  assert.equal(calls.length, 2)
 })
@@ -140,7 +142,7 @@ test('准备中隐藏后立即重读：新读取继续自动完成，旧任务�
  await advance(t)
  assert.deepEqual(await second, newValue)
  oldReply(oldValue)
- assert.equal((await first).code, 'AGENT_READ_INVALIDATED')
+ assert.equal(isReadCancelled(await first), true)
  assert.deepEqual(await client.getCompanyDevices(), newValue)
  assert.equal(calls.length, 4)
 })
@@ -166,7 +168,7 @@ test('同一页面对象随 App 隐藏后立即重读：新读取自动继续，
  await advance(t)
  assert.deepEqual(await second, newValue)
  oldReply(oldValue)
- assert.equal((await first).code, 'AGENT_READ_INVALIDATED')
+ assert.equal(isReadCancelled(await first), true)
  assert.deepEqual(await client.getCompanyDevices(), newValue)
  assert.equal(calls.length, 4)
 })
@@ -194,7 +196,7 @@ test('旧身份迟到结果既不写入新身份，也不清掉新身份已取�
  globalThis.snapshotTestScope = 'bob'
  assert.deepEqual(await client.getCompanyDevices(), newer)
  oldReply(ready)
- assert.equal((await old).code, 'AGENT_READ_INVALIDATED')
+ assert.ok((await old) instanceof Error)
  assert.deepEqual(await client.getCompanyDevices(), newer)
 })
 
@@ -279,13 +281,13 @@ test('普通历史、区域目录、安全详情和候选都在准备中后交�
 test('同键多个可见消费者合并准备中读取，单个关闭不阻断另一个自动更新', async t => {
  const { client, calls } = await setup(t, (_options, count, reply) => reply(count === 1 ? preparing : ready))
  let active = true
- const first = client.getCompanyDevices({ isActive: () => active })
+ const first = client.getCompanyDevices({ isActive: () => active }).catch(error => error)
  const second = client.getCompanyDevices({ isActive: () => true })
  await flush(); active = false
  assert.equal(calls.length, 1)
  await advance(t)
  assert.deepEqual(await second, ready)
- await first
+ assert.equal(isReadCancelled(await first), true)
  assert.equal(calls.length, 2)
 })
 
@@ -300,4 +302,43 @@ test('旧身份的迟到401不能清掉新身份已取得的成功快照', async
  assert.equal((await old).status, 401)
  assert.deepEqual(await client.getCompanyDevices(), ready)
  assert.equal(calls.length, 2)
+})
+
+test('关闭电表统计再刷新仪表盘，已关闭月度读取的取消不弹登录变化提示', async t => {
+ const { client } = await setup(t, (options, _count, reply) => {
+  reply(options.url.includes('/company-meter-report') ? preparing : ready)
+ })
+ const notices = [], published = []
+ globalThis.uni.showToast = options => notices.push(options.title)
+ let statisticsOpen = true
+ const reads = createReadScope({ identity: () => globalThis.snapshotTestScope, active: () => statisticsOpen })
+ const reading = reads.run('monthly', options => readMonthlyEnergy(
+  monthlyEnergyWindows(new Date()),
+  query => client.getCompanyMeterReport(query, options),
+  (key, value) => options.publish(() => published.push({ key, value })),
+ ), { error: cause => globalThis.uni.showToast({ title: cause.message }) })
+ await flush()
+ statisticsOpen = false
+ client.clearCompanyReadCache()
+ const dashboard = await client.getCompanyDashboard('environment', { force: true })
+ await advance(t)
+ assert.equal((await reading).status, 'cancelled')
+ assert.deepEqual(dashboard, ready)
+ assert.deepEqual(published, [])
+ assert.deepEqual(notices, [], '关闭统计后的旧请求不得向当前仪表盘弹出登录变化提示')
+})
+
+test('页面关闭与真实身份变化必须交付不同的终止语义', async t => {
+ let reply
+ const { client, hide } = await setup(t, (_options, _count, answer) => { reply = answer })
+ const closed = client.getCompanyDevices().catch(error => error)
+ await flush()
+ hide()
+ reply(ready)
+ assert.equal(isReadCancelled(await closed), true)
+ const changed = client.getCompanyDevices().catch(error => error)
+ await flush()
+ globalThis.snapshotTestScope = 'synthetic-new-identity'
+ reply(ready)
+ assert.equal((await changed).code, 'AGENT_IDENTITY_CHANGED')
 })

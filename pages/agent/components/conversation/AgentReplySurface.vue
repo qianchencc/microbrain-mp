@@ -130,9 +130,7 @@
           ><view class="execution-spinner" /><text>正在整理执行结果</text></view
         >
         <view v-else-if="turn.result.summary.status === 'failed'"
-          ><text class="reply-error">{{
-            turn.result.summary.reason || '执行总结未完成：未取得具体原因'
-          }}</text
+          ><text class="reply-error">{{ summaryFailure }}</text
           ><button
             class="execution-retry"
             :disabled="busy"
@@ -154,7 +152,7 @@
       /><text
         v-else-if="turn.error"
         class="reply-error"
-        >{{ turn.error }}</text
+        >{{ shortError }}</text
       >
     </view>
   </view>
@@ -170,14 +168,24 @@ import ToolActivity from './ToolActivity.vue';
 import TaskProposalCard from '../tasks/TaskProposalCard.vue';
 import TaskChangeCard from '../tasks/TaskChangeCard.vue';
 import TaskErrorNotice from '../tasks/TaskErrorNotice.vue';
+import { computed } from 'vue';
+import { agentErrorText } from '@/utils/agent-error';
 
-defineProps({
+const props = defineProps({
   turn: { type: Object, required: true },
   source: { type: String, default: 'office' },
   busy: Boolean,
   confirmingTaskId: { type: String, default: '' },
   readOnly: Boolean,
   agentName: { type: String, default: '物联 Agent' },
+});
+// 回答失败只展示归并后的短文案；原文保留给 TaskErrorNotice 的「查看原因」。
+const shortError = computed(() =>
+  agentErrorText(props.turn.error, { fallback: '回答未完成，请重试', timeout: '回答超时，请重试' })
+);
+const summaryFailure = computed(() => {
+  const reason = props.turn.result?.summary?.reason;
+  return reason ? agentErrorText(reason, { fallback: '执行结果未完成' }) : '执行结果未完成';
 });
 defineEmits([
   'toggle-trace',

@@ -78,7 +78,7 @@ test('Agent requests retain server reasons and identify HTTP failures with no re
   await assert.rejects(requestJson('/api/agent/tasks/1', 'GET'), error => error.message === reason)
   assert.equal(friendlyError(reason), reason)
   globalThis.uni = { request: options => options.success({ statusCode: 502, data: '<html>private proxy body</html>' }) }
-  await assert.rejects(requestJson('/api/agent/tasks/1', 'GET'), error => /HTTP 502/.test(error.message) && !error.message.includes('private proxy body'))
+  await assert.rejects(requestJson('/api/agent/tasks/1', 'GET'), error => error.status === 502 && error.message === '业务请求失败' && !error.message.includes('private proxy body'))
  } finally { globalThis.uni = original }
 })
 
@@ -90,10 +90,9 @@ test('PDF download retains the saved HTTP error response instead of replacing it
   assert.equal((await downloadHttpError({ statusCode: 503, tempFilePath: '/tmp/download-response' })).message, reason)
   globalThis.uni = { getFileSystemManager: () => ({ readFile: options => options.success({ data: '<html>proxy unavailable</html>' }) }) }
   const error = await downloadHttpError({ statusCode: 502, tempFilePath: '/tmp/download-response' })
-  assert.match(error.message, /HTTP 502/)
+  assert.equal(error.message, '报告下载失败')
   assert.doesNotMatch(error.message, /html|proxy unavailable/)
   globalThis.uni = { getFileSystemManager: () => { throw new Error('filesystem unavailable') } }
-  assert.match((await downloadHttpError({ statusCode: 503, tempFilePath: '/tmp/download-response' })).message, /HTTP 503/)
-
+  assert.equal((await downloadHttpError({ statusCode: 503, tempFilePath: '/tmp/download-response' })).message, '报告下载失败')
  } finally { globalThis.uni = original }
 })

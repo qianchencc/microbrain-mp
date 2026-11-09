@@ -64,13 +64,11 @@
             ><text class="name">{{ record.deviceName }}</text
             ><text class="time">{{ fmtDateTime(record.occurredAt) }}</text
             ><text
-              v-if="record.currentDevice"
+              v-if="record.currentDevice?.location"
               class="location"
               >{{
-                record.currentDevice.location
-                  ? `当前位置：${record.currentDevice.location}`
-                  : '当前位置未核验'
-              }}<text v-if="!record.currentDevice.name"> · 显示记录名称</text></text
+                record.currentDevice.location ? `当前位置：${record.currentDevice.location}` : ''
+              }}</text
             ><text
               v-else-if="record.location && record.location !== record.deviceName"
               class="location"
@@ -123,8 +121,10 @@
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { listSafetyHistory } from '@/apis/agent/observations';
-import { getAgentStorageScope, isAgentStorageScope } from '@/utils/agent-session';
+import { getAgentStorageScope } from '@/utils/agent-session';
 import { fmtDateTime } from '../../lib/observations.mjs';
+import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from '../../lib/reads.mjs';
 
 const props = defineProps({ active: Boolean });
 defineEmits(['select']);
@@ -143,12 +143,15 @@ const records = ref([]),
   cursor = ref(null),
   loading = ref(false),
   error = ref('');
-let generation = 0,
-  visible = true,
+let visible = true,
   scope = '',
   window = null;
+const reads = useViewReads(
+  () => props.active,
+  () => [type.value, fromDate.value, endDate.value]
+);
 function invalidate() {
-  generation += 1;
+  reads.invalidate();
   loading.value = false;
 }
 function reset() {
@@ -162,86 +165,81 @@ function reset() {
 }
 async function load(first = true, force = false) {
   if (!props.active || !visible || loading.value) return;
-  const current = ++generation;
-  loading.value = true;
-  error.value = '';
-  try {
-    const identity = getAgentStorageScope();
-    if (identity !== scope) {
-      records.value = [];
-      cursor.value = null;
-      window = null;
-      scope = identity;
+  await reads.run(
+    'history',
+    async (options) => {
+      const identity = getAgentStorageScope();
+      if (identity !== scope) {
+        records.value = [];
+        cursor.value = null;
+        window = null;
+        scope = identity;
+      }
+      const refreshCount = first ? Math.max(20, records.value.length) : 20;
+      const query = {
+        type: type.value,
+        limit: 20,
+        from:
+          first || !window
+            ? fromDate.value
+              ? `${fromDate.value}T00:00:00+08:00`
+              : undefined
+            : window.from,
+        to: first || !window ? `${endDate.value}T23:59:59.999+08:00` : window.to,
+        cursor: first ? undefined : cursor.value,
+      };
+      let result = await listSafetyHistory(query, { ...options, force: force === true });
+      const refreshed = [...(result.items || [])];
+      while (first && refreshed.length < refreshCount && result.nextCursor) {
+        result = await listSafetyHistory(
+          { type: query.type, limit: 20, ...result.window, cursor: result.nextCursor },
+          { ...options, force: force === true }
+        );
+        refreshed.push(...(result.items || []));
+      }
+      return { result, refreshed };
+    },
+    {
+      start: () => {
+        loading.value = true;
+        error.value = '';
+      },
+      data: ({ result, refreshed }) => {
+        const existing = first ? [] : records.value;
+        const seen = new Set(
+          existing.map((record) => record.ledger + ':' + record.eventId + ':' + record.deviceId)
+        );
+        records.value = [
+          ...existing,
+          ...refreshed.filter(
+            (record) => !seen.has(record.ledger + ':' + record.eventId + ':' + record.deviceId)
+          ),
+        ];
+        cursor.value = result.nextCursor;
+        observedAt.value = result.observedAt;
+        window = result.window;
+      },
+      denied: () => {
+        records.value = [];
+        cursor.value = null;
+        observedAt.value = '';
+        window = null;
+      },
+      error: (cause) => {
+        if (cause.data?.code === 'INVALID_SAFETY_CURSOR') {
+          records.value = [];
+          cursor.value = null;
+          window = null;
+          observedAt.value = '';
+        }
+        showAgentError(cause, { fallback: '读取失败，请重试' });
+        error.value = '读取失败';
+      },
+      finish: () => {
+        loading.value = false;
+      },
     }
-    const refreshCount = first ? Math.max(20, records.value.length) : 20;
-    const query = {
-      type: type.value,
-      limit: 20,
-      from:
-        first || !window
-          ? fromDate.value
-            ? `${fromDate.value}T00:00:00+08:00`
-            : undefined
-          : window.from,
-      to: first || !window ? `${endDate.value}T23:59:59.999+08:00` : window.to,
-      cursor: first ? undefined : cursor.value,
-    };
-    const options = {
-      force: force === true,
-      isActive: () => current === generation && props.active && visible,
-    };
-    let result = await listSafetyHistory(query, options);
-    const refreshed = [...(result.items || [])];
-    while (first && refreshed.length < refreshCount && result.nextCursor) {
-      if (
-        current !== generation ||
-        !props.active ||
-        !visible ||
-        identity !== getAgentStorageScope()
-      )
-        return;
-      result = await listSafetyHistory(
-        { type: type.value, limit: 20, ...result.window, cursor: result.nextCursor },
-        options
-      );
-      refreshed.push(...(result.items || []));
-    }
-    if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope())
-      return;
-    const existing = first ? [] : records.value;
-    const seen = new Set(
-      existing.map((record) => record.ledger + ':' + record.eventId + ':' + record.deviceId)
-    );
-    records.value = [
-      ...existing,
-      ...refreshed.filter(
-        (record) => !seen.has(record.ledger + ':' + record.eventId + ':' + record.deviceId)
-      ),
-    ];
-    cursor.value = result.nextCursor;
-    observedAt.value = result.observedAt;
-    window = result.window;
-  } catch (cause) {
-    if (current !== generation || !props.active || !visible) return;
-    if (
-      !isAgentStorageScope(scope) ||
-      [401, 403].includes(cause.status) ||
-      ['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code)
-    ) {
-      records.value = [];
-      cursor.value = null;
-      observedAt.value = '';
-    }
-    if (cause.data?.code === 'INVALID_SAFETY_CURSOR') {
-      records.value = [];
-      cursor.value = null;
-      window = null;
-      observedAt.value = '';
-    }
-    error.value = cause.message || '安全历史暂不可用，请稍后重试';
-  } finally {
-    if (current === generation) loading.value = false;
-  }
+  );
 }
 function chooseType(next) {
   if (type.value === next) return;

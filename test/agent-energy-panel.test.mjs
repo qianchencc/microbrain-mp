@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createEnergyPanel, shiftDate } from '../pages/agent/lib/energy.mjs'
 
+globalThis.uni = globalThis.uni || { showToast() {} }
 const day = '2026-11-05'
 const report = (meterId = 'meter-a', usage = 8) => ({
   latestCompleteDay: shiftDate(day, -1), latestSampleTime: `${day}T10:00:00+08:00`,
@@ -10,13 +11,14 @@ const report = (meterId = 'meter-a', usage = 8) => ({
   comparison: { currentDay: { date: day, usage: 3, meterUsage: { [meterId]: 3 } } },
   cache: { status: 'fresh', updatedAt: `${day}T10:00:00+08:00` },
 })
-function fixture(daily) {
+function fixture(daily, notice) {
   const context = { active: true, bounded: false, focusDate: '' }
   let scope = 'a'
   const positions = []
   const panel = createEnergyPanel({
     read: () => context, api: { ready: async () => {}, daily, meter: async () => { throw new Error('unexpected meter request') } },
     identity: { current: () => scope, isCurrent: value => value === scope },
+    notice,
     position: (kind, value) => positions.push([kind, value]), clock: () => day,
   })
   return { panel, context, positions, setScope: value => { scope = value } }
@@ -37,7 +39,7 @@ test('同身份重开保留选中历史，刷新失败保留原始数据和时�
   failure = true
   await panel.init(true)
   assert.equal(panel.state.report.cache.updatedAt, snapshot.cache.updatedAt)
-  assert.equal(panel.state.error, 'network lost')
+  assert.equal(panel.state.error, '逐日能耗暂不可用')
   assert.equal(panel.state.selected, selected)
 })
 
@@ -84,3 +86,25 @@ test('固定统计面板限制在返回边界内选择，收起期间在途结�
   panel.jump('2099-01-01')
   assert.equal(panel.state.selected, selected)
 })
+
+test('能耗面板隐藏后真实403仍清除保留事实，不向下一视图通知', async () => {
+  let hold = false, reject, entered;
+  const started = new Promise(resolve => { entered = resolve });
+  const notices = [];
+  const { panel } = fixture(() => {
+    if (!hold) return Promise.resolve(report());
+    return new Promise((_resolve, fail) => { reject = fail; entered(); });
+  }, cause => notices.push(cause));
+  await panel.init();
+  assert.equal(panel.state.report.meters[0].id, 'meter-a');
+  hold = true;
+  const work = panel.init(true);
+  await started;
+  panel.hide();
+  reject(Object.assign(Error('forbidden'), { status: 403 }));
+  await work;
+  assert.equal(panel.state.report, null);
+  assert.deepEqual(panel.state.strip, []);
+  assert.deepEqual(panel.state.historyCache, {});
+  assert.deepEqual(notices, []);
+});

@@ -82,8 +82,8 @@
           ><text
             v-if="beforeKnown"
             class="from"
-            >{{ before }}</text
-          ><text class="to"><text class="arrow">→</text> {{ operation }}</text></view
+            >{{ beforeText }}</text
+          ><text class="to"><text class="arrow">→</text> {{ operationText }}</text></view
         >
         <text
           :key="phase"
@@ -125,6 +125,15 @@ const before = computed(() =>
   stateText(props.action, props.phase === 'pending' ? props.currentState : props.action.beforeState)
 );
 const beforeKnown = computed(() => Boolean(before.value) && !before.value.includes('未知'));
+
+// 窄卡紧凑摘要：空调电源态已由 .state 角标承载（已开启/已关闭），before 去掉重复的
+// 「开启/关闭 · 」前缀只留 模式·温度·风速；单位 °C→° 与 device-roster 紧凑口径一致。
+const compactSummary = (text) => String(text || '').replace(/°C/g, '°');
+const beforeText = computed(() => {
+  if (props.action.kind !== 'ac') return compactSummary(before.value);
+  return compactSummary(before.value.replace(/^(?:关闭|开启)\s*·\s*/, ''));
+});
+const operationText = computed(() => compactSummary(props.operation));
 const powerLabel = computed(() =>
   props.currentState === true || props.currentState?.power === 'on'
     ? '已开启'
@@ -446,6 +455,27 @@ input {
 } /* before→after 纵向两行制：acSummary 复合串在 103px 内宽里单行不可能容纳两段，
    每段独占一行 + nowrap+ellipsis（与 name/location 同一纪律），最坏退化为行尾省略，
    禁止横向 flex-wrap 硬排——flex item 缩到内容宽以下时 CJK 逐字竖排（2026-09-17 根因）。 */
+.change {
+  font-size: 9px;
+  line-height: 12px;
+}
+.from,
+.to {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.from {
+  color: $agent-color-text-muted;
+}
+.to {
+  color: $agent-color-accent-deep;
+  margin-top: 1px;
+}
+.to .arrow {
+  color: $agent-color-text-muted;
+}
 .outcome {
   min-height: 12px;
   font-size: 9px;

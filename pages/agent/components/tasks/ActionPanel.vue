@@ -65,6 +65,7 @@
       >
         <ActionDraftCard
           :source="source"
+          :active="tab === 'draft'"
           embedded
           :draft="draft"
           :result="result"

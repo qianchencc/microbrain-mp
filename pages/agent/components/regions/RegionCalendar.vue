@@ -92,7 +92,7 @@
       v-if="error"
       class="calendar-error"
       @tap="$emit('month-change', month)"
-      >{{ error }} · 重试</button
+      >读取失败 · 重试</button
     >
   </view>
 </template>

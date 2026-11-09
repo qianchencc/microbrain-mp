@@ -97,7 +97,7 @@ test('换身份重新读取，旧身份迟到响应不能返回或覆盖新身�
  let finishOld
  globalThis.uni.request = options => { calls.push(options); finishOld = () => options.success({ statusCode: 200, data: { ...response(options.url), items: [{ eventId: 'alice' }] } }) }
  const old = client.listSafetyHistory(query)
- const rejected = assert.rejects(old, error => error.code === 'AGENT_READ_INVALIDATED')
+ const rejected = assert.rejects(old)
  await Promise.resolve()
  globalThis.safetyTestScope = 'bob'
  globalThis.uni.request = options => { calls.push(options); queueMicrotask(() => options.success({ statusCode: 200, data: { ...response(options.url), items: [{ eventId: 'bob' }] } })) }

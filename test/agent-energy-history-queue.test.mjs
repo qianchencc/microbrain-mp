@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { energyHistoryBlock, energyMeterSetChanged, energyHistoryRecheckBlocks, createEnergyHistoryQueue } from '../pages/agent/lib/energy.mjs'
+import { cancelRead } from '../utils/agent-read-scope.mjs'
 
 const deferred = () => {
  let resolve, reject
@@ -145,7 +146,7 @@ test('离开目标的在途等待被 isActive 取消，迟到结果不写回也�
  assert.equal(calls.length, 2)
  assert.equal(calls[0].isActive(), false)
  assert.equal(calls[1].isActive(), true)
- calls[0].pending.reject(Object.assign(new Error('读取已失效'), { code: 'AGENT_READ_INVALIDATED' }))
+ calls[0].pending.reject(cancelRead('inactive'))
  await flush()
  assert.deepEqual(errors, [])
  assert.deepEqual(results, [])

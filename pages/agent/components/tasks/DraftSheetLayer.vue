@@ -106,6 +106,11 @@
             /></view>
           </view>
         </view>
+        <text
+          v-if="stateError || stateObservationLabel(stateSnapshot)"
+          class="note"
+          >{{ stateError || stateObservationLabel(stateSnapshot) }}</text
+        >
         <view class="device-scroll-shell"
           ><scroll-view
             scroll-y
@@ -247,6 +252,8 @@ import {
   watch,
 } from 'vue';
 import { readDeviceStates, updateParameters } from '@/apis/agent/actions';
+import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from '../../lib/reads.mjs';
 import {
   operationLabel,
   receiptPhase,
@@ -260,6 +267,7 @@ import {
   executionNotice,
 } from '../../lib/actions.mjs';
 import { receiptText } from '../../lib/conversation.mjs';
+import { stateObservationLabel } from '../../lib/observations.mjs';
 import DeviceActionCard from './DeviceActionCard.vue';
 import DeviceSheet from '../shared/DeviceSheet.vue';
 import ParameterEditor from './ParameterEditor.vue';
@@ -287,7 +295,8 @@ const emit = defineEmits([
 ]);
 const initialWindowWidth =
   uni.getWindowInfo?.().windowWidth || uni.getSystemInfoSync().windowWidth || 320;
-const states = ref({}),
+const stateSnapshot = ref(null),
+  stateError = ref(''),
   stateLoading = ref(false),
   page = ref(0),
   search = ref(''),
@@ -296,6 +305,7 @@ const states = ref({}),
   groupIndex = ref(0),
   parameterError = ref(''),
   windowWidth = ref(initialWindowWidth);
+const states = computed(() => stateSnapshot.value?.states || {});
 const parameterEditor = ref(null),
   editorDirty = ref(false);
 function allowDiscard() {
@@ -345,6 +355,10 @@ function selectGroup(index) {
   groupIndex.value = index;
 }
 const open = computed(() => Boolean(props.draft));
+const reads = useViewReads(
+  () => open.value,
+  () => [props.source, props.draft?.draftId]
+);
 // 关闭动画期间冻结渲染：emit('close') 同帧父级就清空 draftId，但 sheet 仍需完成退场过渡。
 // 渲染一律读最后一次非空的草案/回执/基线快照，否则标题与编辑器会在退场开始前卸载——「瞬间消失+一闪」。
 const renderDraft = ref(null),
@@ -469,6 +483,9 @@ watch(
   () => [props.draft?.draftId, props.openRequest],
   () => {
     if (!props.draft) return;
+    reads.invalidate();
+    stateSnapshot.value = null;
+    stateError.value = '';
     page.value = 0;
     search.value = '';
     searchMounted.value = false;
@@ -478,6 +495,7 @@ watch(
     editorDirty.value = false;
     parameterEditor.value?.discard();
     if (props.browser) listMeasurer.schedule();
+    if (open.value) void stateRefresh.run();
   }
 );
 // 面板内三页导航：0 全部设备 / 1 搜索 / 2 参数编辑；返回列表页即清过滤，列表始终是全量。
@@ -491,7 +509,7 @@ watch(open, (value) => {
     if (props.browser) listMeasurer.schedule();
   } else {
     stateRefresh.cancel();
-    ++stateRequest;
+    reads.invalidate();
     stateLoading.value = false;
   }
 });
@@ -500,8 +518,9 @@ watch(
   (result) => {
     if (result) renderResult.value = result;
     if (result && open.value) {
-      ++stateRequest;
-      states.value = {};
+      reads.invalidate();
+      stateSnapshot.value = null;
+      stateError.value = '';
       stateRefresh.after(1000);
     }
   }
@@ -518,7 +537,7 @@ onMounted(() => uni.onWindowResize?.(updateWindowWidth));
 onBeforeUnmount(() => {
   clearTimeout(searchTimer);
   stateRefresh.cancel();
-  ++stateRequest;
+  reads.invalidate();
   listMeasurer.dispose();
   uni.offWindowResize?.(updateWindowWidth);
 });
@@ -585,25 +604,39 @@ function phase(action) {
       : 'pending';
 }
 async function refresh() {
-  if (!props.draft || !open.value) return;
-  const current = ++stateRequest,
-    draftId = props.draft.draftId;
-  stateLoading.value = true;
-  try {
-    const snapshot = await readDeviceStates(draftId, props.source, {
-      isActive: () => current === stateRequest && props.draft?.draftId === draftId && open.value,
-    });
-    if (current === stateRequest && props.draft?.draftId === draftId && open.value)
-      states.value =
-        snapshot.deviceStates || (!Array.isArray(snapshot.states) ? snapshot.states : {}) || {};
-  } catch {
-    if (current === stateRequest) states.value = {};
-  } finally {
-    if (current === stateRequest) stateLoading.value = false;
-  }
+  if (!props.draft) return;
+  await reads.run(
+    'states',
+    (options) => readDeviceStates(props.draft.draftId, props.source, options),
+    {
+      start: () => {
+        stateLoading.value = true;
+        stateError.value = '';
+      },
+      data: (snapshot) => {
+        stateSnapshot.value = snapshot;
+      },
+      denied: () => {
+        stateSnapshot.value = null;
+      },
+      error: (cause) => {
+        stateSnapshot.value = null;
+        stateError.value = cause.message || '设备状态读取失败';
+      },
+      finish: () => {
+        stateLoading.value = false;
+      },
+    }
+  );
 }
-let stateRequest = 0;
 const stateRefresh = createStateRefresh(refresh);
+watch(reads.isActive, (active) => {
+  if (active) stateRefresh.auto();
+  else {
+    stateRefresh.cancel();
+    stateLoading.value = false;
+  }
+});
 async function save(changes) {
   if (!open.value || props.busy || !pending.value) return;
   emit('editing', true);
@@ -622,10 +655,9 @@ async function save(changes) {
     editorDirty.value = false;
     if (props.browser) page.value = editorBack.value;
     else emit('close');
-  } catch (error) {
-    parameterError.value = String(error.message || '').startsWith('request:fail')
-      ? '保存失败，请检查网络后重试；修改仍保留'
-      : error.message;
+  } catch (cause) {
+    parameterError.value = '保存失败，修改仍保留';
+    showAgentError(cause, { fallback: '保存失败，请重试' });
   } finally {
     emit('editing', false);
   }

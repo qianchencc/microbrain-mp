@@ -137,6 +137,7 @@ import {
 } from '@/apis/agent/tasks';
 import { getAgentStorageScope } from '@/utils/agent-session';
 import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from '../../lib/reads.mjs';
 import {
   shiftDate,
   agendaPreview,
@@ -160,10 +161,10 @@ const tasks = ref([]),
   error = ref(''),
   today = ref(taskToday());
 const previewDays = computed(() => agendaPreview(tasks.value, today.value, 62));
-let generation = 0,
-  timer = 0,
+let timer = 0,
   visible = true,
   loadedScope = '';
+const reads = useViewReads(() => props.active);
 function open(view, task) {
   emit('open', { view, date: today.value, task });
 }
@@ -185,7 +186,7 @@ function showError() {
   issue.value = { title: '任务暂未加载', reason: error.value };
 }
 function stop() {
-  ++generation;
+  reads.invalidate();
   clearTimeout(timer);
   loading.value = false;
 }
@@ -196,73 +197,70 @@ const agendaRange = () => ({
 async function load(force = false) {
   if (!props.active || !visible) return;
   clearTimeout(timer);
-  const current = ++generation;
-  loading.value = true;
-  error.value = '';
-  let scope = '',
-    delay = TASK_POLL_IDLE_MS;
-  try {
-    scope = getAgentStorageScope();
-    if (scope !== loadedScope) {
-      tasks.value = [];
-      loaded.value = false;
-      loadedScope = scope;
+  let delay = TASK_POLL_IDLE_MS;
+  await reads.run(
+    'agenda',
+    async (options) => {
+      const scope = getAgentStorageScope();
+      if (scope !== loadedScope) {
+        tasks.value = [];
+        loaded.value = false;
+        loadedScope = scope;
+      }
+      const range = agendaRange();
+      const saved = peekAgentTasks({ source: 'company', ...range }),
+        savedUnread = peekAgentNotifications({ source: 'company', limit: 1 });
+      if (saved && !loaded.value) {
+        tasks.value = saved.tasks || [];
+        loaded.value = true;
+      }
+      if (savedUnread) {
+        unread.value = Number(savedUnread.unreadCount) || 0;
+        emit('unread', unread.value);
+      }
+      return readAgentTasks({ source: 'company', ...range, force }, options);
+    },
+    {
+      start: () => {
+        loading.value = true;
+        error.value = '';
+      },
+      data: (result) => {
+        tasks.value = result.tasks || [];
+        loaded.value = true;
+        delay = taskPollDelay(tasks.value, Date.now());
+      },
+      denied: () => {
+        tasks.value = [];
+        loaded.value = false;
+        unread.value = 0;
+      },
+      error: (cause) => {
+        error.value = cause.message || '任务暂不可用';
+        showAgentError(cause, { fallback: '任务暂不可用' });
+      },
+      finish: () => {
+        loading.value = false;
+        void refreshUnread(force);
+        timer = setTimeout(() => load(true), delay);
+      },
     }
-    const range = agendaRange();
-    // 同身份议程快照先落位：重挂载、切模式与短时返回都不闪「加载中…」，随后按同一缓存口径对齐。
-    const saved = peekAgentTasks({ source: 'company', ...range }),
-      savedUnread = peekAgentNotifications({ source: 'company', limit: 1 });
-    if (saved && !loaded.value) {
-      tasks.value = saved.tasks || [];
-      loaded.value = true;
-    }
-    if (savedUnread) {
-      unread.value = Number(savedUnread.unreadCount) || 0;
-      emit('unread', unread.value);
-    }
-    const result = await readAgentTasks({ source: 'company', ...range, force });
-    if (current !== generation || scope !== getAgentStorageScope() || !props.active || !visible)
-      return;
-    tasks.value = result.tasks || [];
-    loaded.value = true;
-    // 节拍取自新读取的状态：到点未推进 1 秒快刷、执行中 5 秒、最近未来边界 +1 秒唤醒。
-    delay = taskPollDelay(tasks.value, Date.now());
-  } catch (cause) {
-    if (current !== generation) return;
-    let liveScope = '';
-    try {
-      liveScope = getAgentStorageScope();
-    } catch {
-      /* 身份失效 */
-    }
-    if (cause.data || !scope || scope !== liveScope) {
-      tasks.value = [];
-      loaded.value = false;
-    }
-    error.value = cause.message || '任务暂不可用';
-    showAgentError(cause, { fallback: '任务暂不可用' });
-  } finally {
-    if (current === generation) {
-      loading.value = false;
-      // 未读数独立刷新：任务读取失败也不冻结未读。
-      void refreshUnread(force);
-      if (props.active && visible) timer = setTimeout(() => load(true), delay);
-    }
-  }
+  );
 }
 async function refreshUnread(force = false) {
-  const current = generation;
-  try {
-    const scope = getAgentStorageScope();
-    if (scope !== loadedScope) return;
-    const result = await readAgentNotifications({ source: 'company', limit: 1, force });
-    if (current === generation && props.active && scope === getAgentStorageScope()) {
-      unread.value = Number(result.unreadCount) || 0;
-      emit('unread', unread.value);
+  await reads.run(
+    'unread',
+    (options) => readAgentNotifications({ source: 'company', limit: 1, force }, options),
+    {
+      data: (result) => {
+        unread.value = Number(result.unreadCount) || 0;
+        emit('unread', unread.value);
+      },
+      denied: () => {
+        unread.value = 0;
+      },
     }
-  } catch {
-    /* 未读数失败不影响任务预览 */
-  }
+  );
 }
 watch(
   () => [props.active, props.refreshKey],
@@ -394,11 +392,15 @@ button::after {
   padding: 7px 0 6px;
   border-radius: 10px;
   background: $agent-color-tint;
-  box-shadow: inset 0 0 0 .5px rgba(var(--agent-shadow-rgb), .10), inset 0 1px 0 rgba(255,255,255,.8);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(var(--agent-shadow-rgb), 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .agenda-rail.rail-today {
   background: linear-gradient(155deg, $agent-color-accent, $agent-color-accent-deep);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 3px 8px rgba(var(--agent-shadow-rgb), .18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 3px 8px rgba(var(--agent-shadow-rgb), 0.18);
 }
 .rail-num {
   font-size: 15px;

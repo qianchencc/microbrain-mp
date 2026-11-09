@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { monthlyEnergyWindows, readMonthlyEnergy, monthlyEnergyView, monthlySnapshotCache } from '../pages/agent/lib/energy.mjs'
 import { createAgentReadCache } from '../apis/agent/agent-read-cache.mjs'
+globalThis.uni = globalThis.uni || { showToast() {} }
 // @boundary-private-test-seam: verifies monthly aggregate freshness through the cache adapter.
 const now = () => new Date('2026-10-25T18:00:00+08:00')
 const report = (span, value, ids = ['a','b']) => ({
@@ -69,7 +70,7 @@ test('环比与同比按总量独立计算，正负与简短描述对应，不�
  assert.equal(view.pairs[0].aWidth,100); assert.equal(view.pairs[1].bWidth,100)
 })
 
-test('去年缺数或请求失败不补零，不影响本月与上月结果；保留具体错误', async () => {
+test('去年缺数或请求失败不补零，不影响本月与上月结果；失败期只留短文案', async () => {
  const windows = monthlyEnergyWindows(now())
  const states = await load(windows, async q => {
   if(q.from.startsWith('2025')) throw new Error('HTTP 503：历史采样读取失败')
@@ -78,7 +79,7 @@ test('去年缺数或请求失败不补零，不影响本月与上月结果；�
  const view = monthlyEnergyView(windows,states)
  assert.equal(view.current.value,100);assert.equal(view.pairs[0].pct,'↑ 25%')
  assert.equal(view.pairs[1].pct,'—');assert.equal(view.pairs[1].b.value,null)
- assert.match(view.pairs[1].summary,/503/)
+ assert.match(view.pairs[1].summary,/月度统计读取失败/)
 })
 
 test('两侧电表集合变化、采样日不齐或读取截断均不能生成虚假同比', async () => {
@@ -327,9 +328,9 @@ test('月度组合缓存任一期 stale 只作占位，并在对应期显示 las
  assert.equal(cache.lastError.message, '上游读取超时')
  const view = monthlyEnergyView(windows, states)
  assert.equal(view.current.value, 120)
- assert.match(view.current.note, /上游读取超时/)
- assert.match(view.pairs[0].a.note, /上游读取超时/)
- assert.match(view.pairs[0].note, /上游读取超时/)
+ assert.match(view.current.note, /上次更新未成功/)
+ assert.match(view.pairs[0].a.note, /上次更新未成功/)
+ assert.match(view.pairs[0].note, /上次更新未成功/)
  assert.equal(view.pairs[0].pct, '↑ 20%')
 })
 

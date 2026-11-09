@@ -10,7 +10,7 @@ export function videoPlayerReady() {
 export async function openVideoPlayer(device) {
   const base = String(globalConfig.videoPlayerUrl || '').trim();
   if (!base) {
-    uni.showToast({ title: '播放页接入中', icon: 'none' });
+    uni.showToast({ title: '播放页暂未接入', icon: 'none' });
     return false;
   }
   try {
@@ -38,7 +38,7 @@ export async function openVideoPlayer(device) {
     );
     return true;
   } catch (error) {
-    uni.showToast({ title: '未能打开播放页，请重试', icon: 'none' });
+    uni.showToast({ title: '播放页打开失败，请重试', icon: 'none' });
     return false;
   }
 }

@@ -31,12 +31,12 @@
     >
       <view class="paper"
         ><EnvironmentTrend
-          v-if="report"
+          v-if="report && report.samples.length"
           :report="report"
         /><text
-          v-else
+          v-else-if="!error"
           class="empty"
-          >{{ loading ? '正在读取站点历史' : '本次未取得历史采样' }}</text
+          >{{ emptyMessage }}</text
         ></view
       >
       <view
@@ -51,11 +51,6 @@
         :disabled="loading"
         @tap="loadMore"
         >{{ loading ? '正在读取…' : '继续读取下一批采样' }}</button
-      >
-      <text
-        v-if="report && !report.samples.length"
-        class="empty"
-        >所选期间没有采样，请选择其他日期；实时读数另见概览。</text
       >
     </scroll-view>
     <view class="foot">
@@ -75,12 +70,14 @@
   </view>
 </template>
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { onHide, onShow } from '@dcloudio/uni-app';
 import { getEnvironmentHistory } from '@/apis/agent/observations';
-import { getAgentStorageScope, isAgentStorageScope } from '@/utils/agent-session';
+import { getAgentStorageScope } from '@/utils/agent-session';
+import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from '../../lib/reads.mjs';
 import EnvironmentTrend from './EnvironmentTrend.vue';
-import { fmtDateTime } from '../../lib/observations.mjs';
+import { fmtDateTime, mergeEnvironmentHistory } from '../../lib/observations.mjs';
 const props = defineProps({ active: Boolean });
 defineEmits(['question']);
 const today = fmtDateTime(new Date().toISOString()).slice(0, 10);
@@ -90,76 +87,58 @@ const fromDate = ref(today),
   loading = ref(false),
   error = ref(''),
   failedPage = ref(0);
-let generation = 0,
-  scope = '',
+const emptyMessage = computed(() => {
+  if (loading.value) return '正在读取站点历史';
+  if (report.value?.cache?.lastError) return `${report.value.cache.lastError}，请稍后重试`;
+  if (report.value?.coverage?.complete)
+    return '所选期间没有采样，请选择其他日期；实时读数另见概览。';
+  return report.value ? '历史采样尚未完整，请稍后重试' : '本次未取得历史采样';
+});
+let scope = '',
   visible = true;
+const reads = useViewReads(
+  () => props.active,
+  () => [fromDate.value, toDate.value]
+);
 function invalidate() {
-  generation += 1;
+  reads.invalidate();
   loading.value = false;
 }
 async function load(page = 0) {
   if (!props.active || !visible || loading.value) return;
-  const current = ++generation;
-  loading.value = true;
-  error.value = '';
-  try {
-    const identity = getAgentStorageScope();
-    scope = identity;
-    const value = await getEnvironmentHistory(
-      {
-        from: page ? report.value.window.from : fromDate.value + 'T00:00:00+08:00',
-        to: page ? report.value.window.to : toDate.value + 'T23:59:59.999+08:00',
-        page,
+  await reads.run(
+    'history',
+    (options) =>
+      getEnvironmentHistory(
+        {
+          from: page ? report.value.window.from : fromDate.value + 'T00:00:00+08:00',
+          to: page ? report.value.window.to : toDate.value + 'T23:59:59.999+08:00',
+          page,
+        },
+        options
+      ),
+    {
+      start: () => {
+        loading.value = true;
+        error.value = '';
       },
-      { isActive: () => current === generation && props.active && visible }
-    );
-    if (current !== generation || !props.active || !visible || identity !== getAgentStorageScope())
-      return;
-    if (page && report.value) {
-      const identity = (item) =>
-        item.id + ':' + item.recordedAt + ':' + (item.deviceCode || 'site');
-      const seen = new Set(report.value.samples.map(identity));
-      value.samples = [
-        ...report.value.samples,
-        ...value.samples.filter((item) => !seen.has(identity(item))),
-      ].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
-      value.metrics = value.metrics.map((item) => {
-        const samples = value.samples.filter((sample) => Number.isFinite(sample.values[item.key]));
-        const peak = samples.reduce(
-          (best, sample) =>
-            !best || sample.values[item.key] > best.values[item.key] ? sample : best,
-          null
-        );
-        return {
-          ...item,
-          count: samples.length,
-          min: samples.length
-            ? Math.min(...samples.map((sample) => sample.values[item.key]))
-            : null,
-          peak: peak ? { value: peak.values[item.key], at: peak.recordedAt } : null,
-        };
-      });
-      value.coverage = {
-        complete: value.nextPage === null,
-        readSamples: value.samples.length,
-        from: value.samples[0]?.recordedAt || null,
-        to: value.samples.at(-1)?.recordedAt || null,
-      };
+      data: (value) => {
+        scope = getAgentStorageScope();
+        report.value = mergeEnvironmentHistory(page ? report.value : null, value);
+      },
+      denied: () => {
+        report.value = null;
+      },
+      error: (cause) => {
+        failedPage.value = page;
+        showAgentError(cause, { fallback: '环境历史读取失败，请重试' });
+        error.value = '读取失败';
+      },
+      finish: () => {
+        loading.value = false;
+      },
     }
-    report.value = value;
-  } catch (cause) {
-    if (current !== generation || !props.active || !visible) return;
-    failedPage.value = page;
-    if (
-      [401, 403].includes(cause.status) ||
-      ['UNAUTHORIZED', 'FORBIDDEN'].includes(cause.data?.code) ||
-      !isAgentStorageScope(scope)
-    )
-      report.value = null;
-    error.value = cause.message || '环境历史暂不可用';
-  } finally {
-    if (current === generation) loading.value = false;
-  }
+  );
 }
 function loadMore() {
   void load(report.value.nextPage);

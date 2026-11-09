@@ -168,10 +168,7 @@ export function createConversationOperations({
             if (!current(ticket)) return;
             const live = draftTurn(id);
             if (live && synced.has(id)) live.draft.selectedActionIds = synced.get(id);
-            effects.notice(
-              'selection',
-              error.data?.message || error.message || '服务端未返回具体原因'
-            );
+            effects.notice('selection', error.data?.message || error.message || '操作失败，请重试');
             desired.delete(id);
             if (canRestore(false)) await effects.restore();
             break;
@@ -244,13 +241,11 @@ export function createConversationOperations({
         }
       } else if (command === 'confirm') {
         const reason = error.data?.message || error.message;
-        confirmationError = reason
-          ? `${reason}；请重新读取执行回执`
-          : '未取得执行结果或具体原因，请重新读取回执';
+        confirmationError = reason ? `${reason}；请重新读取执行回执` : '执行回执读取失败，请重试';
         effects.notice('confirmation', confirmationError, id);
         resync = true;
       } else if (command === 'restore') {
-        effects.notice('restore', error.data?.message || error.message || '服务端未返回具体原因');
+        effects.notice('restore', error.data?.message || error.message || '操作失败，请重试');
         resync = canRestore(false);
       } else state.error = error.message;
     } finally {

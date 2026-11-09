@@ -1,7 +1,6 @@
 import { downloadHttpError } from './request.mjs';
 
 // 报告附件下载：PDF/表格共用同一授权加载；身份变化或视图失活的迟到响应不打开文件。
-const formatLabel = (format) => (format === 'xlsx' ? '表格' : 'PDF');
 
 const inactiveError = () => {
   const error = new Error('报告预览已关闭，请重新打开');
@@ -14,14 +13,11 @@ export function downloadReportFile(
   { baseUrl, getHeaders, getScope, downloadFile, openDocument, isActive = () => true } = {}
 ) {
   if (typeof reportId !== 'string' || !reportId)
-    return Promise.reject(new Error('缺少报告标识，无法下载'));
+    return Promise.reject(new Error('缺少报告标识'));
   if (format !== 'pdf' && format !== 'xlsx')
-    return Promise.reject(new Error(`不支持的导出格式 ${format}`));
-  if (typeof downloadFile !== 'function' || typeof openDocument !== 'function') {
-    return Promise.reject(
-      new Error(`当前环境不支持打开${formatLabel(format)}，请在微信小程序中查看`)
-    );
-  }
+    return Promise.reject(new Error('格式不支持'));
+  if (typeof downloadFile !== 'function' || typeof openDocument !== 'function')
+    return Promise.reject(new Error('仅支持小程序内查看'));
   let scope = '';
   try {
     scope = getScope();
@@ -41,9 +37,7 @@ export function downloadReportFile(
           const status = response.statusCode;
           if (status !== 200 || !response.tempFilePath) {
             const error =
-              status === 200
-                ? new Error(`服务端未返回有效的${formatLabel(format)}文件`)
-                : await downloadHttpError(response);
+              status === 200 ? new Error('文件无效') : await downloadHttpError(response);
             reject(error);
             return;
           }
@@ -63,17 +57,13 @@ export function downloadReportFile(
             fileType: format,
             showMenu: true,
             success: () => resolve(response.tempFilePath),
-            fail: (cause) =>
-              reject(
-                new Error(cause?.errMsg || `打开${formatLabel(format)}失败：微信未返回具体原因`)
-              ),
+            fail: (cause) => reject(new Error(cause?.errMsg || '打开失败，请重试')),
           });
         } catch (cause) {
           reject(cause);
         }
       },
-      fail: (cause) =>
-        reject(new Error(cause?.errMsg || '报告下载失败：未取得服务端响应，网络层未提供具体原因')),
+      fail: (cause) => reject(new Error(cause?.errMsg || '下载失败，请重试')),
     });
   });
 }

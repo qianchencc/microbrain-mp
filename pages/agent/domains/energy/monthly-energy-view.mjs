@@ -1,3 +1,5 @@
+import { agentErrorText } from '../../../../utils/agent-error.mjs';
+import { isReadCancelled } from '../../../../utils/agent-read-scope.mjs';
 // 首页月度同期：每月 1 日 08:00 起算，按上海时间每日 08:00/20:00 的采样截止。
 const HOUR = 3600000;
 const round = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
@@ -81,8 +83,9 @@ export async function readMonthlyEnergy(windows, request, publish) {
         });
         publish(key, { report });
       } catch (error) {
+        if (isReadCancelled(error) || error.code === 'AGENT_IDENTITY_CHANGED') throw error;
         publish(key, {
-          error: error.message || '月度统计读取失败',
+          error: agentErrorText(error, { fallback: '月度统计读取失败' }),
           denied:
             [401, 403].includes(error.statusCode ?? error.status) ||
             ['UNAUTHORIZED', 'FORBIDDEN'].includes(error.data?.code),
@@ -138,10 +141,10 @@ function periodView(span, states) {
     meters.length === coverage.meters &&
     meters.every((m) => m.status === 'ok');
   const detailLabel = `${monthlyDate(span.from)} ${span.from.slice(11, 16)} → ${monthlyDate(span.to)} ${span.to.slice(11, 16)}`;
-  // 后端 stale 的刷新失败以 cache.lastError 为准；数据仍按上次完整快照展示。
+  // 后端 stale 的刷新失败以 cache.lastError 为准；数据仍按上次完整快照展示，
+  // 页面只提示固定短标签，原始 lastError 保留在缓存元数据里。
   const cache = report?.cache;
-  const cacheNote =
-    cache?.status === 'stale' && cache.lastError?.message ? cache.lastError.message : '';
+  const cacheNote = cache?.status === 'stale' && cache.lastError?.message ? '上次更新未成功' : '';
   return {
     span,
     label: periodLabel(span),

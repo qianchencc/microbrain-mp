@@ -106,7 +106,9 @@ export function resolveDeviceArtwork(device = {}) {
   if (device.kind === 'environment') return artwork['environment-sensor'];
   if (device.kind === 'energy') return artwork['energy-meter'];
   if (device.kind === 'safety') {
-    const subtype = device.subtype === 'flooding' ? 'water' : device.subtype;
+    // 上游可能不投影 subtype：与 runtime domain.safetySubtypeOf 同一判定，按设备名兜底。
+    const raw = device.subtype === 'flooding' ? 'water' : device.subtype;
+    const subtype = raw || safetySubtypeOfName(`${device.deviceName ?? ''} ${device.name ?? ''}`);
     return artwork[`safety-${subtype}`] ?? artwork['safety-sensor'];
   }
 
@@ -117,6 +119,16 @@ export function resolveDeviceArtwork(device = {}) {
   if (matchedRule) return artwork[matchedRule.key];
   if (device.kind === 'lighting') return artwork['lighting-generic'];
   return artwork['generic-device'];
+}
+
+// 与 runtime domain.safetySubtypeOf 同一判定：烟 / 水浸 / 燃气。
+// 观察面经 observation-view.mjs 转出口供台账/详情行复用，勿另写近义正则。
+export function safetySubtypeOfName(name) {
+  const text = String(name || '');
+  if (/烟/.test(text)) return 'smoke';
+  if (/水浸/.test(text)) return 'water';
+  if (/燃气/.test(text)) return 'gas';
+  return '';
 }
 
 export function deviceDisplayName(deviceName) {

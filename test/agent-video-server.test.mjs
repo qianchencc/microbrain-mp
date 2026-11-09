@@ -6,13 +6,14 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
+import { runInNewContext } from 'node:vm'
 
 test('the video server serves the deployed decoder when the customer SDK origin is unavailable', async t => {
  const directory = await mkdtemp(join(tmpdir(), 'video-sdk-'))
  t.after(() => rm(directory, { recursive: true, force: true }))
  await copyFile(new URL('../deploy/h5player/serve.mjs', import.meta.url), join(directory, 'serve.mjs'))
  await mkdir(join(directory, 'sdk/playctrl1simd'), { recursive: true })
- await writeFile(join(directory, 'sdk/playctrl1simd/Decoder.js'), 'self.decoderReady = true;')
+ await writeFile(join(directory, 'sdk/playctrl1simd/Decoder.js'), '/*' + 'decoder resource '.repeat(200) + '*/self.decoderReady = true;')
  const reservation = createServer()
  reservation.listen(0, '127.0.0.1')
  await once(reservation, 'listening')
@@ -20,7 +21,7 @@ test('the video server serves the deployed decoder when the customer SDK origin 
  await new Promise(resolve => reservation.close(resolve))
  const offline = 'data:text/javascript,' + encodeURIComponent('globalThis.fetch = async () => new Response("Unavailable", {status:503})')
  const child = spawn(process.execPath, ['--import', offline, join(directory, 'serve.mjs')], {
-  env: { ...process.env, PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe'],
+  env: { ...process.env, PORT: String(port), SDK_ROOT: '' }, stdio: ['ignore', 'pipe', 'pipe'],
  })
  t.after(async () => {
   if (child.exitCode !== null || child.signalCode !== null) return
@@ -30,10 +31,17 @@ test('the video server serves the deployed decoder when the customer SDK origin 
  })
  await once(child.stdout, 'data', { signal: AbortSignal.timeout(5000) })
  const origin = `http://127.0.0.1:${port}`
- const response = await fetch(origin + '/owner/static/h5player/playctrl1simd/Decoder.js')
+ const response = await fetch(origin + '/owner/static/h5player/playctrl1simd/Decoder.js', { headers: { 'accept-encoding': 'gzip' } })
  assert.equal(response.status, 200)
  assert.match(response.headers.get('content-type'), /javascript/)
- assert.equal(await response.text(), 'self.decoderReady = true;')
+ assert.equal(response.headers.get('content-encoding'), 'gzip')
+ assert.match(response.headers.get('vary'), /Accept-Encoding/i)
+ const self = {}
+ runInNewContext(await response.text(), { self })
+ assert.equal(self.decoderReady, true, 'The delivered decoder must still be executable after decompression')
+ const cached = await fetch(origin + '/owner/static/h5player/playctrl1simd/Decoder.js', { headers: { 'if-none-match': response.headers.get('etag') } })
+ assert.equal(cached.status, 304, 'An unchanged decoder must be revalidated without downloading its body again')
+ assert.equal(await cached.text(), '')
  const head = await fetch(origin + '/owner/static/h5player/playctrl1simd/Decoder.js', { method: 'HEAD' })
  assert.equal(head.status, 200)
  assert.equal(await head.text(), '')

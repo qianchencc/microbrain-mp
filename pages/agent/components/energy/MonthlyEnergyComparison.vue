@@ -239,13 +239,15 @@
   </view>
 </template>
 <script setup>
-import { computed, ref, watch, onBeforeUnmount } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   getCompanyMeterReport,
   readCompanyMonthlyCache,
   writeCompanyMonthlyCache,
 } from '@/apis/agent/energy';
-import { getAgentStorageScope, waitForAgentSession } from '@/utils/agent-session';
+import { getAgentStorageScope } from '@/utils/agent-session';
+import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from '../../lib/reads.mjs';
 import { useUserStoreHook } from '@/store/modules/user';
 import {
   monthlyEnergyWindows,
@@ -267,8 +269,11 @@ const detailsMounted = ref(false),
   detailsKey = ref('');
 const details = computed(() => view.value.pairs.find((pair) => pair.key === detailsKey.value));
 const user = useUserStoreHook();
-let requestId = 0,
-  scope = '';
+let scope = '';
+const reads = useViewReads(
+  () => props.active,
+  () => props.cutoff
+);
 watch(
   () => [user.token, user.getDistrict?.id, user.authorized],
   () => {
@@ -278,7 +283,7 @@ watch(
     } catch {
       /* 登录失效也使旧统计不可再见。 */
     }
-    ++requestId;
+    reads.invalidate();
     failAll('登录身份已变化，请重新读取');
   },
   { flush: 'post' }
@@ -292,7 +297,7 @@ function openDetails(key) {
     /* 会话失效时清空已有统计。 */
   }
   if (!sameScope) {
-    ++requestId;
+    reads.invalidate();
     failAll('登录身份已变化，请重新读取');
     return;
   }
@@ -310,80 +315,68 @@ function failAll(error) {
   );
 }
 async function load(force = false) {
-  const id = ++requestId;
   detailsOpen.value = false;
-  const nextWindows = monthlyEnergyWindows(new Date(), props.cutoff);
-  try {
-    await waitForAgentSession();
-    if (id !== requestId || !props.active) return;
-    const nextScope = getAgentStorageScope();
-    const sameWindow = JSON.stringify(windows.value) === JSON.stringify(nextWindows);
-    if (scope !== nextScope || !sameWindow) states.value = {};
-    scope = nextScope;
-    windows.value = nextWindows;
-    const key = 'monthly-snapshot:' + JSON.stringify(nextWindows);
-    const cached = readCompanyMonthlyCache(key);
-    if (cached && force !== true) {
-      states.value = cached.value?.states || cached.value;
-      if (cached.fresh) return;
+  await reads.run(
+    'monthly',
+    async (options) => {
+      const nextWindows = monthlyEnergyWindows(new Date(), props.cutoff);
+      const nextScope = getAgentStorageScope();
+      if (scope !== nextScope || JSON.stringify(windows.value) !== JSON.stringify(nextWindows))
+        states.value = {};
+      scope = nextScope;
+      windows.value = nextWindows;
+      const key = 'monthly-snapshot:' + JSON.stringify(nextWindows);
+      const cached = readCompanyMonthlyCache(key);
+      if (cached && force !== true) {
+        states.value = cached.value?.states || cached.value;
+        if (cached.fresh) return null;
+      }
+      await readMonthlyEnergy(
+        nextWindows,
+        (query) => getCompanyMeterReport(query, { ...options, force: force === true }),
+        (period, result) =>
+          options.publish(() => {
+            if (result.error)
+              showAgentError(result.error, { fallback: '月度统计读取失败，请重试' });
+            if (result.denied) {
+              reads.invalidate();
+              failAll(result.error);
+            } else if (result.error && states.value[period]?.report) {
+              states.value = {
+                ...states.value,
+                [period]: { ...states.value[period], refreshError: result.error },
+              };
+            } else states.value = { ...states.value, [period]: result };
+          })
+      );
+      return key;
+    },
+    {
+      data: (key) => {
+        if (key)
+          writeCompanyMonthlyCache(key, {
+            states: states.value,
+            cache: monthlySnapshotCache(states.value),
+          });
+      },
+      denied: () => failAll('暂无权限'),
+      error: (cause) => {
+        showAgentError(cause, { fallback: '月度统计读取失败，请重试' });
+        failAll('读取失败');
+      },
     }
-    const active = () => {
-      if (id !== requestId || !props.active) return false;
-      let sameScope = false;
-      try {
-        sameScope = scope === getAgentStorageScope();
-      } catch {
-        /* 会话失效后清空整组读数。 */
-      }
-      if (!sameScope) {
-        ++requestId;
-        failAll('登录身份已变化，请重新读取');
-        return false;
-      }
-      return true;
-    };
-    await readMonthlyEnergy(
-      windows.value,
-      (query) => getCompanyMeterReport(query, { force: force === true, isActive: active }),
-      (key, result) => {
-        if (!active()) return;
-        if (result.denied) {
-          // 任一期撤权时整组清空，不能继续保留其他请求已取得的总量。
-          ++requestId;
-          failAll(result.error);
-        } else if (result.error && states.value[key]?.report) {
-          states.value = {
-            ...states.value,
-            [key]: { ...states.value[key], refreshError: result.error },
-          };
-        } else states.value = { ...states.value, [key]: result };
-      }
-    );
-    // 失败/准备/无报期也要落一个非 fresh 占位，覆盖此前可能存在的成功组合，避免下次进入
-    // 复用旧 fresh 而看不到本次刷新失败；纯 waiting 组合仍可短暂复用，避免月初无限重试。
-    if (active())
-      writeCompanyMonthlyCache(key, {
-        states: states.value,
-        cache: monthlySnapshotCache(states.value),
-      });
-  } catch (error) {
-    if (id === requestId && props.active) failAll(error.message || '月度统计读取失败');
-  }
+  );
 }
 watch(
   [() => props.active, () => props.refreshKey, () => props.cutoff],
   ([active, revision], previous) => {
     if (active) void load(Boolean(previous && revision !== previous[1]));
     else {
-      ++requestId;
       detailsOpen.value = false;
     }
   },
   { immediate: true }
 );
-onBeforeUnmount(() => {
-  ++requestId;
-});
 </script>
 <style scoped lang="scss">
 @import '../../styles/tokens';

@@ -5,6 +5,7 @@ import {
   isAgentStorageScope,
   waitForAgentSession,
 } from '@/utils/agent-session';
+import { isReadCancelled } from '../../../../utils/agent-read-scope.mjs';
 
 export const regions = ref([]);
 export const focusRegionId = ref('');
@@ -19,7 +20,6 @@ let loadedAt = 0,
   inFlight = null;
 const storageKey = (scope) => 'agent-focus-region:' + scope;
 const directoryKey = (scope) => 'agent-region-directory:v1:' + scope;
-const shanghaiDay = (at) => Math.floor((at + 8 * 3600000) / 86400000);
 const denied = (error) =>
   [401, 403].includes(error.status ?? error.statusCode) || error.code === 'AGENT_SESSION_EXPIRED';
 const validDirectory = (value) =>
@@ -57,8 +57,12 @@ function clearDirectory(scope) {
   }
 }
 function useDirectory(scope, rows) {
+  const previous = new Map(regions.value.map((region) => [region.id, region.attention]));
   const directory = rows.map(({ id, name }) => ({ id, name }));
-  regions.value = directory;
+  regions.value = directory.map((region) => ({
+    ...region,
+    attention: previous.get(region.id),
+  }));
   const saved = readLocal(storageKey(scope));
   focusRegionId.value =
     regions.value.find((region) => region.id === saved)?.id || regions.value[0]?.id || '';
@@ -66,9 +70,16 @@ function useDirectory(scope, rows) {
   return directory;
 }
 function refreshAttention(scope, request, options) {
-  listRegions(undefined, { isActive: () => request === sequence && options.isActive?.() !== false })
+  listRegions(undefined, {
+    ...options,
+    isActive: () => request === sequence && options.isActive?.() !== false,
+  })
     .then((latest) => {
-      if (request !== sequence || !isAgentStorageScope(scope)) return;
+      if (request !== sequence || options.isActive?.() === false || !isAgentStorageScope(scope))
+        return;
+      if (!validDirectory(latest.regions)) throw new Error('区域目录响应无效');
+      const directory = useDirectory(scope, latest.regions);
+      writeLocal(directoryKey(scope), { regions: directory, loadedAt });
       const attention = new Map(
         (latest.regions || []).map((region) => [region.id, region.attention])
       );
@@ -80,12 +91,13 @@ function refreshAttention(scope, request, options) {
     .catch((error) => {
       if (request === sequence && isAgentStorageScope(scope) && denied(error)) {
         clearDirectory(scope);
-        regionsError.value = error.message || '区域访问已失效';
+        if (options.isActive?.() !== false) regionsError.value = error.message || '区域访问已失效';
       }
     });
 }
 
 export async function loadRegionFocus(options = {}) {
+  const consumerActive = options.viewActive || options.isActive || (() => true);
   if (owner && !isAgentStorageScope(owner)) {
     ++sequence;
     clearDirectory('');
@@ -99,9 +111,12 @@ export async function loadRegionFocus(options = {}) {
     clearDirectory(owner);
     owner = '';
     inFlight = null;
-    regionsError.value = error.message || '区域暂不可用';
+    if (consumerActive()) {
+      regionsError.value = error.message || '区域暂不可用';
+    }
     throw error;
   }
+  if (!consumerActive()) return;
   const scope = getAgentStorageScope();
   if (scope !== owner) {
     ++sequence;
@@ -119,33 +134,36 @@ export async function loadRegionFocus(options = {}) {
       loadedAt = saved.loadedAt;
     }
   }
-  if (loadedAt && shanghaiDay(loadedAt) === shanghaiDay(Date.now())) {
-    regionsLoading.value = false;
-    refreshAttention(scope, sequence, options);
-    return;
-  }
-  if (inFlight?.scope === scope && inFlight.isActive?.() !== false) {
+  if (inFlight?.scope === scope && inFlight.active()) {
+    inFlight.consumers.add(consumerActive);
     return loadedAt ? undefined : inFlight.promise;
   }
   const request = ++sequence;
-  regionsLoading.value = !loadedAt;
+  const consumers = new Set([consumerActive]);
+  const active = () => [...consumers].some((consumer) => consumer());
+  regionsLoading.value = !regions.value.length;
   regionsError.value = '';
   const promise = Promise.resolve().then(async () => {
     try {
       const result = await listRegions('directory', {
-        isActive: () => request === sequence && options.isActive?.() !== false,
+        ...options,
+        isActive: () => request === sequence && active(),
       });
-      if (request !== sequence || !isAgentStorageScope(scope)) return;
+      if (request !== sequence || !active() || !isAgentStorageScope(scope)) return;
       if (!validDirectory(result.regions)) throw new Error('区域目录响应无效');
       const directory = useDirectory(scope, result.regions);
       const observed = Date.parse(result.cache?.updatedAt);
       loadedAt = Number.isFinite(observed) ? observed : Date.now();
       writeLocal(directoryKey(scope), { regions: directory, loadedAt });
-      refreshAttention(scope, request, options);
+      refreshAttention(scope, request, { ...options, isActive: active });
     } catch (error) {
+      if (isReadCancelled(error)) throw error;
       if (request === sequence) {
         if (!isAgentStorageScope(scope) || denied(error)) clearDirectory(scope);
-        regionsError.value = error.message || '区域暂不可用';
+        // Hidden callers may clear revoked data, but cannot notify or repaint another page.
+        if (active()) {
+          regionsError.value = error.message || '区域暂不可用';
+        }
       }
       throw error;
     } finally {
@@ -153,7 +171,7 @@ export async function loadRegionFocus(options = {}) {
       if (inFlight?.request === request) inFlight = null;
     }
   });
-  inFlight = { scope, promise, request, isActive: options.isActive };
+  inFlight = { scope, promise, request, consumers, active };
   if (loadedAt) {
     // A refresh failure is recorded above; it must not block an already usable directory.
     promise.catch(() => {});

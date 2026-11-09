@@ -16,9 +16,11 @@ import {
   energyHistoryRecheckBlocks,
   createEnergyHistoryQueue,
 } from './energy-history-queue.mjs';
-
-const failureMessage = (cause, fallback) =>
-  cause?.data?.cache?.lastError?.message || cause?.data?.message || cause?.message || fallback;
+import {
+  cancelRead,
+  createReadScope,
+  isReadCancelled,
+} from '../../../../utils/agent-read-scope.mjs';
 const SPAN_DAYS = 180,
   PAD_DAYS = 90;
 
@@ -28,9 +30,14 @@ export function createEnergyPanel({
   api,
   identity,
   position,
+  notice,
   createState = (value) => value,
   clock = shanghaiToday,
 }) {
+  const failureMessage = (cause, fallback) => {
+    notice?.(cause, fallback);
+    return fallback;
+  };
   const today = clock();
   const state = createState({
     today,
@@ -56,6 +63,12 @@ export function createEnergyPanel({
     requestId = 0,
     visible = true;
   const active = () => visible && read().active;
+  const reads = createReadScope({
+    identity: identity.current,
+    ready: api.ready,
+    active,
+    context: () => [read().bounded, read().initialQuery || null],
+  });
   const historyQueue = createEnergyHistoryQueue({
     concurrency: 2,
     load: (block, wanted) => fetchWindow(block.days, block.end, block.force === true, wanted),
@@ -133,27 +146,32 @@ export function createEnergyPanel({
     }
     state.meterDaily = meters;
   }
-  async function fetchWindow(days, end, force = false, wanted = null) {
-    const current = requestId;
-    await api.ready();
-    return api.daily(
-      { days, ...(end ? { end } : {}) },
-      {
-        force: force === true,
-        isActive: () => current === requestId && active() && (!wanted || wanted()),
-      }
+  async function readReport(key, load) {
+    const result = await reads.run(key, load, { denied: clearData });
+    if (result.status === 'error') throw result.error;
+    if (result.status === 'cancelled') throw cancelRead('superseded');
+    return result.value;
+  }
+  function fetchWindow(days, end, force = false, wanted = null) {
+    return readReport(`daily:${days}:${end || ''}`, (options) =>
+      api.daily(
+        { days, ...(end ? { end } : {}) },
+        {
+          ...options,
+          force: force === true,
+          isActive: () => options.isActive() && (!wanted || wanted()),
+        }
+      )
     );
   }
-  async function fetchMeter(request, force = false) {
-    const current = requestId;
-    await api.ready();
-    return api.meter(request, {
-      force: force === true,
-      isActive: () => current === requestId && active(),
-    });
+  function fetchMeter(request, force = false) {
+    return readReport(`meter:${JSON.stringify(request)}`, (options) =>
+      api.meter(request, { ...options, force: force === true })
+    );
   }
   async function init(force = false) {
     const current = ++requestId;
+    reads.invalidate();
     historyQueue.reset();
     selectedDemand = null;
     visibleDemand = null;
@@ -199,6 +217,7 @@ export function createEnergyPanel({
         setSelectedDemand(shiftDate(state.selected, -45), shiftDate(state.selected, 15));
       }
     } catch (cause) {
+      if (isReadCancelled(cause)) return;
       if (current === requestId) {
         if (!identity.isCurrent(scope) || [401, 403].includes(cause.status)) clearData();
         state.error = failureMessage(cause, '逐日能耗暂不可用');
@@ -313,6 +332,7 @@ export function createEnergyPanel({
         resolveBoundedPending(boundedChunkFrom(end), end);
         if (!state.strip.some((day) => day.failed)) state.error = '';
       } catch (cause) {
+        if (isReadCancelled(cause)) break;
         if (current !== requestId || job !== boundedJob || !active()) break;
         if (!identity.isCurrent(job.scope) || [401, 403].includes(cause.status)) {
           boundedJob = null;
@@ -438,6 +458,7 @@ export function createEnergyPanel({
     historyRecheck.delete(block.key);
   }
   function failHistoryBlock(block, cause) {
+    if (isReadCancelled(cause)) return;
     if (!active() || !identity.isCurrent(scope)) return;
     if ([401, 403].includes(cause.status)) {
       historyQueue.reset();
@@ -516,6 +537,7 @@ export function createEnergyPanel({
   }
   function invalidate() {
     ++requestId;
+    reads.invalidate();
     boundedJob = null;
     historyQueue.reset();
     selectedDemand = null;

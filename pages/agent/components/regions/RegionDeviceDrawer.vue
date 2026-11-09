@@ -116,7 +116,7 @@
           <view
             v-if="!regionId"
             class="empty"
-            >{{ regionError || '正在读取关注区域' }}</view
+            >{{ regionError ? '区域暂不可用' : '正在读取关注区域' }}</view
           >
           <view
             v-else-if="loading"
@@ -126,8 +126,7 @@
           <view
             v-else-if="error"
             class="empty"
-            ><text>{{ error }}</text
-            ><button @tap="loadDirectory">重新加载</button></view
+            ><text>设备目录暂不可用</text><button @tap="loadDirectory">重新加载</button></view
           >
           <view
             v-else-if="!devices.length"
@@ -219,6 +218,11 @@
                       >{{ part.text }}</text
                     ></text
                   >
+                  <text
+                    v-if="device.stateNote"
+                    class="device-location"
+                    >{{ device.stateNote }}</text
+                  >
                 </view>
               </view>
             </view>
@@ -241,6 +245,7 @@
           ref="deviceTimeline"
           class="device-timeline-host"
           :device="devicePane"
+          :active="open && depth === 1 && !issue"
           :date="date"
           :now="now"
           :sample-mode="sampleMode"
@@ -273,6 +278,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { listRegionDevices, listRegionDeviceStates } from '@/apis/agent/observations';
 import { getAgentStorageScope, isAgentStorageScope } from '@/utils/agent-session';
+import { showAgentError } from '@/utils/agent-error';
+import { useViewReads } from '../../lib/reads.mjs';
 import DeviceSheet from '../shared/DeviceSheet.vue';
 import DeviceTimelineView from './DeviceTimelineView.vue';
 import DeviceObservationView from '../observations/DeviceObservationView.vue';
@@ -304,8 +311,7 @@ const pageVisible = ref(true);
 onHide(() => {
   pageVisible.value = false;
   stateRefresh.cancel();
-  ++stateRequest;
-  ++directoryRequest;
+  reads.invalidate();
   loading.value = false;
 });
 onShow(() => {
@@ -358,9 +364,11 @@ const activeDevice = computed(() =>
         .find((device) => device.id === activeDeviceId.value) || null
     : null
 );
-let directoryRequest = 0,
-  stateRequest = 0,
-  focusTimer;
+const reads = useViewReads(
+  () => props.open,
+  () => props.regionId
+);
+let focusTimer;
 let loadedRegionId = '',
   loadedScope = '',
   loadedAt = 0;
@@ -433,12 +441,12 @@ async function loadDirectory(preserveNavigation = false) {
     preserveNavigation === true &&
     isAgentStorageScope(loadedScope) &&
     props.regionId === loadedRegionId;
-  const current = ++directoryRequest,
-    regionId = props.regionId;
+  if (!props.open || !pageVisible.value) return;
+  const regionId = props.regionId;
   if (!preserveNavigation) resetStack();
   // 纯前端演示:设备清单从样例任务直接取,不拉接口。
   if (props.sampleMode) {
-    ++stateRequest;
+    reads.invalidate('states');
     stateLoading.value = false;
     error.value = '';
     stateError.value = '';
@@ -451,101 +459,99 @@ async function loadDirectory(preserveNavigation = false) {
     emit('count', devices.value.length);
     return;
   }
-  let scope;
-  try {
-    scope = getAgentStorageScope();
-  } catch (cause) {
-    ++stateRequest;
-    devices.value = [];
-    readings.value = {};
-    loading.value = false;
-    stateLoading.value = false;
-    emit('count', null);
-    error.value = cause.message;
-    return;
-  }
-  if (
-    !preserveNavigation &&
-    regionId === loadedRegionId &&
-    scope === loadedScope &&
-    Date.now() - loadedAt < 30000
-  ) {
-    if (props.open) stateRefresh.auto();
-    return;
-  }
-  ++stateRequest;
-  if (regionId !== loadedRegionId || scope !== loadedScope) {
-    devices.value = [];
-    readings.value = {};
-    emit('count', null);
-  }
-  stateLoading.value = false;
-  error.value = '';
-  stateError.value = '';
-  if (!regionId) return;
-  loading.value = true;
-  try {
-    const result = await listRegionDevices(regionId, {
-      isActive: () =>
-        current === directoryRequest &&
-        props.open &&
-        pageVisible.value &&
-        regionId === props.regionId,
-    });
-    if (
-      current !== directoryRequest ||
-      regionId !== props.regionId ||
-      !pageVisible.value ||
-      scope !== getAgentStorageScope()
-    )
-      return;
-    devices.value = result.devices || [];
-    if (activeDeviceId.value && !devices.value.some((device) => device.id === activeDeviceId.value))
-      resetStack();
-    loadedRegionId = regionId;
-    loadedScope = scope;
-    loadedAt = Date.now();
-    emit('count', devices.value.length);
-    if (props.open) stateRefresh.auto();
-  } catch (cause) {
-    if (current === directoryRequest) {
-      if (!isAgentStorageScope(scope) || [401, 403].includes(cause.status)) {
-        devices.value = [];
-        readings.value = {};
-        emit('count', null);
-      }
-      error.value =
-        cause.message === 'request:fail'
-          ? '设备目录暂不可用，请重试'
-          : cause.message || '设备目录暂不可用';
+  await reads.run(
+    'directory',
+    (options) => {
+      const scope = getAgentStorageScope();
+      if (
+        !preserveNavigation &&
+        regionId === loadedRegionId &&
+        scope === loadedScope &&
+        Date.now() - loadedAt < 30000
+      )
+        return null;
+      reads.invalidate('states');
+      if (regionId !== loadedRegionId || scope !== loadedScope) clearReadData();
+      stateLoading.value = false;
+      error.value = '';
+      stateError.value = '';
+      if (!regionId) return null;
+      loading.value = true;
+      return listRegionDevices(regionId, options);
+    },
+    {
+      data: (result) => {
+        if (result) {
+          devices.value = result.devices || [];
+          if (
+            activeDeviceId.value &&
+            !devices.value.some((device) => device.id === activeDeviceId.value)
+          )
+            resetStack();
+          loadedRegionId = regionId;
+          loadedScope = getAgentStorageScope();
+          loadedAt = Date.now();
+          emit('count', devices.value.length);
+        }
+        if (regionId) stateRefresh.auto();
+      },
+      denied: clearReadData,
+      error: (cause) => {
+        error.value = '设备目录暂不可用';
+        showAgentError(cause, { fallback: '设备目录暂不可用' });
+      },
+      finish: () => {
+        loading.value = false;
+      },
     }
-  } finally {
-    if (current === directoryRequest) loading.value = false;
-  }
+  );
 }
 
+function clearReadData() {
+  devices.value = [];
+  readings.value = {};
+  loadedAt = 0;
+  emit('count', null);
+}
 async function loadStates() {
-  const current = ++stateRequest,
-    regionId = props.regionId;
-  if (!props.open || !pageVisible.value || !regionId || !devices.value.length) return;
-  stateLoading.value = true;
-  stateError.value = '';
-  try {
-    const result = await listRegionDeviceStates(regionId, {
-      isActive: () =>
-        current === stateRequest && regionId === props.regionId && props.open && pageVisible.value,
-    });
-    if (current !== stateRequest || regionId !== props.regionId || !props.open) return;
-    readings.value = Object.fromEntries((result.states || []).map((item) => [item.id, item]));
-  } catch (cause) {
-    if (current === stateRequest) {
-      if (!['AGENT_READ_PREPARING', 'ACCOUNT_IDENTITY_PREPARING'].includes(cause.code))
+  const regionId = props.regionId;
+  if (!regionId || !devices.value.length) return;
+  await reads.run('states', (options) => listRegionDeviceStates(regionId, options), {
+    start: () => {
+      stateLoading.value = true;
+      stateError.value = '';
+    },
+    data: (result) => {
+      readings.value = Object.fromEntries(
+        (result.states || []).map((item) => [
+          item.id,
+          {
+            ...item,
+            status: result.status,
+            cache: result.cache,
+            missingDeviceIds: result.missingDeviceIds,
+          },
+        ])
+      );
+    },
+    denied: clearReadData,
+    error: (cause) => {
+      if (
+        ![
+          'AGENT_READ_PREPARING',
+          'ACCOUNT_IDENTITY_PREPARING',
+          'IOT_SCOPE_PREPARING',
+          'DEVICE_STATE_PREPARING',
+        ].includes(cause.code)
+      )
         readings.value = {};
       stateError.value = cause.message || '设备状态暂不可用';
-    }
-  } finally {
-    if (current === stateRequest) stateLoading.value = false;
-  }
+      showAgentError(cause, { fallback: '设备状态暂不可用' });
+    },
+    finish: () => {
+      stateLoading.value = false;
+    },
+  });
 }
 const stateRefresh = createStateRefresh(loadStates);
 
@@ -583,8 +589,7 @@ watch(
       if (!loading.value) loadDirectory();
     } else {
       stateRefresh.cancel();
-      ++directoryRequest;
-      ++stateRequest;
+      reads.invalidate();
       loading.value = false;
       stateLoading.value = false;
       closeSearch();
@@ -602,8 +607,7 @@ watch(
 );
 onBeforeUnmount(() => {
   stateRefresh.cancel();
-  ++directoryRequest;
-  ++stateRequest;
+  reads.invalidate();
   clearTimeout(focusTimer);
   clearPaneTimer('device');
   clearPaneTimer('task');

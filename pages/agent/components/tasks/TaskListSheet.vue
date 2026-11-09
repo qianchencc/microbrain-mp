@@ -26,18 +26,13 @@
     </template>
     <template #header-right>
       <view class="header-actions">
-        <button
-          v-if="!selectedTask && !selectedPlan && view !== 'inbox'"
-          class="refresh-button"
-          aria-label="刷新安排"
-          :disabled="loading"
-          @tap="load(true)"
-          ><uni-icons
-            :class="{ spinning: loading }"
-            type="refreshempty"
-            size="16"
-            color="var(--agent-accent-deep)"
-        /></button>
+        <RefreshButton
+          v-if="view === 'inbox' ? !inboxNavigation.canBack : !selectedTask && !selectedPlan"
+          :label="view === 'inbox' ? '刷新通知' : '刷新安排'"
+          :loading="view === 'inbox' ? inboxBusy : loading"
+          :disabled="view === 'inbox' ? inboxBusy : loading"
+          @tap="view === 'inbox' ? inbox?.refresh() : load(true)"
+        />
         <view
           v-if="source === 'company' && !selectedTask && !selectedPlan && view !== 'inbox'"
           class="inbox-entry"
@@ -93,11 +88,9 @@
           :open="open && view === 'inbox' && !selectedTask && !selectedPlan"
           :source="source"
           @navigation="inboxNavigation = $event"
+          @busy="inboxBusy = $event"
           @reference="emit('reference', $event)"
-          @unread-count="
-            inboxUnread = $event;
-            emit('unread-count', $event);
-          "
+          @unread-count="emit('unread-count', $event)"
           @changed="emit('changed')"
         />
         <scroll-view
@@ -185,6 +178,7 @@
               class="state-message"
               ><TaskErrorNotice
                 :message="error"
+                summary="读取失败"
                 @details="showIssue"
               /><button @tap="load">重试</button></view
             >
@@ -361,11 +355,6 @@
                   @change.stop="togglePlanStatus(plan, $event.detail.value)"
                 />
               </view>
-              <text
-                v-if="plans.length"
-                class="plans-foot"
-                >暂停只影响未来安排，保留已有执行记录</text
-              >
             </template>
 
             <template v-else>
@@ -404,6 +393,7 @@
               class="list-footer list-error"
               ><TaskErrorNotice
                 :message="error"
+                summary="任务暂未更新"
                 @details="showIssue"
               /><button @tap="load">重试</button></view
             >
@@ -431,6 +421,7 @@
         ><TaskErrorNotice
           v-if="planDetailError"
           :message="planDetailError"
+          summary="读取失败"
           @details="showIssue"
         />
         <scroll-view
@@ -478,12 +469,7 @@
               @details="showIssue"
             />
             <view class="plan-toggle-row">
-              <view class="plan-toggle-copy"
-                ><text class="plan-toggle-title">周期任务</text
-                ><text class="plan-toggle-note">{{
-                  planIsEnabled(selectedPlan) ? '暂停后只影响以后的安排' : '继续前会检查设备权限'
-                }}</text></view
-              >
+              <view class="plan-toggle-copy"><text class="plan-toggle-title">周期任务</text></view>
               <view
                 v-if="!planCanToggle(selectedPlan)"
                 class="plan-switch-wrap plan-switch-wrap--disabled"
@@ -586,6 +572,7 @@
 import { computed, reactive, ref, toRef, watch } from 'vue';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { getAgentStorageScope } from '@/utils/agent-session';
+import { useViewReads } from '../../lib/reads.mjs';
 import {
   getTaskPlan,
   cancelTaskPlan,
@@ -614,8 +601,9 @@ import {
   createPlanManagement,
 } from '../../lib/tasks.mjs';
 import DeviceSheet from '../shared/DeviceSheet.vue';
-import TaskIssueDetails from './TaskIssueDetails.vue';
+import RefreshButton from '../shared/RefreshButton.vue';
 import TaskErrorNotice from './TaskErrorNotice.vue';
+import { showAgentError } from '@/utils/agent-error';
 import SlidingSegments from '../shared/SlidingSegments.vue';
 import TaskResultContent from './TaskResultContent.vue';
 import TaskCalendarView from './TaskCalendarView.vue';
@@ -633,6 +621,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'reference', 'create', 'changed', 'unread-count']);
 const calendar = ref(null),
   inbox = ref(null),
+  inboxBusy = ref(false),
   inboxNavigation = ref({ title: '', canBack: false }),
   selectedDate = ref(props.date || taskToday());
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -780,13 +769,16 @@ function agendaSubtitle(task) {
     requirements || (task.repeat || task.occurrence ? repeatText(task.repeat) || '按周期执行' : '')
   );
 }
-let requestId = 0,
-  planRequest = 0,
-  plansRequest = 0,
-  unreadRequest = 0,
-  moreRequest = 0,
-  loadedScope = '',
+let loadedScope = '',
   pageVisible = true;
+const reads = useViewReads(
+  () => props.open && !selectedTask.value && !selectedPlan.value && !issue.value,
+  () => [props.source, view.value]
+);
+const detailReads = useViewReads(
+  () => props.open && !selectedTask.value && !issue.value,
+  () => [props.source, selectedPlan.value?.planId]
+);
 
 function resetPlanSwitch() {
   planControls.invalidate();
@@ -794,8 +786,8 @@ function resetPlanSwitch() {
 function resetIdentity() {
   issue.value = null;
   operationError.value = '';
-  ++plansRequest;
-  ++moreRequest;
+  reads.invalidate('plans');
+  reads.invalidate('more');
   tasks.value = [];
   plans.value = [];
   taskRows.clear();
@@ -816,10 +808,8 @@ function resetIdentity() {
 }
 onHide(() => {
   pageVisible = false;
-  ++requestId;
-  ++planRequest;
-  ++plansRequest;
-  ++moreRequest;
+  reads.invalidate();
+  detailReads.invalidate();
   loading.value = false;
   planLoading.value = false;
   plansLoading.value = false;
@@ -892,52 +882,52 @@ function selectTaskRows(values, kind) {
 }
 
 async function loadPlans(force = true) {
-  if (!props.open || !pageVisible) return;
-  const current = ++plansRequest;
-  let scope = '';
-  try {
-    scope = getAgentStorageScope();
-    const source = props.source;
-    if (scope !== loadedScope) return;
-    const saved = peekAgentPlans({ source });
-    if (saved?.plans) {
-      plans.value = saved.plans;
-      plansLoaded.value = true;
-      plansError.value = '';
+  await reads.run(
+    'plans',
+    (options) => {
+      const source = props.source;
+      const saved = peekAgentPlans({ source });
+      if (saved?.plans) {
+        plans.value = saved.plans;
+        plansLoaded.value = true;
+      }
+      return readAgentPlans({ source, force }, options);
+    },
+    {
+      start: () => {
+        plansLoading.value = true;
+        plansError.value = '';
+      },
+      data: (result) => {
+        plans.value = Array.isArray(result?.plans) ? result.plans : [];
+        plansLoaded.value = true;
+      },
+      denied: resetIdentity,
+      error: (cause) => {
+        plansError.value = cause.message || '周期任务暂不可用';
+        showAgentError(cause, { fallback: '周期任务暂不可用' });
+      },
+      finish: () => {
+        plansLoading.value = false;
+      },
     }
-    plansLoading.value = true;
-    plansError.value = '';
-    const result = await readAgentPlans({ source, force });
-    if (
-      current === plansRequest &&
-      pageVisible &&
-      props.open &&
-      source === props.source &&
-      scope === getAgentStorageScope()
-    ) {
-      plans.value = Array.isArray(result?.plans) ? result.plans : [];
-      plansLoaded.value = true;
-      plansError.value = '';
-    }
-  } catch (cause) {
-    if (current === plansRequest && props.open)
-      plansError.value = cause.message || '周期任务暂不可用';
-  } finally {
-    if (current === plansRequest) plansLoading.value = false;
-  }
+  );
 }
 
 async function refreshUnread(force = false) {
-  if (props.source !== 'company' || !props.open) return;
-  const current = ++unreadRequest;
-  try {
-    const scope = getAgentStorageScope();
-    const result = await readAgentNotifications({ source: 'company', limit: 1, force });
-    if (current === unreadRequest && props.open && scope === getAgentStorageScope())
-      inboxUnread.value = Number(result?.unreadCount) || 0;
-  } catch {
-    /* 未读角标失败不阻塞列表 */
-  }
+  if (props.source !== 'company') return;
+  await reads.run(
+    'unread',
+    (options) => readAgentNotifications({ source: 'company', limit: 1, force }, options),
+    {
+      data: (result) => {
+        inboxUnread.value = Number(result?.unreadCount) || 0;
+      },
+      denied: () => {
+        inboxUnread.value = 0;
+      },
+    }
+  );
 }
 
 async function load(force = true) {
@@ -950,108 +940,101 @@ async function load(force = true) {
     inbox.value?.refresh();
     return;
   }
-  const current = ++requestId,
-    kind = view.value;
-  loading.value = true;
-  error.value = '';
-  let scope = '';
-  try {
-    scope = getAgentStorageScope();
-    const source = props.source;
-    if (scope !== loadedScope) {
-      resetIdentity();
-      loadedScope = scope;
-    }
-    tasks.value = taskRows.get(kind) || [];
-    listLoaded.value = kind === 'plans' ? plansLoaded.value : taskRows.has(kind);
-    if (kind === 'plans') {
-      await loadPlans(force);
-      if (current === requestId && view.value === 'plans') {
-        listLoaded.value = plansLoaded.value;
-        error.value = plansError.value;
+  const kind = view.value;
+  reads.invalidate('more');
+  moreLoading.value = false;
+  await reads.run(
+    'list',
+    (options) => {
+      const scope = getAgentStorageScope(),
+        source = props.source;
+      if (scope !== loadedScope) {
+        resetIdentity();
+        loadedScope = scope;
       }
-      return;
-    }
-    if (kind === 'all' && props.source === 'company') void loadPlans(force);
-    const range = taskListRange(kind);
-    // 同身份快照先落位：重新打开不再空等 Runtime，随后按同一缓存口径对齐。
-    const saved = peekAgentTasks({ source, ...range });
-    if (saved?.tasks?.length) {
-      tasks.value = selectTaskRows(saved.tasks, kind);
-      taskRows.set(kind, tasks.value);
-      listLoaded.value = true;
-      loading.value = false;
-      if (kind === 'all') {
-        allLoadedTo.value = TASK_ALL_CHUNK_DAYS;
-        moreError.value = '';
+      tasks.value = taskRows.get(kind) || [];
+      listLoaded.value = kind === 'plans' ? plansLoaded.value : taskRows.has(kind);
+      if (kind === 'plans') return readAgentPlans({ source, force }, options);
+      if (kind === 'all' && source === 'company') void loadPlans(force);
+      const range = taskListRange(kind);
+      const saved = peekAgentTasks({ source, ...range });
+      if (saved?.tasks?.length) {
+        tasks.value = selectTaskRows(saved.tasks, kind);
+        taskRows.set(kind, tasks.value);
+        listLoaded.value = true;
+        loading.value = false;
+        if (kind === 'all') {
+          allLoadedTo.value = TASK_ALL_CHUNK_DAYS;
+          moreError.value = '';
+        }
       }
+      return readAgentTasks({ source, ...range, force }, options);
+    },
+    {
+      start: () => {
+        loading.value = true;
+        error.value = '';
+      },
+      data: (result) => {
+        if (kind === 'plans') {
+          plans.value = result?.plans || [];
+          plansLoaded.value = true;
+          plansError.value = '';
+        } else {
+          tasks.value = selectTaskRows(result?.tasks, kind);
+          taskRows.set(kind, tasks.value);
+          if (kind === 'all') {
+            allLoadedTo.value = TASK_ALL_CHUNK_DAYS;
+            moreError.value = '';
+          }
+        }
+        listLoaded.value = true;
+      },
+      denied: resetIdentity,
+      error: (cause) => {
+        error.value = cause.message || '安排暂不可用';
+        showAgentError(cause, { fallback: '安排暂不可用' });
+      },
+      finish: () => {
+        loading.value = false;
+      },
     }
-    const result = await readAgentTasks({ source, ...range, force });
-    if (
-      current === requestId &&
-      pageVisible &&
-      props.open &&
-      view.value === kind &&
-      source === props.source &&
-      scope === getAgentStorageScope()
-    ) {
-      tasks.value = selectTaskRows(result?.tasks, kind);
-      taskRows.set(kind, tasks.value);
-      listLoaded.value = true;
-      if (kind === 'all') {
-        allLoadedTo.value = TASK_ALL_CHUNK_DAYS;
-        moreError.value = '';
-      }
-    }
-  } catch (cause) {
-    if (current === requestId && props.open && view.value === kind) {
-      let currentScope = '';
-      try {
-        currentScope = getAgentStorageScope();
-      } catch {
-        /* 失效身份不得保留旧列表 */
-      }
-      if (cause.data || !scope || scope !== currentScope) resetIdentity();
-      error.value = cause.message || '安排暂不可用';
-    }
-  } finally {
-    if (current === requestId) loading.value = false;
-  }
+  );
 }
 async function loadMore() {
-  if (view.value !== 'all' || moreLoading.value || !hasMore.value || !props.open || !pageVisible)
-    return;
-  const current = ++moreRequest;
-  moreLoading.value = true;
-  moreError.value = '';
-  try {
-    const scope = getAgentStorageScope(),
-      source = props.source;
-    const today = taskToday();
-    const from = `${shiftDate(today, allLoadedTo.value)}T00:00:00+08:00`;
-    const to = `${shiftDate(today, Math.min(allLoadedTo.value + TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS))}T00:00:00+08:00`;
-    const result = await readAgentTasks({ source, from, to });
-    if (
-      current !== moreRequest ||
-      !pageVisible ||
-      !props.open ||
-      view.value !== 'all' ||
-      source !== props.source ||
-      scope !== getAgentStorageScope()
-    )
-      return;
-    const seen = new Set(tasks.value.map(taskKey));
-    tasks.value = [
-      ...tasks.value,
-      ...(result?.tasks || []).filter((task) => !seen.has(taskKey(task))),
-    ];
-    taskRows.set('all', tasks.value);
-    allLoadedTo.value = Math.min(allLoadedTo.value + TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS);
-  } catch (cause) {
-    if (current === moreRequest) moreError.value = cause.message || '加载失败';
-  } finally {
-    if (current === moreRequest) moreLoading.value = false;
-  }
+  if (view.value !== 'all' || moreLoading.value || !hasMore.value) return;
+  await reads.run(
+    'more',
+    (options) => {
+      const today = taskToday();
+      const from = `${shiftDate(today, allLoadedTo.value)}T00:00:00+08:00`;
+      const to = `${shiftDate(today, Math.min(allLoadedTo.value + TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS))}T00:00:00+08:00`;
+      return readAgentTasks({ source: props.source, from, to }, options);
+    },
+    {
+      start: () => {
+        moreLoading.value = true;
+        moreError.value = '';
+      },
+      data: (result) => {
+        const seen = new Set(tasks.value.map(taskKey));
+        tasks.value = [
+          ...tasks.value,
+          ...(result?.tasks || []).filter((task) => !seen.has(taskKey(task))),
+        ];
+        taskRows.set('all', tasks.value);
+        allLoadedTo.value = Math.min(allLoadedTo.value + TASK_ALL_CHUNK_DAYS, TASK_ALL_MAX_DAYS);
+      },
+      denied: resetIdentity,
+      error: (cause) => {
+        moreError.value = cause.message || '加载失败';
+        showAgentError(cause, { fallback: '更晚的任务加载失败' });
+      },
+      finish: () => {
+        moreLoading.value = false;
+      },
+    }
+  );
 }
 function openTask(task) {
   if (!taskKey(task)) return;
@@ -1060,35 +1043,34 @@ function openTask(task) {
 }
 async function openPlan(plan) {
   resetPlanSwitch();
-  const current = ++planRequest,
-    source = props.source,
-    scope = getAgentStorageScope();
   selectedPlan.value = plan;
   selectedTask.value = null;
   planDetailError.value = '';
   returnPlan.value = null;
-  planLoading.value = true;
-  try {
-    const result = await getTaskPlan(plan.planId, source);
-    if (
-      current === planRequest &&
-      pageVisible &&
-      props.open &&
-      scope === getAgentStorageScope() &&
-      props.source === source &&
-      selectedPlan.value?.planId === plan.planId
-    ) {
+  await detailReads.run(
+    'plan',
+    async (options) => {
+      const result = await getTaskPlan(plan.planId, props.source, options);
       if (!result.plan) throw new Error('计划不存在或已无权查看');
-      selectedPlan.value = result.plan;
+      return result.plan;
+    },
+    {
+      start: () => {
+        planLoading.value = true;
+      },
+      data: (value) => {
+        selectedPlan.value = value;
+      },
+      denied: resetIdentity,
+      error: (cause) => {
+        planDetailError.value = cause.message || '周期任务读取失败，请刷新后重试';
+        showAgentError(cause, { fallback: '周期任务读取失败' });
+      },
+      finish: () => {
+        planLoading.value = false;
+      },
     }
-  } catch (cause) {
-    if (current === planRequest && props.open) {
-      planDetailError.value = cause.message || '周期任务读取失败，请刷新后重试';
-      uni.showToast({ title: planDetailError.value, icon: 'none' });
-    }
-  } finally {
-    if (current === planRequest) planLoading.value = false;
-  }
+  );
 }
 function openLatestReport() {
   const task = selectedPlan.value?.latestTask;
@@ -1097,7 +1079,7 @@ function openLatestReport() {
   openTask(task);
 }
 function backToList() {
-  ++planRequest;
+  detailReads.invalidate();
   planLoading.value = false;
   resetPlanSwitch();
   navigation.value = { title: '', canBack: false };
@@ -1109,6 +1091,7 @@ function backToList() {
   }
   selectedTask.value = null;
   selectedPlan.value = null;
+  if (props.open && pageVisible) void load(false);
 }
 function goBack() {
   if (issue.value) {
@@ -1143,7 +1126,7 @@ function nativeBack() {
 function closeSheet() {
   issue.value = null;
   operationError.value = '';
-  ++planRequest;
+  detailReads.invalidate();
   planLoading.value = false;
   resetPlanSwitch();
   selectedTask.value = null;
@@ -1197,7 +1180,7 @@ watch(
       } catch {
         resetIdentity();
       }
-      ++planRequest;
+      detailReads.invalidate();
       planLoading.value = false;
       selectedTask.value = null;
       selectedPlan.value = null;
@@ -1231,7 +1214,7 @@ watch(
     if (currentView !== 'inbox') inboxNavigation.value = { title: '', canBack: false };
     if (isOpen) void load(Boolean(previous && previous[1] !== source));
     else {
-      ++requestId;
+      reads.invalidate();
       loading.value = false;
       planLoading.value = false;
       resetPlanSwitch();
@@ -1344,13 +1327,6 @@ button::after {
   color: $agent-color-text-muted;
   font-size: 11px;
   line-height: 1.45;
-}
-.plans-foot {
-  display: block;
-  padding: 14px 0 4px;
-  text-align: center;
-  color: $agent-color-text-faint;
-  font-size: 11px;
 }
 .plan-switch {
   flex-shrink: 0;
@@ -1630,12 +1606,6 @@ button::after {
 .header-actions .refresh-button {
   margin-right: 0;
 }
-.refresh-button[disabled] {
-  opacity: 0.5;
-}
-.spinning {
-  animation: arrangements-spin 900ms linear infinite;
-}
 .detail-scroll {
   padding-top: 4px;
 }
@@ -1708,10 +1678,6 @@ button::after {
   color: $agent-color-text-secondary;
   font-size: $agent-font-size-compact;
   font-weight: 600;
-}
-.plan-toggle-note {
-  color: $agent-color-text-muted;
-  font-size: 10px;
 }
 .latest-result {
   margin-top: 14px;
@@ -1797,16 +1763,6 @@ button::after {
 }
 .reference-button:active {
   background: $agent-color-accent-deep;
-}
-@keyframes arrangements-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .spinning {
-    animation: none;
-  }
 }
 .create-task {
   min-height: 44px;

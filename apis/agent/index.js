@@ -7,7 +7,7 @@ import { requestJson, httpError, recoverDraftRequest } from './request.mjs';
 import { downloadReportFile } from './report-download.mjs';
 import { conversationSourceBody, withConversationSource } from './conversation-source.mjs';
 import { createAgentReadCache } from './agent-read-cache.mjs';
-import { createPreparedReader, captureActivityToken } from './read-preparation.mjs';
+import { createPreparedReader, captureActivity } from './read-preparation.mjs';
 
 const STREAM_IDLE_TIMEOUT_MS = 60000;
 const STREAM_REQUEST_TIMEOUT_MS = 300000;
@@ -100,8 +100,8 @@ const ordinaryRead = (url, timeout, options = {}) =>
 const readSnapshot = (url, timeout, options = {}) =>
   agentReadCache.read(
     options.key || globalConfig.agentUrl + url,
-    (activity) => ordinaryRead(url, timeout, { ...options, ...activity }),
-    { ...options, activity: captureActivityToken() }
+    (activity) => ordinaryRead(url, timeout, { ...options, ...activity, activityBound: true }),
+    { ...options, isActive: options.isActive || captureActivity() }
   );
 const queryString = (query) =>
   Object.entries(query)
@@ -142,18 +142,24 @@ export const listRegionDevices = (regionId, options) =>
   ordinaryRead(`/agent/regions/${encodeURIComponent(regionId)}/devices`, undefined, options);
 export const listRegionDeviceStates = (regionId, options) =>
   ordinaryRead(`/agent/regions/${encodeURIComponent(regionId)}/device-states`, undefined, options);
-export const listRegionTimeline = (regionId, date) =>
-  request(
+export const listRegionTimeline = (regionId, date, options) =>
+  ordinaryRead(
     `/agent/regions/${encodeURIComponent(regionId)}/timeline?date=${encodeURIComponent(date)}`,
-    'GET'
+    undefined,
+    options
   );
-export const listRegionCalendar = (regionId, from, to) =>
-  request(
+export const listRegionCalendar = (regionId, from, to, options) =>
+  ordinaryRead(
     `/agent/regions/${encodeURIComponent(regionId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-    'GET'
+    undefined,
+    options
   );
-export const getTaskPlan = (planId, source = 'office') =>
-  request(withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}`, source), 'GET');
+export const getTaskPlan = (planId, source = 'office', options) =>
+  ordinaryRead(
+    withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}`, source),
+    undefined,
+    options
+  );
 export const cancelTaskPlan = (planId, version, scope, date, source = 'office') =>
   request(
     withConversationSource(`/agent/task-plans/${encodeURIComponent(planId)}/cancel`, source),
@@ -191,8 +197,10 @@ const peekSnapshot = (url) => {
     return null;
   }
 };
-export const readAgentTasks = ({ source = 'company', from, to, force = false } = {}) =>
-  readSnapshot(agentTasksUrl({ source, from, to }), undefined, { force });
+export const readAgentTasks = (
+  { source = 'company', from, to, force = false } = {},
+  options = {}
+) => readSnapshot(agentTasksUrl({ source, from, to }), undefined, { ...options, force });
 export const peekAgentTasks = ({ source = 'company', from, to } = {}) =>
   peekSnapshot(agentTasksUrl({ source, from, to }));
 // 日历月窗口另立快照键：整格按默认 60 秒新鲜度对齐。历史月不再视为不可变——
@@ -200,8 +208,12 @@ export const peekAgentTasks = ({ source = 'company', from, to } = {}) =>
 // 实时推进仍只走当日 #calendar-day。
 const calendarUrl = ({ source = 'company', from, to }, suffix = '#calendar') =>
   globalConfig.agentUrl + agentTasksUrl({ source, from, to }) + suffix;
-export const readAgentCalendar = ({ source = 'company', from, to, force = false } = {}) =>
+export const readAgentCalendar = (
+  { source = 'company', from, to, force = false } = {},
+  options = {}
+) =>
   readSnapshot(agentTasksUrl({ source, from, to }), undefined, {
+    ...options,
     key: calendarUrl({ source, from, to }),
     force,
   });
@@ -212,29 +224,36 @@ export const peekAgentCalendar = ({ source = 'company', from, to } = {}) => {
     return null;
   }
 };
-export const readAgentCalendarDay = ({ source = 'company', from, to, force = false } = {}) =>
+export const readAgentCalendarDay = (
+  { source = 'company', from, to, force = false } = {},
+  options = {}
+) =>
   readSnapshot(agentTasksUrl({ source, from, to }), undefined, {
+    ...options,
     key: calendarUrl({ source, from, to }, '#calendar-day'),
     force,
   });
-export const readAgentPlans = ({ source = 'company', force = false } = {}) =>
-  readSnapshot(agentPlansUrl({ source }), undefined, { force });
+export const readAgentPlans = ({ source = 'company', force = false } = {}, options = {}) =>
+  readSnapshot(agentPlansUrl({ source }), undefined, { ...options, force });
 export const peekAgentPlans = ({ source = 'company' } = {}) =>
   peekSnapshot(agentPlansUrl({ source }));
 export const AGENT_NOTIFICATION_PAGE = 30;
-export const readAgentNotifications = ({
-  source = 'company',
-  limit = AGENT_NOTIFICATION_PAGE,
-  before,
-  force = false,
-} = {}) => readSnapshot(agentNotificationsUrl({ source, limit, before }), undefined, { force });
+export const readAgentNotifications = (
+  { source = 'company', limit = AGENT_NOTIFICATION_PAGE, before, force = false } = {},
+  options = {}
+) =>
+  readSnapshot(agentNotificationsUrl({ source, limit, before }), undefined, { ...options, force });
 export const peekAgentNotifications = ({
   source = 'company',
   limit = AGENT_NOTIFICATION_PAGE,
   before,
 } = {}) => peekSnapshot(agentNotificationsUrl({ source, limit, before }));
-export const getTaskDetail = (taskId, source = 'office') =>
-  request(withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}`, source), 'GET');
+export const getTaskDetail = (taskId, source = 'office', options) =>
+  ordinaryRead(
+    withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}`, source),
+    undefined,
+    options
+  );
 export const markNotificationSeen = (id, source = 'office') =>
   request(
     withConversationSource(`/agent/notifications/${encodeURIComponent(id)}/seen`, source),
@@ -289,10 +308,11 @@ export const discardTaskCancellation = (cancellationId, version, source = 'offic
     'POST',
     { version }
   );
-export const listDeviceTimeline = (deviceId, date) =>
-  request(
+export const listDeviceTimeline = (deviceId, date, options) =>
+  ordinaryRead(
     `/agent/devices/${encodeURIComponent(deviceId)}/timeline?date=${encodeURIComponent(date)}`,
-    'GET'
+    undefined,
+    options
   );
 // 视频取流：返回短时效播放地址（wss），不缓存；页面与组件不接触凭据。
 // Company 监控走智慧页面取流出口，Office 视频走既有 view 动作——必须带 source 区分目录。
@@ -330,15 +350,17 @@ export const getCompanyEnergyDaily = (query = {}, options) =>
 // 计量范围×时间统计（meter-report）：scopeLevel all|floor|location|nameMatch + floor/meterId/text，from/to 带时区，grain 可选。
 export const getCompanyMeterReport = (query = {}, options) =>
   readSnapshot('/agent/company-meter-report?source=company&' + queryString(query), 90000, options);
-export const listDeviceCalendar = (deviceId, from, to) =>
-  request(
+export const listDeviceCalendar = (deviceId, from, to, options) =>
+  ordinaryRead(
     `/agent/devices/${encodeURIComponent(deviceId)}/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-    'GET'
+    undefined,
+    options
   );
-export const getReportArtifact = (reportId, source = 'company') =>
-  request(
+export const getReportArtifact = (reportId, source = 'company', options) =>
+  ordinaryRead(
     `/agent/reports/${encodeURIComponent(reportId)}?source=${encodeURIComponent(source)}`,
-    'GET'
+    undefined,
+    options
   );
 export function downloadReportArtifact(reportId, source = 'company', format = 'pdf', options = {}) {
   return downloadReportFile(
