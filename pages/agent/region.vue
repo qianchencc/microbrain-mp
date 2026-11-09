@@ -13,15 +13,17 @@
         date === today ? '今天' : Number(date.slice(5, 7)) + '月' + Number(date.slice(8)) + '日'
       }}</text
       ><text class="record-status">{{
-        sampleMode
-          ? error
-            ? '演示记录未加载'
-            : tasks.length + ' 条记录'
-          : !hasDaySnapshot
+        !focusRegionId && !loading && !error
+          ? '暂无可用区域'
+          : sampleMode
             ? error
-              ? '加载失败'
-              : '任务加载中…'
-            : tasks.length + ' 条记录'
+              ? '演示记录未加载'
+              : tasks.length + ' 条记录'
+            : !hasDaySnapshot
+              ? error
+                ? '加载失败'
+                : '任务加载中…'
+              : tasks.length + ' 条记录'
       }}</text
       ><button
         v-if="isDev"
@@ -544,6 +546,10 @@ async function load() {
     initialDate = '';
     loadedRegion = focusRegionId.value;
     loadedDate = date.value;
+    if (!loadedRegion) {
+      loading.value = false;
+      return;
+    }
     dayDone.clear();
     loadCalendar();
     const loadedRequest = await loadVisibleTimeline();
