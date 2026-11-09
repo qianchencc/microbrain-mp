@@ -3,7 +3,12 @@ import { taskNeedsDetails, taskResultStatus } from '../tasks/task-presentation.m
 import { creatorVariant } from './region-device-view.mjs';
 
 export function regionTimelineItems(tasks) {
-  return tasks
+  const records = new Map();
+  for (const task of tasks) {
+    const previous = records.get(task.id);
+    if (!previous || (task.version ?? 0) >= (previous.version ?? 0)) records.set(task.id, task);
+  }
+  return [...records.values()]
     .filter((task) => task.status !== 'cancelled')
     .map((task) => {
       // 来源 draft/conversation id 只对创建者本人返回，等价于“我创建的任务”身份信号。

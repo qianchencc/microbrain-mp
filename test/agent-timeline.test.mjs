@@ -1139,3 +1139,39 @@ test('周期任务的虚拟发生在缺省字段下仍产出可显示卡片', ()
   assert.equal(labeled.creatorMark, '钱');
   assert.equal(labeled.avatars.length, 1);
 });
+
+test('跨日快照按具体记录合并，保留较新状态及同一计划的不同发生日', () => {
+  const phase = { id: 'fixture-phase', at: '2026-11-09T07:18:00Z', status: 'completed', devices: [] };
+  const completed = {
+    id: 'fixture-operation', version: 3, status: 'completed',
+    source: { type: 'immediate_draft' }, phases: [phase], devices: [],
+  };
+  const stale = { ...completed, version: 2, status: 'scheduled' };
+  const occurrence = (date) => ({
+    id: `occurrence:fixture-plan:${date}`, version: 1, status: 'scheduled',
+    occurrence: { planId: 'fixture-plan', date, virtual: true },
+    phases: [{ ...phase, at: `${date}T07:30:00Z` }], devices: [],
+  });
+  const cards = regionTimelineItems([
+    completed, occurrence('2026-11-10'), stale, occurrence('2026-11-11'), stale,
+  ]);
+  assert.deepEqual(cards.map((card) => card.id), [
+    'fixture-operation', 'occurrence:fixture-plan:2026-11-10', 'occurrence:fixture-plan:2026-11-11',
+  ]);
+  assert.equal(cards[0].status, 'completed');
+  const scene = createTimeline({
+    date: '2026-11-09', days: 3, now: '2026-11-09T07:20:00Z', items: cards,
+  });
+  assert.deepEqual(scene.cards.map((card) => card.id), cards.map((card) => card.id));
+});
+
+test('跨日新取消事实不会被另一日的旧可见记录重新显示', () => {
+  const original = {
+    id: 'fixture-spanning', version: 2, status: 'executing',
+    interval: { startsAt: '2026-11-08T23:00:00+08:00', endsAt: '2026-11-10T01:00:00+08:00' },
+    phases: [], devices: [],
+  };
+  assert.deepEqual(regionTimelineItems([
+    original, { ...original, version: 3, status: 'cancelled' }, original,
+  ]), []);
+});
