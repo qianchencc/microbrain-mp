@@ -34,7 +34,7 @@
         >
           <view
             v-for="device in group.items"
-            :key="device.id"
+            :key="device.kind + ':' + device.id"
             class="dcard"
           >
             <view class="dart"
@@ -51,17 +51,15 @@
                 v-else
                 type="gear"
                 size="28"
-                color="var(--agent-text-faint)" /><view
-                class="lamp"
-                :class="{ observe: OBSERVE_KINDS.has(device.kind) }"
+                color="var(--agent-text-faint)"
             /></view>
             <view class="dcopy">
               <text class="dname">{{ device.name }}</text>
               <text class="dloc">{{ locationText(device) }}</text>
               <text
-                v-if="stateLabel(device)"
+                v-if="typeLabel(device)"
                 class="dstate"
-                >{{ stateLabel(device) }}</text
+                >{{ typeLabel(device) }}</text
               >
             </view>
           </view>
@@ -84,19 +82,27 @@ const props = defineProps({ devices: { type: Array, default: () => [] }, kind: S
 
 const modes = [
   { key: 'location', label: '位置' },
-  { key: 'status', label: '状态' },
+  { key: 'kind', label: '类型' },
 ];
 const groupBy = ref('location');
 const collapsed = ref(new Set());
 
-const OBSERVE_KINDS = new Set(['environment', 'energy', 'safety', 'video']);
+const KIND_LABEL = {
+  environment: '环境传感器',
+  energy: '电表',
+  safety: '消防安全',
+  ac: '空调',
+  lighting: '照明',
+  access: '门禁',
+  video: '视频监控',
+};
 const SUBTYPE_LABEL = { gas: '燃气', smoke: '烟感', water: '水浸', flooding: '水浸' };
-// 上游 installAddress 为空、location 与设备名相同（"类型-位置-回路"结构）：
-// 取"类型-其后除末段"作为空间分组，无短横线的名字剥掉尾部类型词。
+// 先保留来源明确的位置；只有缺位置时才从设备名称推导空间分组。
 const TYPE_TAIL =
   /(电表|水浸感应器|燃气感应器|光电感烟探测器|感应器|探测器|传感器|开关|智慧空调|空调|门禁|监控|摄像头|摄像机)$/u;
 function locationKey(device) {
-  const name = (device.location || device.name || '').trim();
+  if (device.location?.trim()) return device.location.trim();
+  const name = (device.name || '').trim();
   const segs = name
     .split('-')
     .map((s) => s.trim())
@@ -108,12 +114,12 @@ function locationKey(device) {
   const stripped = name.replace(TYPE_TAIL, '').trim();
   return stripped || '未标位置';
 }
-function stateLabel(device) {
+function typeLabel(device) {
   if (device.kind === 'safety') {
     const subtype = device.subtype || safetySubtypeOfName(device.name);
-    return subtype ? SUBTYPE_LABEL[subtype] || subtype : '';
+    if (subtype) return SUBTYPE_LABEL[subtype] || subtype;
   }
-  return OBSERVE_KINDS.has(device.kind) ? '' : '可控制';
+  return KIND_LABEL[device.kind] || '设备';
 }
 // 设备图与区域抽屉共用 catalog；保留 subtype，消防设备按实际类别选图。
 function artOf(device) {
@@ -124,13 +130,14 @@ function artOf(device) {
   });
 }
 function locationText(device) {
+  if (device.location?.trim()) return device.location.trim();
   const key = locationKey(device);
   return key === device.name?.trim() ? '未标位置' : key;
 }
 const groups = computed(() => {
   const map = new Map();
   for (const device of props.devices) {
-    const key = groupBy.value === 'location' ? locationKey(device) : stateLabel(device) || '其他';
+    const key = groupBy.value === 'location' ? locationKey(device) : typeLabel(device);
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(device);
   }
@@ -312,20 +319,6 @@ button::after {
     var(--agent-accent-deep) 55%,
     var(--agent-text-primary)
   );
-}
-.lamp {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--agent-text-faint);
-  border: 1px solid #fff;
-  box-shadow: 0 1px 2px rgba(var(--agent-shadow-rgb), 0.2);
-}
-.lamp.observe {
-  background: var(--agent-success);
 }
 .dcopy {
   padding: 7px 9px 9px;

@@ -16,9 +16,9 @@ const CONFIRM_REQUEST_TIMEOUT_MS = 180000;
 const agentReadCache = createAgentReadCache(getAgentStorageScope);
 const preparedRead = createPreparedReader(getAgentStorageScope);
 export const clearCompanyReadCache = () => agentReadCache.clear();
-export const readCompanyDashboardCache = () => agentReadCache.peek('dashboard-snapshot');
+export const readCompanyDashboardCache = () => agentReadCache.peek('dashboard-device-catalog');
 export const writeCompanyDashboardCache = (value) =>
-  agentReadCache.put('dashboard-snapshot', value);
+  agentReadCache.put('dashboard-device-catalog', value);
 export const readCompanyMonthlyCache = (key) => agentReadCache.peek(key);
 export const writeCompanyMonthlyCache = (key, value) => agentReadCache.put(key, value);
 const isPlansRead = (key) => key.includes('/agent/task-plans?');
@@ -346,6 +346,9 @@ export const getEnergyHistory = (query = {}, options) =>
   ordinaryRead('/agent/energy-history?source=company&' + queryString(query), undefined, options);
 export const getCompanyDevices = (options) =>
   readSnapshot('/agent/company-devices?source=company', undefined, options);
+// 公司完整展示目录；company-devices 仍是用户可见目录，不能互作授权来源。
+export const getDeviceCatalog = (options) =>
+  readSnapshot('/agent/device-catalog?source=company', undefined, options);
 export const getCompanyEnergyDaily = (query = {}, options) =>
   readSnapshot('/agent/company-energy-daily?source=company&' + queryString(query), 90000, options);
 // 计量范围×时间统计（meter-report）：scopeLevel all|floor|location|nameMatch + floor/meterId/text，from/to 带时区，grain 可选。

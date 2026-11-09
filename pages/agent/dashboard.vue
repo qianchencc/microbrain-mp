@@ -35,8 +35,7 @@
       <view class="content">
         <view class="headline">
           <view
-            ><text class="page-title">公司总览</text
-            ><text class="date">{{ dateLine }}</text></view
+            ><text class="page-title">公司总览</text><text class="date">{{ dateLine }}</text></view
           >
           <button
             class="refresh"
@@ -313,7 +312,7 @@ import {
 } from '@/utils/agent-launch-link.mjs';
 import {
   getCompanyDashboard,
-  getCompanyDevices,
+  getDeviceCatalog,
   clearCompanyReadCache,
   readCompanyDashboardCache,
   writeCompanyDashboardCache,
@@ -384,7 +383,7 @@ const overview = createCompanyOverview({
   api: {
     ready: waitForAgentSession,
     dashboard: getCompanyDashboard,
-    devices: getCompanyDevices,
+    devices: getDeviceCatalog,
     energy: getCompanyEnergyDaily,
     peekUnread: peekAgentNotifications,
     unread: readAgentNotifications,
@@ -467,7 +466,9 @@ const dateLine = computed(() => {
 });
 
 const zoneSuffix = (zone) => (zone ? ` · ${zone}` : '');
-const humidityZoneText = computed(() => zoneSuffix(humidityZone(environment.value?.reading?.humidity)));
+const humidityZoneText = computed(() =>
+  zoneSuffix(humidityZone(environment.value?.reading?.humidity))
+);
 const pm25ZoneText = computed(() => zoneSuffix(pm25Zone(environment.value?.reading?.pm25)));
 
 /* 设备目录计数 + 单类设备抽屉 */

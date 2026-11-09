@@ -5,6 +5,7 @@ export {
   writeCompanyDashboardCache,
   getCompanyDashboard,
   getCompanyDevices,
+  getDeviceCatalog,
   listRegions,
   markRegionSeen,
   listRegionDevices,
