@@ -14,23 +14,26 @@ test('the video server serves the deployed decoder when the customer SDK origin 
  await copyFile(new URL('../deploy/h5player/serve.mjs', import.meta.url), join(directory, 'serve.mjs'))
  await mkdir(join(directory, 'sdk/playctrl1simd'), { recursive: true })
  await writeFile(join(directory, 'sdk/playctrl1simd/Decoder.js'), '/*' + 'decoder resource '.repeat(200) + '*/self.decoderReady = true;')
- const reservation = createServer()
- reservation.listen(0, '127.0.0.1')
- await once(reservation, 'listening')
- const port = reservation.address().port
- await new Promise(resolve => reservation.close(resolve))
- const offline = 'data:text/javascript,' + encodeURIComponent('globalThis.fetch = async () => new Response("Unavailable", {status:503})')
- const child = spawn(process.execPath, ['--import', offline, join(directory, 'serve.mjs')], {
-  env: { ...process.env, PORT: String(port), SDK_ROOT: '' }, stdio: ['ignore', 'pipe', 'pipe'],
- })
- t.after(async () => {
-  if (child.exitCode !== null || child.signalCode !== null) return
-  const exited = once(child, 'exit')
-  child.kill()
-  await exited
- })
- await once(child.stdout, 'data', { signal: AbortSignal.timeout(5000) })
- const origin = `http://127.0.0.1:${port}`
+ const startServer = async sdkRoot => {
+  const reservation = createServer()
+  reservation.listen(0, '127.0.0.1')
+  await once(reservation, 'listening')
+  const port = reservation.address().port
+  await new Promise(resolve => reservation.close(resolve))
+  const offline = 'data:text/javascript,' + encodeURIComponent('globalThis.fetch = async () => new Response("Unavailable", {status:503})')
+  const child = spawn(process.execPath, ['--import', offline, join(directory, 'serve.mjs')], {
+   env: { ...process.env, PORT: String(port), SDK_ROOT: sdkRoot }, stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  t.after(async () => {
+   if (child.exitCode !== null || child.signalCode !== null) return
+   const exited = once(child, 'exit')
+   child.kill()
+   await exited
+  })
+  await once(child.stdout, 'data', { signal: AbortSignal.timeout(5000) })
+  return `http://127.0.0.1:${port}`
+ }
+ const origin = await startServer('')
  const response = await fetch(origin + '/owner/static/h5player/playctrl1simd/Decoder.js', { headers: { 'accept-encoding': 'gzip' } })
  assert.equal(response.status, 200)
  assert.match(response.headers.get('content-type'), /javascript/)
@@ -50,4 +53,9 @@ test('the video server serves the deployed decoder when the customer SDK origin 
  assert.equal((await missing.json()).code, 'SDK_RESOURCE_UNAVAILABLE')
  assert.equal((await fetch(origin + '/api/agent/devices/camera/video-stream?source=company')).status, 401)
  assert.equal((await fetch(origin + '/api/admin/config')).status, 404)
+ const local = await startServer(join(directory, 'sdk'))
+ for (const [resource, method] of [['missing.js', 'GET'], ['playctrl1simd', 'HEAD'], ['playctrl1simd/Decoder.js/missing.js', 'GET']]) {
+  const invalid = await fetch(local + '/owner/static/h5player/' + resource, { method })
+  assert.equal(invalid.status, 404, 'An explicit SDK root must not serve a non-file or silently fall back: ' + resource)
+ }
 })

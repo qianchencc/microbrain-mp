@@ -48,6 +48,7 @@ createServer(async (request, response) => {
    try {
     const path = new URL('./' + url.pathname.slice(sdkPrefix.length), sdkRoot)
     const metadata = await stat(path)
+    if (!metadata.isFile()) throw Object.assign(new Error('SDK_RESOURCE_NOT_FILE'), { code: 'ENOENT' })
     const etag = `W/"${metadata.size.toString(16)}-${metadata.mtimeMs.toString(16)}"`
     const headers = {
      'content-type': url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8'
@@ -69,7 +70,7 @@ createServer(async (request, response) => {
     else await pipeline(createReadStream(path), response)
     return
    } catch (error) {
-    if (error.code !== 'ENOENT') throw error
+    if (error.code !== 'ENOENT' && error.code !== 'ENOTDIR') throw error
     if (process.env.SDK_ROOT) return json(response, 404, { code: 'SDK_RESOURCE_UNAVAILABLE', message: '本地 SDK 资源不存在，请检查完整资源目录' })
    }
    target = new URL(url.pathname, sdkOrigin)

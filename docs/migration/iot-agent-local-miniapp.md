@@ -4,7 +4,7 @@ This is a develop-only acceptance profile. It does not change login, SSO, trial,
 
 ## Enable and restore
 
-`config/settings.js` contains `USE_LOCAL_DEVELOP_AGENT = false`. For a local acceptance build, change that one line to `true`, compile the `develop` target, and restore it to `false` followed by another compile when finished. The switch is ignored for `trial` and `release`; they always select their existing customer profiles.
+`config/settings.js` selects this profile through `USE_LOCAL_DEVELOP_AGENT`. For a local acceptance build, set it to `true` and compile the `develop` target. Restore the preceding settings and recompile when finished; do not overwrite an existing workspace's LAN endpoints. The switch is ignored for `trial` and `release`.
 
 The selected local profile is:
 
@@ -44,6 +44,57 @@ handshake but no binary media before SDK receive-timeout `0x12f900009`.
 The reported freight-lift window still returned `VIDEO_RECORDING_UNAVAILABLE`.
 Developer Tools automation was unresponsive, so mini-program business acceptance
 remains pending. [H5 screenshots and redacted timings](../../.scratch/video-playback-local-api/evidence/COMP-VID-01/result.json).
+
+### Local H5 preview with the supplied SDK
+
+With the existing Java backend running, start the source project's loopback-only
+player; this does not restart Java or publish any service:
+
+```sh
+PORT=9419 RUNTIME_ORIGIN=http://127.0.0.1:3381 \
+SDK_ROOT="$HOME/Downloads/新世纪/h5player" \
+/opt/homebrew/opt/node@22/bin/node deploy/h5player/serve.mjs
+```
+
+The page is `http://127.0.0.1:9419/player.html`; pass
+`api=http://127.0.0.1:9419/api` with the existing authenticated WebView parameters.
+The local server serves the supplied SDK at `/owner/static/h5player/` and proxies
+only video-stream reads to Java, forwarding the real Bearer and tenant headers.
+It is not an identity verifier or a direct customer business-API fallback.
+No token belongs in documentation, command history, or a shared URL. An anonymous
+page correctly refuses to play. No browser permission change is needed for this
+same-origin local page/API pair.
+
+For desktop mini-program acceptance, temporarily select this player and its
+same-origin video API in the develop profile, retaining the existing Agent
+endpoint. The current workspace's LAN settings were not changed by this H5
+verification. A phone cannot use this loopback endpoint.
+
+The WeChat bridge script now loads asynchronously. SDK release has a 1.5-second
+bounded UI wait, but the actual cleanup remains serialized: a timed-out cleanup
+never authorizes a second session. The existing 20-second first-frame limit now
+also covers SDK preparation; neither it nor the vendor's 10-second no-media
+watchdog was extended. Pages remain `no-store`; local SDK files use gzip and
+`no-cache`/ETag revalidation. An explicit SDK directory never silently falls back
+to the public SDK when a file is missing.
+
+2026-11-09 local H5 observations: tea-room recording first frame 5.4s
+(1920×1080); freight live initially failed after 14.8s, manual retry rendered in
+2.1s (704×576). Actual screenshots also show recording → live → the same
+recording window. The optional final timing-script DOM probe failed; those
+transition screenshots are evidence, not a complete control/timing assertion.
+No public player or Java process was changed.
+
+The first freight failure was **SDK-initiated**, not proof of a peer-initiated
+close: `h5player.min.js:305:40511` called WebSocket close after about 10 seconds
+without binary media, before the page's 20-second guard. The same camera on the
+customer “智慧监控” page rendered in about 2 seconds; omitting only its `noTip`
+request field still received media in 2 seconds. This rules out that field as a
+required fix, not all possible upstream differences. The intermittent first
+live failure and the original freight recording window remain unaccepted;
+browser H5 evidence does not close mini-program/real-device acceptance.
+[Local screenshots and sanitized protocol evidence](../../.scratch/video-playback-local-api/evidence/COMP-VID-01/optimization-20261109/result.json).
+
 
 ## Matrix
 

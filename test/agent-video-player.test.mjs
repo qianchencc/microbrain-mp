@@ -108,10 +108,13 @@ test('a stalled SDK release bounds retry without reusing the old session and can
  const initialRequests = p.requests.length
  void p.elements.get('btnRelink').listeners.click()
  await flush()
- t.mock.timers.tick(20000)
+ t.mock.timers.tick(1499)
+ await flush()
+ assert.equal(p.elements.get('footState').textContent, '准备中')
+ assert.equal(p.requests.length, initialRequests)
+ t.mock.timers.tick(1)
  await flush()
  assert.match(p.elements.get('errDetail')?.textContent || '', /SDK_STOP_TIMEOUT/)
- assert.doesNotMatch(p.elements.get('errDetail')?.textContent || '', /上游播放|申请播放地址/)
  assert.equal(p.requests.length, initialRequests, 'No new stream may be acquired before old SDK cleanup completes')
  finishStop()
  await flush()
@@ -239,7 +242,7 @@ test('return during SDK connection releases the late session instead of painting
  let finish
  const p = player({ play: () => new Promise(resolve => { finish = resolve }) }); await flush()
  p.elements.get('btnBack').listeners.click(); finish(); await flush()
- assert.ok(p.instances[0].stops >= 1)
+ assert.equal(p.instances[0].stops, 1, 'Late JS_Play completion must not release a stopped session again')
  assert.notEqual(p.elements.get('footState').textContent, '播放中')
 })
 
