@@ -81,21 +81,39 @@ const spanLabel = (requested, short) => {
   return `${boundaryLabel(requested?.from, !short || crossYear)} → ${boundaryLabel(requested?.to, crossYear)}`;
 };
 
-const periodMonth = (span) => {
-  const text = fmtShanghaiDateTime(span?.from) || String(span?.from || '');
-  const year = text.slice(0, 4),
-    month = Number(text.slice(5, 7));
-  return /^\d{4}$/.test(year) && month >= 1 && month <= 12 ? { year, month } : null;
+const periodLabel = (span, withYear) => {
+  const from = fmtShanghaiDateTime(span?.from) || '';
+  const to = fmtShanghaiDateTime(span?.to) || '';
+  const fromMs = Date.parse(span?.from || '');
+  const toMs = Date.parse(span?.to || '');
+  if (!Number.isFinite(fromMs)) return '';
+  if (!Number.isFinite(toMs) || toMs <= fromMs) return boundaryLabel(span.from, withYear);
+  const wholeMonths =
+    from.slice(8, 16) === '01 00:00' &&
+    to.slice(8, 16) === '01 00:00' &&
+    fromMs % 60_000 === 0 &&
+    toMs % 60_000 === 0;
+  if (!wholeMonths) return spanLabel(span, !withYear);
+  const last = fmtShanghaiDateTime(new Date(toMs - 1).toISOString());
+  const year = from.slice(0, 4);
+  const lastYear = last.slice(0, 4);
+  const month = Number(from.slice(5, 7));
+  const lastMonth = Number(last.slice(5, 7));
+  if (year !== lastYear) return `${year}年${month}月–${lastYear}年${lastMonth}月`;
+  const prefix = withYear ? `${year}年` : '';
+  return month === lastMonth ? `${prefix}${month}月` : `${prefix}${month}–${lastMonth}月`;
 };
 
-// 对比卡的两侧直接显示所属月份；跨年时保留年份，避免同名月份产生歧义。
 export function meterReportPeriodLabels(report) {
-  const a = periodMonth(report?.params?.span?.requested);
-  const b = periodMonth(report?.params?.baseline?.requested);
-  const withYear = Boolean(a && b && a.year !== b.year);
-  const label = (period) =>
-    period ? `${withYear ? period.year + '年' : ''}${period.month}月` : '';
-  return { a: label(a) || '当前月', b: label(b) || '对照月' };
+  const a = report?.params?.span?.requested;
+  const b = report?.params?.baseline?.requested;
+  const yearA = fmtShanghaiDateTime(a?.from).slice(0, 4);
+  const yearB = fmtShanghaiDateTime(b?.from).slice(0, 4);
+  const withYear = Boolean(yearA && yearB && yearA !== yearB);
+  return {
+    a: periodLabel(a, withYear) || '本期',
+    b: periodLabel(b, withYear) || '基期',
+  };
 }
 
 export function meterReportSpan(report) {
@@ -132,18 +150,27 @@ export function meterReportParamLine(report) {
       : meterReportSpan(report);
     line = `${when} · ${scope.label || '全部电表'} ${scope.meterCount ?? report?.meters?.length ?? 0}台`;
   }
-  const requested = report?.params?.span?.requested || {};
-  const observed = report?.params?.span?.observed || {};
-  const sampleFrom = Date.parse(observed.from || ''),
-    sampleTo = Date.parse(observed.to || '');
-  const showObserved =
-    !meterReportIsComparison(report) &&
-    !report?.params?.dailyWindow &&
-    Number.isFinite(sampleFrom) &&
-    Number.isFinite(sampleTo) &&
-    (sampleFrom !== Date.parse(requested.from || '') ||
-      sampleTo !== Date.parse(requested.to || ''));
-  if (showObserved) line += ` · 采样覆盖 ${spanLabel(observed, false)}`;
+  if (!report?.params?.dailyWindow) {
+    const spans = [[base ? '本期采样' : '采样覆盖', report?.params?.span]];
+    if (base) spans.push(['基期采样', report.params.baseline]);
+    for (const [label, span] of spans) {
+      const requested = span?.requested || {};
+      const observed = span?.observed || {};
+      const sampleFrom = Date.parse(observed.from || '');
+      const sampleTo = Date.parse(observed.to || '');
+      if (
+        Number.isFinite(sampleFrom) &&
+        Number.isFinite(sampleTo) &&
+        (sampleFrom !== Date.parse(requested.from || '') ||
+          sampleTo !== Date.parse(requested.to || ''))
+      ) {
+        const actual = meterReportIsComparison(report)
+          ? `${boundaryLabel(observed.from, true)} → ${boundaryLabel(observed.to, true)}`
+          : spanLabel(observed, false);
+        line += ` · ${label} ${actual}`;
+      }
+    }
+  }
   const through = (coverage.partial || [])
     .map((item) => item.through)
     .filter(Boolean)
@@ -166,6 +193,8 @@ export function meterReportParamLine(report) {
   }
   if (meterReportAxis(report) !== 'region' && coverage.noData?.length)
     line += ` · ${coverage.noData.length}台无数据`;
+  if (report?.dataProvenance === 'upstream-simulated-backfill')
+    line += ' · 含上游模拟补数，仅作统计展示';
   if (coverage.truncated) line += ' · 读取不全';
   return line;
 }
