@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createConversationOperations } from '../pages/agent/lib/conversation.mjs';
+import { agentErrorText } from '../utils/agent-error.mjs';
 
 const deferred = () => {
   let resolve, reject;
@@ -166,13 +167,15 @@ test('放弃请求失败只发简短toast，不把错误写入对话布局', asy
   const { model, context, notices } = fixture({
     discardTask: async () => {
       throw Object.assign(new Error('request failed'), {
-        data: { message: '提案已经变化，请重新读取后再操作\n内部编号 abc' },
+        data: { code: 'VERSION_CONFLICT', message: '提案已经变化，请重新读取后再操作\n内部编号 abc' },
       });
     },
   });
   context.turns = [{ tasks: [task] }];
   await model.discardTask(task);
-  assert.deepEqual(notices, [['toast', '放弃失败：提案已经变化，请重新读取后再操作']]);
+  assert.equal(notices[0][0], 'toast');
+  assert.equal(notices[0][1].data.code, 'VERSION_CONFLICT');
+  assert.equal(agentErrorText(notices[0][1]).includes('abc'), false);
   assert.equal(model.state.error, '');
   assert.equal(task.status, 'PENDING_CONFIRMATION');
 });
@@ -231,4 +234,21 @@ test('放弃开始和结束都隔离旧快照，失败后仍可恢复真实状�
     assert.equal(task.status, failure ? 'PENDING_CONFIRMATION' : 'CANCELLED');
     assert.equal(model.state.busy, false);
   }
+});
+
+test('确认设备范围失败保留错误码，不误报创建成功或版本冲突', async () => {
+  const { model, context, notices, restores } = fixture({
+    confirmTask: async () => {
+      throw { status: 409, data: { code: 'TASK_DEVICE_UNAVAILABLE', message: '任务设备范围已变化' } };
+    },
+  });
+  const task = { taskId: 'proposal', status: 'PENDING_CONFIRMATION', version: 3 };
+  context.turns = [{ task }];
+  await model.confirmTask(task);
+  assert.equal(task.created, undefined);
+  assert.equal(task.status, 'PENDING_CONFIRMATION');
+  assert.equal(notices[0][1].data.code, 'TASK_DEVICE_UNAVAILABLE');
+  assert.notEqual(agentErrorText(notices[0][1]), agentErrorText({ code: 'VERSION_CONFLICT' }));
+  assert.equal(model.state.error, '');
+  assert.equal(restores(), 1);
 });

@@ -5,11 +5,6 @@ const tasksOf = (turn) => (turn.tasks?.length ? turn.tasks : turn.task ? [turn.t
 const sameIds = (left, right) =>
   left.length === right.length && left.every((id) => right.includes(id));
 const proposalKey = (task) => task.changeId || task.cancellationId || task.taskId;
-const conciseTaskDiscardError = (error) => {
-  const raw = String(error?.data?.message || error?.message || '').trim();
-  const message = raw.split(/\r?\n/, 1)[0] || '服务暂时不可用';
-  return `放弃失败：${message.length > 48 ? `${message.slice(0, 48)}…` : message}`;
-};
 
 // Owns transport, selection serialization and confirmation fences. UI effects never decide business success.
 export function createConversationOperations({
@@ -289,7 +284,7 @@ export function createConversationOperations({
               ticket.source
             )
           : discard
-            ? await api.discardTask(taskId, ticket.source)
+            ? await api.discardTask(taskId, task.version, ticket.source)
             : await api.confirmTask(taskId, task.version, ticket.source);
       if (!current(ticket)) return;
       const live = taskFor(key);
@@ -326,8 +321,7 @@ export function createConversationOperations({
         state.recovery = '核实完成：提案已更新，请重新确认';
       else if (!discard && ['TASK_EXPIRED', 'TASK_TIME_PASSED'].includes(code))
         state.recovery = error.data?.message || '原定时间已过，请指定新的执行时间';
-      else if (discard) effects.notice('toast', conciseTaskDiscardError(error));
-      else state.error = error.data?.message || error.message;
+      else effects.notice(discard ? 'toast' : 'task', error);
       resync = !discard;
     } finally {
       if (current(ticket)) {

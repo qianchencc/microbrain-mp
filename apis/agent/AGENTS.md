@@ -7,3 +7,4 @@
 - 两端任务列表（`readAgentTasks`）、周期安排（`readAgentPlans`）与通知首屏（`readAgentNotifications`）走同身份快照：`peek*` 先落位再对齐，`force` 只由手动刷新与数据变更后触发。窗口键由 `pages/agent/task-calendar.mjs` 的 `taskListRange` 统一生成（上海自然日），Company「全部任务」首块与首页 62 天议程同键，进入 Agent 的预取因此直接命中；执行结果窗取到今天结束，避免毫秒级 `now` 让每次打开的键都不同。
 - 控制、执行状态/回执、任务日历轮询、会话、报告下载、短时效视频地址走实时请求，不复用此缓存：`TaskCalendarView` 按执行中 5 秒/其他 30 秒轮询，快照会掩盖状态推进。服务器执行前权限核验不受前端缓存影响，stale 快照不得支撑确认、执行、已读或控制。
 - 微信消息流的非2xx JSON错误可能只在chunk回调中抵达，success.data为空；保留结构化code/message供最终拒绝，不能把无type的HTTP错误送进presentation。不能因未取得终态就盲重发POST。公开客户端分块回归见 `test/agent-stream.test.mjs`。
+- 创建提案的confirm/discard均传当前卡片version，不硬编码初始版本；业务错误保留code/status到统一toast入口，不先拆成message字符串再分类。

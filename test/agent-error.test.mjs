@@ -44,3 +44,9 @@ test('非错误信息与未知错误走兜底，不误伤非错误文案', () =>
 	// 「当前版本暂不支持语音输入」不含错误模式，走 fallback，不会被误判成数据已变化
 	assert.equal(agentErrorText(new Error('当前版本暂不支持语音输入'), { fallback: '操作失败，请重试' }), '操作失败，请重试');
 });
+
+test('任务范围变化与上游不可用、版本冲突分开处理', () => {
+	const scopeChanged = { status: 409, data: { code: 'TASK_DEVICE_UNAVAILABLE', message: '设备范围已变化' } };
+	assert.notEqual(agentErrorText(scopeChanged), agentErrorText({ code: 'OBSERVATION_UPSTREAM_UNAVAILABLE' }));
+	assert.notEqual(agentErrorText(scopeChanged), agentErrorText({ code: 'VERSION_CONFLICT' }));
+});

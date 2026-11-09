@@ -638,7 +638,7 @@ const operations = createConversationOperations({
     tasksChanged,
     rememberDraft: (draft) => draftBaselines.set(draft.draftId, createDraftBaseline(draft)),
     notice: (kind, message, draftId) => {
-      if (kind === 'toast') uni.showToast({ title: message, icon: 'none' });
+      if (kind === 'toast') showAgentError(message, { fallback: '放弃失败，请重试' });
       else if (kind === 'confirmation') {
         // 草稿面板内联只留归并后的短文案，原文不再直渲。
         if (sheetDraftId.value === draftId)

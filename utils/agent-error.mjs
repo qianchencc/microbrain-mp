@@ -15,6 +15,7 @@ const PATTERN_RULES = [
 
 // 后端错误码 → 短文案。码名含语义，UI 不再展示后端拼好的长句。
 const CODE_RULES = [
+  [/^TASK_DEVICE_UNAVAILABLE$/, '设备范围已变化，请重新核实'],
   [/PREPARING|NOT_READY/, '数据准备中，请稍后重试'],
   [/SESSION_EXPIRED/, '登录已过期，请重新进入'],
   [/SCOPE_CHANGED|IDENTITY/, '登录已变化，请重新读取'],

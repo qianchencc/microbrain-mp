@@ -273,10 +273,11 @@ export const confirmTask = (taskId, version, source = 'office') =>
     'POST',
     { version }
   );
-export const discardTask = (taskId, source = 'office') =>
+export const discardTask = (taskId, version, source = 'office') =>
   request(
     withConversationSource(`/agent/tasks/${encodeURIComponent(taskId)}/discard`, source),
-    'POST'
+    'POST',
+    { version }
   );
 export const confirmTaskChange = (changeId, version, source = 'office') =>
   request(
