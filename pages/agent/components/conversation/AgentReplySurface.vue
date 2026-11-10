@@ -154,6 +154,35 @@
         class="reply-error"
         >{{ shortError }}</text
       >
+      <view
+        v-if="answerComplete"
+        class="reply-footer"
+      >
+        <view
+          class="reply-end"
+          aria-hidden="true"
+        />
+        <button
+          class="reply-copy"
+          hover-class="reply-copy--pressed"
+          :aria-label="copied ? '已复制回答' : '复制回答'"
+          @tap="copyAnswer"
+        >
+          <uni-icons
+            v-if="copied"
+            type="checkmarkempty"
+            size="15"
+            color="var(--agent-text-secondary)"
+          />
+          <image
+            v-else
+            class="reply-copy__icon"
+            src="/static/copy.svg"
+            aria-hidden="true"
+          />
+          <text>{{ copied ? '已复制' : '复制回答' }}</text>
+        </button>
+      </view>
     </view>
   </view>
 </template>
@@ -168,7 +197,7 @@ import ToolActivity from './ToolActivity.vue';
 import TaskProposalCard from '../tasks/TaskProposalCard.vue';
 import TaskChangeCard from '../tasks/TaskChangeCard.vue';
 import TaskErrorNotice from '../tasks/TaskErrorNotice.vue';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { agentErrorText } from '@/utils/agent-error';
 
 const props = defineProps({
@@ -187,6 +216,52 @@ const summaryFailure = computed(() => {
   const reason = props.turn.result?.summary?.reason;
   return reason ? agentErrorText(reason, { fallback: '执行结果未完成' }) : '执行结果未完成';
 });
+// 只复制终稿正文与已完成的执行摘要，不夹带处理记录、卡片或未定稿思路。
+const answerText = computed(() => {
+  const parts = props.turn.items
+    .filter((item) => item.kind === 'text' || (item.kind === 'draftText' && item.settled))
+    .map((item) => (item.text ?? props.turn.text)?.trim())
+    .filter(Boolean);
+  const summary = props.turn.result?.summary;
+  if (!props.readOnly && summary?.status === 'completed' && summary.text?.trim())
+    parts.push(summary.text.trim());
+  return parts.join('\n\n');
+});
+const answerComplete = computed(
+  () =>
+    !props.turn.running &&
+    !props.turn.streaming &&
+    !props.turn.error &&
+    !['running', 'failed'].includes(props.turn.result?.summary?.status) &&
+    Boolean(answerText.value)
+);
+const copied = ref(false);
+let copyTimer,
+  copyVersion = 0;
+function resetCopy() {
+  copyVersion++;
+  clearTimeout(copyTimer);
+  copied.value = false;
+}
+watch(() => [props.turn.id, answerText.value, answerComplete.value], resetCopy);
+onBeforeUnmount(resetCopy);
+function copyAnswer() {
+  if (!answerComplete.value) return;
+  const version = copyVersion;
+  uni.setClipboardData({
+    data: answerText.value,
+    showToast: false,
+    success: () => {
+      if (version !== copyVersion) return;
+      copied.value = true;
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => (copied.value = false), 2000);
+    },
+    fail: () => {
+      if (version === copyVersion) uni.showToast({ title: '暂时没能复制，请重试', icon: 'none' });
+    },
+  });
+}
 defineEmits([
   'toggle-trace',
   'select',
@@ -383,6 +458,54 @@ input {
   font-size: $agent-font-size-compact;
   line-height: 1.5;
 }
+.reply-footer {
+  margin-top: 14px;
+  animation: reply-finish 180ms ease-out;
+}
+.reply-end {
+  width: 32px;
+  height: 2px;
+  margin-bottom: 4px;
+  border-radius: 1px;
+  background: $agent-color-line;
+}
+.reply-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 104px;
+  min-height: 40px;
+  margin: 0 0 0 -8px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: transparent;
+  color: $agent-color-text-secondary;
+  font-size: 12px;
+  line-height: 1;
+  transition:
+    transform 150ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 150ms ease;
+}
+.reply-copy::after {
+  border: 0;
+}
+.reply-copy--pressed {
+  transform: scale(0.97);
+  background: $agent-color-tint;
+}
+.reply-copy__icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.45;
+}
+@keyframes reply-finish {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 @keyframes execution-spin {
   to {
     transform: rotate(360deg);
@@ -393,10 +516,14 @@ input {
   .trace__toggle,
   .trace__expand,
   .trace__chevron,
-  .execution-retry {
+  .execution-retry,
+  .reply-copy {
     transition: none;
   }
   .execution-spinner {
+    animation: none;
+  }
+  .reply-footer {
     animation: none;
   }
 }
