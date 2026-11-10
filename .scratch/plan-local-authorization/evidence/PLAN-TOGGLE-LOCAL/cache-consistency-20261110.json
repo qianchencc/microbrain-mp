@@ -1,0 +1,55 @@
+{
+  "case": "PLAN-TOGGLE-CACHE-01",
+  "date": "2026-11-10",
+  "scope": "周期任务暂停后的保存确认、切页与重进；不包含设备执行验收",
+  "reproducedBeforeFix": [
+    "暂停已提交但响应丢失，幂等重放成功时漏掉列表和日历缓存失效",
+    "另一客户端改变计划状态后，重进周期列表仍复用一分钟旧状态",
+    "HTTP正常但未返回目标状态时，管理器仍提示暂停成功"
+  ],
+  "changes": [
+    "状态写入所有结束路径按原身份作废计划及任务/日历快照，保留无关概览与统计",
+    "周期列表每次访问后端核对，旧快照只作占位，读取期间不允许用旧版本操作",
+    "仅同一计划、目标状态且版本递增的回包可以更新成功状态，单项与批量共用核验",
+    "采用确认计划时使旧在途列表和详情读取失效，释放其加载标记"
+  ],
+  "verification": {
+    "newRegressions": "修复前3项失败，修复后通过",
+    "frontendSuite": { "passed": 373, "failed": 0, "note": "完整回归后又补充了界面在途读取保护，最终状态以下述定向回归和真实界面验证为准" },
+    "finalFocusedTests": { "passed": 21, "failed": 0, "command": "node --test test/agent-read-cache.test.mjs test/agent-plan-management.test.mjs test/agent-view-reads.test.mjs" },
+    "moduleBoundaries": { "result": "passed", "sourceFiles": 187 },
+    "changedProductionFileFormatting": "passed",
+    "wechatDevelopmentCompile": { "result": "passed", "time": "15:05", "existingWarnings": ["uniCloud未关联服务空间", "pages/check/detail/index.vue既有vue默认导出及sourcemap警告", "img选择器及鸿蒙适配警告"] },
+    "existingBackendIsolatedRegression": { "test": "TaskPublicParityFacadeBehaviorTest#repeatedPlanSwitchesKeepAuthoritativeViewsAndFuturePointerWithoutUnrelatedBindings", "result": "passed", "note": "诊断阶段既有隔离存储回归，不代替前端或当前运行包整体验收" },
+    "realFrontend": {
+      "environment": "微信开发者工具，现有真实登录身份，最终本地开发构建，后端3381",
+      "time": "15:06",
+      "tabRoundTrip": { "result": "passed", "path": "周期任务→全部任务→周期任务", "observed": "目标照明计划仍显示已暂停、开关关闭，未见请求错误条或toast", "screenshot": "cache-consistency-tab-20261110.png" },
+      "sheetReentry": { "result": "passed", "path": "关闭任务安排→查看所有任务→周期任务", "observed": "目标照明计划仍显示已暂停、开关关闭，未见请求错误条或toast", "screenshot": "cache-consistency-reentry-20261110.png" },
+      "additionalWritesDuringReadOnlyVerification": 0
+    }
+  },
+  "realWriteDisclosure": {
+    "pauseRequestsSubmittedDuringDiagnosis": 1,
+    "explanation": "最初意图隔离原生请求，但写入保护未生效，实际提交了一次目标计划暂停；此后停止真实启停操作，仅做只读复验",
+    "savedStateObservedAt": "2026-11-10 14:30:14",
+    "status": "PAUSED",
+    "version": 9,
+    "nextAt": null,
+    "nextDate": null,
+    "resumeRequestsSubmitted": 0,
+    "newTasksCreated": 0,
+    "deviceControlsDispatched": 0,
+    "notificationsSentByThisVerification": 0
+  },
+  "interruptedRuns": [
+    "开发者工具连接、选择器和动画未落稳的探针失败未计为业务通过",
+    "中途真实界面出现网络失败；同时3381从先前实例被替换为var/report-export-20261110-activation/backend-final.jar（PID19319，14:56:41启动）。未覆盖或重启该实例，待其稳定后按最终截图重新完成只读切页和重进"
+  ],
+  "limits": [
+    "两台真实手机同账号联合操作尚未实测；跨客户端旧状态由行为回归覆盖，不冒充双真机验收",
+    "本机编译不会自动更新手机上的旧开发包；未上传代码或生成新的手机预览",
+    "没有恢复目标计划，没有为了验收执行设备控制或新建任务",
+    "本修复只向后端读取周期状态，不增加对客户上游的页面读请求"
+  ]
+}

@@ -9,7 +9,7 @@ let instance = 0
 const RANGE = { from: '2026-10-27T00:00:00+08:00', to: '2026-12-28T00:00:00+08:00' }
 const TASKS = { tasks: [{ taskId: 't1', label: '夜间简报' }] }
 
-async function setup(t, { hold } = {}) {
+async function setup(t, { hold, serve } = {}) {
  const previousUni = globalThis.uni, previousScope = globalThis.agendaTestScope
  const testInstance = ++instance
  globalThis.agendaTestScope = `alice-${testInstance}`
@@ -23,6 +23,7 @@ async function setup(t, { hold } = {}) {
  const calls = [], pending = []
  globalThis.uni = { request(options) {
   calls.push(options)
+  if (serve?.(options) === true) return
   const url = new URL(options.url), limit = Number(url.searchParams.get('limit'))
   const data = url.pathname.endsWith('/notifications')
    ? { unreadCount: limit === 1 ? 2 : 7, notifications: [{ id: 'n1' }], nextCursor: '' }
@@ -108,18 +109,48 @@ test('确认任务后议程快照失效，下一次进入重新读取', async t 
  assert.equal(calls.length, 3)
 })
 
-test('周期启停只作废周期安排快照，任务与通知快照保留', async t => {
- const { client, calls } = await setup(t)
- await client.readAgentPlans({ source: 'office' })
- await client.readAgentTasks({ source: 'office', ...RANGE })
+test('关闭周期的响应丢失后重放成功，重新进入列表和日历必须采用已保存状态', async t => {
+ const saved = { planId: 'p1', version: 1, status: 'enabled' }
+ let firstWrite = true
+ const { client } = await setup(t, { serve(options) {
+  const url = new URL(options.url)
+  let data
+  if (options.method === 'POST' && url.pathname.endsWith('/status')) {
+   saved.status = 'paused'
+   saved.version = 2
+   if (firstWrite) {
+    firstWrite = false
+    queueMicrotask(() => options.fail({ errMsg: 'fixture response lost after commit' }))
+    return true
+   }
+   data = { plan: { ...saved }, recovered: true }
+  } else if (url.pathname.endsWith('/task-plans')) data = { plans: [{ ...saved }] }
+  else if (url.pathname.endsWith('/tasks')) data = { tasks: saved.status === 'enabled' ? [{ taskId: 'future-occurrence' }] : [] }
+  else return false
+  queueMicrotask(() => options.success({ statusCode: 200, data }))
+  return true
+ } })
+ assert.equal((await client.readAgentPlans({ source: 'office' })).plans[0].status, 'enabled')
+ assert.deepEqual((await client.readAgentCalendar({ source: 'office', ...RANGE })).tasks, [{ taskId: 'future-occurrence' }])
  await client.readAgentNotifications({ source: 'office', limit: 1 })
- const before = reads(calls).length
- await client.setTaskPlanStatus('p1', 1, 'pause', 'office')
- assert.equal(client.peekAgentPlans({ source: 'office' }), null)
- assert.ok(client.peekAgentTasks({ source: 'office', ...RANGE }))
- assert.ok(client.peekAgentNotifications({ source: 'office', limit: 1 }))
- await client.readAgentPlans({ source: 'office' })
- assert.equal(reads(calls).length, before + 1)
+ const result = await client.setTaskPlanStatus('p1', 1, 'pause', 'office')
+ assert.equal(result.plan.status, 'paused')
+ assert.equal((await client.readAgentPlans({ source: 'office' })).plans[0].status, 'paused')
+ assert.deepEqual((await client.readAgentCalendar({ source: 'office', ...RANGE })).tasks, [])
+ assert.equal(client.peekAgentNotifications({ source: 'office', limit: 1 }).unreadCount, 2)
+})
+
+test('另一设备已关闭周期任务，重新进入周期列表不复用一分钟前的开关状态', async t => {
+ let saved = { planId: 'p1', version: 1, status: 'enabled' }
+ const { client } = await setup(t, { serve(options) {
+  if (!new URL(options.url).pathname.endsWith('/task-plans')) return false
+  const data = { plans: [{ ...saved }] }
+  queueMicrotask(() => options.success({ statusCode: 200, data }))
+  return true
+ } })
+ assert.equal((await client.readAgentPlans({ source: 'company' })).plans[0].status, 'enabled')
+ saved = { ...saved, version: 2, status: 'paused' }
+ assert.equal((await client.readAgentPlans({ source: 'company' })).plans[0].status, 'paused')
 })
 
 test('已读写入作废通知快照：作废前在途的列表读取不回写旧已读状态', async t => {
@@ -143,28 +174,6 @@ test('换身份不复用旧议程快照', async t => {
  assert.equal(client.peekAgentTasks({ source: 'company', ...RANGE }), null)
  await client.readAgentTasks({ source: 'company', ...RANGE })
  assert.equal(calls.length, 2)
-})
-
-test('预取后打开任务与通知不产生第二次请求；手动刷新与已读才重读', async t => {
- const { client, calls } = await setup(t)
- // 预取顺序与 AgentConversation.prewarmLists 一致。
- await client.readAgentNotifications({ source: 'office' })
- await client.readAgentTasks({ source: 'office', ...taskListRange('upcoming') })
- await client.readAgentPlans({ source: 'office' })
- assert.equal(calls.length, 3)
- // 打开 Sheet：先 peek 落位，再按同一缓存口径对齐。
- assert.ok(client.peekAgentNotifications({ source: 'office' }))
- assert.ok(client.peekAgentTasks({ source: 'office', ...taskListRange('upcoming') }))
- assert.ok(client.peekAgentPlans({ source: 'office' }))
- await client.readAgentNotifications({ source: 'office' })
- await client.readAgentTasks({ source: 'office', ...taskListRange('upcoming') })
- await client.readAgentPlans({ source: 'office' })
- assert.equal(calls.length, 3)
- await client.readAgentTasks({ source: 'office', ...taskListRange('upcoming'), force: true })
- assert.equal(calls.length, 4)
- await client.markNotificationSeen('n1', 'office')
- await client.readAgentNotifications({ source: 'office' })
- assert.equal(calls.length, 6)
 })
 
 test('日历月窗口按身份与月缓存：一分钟内不重读，历史月同样按分钟级新鲜度重读', async t => {

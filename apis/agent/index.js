@@ -22,6 +22,7 @@ export const writeCompanyDashboardCache = (value) =>
 export const readCompanyMonthlyCache = (key) => agentReadCache.peek(key);
 export const writeCompanyMonthlyCache = (key, value) => agentReadCache.put(key, value);
 const isPlansRead = (key) => key.includes('/agent/task-plans?');
+const isTaskRead = (key) => key.includes('/agent/tasks?');
 const isNotificationsRead = (key) => key.includes('/agent/notifications?');
 const request = async (url, method, data, timeout, options = {}) => {
   const scope = getAgentStorageScope(),
@@ -38,7 +39,7 @@ const request = async (url, method, data, timeout, options = {}) => {
     /\/(action-drafts|tasks|task-plans|task-changes|task-cancellations)\/[^/?]+\/(confirm|cancel)(?:\?|$)/.test(
       url
     );
-  // 周期启停与已读只作废各自列表快照：不清空无关概览/统计，也不等待下一次读才发现新状态。
+  // 周期变更作废计划及任务/日历投影；已读只作废通知，不连带清空概览和统计。
   const changesPlans = method !== 'GET' && /\/task-plans\/[^/?]+\/status(?:\?|$)/.test(url);
   const changesNotifications =
     method !== 'GET' && /\/notifications\/(?:seen-all|[^/?]+\/seen)(?:\?|$)/.test(url);
@@ -48,7 +49,6 @@ const request = async (url, method, data, timeout, options = {}) => {
       () => requestJson(globalConfig.agentUrl + url, method, data, headers, timeout),
       { ...options, snapshot: options.snapshot === true }
     );
-    if (changesPlans) agentReadCache.drop(isPlansRead);
     if (changesNotifications) agentReadCache.drop(isNotificationsRead);
     return result;
   } catch (error) {
@@ -93,6 +93,8 @@ const request = async (url, method, data, timeout, options = {}) => {
     throw error;
   } finally {
     if (changesDevices && sameScope()) agentReadCache.clear();
+    if (changesPlans && sameScope())
+      agentReadCache.drop((key) => isPlansRead(key) || isTaskRead(key));
   }
 };
 const ordinaryRead = (url, timeout, options = {}) =>
@@ -183,8 +185,8 @@ export const listAgentTasks = ({ source = 'office', from, to } = {}) =>
     `/agent/tasks?source=${encodeURIComponent(source)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
     'GET'
   );
-// 两端任务、周期安排与通知列表共用同身份读取快照：先落位再对齐，60 秒内复用，
-// 过期占位最多保留 5 分钟；写操作由 request 定点作废，不替代 fresh 写入核验。
+// 任务、日历与通知按身份复用快照；周期状态每次向后端核对，旧值只作占位。
+// 过期占位最多保留 5 分钟；写操作定点作废，不替代后端权限与版本核验。
 const agentTasksUrl = ({ source = 'company', from, to }) =>
   '/agent/tasks?' + queryString({ source, from, to });
 const agentPlansUrl = ({ source = 'company' }) => '/agent/task-plans?' + queryString({ source });
@@ -234,7 +236,7 @@ export const readAgentCalendarDay = (
     force,
   });
 export const readAgentPlans = ({ source = 'company', force = false } = {}, options = {}) =>
-  readSnapshot(agentPlansUrl({ source }), undefined, { ...options, force });
+  readSnapshot(agentPlansUrl({ source }), undefined, { ...options, force, freshMs: 0 });
 export const peekAgentPlans = ({ source = 'company' } = {}) =>
   peekSnapshot(agentPlansUrl({ source }));
 export const AGENT_NOTIFICATION_PAGE = 30;

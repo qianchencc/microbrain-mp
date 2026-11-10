@@ -50,6 +50,19 @@ export function createPlanManagement({
     state.error = '';
   }
 
+  function applyStatus(result, previous, status) {
+    const next = result?.plan;
+    if (
+      !next ||
+      next.planId !== previous.planId ||
+      next.status !== status ||
+      !Number.isSafeInteger(next.version) ||
+      next.version <= previous.version
+    )
+      throw new Error('尚未确认周期任务状态已保存，请刷新后重试');
+    updatePlan(next);
+  }
+
   async function toggle(planId) {
     if (state.busy) return;
     const plan = readContext().plans.find((value) => value?.planId === planId);
@@ -71,7 +84,7 @@ export function createPlanManagement({
         enabled
       );
       if (!current(ticket, plan)) return;
-      if (result?.plan) updatePlan(result.plan);
+      applyStatus(result, plan, enabled ? 'enabled' : 'paused');
       changed(operation);
       notify(enabled ? '已继续执行' : '已暂停以后的安排');
     } catch (cause) {
@@ -109,7 +122,7 @@ export function createPlanManagement({
         try {
           const result = await api.setStatus(plan.planId, plan.version, 'pause', ticket.source);
           if (!current(ticket)) return;
-          if (result?.plan) updatePlan(result.plan);
+          applyStatus(result, plan, 'paused');
           paused += 1;
         } catch (cause) {
           if (!current(ticket)) return;

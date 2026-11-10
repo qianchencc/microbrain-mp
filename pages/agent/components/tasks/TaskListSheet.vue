@@ -677,7 +677,7 @@ const planControls = createPlanManagement({
   },
 });
 const operationError = toRef(planControls.state, 'error');
-const planBusy = computed(() => planLoading.value || planControls.state.busy);
+const planBusy = computed(() => loading.value || planLoading.value || planControls.state.busy);
 const stackedView = computed(() => props.source === 'company' && view.value === 'inbox');
 const sheetTitle = computed(() =>
   selectedTask.value
@@ -827,14 +827,20 @@ function explainPlanAccess(plan) {
 }
 function replacePlan(next) {
   if (!next?.planId) return;
+  reads.invalidate('plans');
+  reads.invalidate('list');
+  detailReads.invalidate();
+  plansLoading.value = false;
+  loading.value = false;
+  planLoading.value = false;
   plans.value = plans.value.map((plan) => (plan.planId === next.planId ? next : plan));
   if (selectedPlan.value?.planId === next.planId) selectedPlan.value = next;
 }
 function togglePlanStatus(planId) {
-  if (!planLoading.value) return planControls.toggle(planId);
+  if (!planBusy.value) return planControls.toggle(planId);
 }
 function pauseAllPlans() {
-  if (!planLoading.value) return planControls.pauseAll();
+  if (!planBusy.value) return planControls.pauseAll();
 }
 function selectTaskRows(values, kind) {
   const rows = Array.isArray(values) ? values : [];

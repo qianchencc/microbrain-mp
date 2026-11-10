@@ -132,3 +132,14 @@ test('启停失败不改变后端状态，释放忙碌标记后可在同页重�
  assert.equal(f.manager.state.busy, false)
  assert.equal(f.manager.state.error, '')
 })
+
+test('后端没有确认目标状态时，不把正常 HTTP 回包误报为暂停成功', async () => {
+ for (const response of [{}, { plan: { planId: 'plan-a', version: 4, status: 'enabled' } }]) {
+  const f = fixture({ api: { setStatus: async () => response } })
+  await f.manager.toggle('plan-a')
+  assert.deepEqual(f.messages, [])
+  assert.deepEqual(f.changes, [])
+  assert.equal(f.context.plans[0].status, 'enabled')
+  assert.equal(f.manager.state.busy, false)
+ }
+})
