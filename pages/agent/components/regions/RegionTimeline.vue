@@ -104,12 +104,71 @@
               class="timeline-card"
               :class="{ faded: item.faded, executing: item.status === 'executing' }"
               :hover-class="interactive ? 'timeline-card--pressed' : 'none'"
-              ><slot
-                name="card"
-                :item="item"
-                ><text class="card-label">{{ item.label }}</text></slot
-              ></view
             >
+              <template v-if="cardKind === 'task'">
+                <view
+                  class="task-row"
+                  :class="{ cancelled: item.status === 'cancelled' }"
+                >
+                  <text class="task-label"
+                    ><text
+                      v-if="item.warning || item.failure"
+                      class="warning-dot"
+                    />{{ item.label }}</text
+                  >
+                  <text
+                    v-if="item.status === 'cancelled'"
+                    class="cancelled-status"
+                    >已取消</text
+                  >
+                  <view class="avatars"
+                    ><view
+                      v-for="avatar in item.avatars"
+                      :key="avatar.id"
+                      class="device-avatar"
+                      ><image
+                        v-if="avatar.src"
+                        :src="avatar.src"
+                        mode="aspectFit" /><uni-icons
+                        v-else
+                        type="gear"
+                        size="13"
+                        color="var(--agent-text-muted)" /></view
+                    ><text
+                      v-if="item.more"
+                      class="more"
+                      >+{{ item.more }}</text
+                    ></view
+                  >
+                  <view class="task-separator" />
+                  <view
+                    class="owner-mark"
+                    :class="'cv-' + item.creatorVariant"
+                    :aria-label="item.creatorName"
+                    >{{ item.creatorMark }}</view
+                  >
+                </view>
+              </template>
+              <template v-else>
+                <view class="record-card"
+                  ><text
+                    class="source"
+                    :class="item.sourceText === '即时' ? 'immediate' : 'scheduled'"
+                    >{{ item.sourceText }}</text
+                  ><text class="record-target"
+                    >{{ item.label }}<text class="record-task">{{ item.taskLabel }}</text></text
+                  ><text
+                    class="record-result"
+                    :class="item.resultTone"
+                    >{{ item.resultText }}</text
+                  ><text
+                    class="creator"
+                    :class="'cv-' + item.creatorVariant"
+                    >{{ item.creatorName.slice(0, 1) }}</text
+                  ></view
+                >
+              </template>
+            </view>
           </view>
           <text
             v-if="renderError"
@@ -149,6 +208,7 @@ import RegionCalendar from './RegionCalendar.vue';
 
 const props = defineProps({
   interactive: { type: Boolean, default: true },
+  cardKind: { type: String, default: 'task' },
   calendar: Boolean,
   compactCalendar: Boolean,
   focusItems: Boolean,
@@ -544,14 +604,176 @@ input {
   border-radius: 2px;
   background: $agent-color-accent;
 }
-.card-label {
-  display: block;
-  font-size: 12.5px;
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  min-width: 0;
+}
+.avatars {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.device-avatar {
+  width: 21px;
+  height: 21px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff, $agent-color-tint 72%);
+  box-shadow:
+    0 0 0 1.5px #fff,
+    0 2px 5px rgba(var(--agent-shadow-rgb), 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.device-avatar image {
+  width: 21px;
+  height: 21px;
+}
+.device-avatar:first-child {
+  margin-left: 0;
+}
+.more {
+  font-size: 8px;
+  margin-left: 2px;
+  color: $agent-color-text-muted;
+}
+.task-label {
+  flex: 1;
+  min-width: 0;
+  font-size: $agent-font-size-compact;
   font-weight: 600;
-  color: var(--agent-text-secondary);
+  color: $agent-color-text-secondary;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+.warning-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: $agent-color-warning;
+  box-shadow: 0 0 0 2px $agent-color-warning-faint;
+  vertical-align: 1px;
+}
+.cancelled-status {
+  flex-shrink: 0;
+  color: $agent-color-text-muted;
+  font-size: 9px;
+}
+.task-separator {
+  width: 1px;
+  height: 14px;
+  flex-shrink: 0;
+  background: $agent-color-line;
+}
+.owner-mark {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, $agent-color-accent, $agent-color-accent-deep);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+.owner-mark.cv-brass {
+  background: linear-gradient(145deg, $agent-color-warning, $agent-color-warning-deep);
+}
+.owner-mark.cv-slate {
+  background: linear-gradient(145deg, $agent-color-chart-deep, $agent-color-text-secondary);
+}
+.owner-mark.cv-grey {
+  background: linear-gradient(145deg, $agent-color-text-faint, $agent-color-text-muted);
+}
+.task-row.cancelled .task-label {
+  text-decoration: line-through;
+  text-decoration-color: $agent-color-text-faint;
+}
+.record-card {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  min-width: 0;
+}
+.source {
+  flex-shrink: 0;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+}
+.source.immediate {
+  color: var(--agent-text-secondary);
+  background: var(--agent-tint);
+}
+.source.scheduled {
+  color: $agent-color-accent;
+  background: var(--agent-accent-faint);
+}
+.record-target {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--agent-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.record-task {
+  margin-left: 5px;
+  color: var(--agent-text-muted);
+  font-size: 9px;
+  font-weight: 400;
+}
+.record-result {
+  flex-shrink: 0;
+  font-size: 9px;
+}
+.record-result.ok,
+.record-result.active {
+  color: var(--agent-success);
+}
+.record-result.warn {
+  color: $agent-color-warning;
+}
+.record-result.wait {
+  color: var(--agent-text-muted);
+}
+.record-result.fail {
+  color: var(--agent-error);
+}
+.creator {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, var(--agent-accent), var(--agent-accent-deep));
+  color: #fff;
+  font-size: 9px;
+}
+.creator.cv-brass {
+  background: linear-gradient(145deg, var(--agent-warning), var(--agent-warning-deep));
+}
+.creator.cv-slate {
+  background: linear-gradient(145deg, var(--agent-text-muted), var(--agent-text-secondary));
+}
+.creator.cv-grey {
+  background: linear-gradient(145deg, var(--agent-text-faint), var(--agent-text-muted));
 }
 .render-error {
   position: absolute;

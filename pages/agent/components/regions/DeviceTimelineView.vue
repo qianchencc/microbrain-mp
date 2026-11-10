@@ -39,6 +39,7 @@
       <RegionTimeline
         ref="timeline"
         :key="selectedDate"
+        card-kind="device"
         calendar
         compact-calendar
         focus-items
@@ -51,25 +52,6 @@
         @calendar-month="onMonth"
         @select="openTask"
       >
-        <template #card="{ item }"
-          ><view class="record-card"
-            ><text
-              class="source"
-              :class="item.sourceText === '即时' ? 'immediate' : 'scheduled'"
-              >{{ item.sourceText }}</text
-            ><text class="record-target"
-              >{{ item.label }}<text class="record-task">{{ item.taskLabel }}</text></text
-            ><text
-              class="record-result"
-              :class="item.resultTone"
-              >{{ item.resultText }}</text
-            ><text
-              class="creator"
-              :class="'cv-' + item.creatorVariant"
-              >{{ item.creatorName.slice(0, 1) }}</text
-            ></view
-          ></template
-        >
         <template #empty>
           <view
             v-if="loading || error"
@@ -332,82 +314,6 @@ button::after {
   height: 0;
   min-height: 0;
   flex: 1;
-}
-.record-card {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  height: 32px;
-  min-width: 0;
-}
-.source {
-  flex-shrink: 0;
-  padding: 2px 5px;
-  border-radius: 4px;
-  font-size: 9px;
-  font-weight: 700;
-}
-.source.immediate {
-  color: var(--agent-text-secondary);
-  background: var(--agent-tint);
-}
-.source.scheduled {
-  color: $agent-color-accent;
-  background: var(--agent-accent-faint);
-}
-.record-target {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--agent-text-secondary);
-  font-size: 11px;
-  font-weight: 600;
-}
-.record-task {
-  margin-left: 5px;
-  color: var(--agent-text-muted);
-  font-size: 9px;
-  font-weight: 400;
-}
-.record-result {
-  flex-shrink: 0;
-  font-size: 9px;
-}
-.record-result.ok,
-.record-result.active {
-  color: var(--agent-success);
-}
-.record-result.warn {
-  color: $agent-color-warning;
-}
-.record-result.wait {
-  color: var(--agent-text-muted);
-}
-.record-result.fail {
-  color: var(--agent-error);
-}
-.creator {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(145deg, var(--agent-accent), var(--agent-accent-deep));
-  color: #fff;
-  font-size: 9px;
-}
-.creator.cv-brass {
-  background: linear-gradient(145deg, var(--agent-warning), var(--agent-warning-deep));
-}
-.creator.cv-slate {
-  background: linear-gradient(145deg, var(--agent-text-muted), var(--agent-text-secondary));
-}
-.creator.cv-grey {
-  background: linear-gradient(145deg, var(--agent-text-faint), var(--agent-text-muted));
 }
 .empty {
   padding: 70px 20px;
