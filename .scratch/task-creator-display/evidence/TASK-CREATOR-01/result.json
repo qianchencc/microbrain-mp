@@ -1,0 +1,44 @@
+{
+  "case": "TASK-CREATOR-01",
+  "date": "2026-11-10",
+  "scope": "补齐任务创建人展示，并记录用户认可的任务可见范围；不更改权限或后端",
+  "implementation": {
+    "creator": "任务详情使用后端已有creator.displayName；空值或全空格显示未记录，不代入当前用户",
+    "recurringSource": "周期执行记录在已持有父计划时显示所属周期名称，否则使用后端任务类型对应的周期来源说明；不为名字额外查询",
+    "planDetail": "已有创建人行保留，缺姓名统一显示未记录",
+    "permissions": "记录在docs/adr/0006-dual-agent-sources-and-history-boundary.md，代码逻辑未改"
+  },
+  "checks": {
+    "agentRegression": { "passed": 373, "failed": 0 },
+    "moduleBoundaries": { "result": "passed", "sourceFiles": 187 },
+    "changedVueFormatting": "passed",
+    "wechatDevelopmentCompile": { "result": "passed", "time": "15:52", "existingWarnings": ["uniCloud未关联服务空间", "pages/check/detail/index.vue既有vue默认导出及sourcemap警告", "img选择器及鸿蒙适配警告"] },
+    "temporaryTemplateRendering": {
+      "method": "使用HBuilderX现有Vue compiler/server-renderer编译当前SFC中实际创建人与来源节点，无新增依赖或测试文件",
+      "passedCases": ["保存的姓名去除首尾空格", "历史姓名空白显示未记录", "已持有父计划时显示其名称", "未持有父计划时仅显示周期来源，不捏造计划名称"],
+      "permanentTestsAdded": 0
+    },
+    "realFrontend": {
+      "environment": "微信开发者工具，现有登录身份，真实后端与原有任务，只读操作",
+      "path": "公司总览→查看所有任务→11月10日下午公司能耗对比报告推送",
+      "observed": "日期下方显示创建人：马云飞；标题、状态、操作记录、报告卡及引用按钮正常可见",
+      "screenshot": "company-report-creator.png",
+      "result": "passed",
+      "taskWrites": 0
+    }
+  },
+  "limits": [
+    "手机真机及旧手机包更新未验收，未上传开发版",
+    "缺姓名和周期来源分支完成真实模板渲染烟测，尚无对应真实业务页面的前端截图，不将烟测当作整例前端验收",
+    "一次开发工具切页导致旧句柄失效，未计通过；刷新句柄后完成并检查了原任务真实截图",
+    "周期详情额外原生探针未定位到当前组件，未计通过；没有点击计划开关"
+  ],
+  "safety": {
+    "newBackendQueries": 0,
+    "customerUpstreamRequestsAdded": 0,
+    "backendRestarted": false,
+    "newTasksCreated": 0,
+    "deviceControlsDispatched": 0,
+    "existingUserEditsPreserved": true
+  }
+}

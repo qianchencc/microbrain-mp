@@ -97,6 +97,14 @@
           >{{ detail.occurrenceText }}</text
         >
         <text class="task-when">{{ whenLine }}</text>
+        <text class="task-when">创建人：{{ detail.creator?.displayName?.trim() || '未记录' }}</text>
+        <text
+          v-if="task && detail.source?.type === 'recurring_plan'"
+          class="task-when"
+          >{{
+            returnPlan?.label ? `所属周期：${returnPlan.label}` : `来源：${detail.sourceText}`
+          }}</text
+        >
         <text
           v-if="loading"
           class="task-when"

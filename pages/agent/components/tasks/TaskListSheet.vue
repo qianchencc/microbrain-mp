@@ -444,7 +444,7 @@
             >
             <view class="summary-line"
               ><text>创建人</text
-              ><text>{{ selectedPlan.creator?.displayName || '成员' }}</text></view
+              ><text>{{ selectedPlan.creator?.displayName?.trim() || '未记录' }}</text></view
             >
             <text class="summary-note">{{ planAccessSummary(selectedPlan) }}</text>
             <TaskErrorNotice
