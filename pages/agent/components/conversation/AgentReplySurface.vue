@@ -180,7 +180,6 @@
             src="/static/copy.svg"
             aria-hidden="true"
           />
-          <text>{{ copied ? '已复制' : '复制回答' }}</text>
         </button>
       </view>
     </view>
@@ -459,24 +458,27 @@ input {
   line-height: 1.5;
 }
 .reply-footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 14px;
   animation: reply-finish 180ms ease-out;
 }
 .reply-end {
   width: 32px;
   height: 2px;
-  margin-bottom: 4px;
+  flex-shrink: 0;
   border-radius: 1px;
   background: $agent-color-line;
 }
 .reply-copy {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 104px;
-  min-height: 40px;
-  margin: 0 0 0 -8px;
-  padding: 0 8px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
   border-radius: 6px;
   background: transparent;
   color: $agent-color-text-secondary;
