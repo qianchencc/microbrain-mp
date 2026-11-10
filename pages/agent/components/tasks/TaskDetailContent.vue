@@ -469,7 +469,7 @@
           :disabled="busy"
           :loading="busy"
           @tap="task?.occurrence?.virtual ? cancelPeriod('occurrence') : deleteTask()"
-          >{{ task?.occurrence ? '取消本次' : '取消任务' }}</button
+          >{{ task?.occurrence ? '仅取消本次' : '取消任务' }}</button
         >
         <button
           v-if="!sampleTask && (plan?.canManage || (task?.occurrence && detailMine))"
@@ -477,7 +477,7 @@
           :disabled="busy"
           :loading="busy"
           @tap="cancelPeriod('all')"
-          >取消全部</button
+          >取消整个周期</button
         >
       </view>
     </scroll-view>
@@ -853,16 +853,30 @@ async function deleteTask() {
   if (!detail.value?.canCancel || busy.value) return;
   const taskId = activeTaskId.value,
     version = task.value.version;
-  const settledInterval =
-    detail.value?.interval && !detail.value.phases.some((phase) => phase.status === 'pending');
-  const title = task.value.occurrence ? '取消本次' : '取消任务';
+  const phases = detail.value.phases;
+  const meterTask =
+    phases.length > 0 &&
+    phases.every(
+      (phase) =>
+        phase.readAgent ||
+        (phase.devices.length > 0 && phase.devices.every((device) => device.kind === 'energy'))
+    );
+  const notStarted = ['pending', 'scheduled'].includes(task.value.status);
+  const title = task.value.occurrence ? '取消本次任务？' : '取消这项任务？';
+  let content = notStarted
+    ? meterTask
+      ? '该任务尚未开始。取消后，将不再执行本次电表统计。'
+      : '该任务尚未开始。取消后，将不再执行这项任务。'
+    : meterTask
+      ? '取消后，将停止本次任务尚未执行的电表统计，已生成的结果保留。'
+      : '取消后，将停止这项任务尚未执行的安排；已下发的动作不会撤销。';
+  if (task.value.occurrence) content += '后续周期照常执行。';
   const confirmed = await new Promise((resolve) =>
     uni.showModal({
       title,
-      content: settledInterval
-        ? '取消剩下的安排；已做的操作保持原样。'
-        : `${detail.value?.interval ? '后面的检查' : '后面的操作'}将取消；已经执行的设备动作保持原样。${task.value.occurrence ? '后续周期照常执行。' : ''}`,
-      confirmText: title,
+      content,
+      cancelText: '保留任务',
+      confirmText: task.value.occurrence ? '取消本次' : '确认取消',
       confirmColor: AGENT_COLORS.error,
       success: (result) => resolve(result.confirm),
       fail: () => resolve(false),

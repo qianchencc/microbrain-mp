@@ -149,15 +149,16 @@ export function createPlanManagement({
       const target = refresh ? (await api.getPlan(plan.planId, ticket.source)).plan : plan;
       if (!current(ticket)) return false;
       if (!target?.canManage) throw new Error('当前无权取消这个周期');
-      const title = scope === 'all' ? '取消全部' : '取消本次';
+      const all = scope === 'all';
+      const title = all ? '取消整个周期？' : '仅取消本次？';
       const accepted = await confirm({
         title,
-        confirmText: title,
+        cancelText: all ? '保留周期' : '保留本次',
+        confirmText: all ? '取消周期' : '取消本次',
         destructive: true,
-        content:
-          scope === 'all'
-            ? '取消这个周期全部尚未执行的安排；已执行或已发送的动作保持原样。'
-            : '只取消这一次，后续周期照常执行。',
+        content: all
+          ? '取消后，将停止整个周期尚未执行的安排；已执行的部分不会撤销。'
+          : '仅取消本次尚未执行的安排，后续周期照常执行；已执行的部分不会撤销。',
       });
       if (!accepted || !current(ticket)) return false;
       await api.cancelPlan(target.planId, target.version, scope, date, ticket.source);

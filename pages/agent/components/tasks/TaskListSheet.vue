@@ -506,12 +506,12 @@
               class="cancel-button"
               :disabled="planBusy"
               @tap="cancelWholePlan('occurrence')"
-              >取消本次</button
+              >仅取消本次</button
             ><button
               class="cancel-button"
               :disabled="planBusy"
               @tap="cancelWholePlan('all')"
-              >取消全部</button
+              >取消整个周期</button
             ></view
           ></view
         >

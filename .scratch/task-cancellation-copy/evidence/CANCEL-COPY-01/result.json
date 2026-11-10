@@ -1,0 +1,83 @@
+{
+  "date": "2026-11-10",
+  "taskDialogScenarios": [
+    {
+      "scenario": "scheduled-meter",
+      "title": "取消这项任务？",
+      "content": "该任务尚未开始。取消后，将不再执行本次电表统计。",
+      "cancelText": "保留任务",
+      "confirmText": "确认取消"
+    },
+    {
+      "scenario": "running-meter",
+      "title": "取消这项任务？",
+      "content": "取消后，将停止本次任务尚未执行的电表统计，已生成的结果保留。",
+      "cancelText": "保留任务",
+      "confirmText": "确认取消"
+    },
+    {
+      "scenario": "scheduled-device-read",
+      "title": "取消这项任务？",
+      "content": "该任务尚未开始。取消后，将不再执行本次电表统计。",
+      "cancelText": "保留任务",
+      "confirmText": "确认取消"
+    },
+    {
+      "scenario": "scheduled-control",
+      "title": "取消这项任务？",
+      "content": "该任务尚未开始。取消后，将不再执行这项任务。",
+      "cancelText": "保留任务",
+      "confirmText": "确认取消"
+    },
+    {
+      "scenario": "running-control",
+      "title": "取消这项任务？",
+      "content": "取消后，将停止这项任务尚未执行的安排；已下发的动作不会撤销。",
+      "cancelText": "保留任务",
+      "confirmText": "确认取消"
+    },
+    {
+      "scenario": "mixed-read-control",
+      "title": "取消这项任务？",
+      "content": "取消后，将停止这项任务尚未执行的安排；已下发的动作不会撤销。",
+      "cancelText": "保留任务",
+      "confirmText": "确认取消"
+    },
+    {
+      "scenario": "recurring-meter-occurrence",
+      "title": "取消本次任务？",
+      "content": "该任务尚未开始。取消后，将不再执行本次电表统计。后续周期照常执行。",
+      "cancelText": "保留任务",
+      "confirmText": "取消本次"
+    }
+  ],
+  "periodDialogScenarios": [
+    {
+      "scope": "occurrence",
+      "title": "仅取消本次？",
+      "cancelText": "保留本次",
+      "confirmText": "取消本次",
+      "destructive": true,
+      "content": "仅取消本次尚未执行的安排，后续周期照常执行；已执行的部分不会撤销。"
+    },
+    {
+      "scope": "all",
+      "title": "取消整个周期？",
+      "cancelText": "保留周期",
+      "confirmText": "取消周期",
+      "destructive": true,
+      "content": "取消后，将停止整个周期尚未执行的安排；已执行的部分不会撤销。"
+    }
+  ],
+  "regression": {
+    "command": "node --test test/agent-plan-management.test.mjs test/agent-task-presentation.test.mjs",
+    "passed": 13,
+    "failed": 0
+  },
+  "format": "passed",
+  "mpWeixinCompilation": "passed",
+  "realCancellationRequests": 0,
+  "realTaskOrPlanMutations": 0,
+  "frontendAcceptance": "Not accepted: native modal screenshot not obtained; shared automation timeout/page switches and isolated compiled-project connection failure.",
+  "temporaryCompiledPreviewRemoved": true
+}
