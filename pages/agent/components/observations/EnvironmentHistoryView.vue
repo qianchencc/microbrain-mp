@@ -43,14 +43,7 @@
         v-if="error"
         class="error"
         ><text>{{ error }}</text
-        ><button @tap="load(report ? failedPage : 0)">重试</button></view
-      >
-      <button
-        v-if="report?.nextPage !== null && report"
-        class="more"
-        :disabled="loading"
-        @tap="loadMore"
-        >{{ loading ? '正在读取…' : '继续读取下一批采样' }}</button
+        ><button @tap="load()">重试</button></view
       >
     </scroll-view>
     <view class="foot">
@@ -85,8 +78,7 @@ const fromDate = ref(today),
   toDate = ref(today),
   report = ref(null),
   loading = ref(false),
-  error = ref(''),
-  failedPage = ref(0);
+  error = ref('');
 const emptyMessage = computed(() => {
   if (loading.value) return '正在读取站点历史';
   if (report.value?.cache?.lastError) return `${report.value.cache.lastError}，请稍后重试`;
@@ -104,16 +96,15 @@ function invalidate() {
   reads.invalidate();
   loading.value = false;
 }
-async function load(page = 0) {
+async function load() {
   if (!props.active || !visible || loading.value) return;
   await reads.run(
     'history',
     (options) =>
       getEnvironmentHistory(
         {
-          from: page ? report.value.window.from : fromDate.value + 'T00:00:00+08:00',
-          to: page ? report.value.window.to : toDate.value + 'T23:59:59.999+08:00',
-          page,
+          from: fromDate.value + 'T00:00:00+08:00',
+          to: toDate.value + 'T23:59:59.999+08:00',
         },
         options
       ),
@@ -124,13 +115,12 @@ async function load(page = 0) {
       },
       data: (value) => {
         scope = getAgentStorageScope();
-        report.value = mergeEnvironmentHistory(page ? report.value : null, value);
+        report.value = mergeEnvironmentHistory(null, value);
       },
       denied: () => {
         report.value = null;
       },
       error: (cause) => {
-        failedPage.value = page;
         showAgentError(cause, { fallback: '环境历史读取失败，请重试' });
         error.value = '读取失败';
       },
@@ -139,9 +129,6 @@ async function load(page = 0) {
       },
     }
   );
-}
-function loadMore() {
-  void load(report.value.nextPage);
 }
 function changeDate(field, value) {
   if (field === 'from') fromDate.value = value;
@@ -255,18 +242,6 @@ button::after {
 .error button {
   font-size: $agent-font-size-compact;
   color: var(--agent-accent-deep);
-}
-.more {
-  margin: 18px 20px;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $agent-space-small;
-  border-radius: 13px;
-  font-size: $agent-font-size-compact;
-  color: var(--agent-accent-deep);
-  background: var(--agent-tint);
 }
 .foot {
   padding: 4px 20px 12px;

@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-10",
+  "rootCause": "此前 fullWindow 修复仅覆盖 Agent 工具与引用；仪表盘 HTTP 默认仍分页，页面显式传 page=0 并等待手动续读。",
+  "change": "HTTP 未传 page 时读取完整所选窗口；显式 page 仍读取原始分页。趋势页面不再传页号或展示手动续读按钮。",
+  "verification": {
+    "regressionBeforeFix": "HTTP expected 165 samples but received 100",
+    "backendFocused": {
+      "tests": 35,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "frontendTests": {
+      "passed": 371,
+      "failed": 0
+    },
+    "boundaryFiles": 186,
+    "changedVueFormatting": "passed",
+    "wechatDevelopmentCompile": "passed",
+    "userAcceptance": {
+      "statement": "已确认通过",
+      "assistantPostFixScreenshot": false
+    },
+    "noSyntheticSamples": true,
+    "controlsOrTaskConfirmationsIssued": false
+  },
+  "deployment": {
+    "baseJar": "var/energy-period-fix-20261109-final/backend.jar",
+    "jar": "var/environment-http-window-20261110-094140/backend.jar",
+    "sha256": "538adcc019be22f0602108305806259cd5816f8baa9b91a9797cbda9b6419b2c",
+    "changedEntries": [
+      "BOOT-INF/classes/ltd/qianc/iotagent/observation/internal/controller/ObservationController.class",
+      "BOOT-INF/classes/ltd/qianc/iotagent/observation/internal/controller/ObservationController$1.class"
+    ],
+    "javaPort": 3381,
+    "javaPid": 11597,
+    "nodeUnchanged": true,
+    "yamlFingerprintsUnchanged": true
+  }
+}
