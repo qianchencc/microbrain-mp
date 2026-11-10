@@ -283,7 +283,10 @@
       compact-header
       :title="drawerTitle"
       :meta="
-        [drawerDevices.length + ' 台', directorySyncLabel(sectionCache.devices)]
+        [
+          drawerDevices.length + ' 台',
+          drawerKind === 'catalog' ? directorySyncLabel(sectionCache.devices) : '',
+        ]
           .filter(Boolean)
           .join(' · ')
       "
