@@ -137,16 +137,20 @@ export const safetySubtypeText = (subtype) => SAFETY_SUBTYPES[subtype] || '安�
 // 平台读数可能与现场面板（半度设定、事后手动改回）不一致，如实标注为平台回读。
 const AC_DISPOSITIONS = {
   adjustable: '可调',
-  not_needed: '无需调整',
   unknown: '已下发',
   not_dispatched: '这次未调整',
 };
 const acAdjustedText = (target) =>
   Number.isFinite(target) ? `已下发调到${target}℃` : '已下发调温指令';
-export const acDispositionText = (device, target) =>
-  (device.disposition === 'adjusted'
-    ? acAdjustedText(target)
-    : AC_DISPOSITIONS[device.disposition]) || '状态未知';
+export const acDispositionText = (device, target) => {
+  if (device.disposition === 'not_needed') return '已检查';
+  if (device.disposition === 'satisfied') return '已下发';
+  return (
+    (device.disposition === 'adjusted'
+      ? acAdjustedText(target)
+      : AC_DISPOSITIONS[device.disposition]) || '已下发'
+  );
+};
 export const acReadbackText = (device) =>
   finite(device?.afterSetpoint) !== null ? `平台回读 ${device.afterSetpoint}℃` : '';
 export const acStateText = (device) =>

@@ -243,7 +243,7 @@
               <text class="nm">{{ d.name }}</text>
               <text class="loc">{{ d.location }}</text>
             </view>
-            <text class="meta">{{ acInspectionMeta(d, block) }}</text>
+            <text class="meta">{{ inspectionMeta(d, block) }}</text>
             <button
               v-if="d.reason"
               class="omore"
@@ -300,12 +300,7 @@
           </button>
           <text class="meta">{{ alertsMeta(block) }}</text>
           <text
-            v-if="block.summaryStatus === 'unavailable'"
-            class="meta alert-warning"
-            >未取得有效统计，不能据此判断无记录或已恢复</text
-          >
-          <text
-            v-else-if="block.coverageComplete === false"
+            v-if="block.summaryStatus !== 'unavailable' && block.coverageComplete === false"
             class="meta alert-warning"
             >分页未读全，以上为已取得的部分统计</text
           >
@@ -394,6 +389,8 @@ import { meterReportHasData } from '../../lib/energy.mjs';
 import {
   acDotOf,
   acInspectionMeta,
+  acReadbackText,
+  acStateText,
   ageHint,
   energyPowerText,
   energyStale,
@@ -411,10 +408,16 @@ const props = defineProps({
   showIssue: Function,
   observation: { type: Object, required: true },
   readOnly: Boolean,
+  hideExecutionStatus: Boolean,
   running: Boolean,
   source: { type: String, default: 'office' },
   inlinePlayback: Boolean,
 });
+function inspectionMeta(device, block) {
+  if (!props.hideExecutionStatus) return acInspectionMeta(device, block);
+  const before = block?.mode === 'adjust_to_26' ? '检查前：' : '';
+  return [before + acStateText(device), acReadbackText(device)].filter(Boolean).join(' · ');
+}
 const visibleBlocks = computed(() =>
   (props.observation?.blocks || []).filter((block) =>
     block?.type === 'report_artifact'
@@ -579,11 +582,9 @@ function alertsMeta(block) {
         ? `近 ${block.windowDays} 天`
         : '本次查询';
   const latest = block.windowLatest || block.latest;
-  if (block.summaryStatus === 'unavailable') return `${windowText}未取得有效统计 · 不代表已恢复`;
+  if (block.summaryStatus === 'unavailable') return `${windowText} · 未取得有效统计`;
   if (!(block.records || []).length)
-    return alertPartial(block)
-      ? `${windowText}仅取得部分统计 · 不代表已恢复`
-      : `${windowText}无记录 · 不代表已恢复`;
+    return alertPartial(block) ? `${windowText} · 仅取得部分统计` : `${windowText} · 无记录`;
   const partialText =
     block.coverageComplete === false
       ? ' · 分页未读完'
@@ -591,8 +592,8 @@ function alertsMeta(block) {
         ? ' · 部分类别未取得'
         : '';
   return latest?.time
-    ? `${windowText} · 最新一条 ${fmtDateTime(latest.time)}（${ageHint(latest.time)}） · 未提供恢复证据${partialText}`
-    : `${windowText} · 未提供恢复证据${partialText}`;
+    ? `${windowText} · 最新一条 ${fmtDateTime(latest.time)}（${ageHint(latest.time)}）${partialText}`
+    : `${windowText}${partialText}`;
 }
 </script>
 

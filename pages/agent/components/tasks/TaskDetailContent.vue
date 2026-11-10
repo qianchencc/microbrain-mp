@@ -206,6 +206,7 @@
                   :show-issue="showIssue"
                   inline-playback
                   read-only
+                  hide-execution-status
                   @select-alert="$emit('select-alert', $event)"
                   @browse-alerts="$emit('browse-alerts')" /></view
             ></view>
@@ -280,10 +281,16 @@
                     class="device-row"
                   >
                     <text class="device-name">{{ device.name }}</text
-                    ><text class="target">{{ device.targetText }}</text
+                    ><text
+                      v-if="device.kind !== 'energy'"
+                      class="target"
+                      >{{
+                        device.target?.observe ? device.targetText : `目标：${device.targetText}`
+                      }}</text
                     ><button
                       v-if="device.resultTone === 'warn' && phase.status !== 'cancelled'"
                       class="result result-link"
+                      :aria-label="`${device.name}，查看原因`"
                       :class="device.resultTone"
                       @tap="
                         showIssue({
@@ -291,12 +298,7 @@
                           reason: device.resultReason,
                         })
                       "
-                      >{{ device.resultText }} ›</button
-                    ><text
-                      v-else
-                      class="result"
-                      :class="device.resultTone"
-                      >{{ device.resultText }}</text
+                      >查看原因 ›</button
                     >
                   </view>
                 </view></view
@@ -686,14 +688,7 @@ const reportLink = computed(() =>
     : null
 );
 function phaseNote(phase) {
-  const devices = phase.devices || [];
-  const reasons = [
-    ...new Set(
-      devices.map((d) => (d.resultReason || d.targetText || '').split('\n')[0]).filter(Boolean)
-    ),
-  ];
-  const parts = [devices.length ? `${devices.length} 台` : '', ...reasons.slice(0, 2)];
-  return parts.filter(Boolean).join(' · ') || phase.title;
+  return phase.devices.length ? `${phase.devices.length} 台` : phase.title;
 }
 // 来源 draft/conversation id 只对创建者返回；等价于“我创建的任务”，用于保留原取消权限。
 const detailMine = computed(() =>

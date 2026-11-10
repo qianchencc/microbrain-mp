@@ -48,6 +48,8 @@ export {
   taskResultStatus,
   planPresentation,
   taskResultLabel,
+  deviceResultView,
+  deviceResultReason,
 } from '../domains/tasks/task-presentation.mjs';
 export { deviceTimelineItems } from '../domains/tasks/device-timeline-view.mjs';
 export { createPlanManagement } from '../domains/tasks/plan-management.mjs';

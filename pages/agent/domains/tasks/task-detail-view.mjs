@@ -533,7 +533,7 @@ export function taskDetailView(task) {
           artwork: resolveDeviceArtwork({ ...device, deviceName: device.name }).src,
           targetText: target,
           resultText: phase.status === 'cancelled' ? '已取消' : result.text,
-          resultReason: deviceResultReason(device, target),
+          resultReason: deviceResultReason(device),
           resultTone: phase.status === 'cancelled' ? 'wait' : result.tone,
         };
       }),

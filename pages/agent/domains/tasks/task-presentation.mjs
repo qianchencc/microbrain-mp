@@ -6,7 +6,6 @@ const labels = {
   completed: '已结束',
   verified: '已完成',
   observed: '已检查',
-  satisfied: '无需调整',
   partial: '部分完成',
   failed: '未完成',
   missed: '未完成',
@@ -38,7 +37,7 @@ const DISPATCHED = new Set(['dispatched', 'unconfirmed', 'unknown', 'unavailable
 export function deviceResultView(device) {
   const { outcome } = device;
   if (outcome === 'verified') return { text: '已完成', tone: 'ok', settled: true };
-  if (outcome === 'satisfied') return { text: '无需调整', tone: 'ok', settled: true };
+  if (outcome === 'satisfied') return { text: '', tone: 'ok', settled: true };
   if (outcome === 'observed') return { text: '已检查', tone: 'ok', settled: true };
   if (outcome === 'pending') return { text: '未开始', tone: 'wait', settled: false };
   if (outcome === 'not_dispatched') return { text: '这次未调整', tone: 'wait', settled: false };
@@ -47,9 +46,8 @@ export function deviceResultView(device) {
 }
 
 // 面向非专业读者的一句话说明：只写已发生的事实，回传缺失不再追加不确定说明。
-export function deviceResultReason(device, target) {
-  const action =
-    !device.target?.observe && target && target !== '目标未指定' ? `「${target}」` : '';
+export function deviceResultReason(device) {
+  if (['satisfied', 'verified', 'observed'].includes(device.outcome)) return '';
   const known = {
     unconfirmed: '',
     unknown: '',
@@ -60,13 +58,13 @@ export function deviceResultReason(device, target) {
     missing: '这台设备当前无法操作。',
     failed: '这次操作没有完成。',
   };
-  return [
-    known[device.outcome] ?? taskStatusText(device.outcome),
-    device.reason,
-    device.details?.reason,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
+  const legacyReasons = new Set(['指令已受理，尚未取得平台实测回读', '当前无需调整']);
+  const reasons = [known[device.outcome] ?? taskStatusText(device.outcome)];
+  reasons.push(
+    device.reason && !legacyReasons.has(device.reason) ? device.reason : '',
+    device.details?.reason && !legacyReasons.has(device.details.reason) ? device.details.reason : ''
+  );
+  return reasons.filter(Boolean).join('\n\n');
 }
 
 // completed只表示执行流程结束；有设备事实时，才进一步表达目标结果。

@@ -260,7 +260,16 @@ test('空调巡检行分开展示调前读数与平台回读，指令目标不�
       { power: 'on', mode: 'cool', setpoint: 26, disposition: 'not_needed' },
       { mode: 'inspect' }
     ),
-    '无需调整 · 开机 · 制冷 · 26℃'
+    '已检查 · 开机 · 制冷 · 26℃',
+    '只读巡检未下发指令，标注为已检查'
+  );
+  assert.equal(
+    acInspectionMeta(
+      { power: 'on', mode: 'cool', setpoint: 26, disposition: 'satisfied' },
+      { mode: 'adjust_to_26' }
+    ),
+    '已下发 · 检查前：开机 · 制冷 · 26℃',
+    '已下发但无需调整不显示无需调整文案'
   );
   const target27 = { mode: 'adjust_to_26', criteria: { setpoint: { value: 27 } } };
   assert.equal(
