@@ -25,11 +25,7 @@ export function useViewReads(active = () => true, context = () => '') {
     context,
   });
   watchAgentIdentity(scope.identityChanged);
-  watch(
-    () => [isActive(), JSON.stringify(context())],
-    () => scope.invalidate(),
-    { flush: 'sync' }
-  );
+  watch([isActive, () => JSON.stringify(context())], () => scope.invalidate(), { flush: 'sync' });
   onHide(() => {
     visible.value = false;
     scope.invalidate();
