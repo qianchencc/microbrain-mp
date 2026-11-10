@@ -59,11 +59,11 @@ test('暂停后只采用当前版本返回的计划；失效在途响应不污�
   assert.equal(second.changes.length, 0)
 })
 
-test('版本冲突采用权威恢复计划并保留错误，不把失败说成暂停成功', async () => {
+test('版本冲突采用权威恢复计划，错误不撑开页面，也不误报暂停成功', async () => {
   const f = fixture({ api: { setStatus: async () => { throw Object.assign(new Error('计划版本已变化'), { data: { recovery: { plan: { planId: 'plan-a', status: 'paused', version: 5 } } } }) } } })
   await f.manager.toggle(f.plan.planId)
   assert.equal(f.context.plans[0].version, 5)
-  assert.equal(f.manager.state.error, '计划版本已变化')
+  assert.equal(f.manager.state.error, '')
   assert.deepEqual(f.changes, [])
   assert.deepEqual(f.messages, [])
 })
@@ -125,7 +125,7 @@ test('启停失败不改变后端状态，释放忙碌标记后可在同页重�
  assert.equal(f.context.plans[0].status, 'enabled')
  assert.equal(f.context.plans[0].version, 3)
  assert.equal(f.manager.state.busy, false)
- assert.equal(f.manager.state.error, '连接中断')
+ assert.equal(f.manager.state.error, '')
  await f.manager.toggle('plan-a')
  assert.equal(f.context.plans[0].status, 'paused')
  assert.equal(f.context.plans[0].version, 4)

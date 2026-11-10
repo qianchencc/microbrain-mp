@@ -15,7 +15,7 @@ const PATTERN_RULES = [
 
 // 后端错误码 → 短文案。码名含语义，UI 不再展示后端拼好的长句。
 const CODE_RULES = [
-  [/^TASK_DEVICE_UNAVAILABLE$/, '设备范围已变化，请重新核实'],
+  [/^(TASK_DEVICE_UNAVAILABLE|PLAN_SCOPE_CHANGED)$/, '设备范围已变化，请重新核实'],
   [/PREPARING|NOT_READY/, '数据准备中，请稍后重试'],
   [/SESSION_EXPIRED/, '登录已过期，请重新进入'],
   [/SCOPE_CHANGED|IDENTITY/, '登录已变化，请重新读取'],
@@ -45,11 +45,14 @@ export function agentErrorText(cause, { fallback = '操作失败，请重试', t
   if (!cause) return fallback;
   const object = typeof cause === 'object' ? cause : { message: String(cause) };
   const code = String(object.code || object.data?.code || '');
+  const status = object.status ?? object.data?.status ?? object.statusCode;
+  if (code === 'TASK_DEVICE_AUTHORIZATION_UNAVAILABLE' && status === 403) {
+    return '设备范围已变化，请重新核实';
+  }
   for (const [pattern, text] of CODE_RULES) {
     if (pattern.test(code)) return text;
   }
   const message = String(object.message || object.data?.message || '');
-  const status = object.status ?? object.data?.status ?? object.statusCode;
   if (object.transport || status === 0) {
     return classifyMessage(message, timeout || '请求超时，稍后重试') || '网络异常，稍后重试';
   }

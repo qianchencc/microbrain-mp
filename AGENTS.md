@@ -23,6 +23,12 @@ Architecture terms and the accepted Agent page module decision are in [GLOSSARY.
 - 任务和通知只向后端读写；前端快照仅作展示，不自行判定任务成功。生命周期变更对照[基础闭环设计](../iot-agent-backend/.scratch/agent-business-recovery/task-lifecycle.md)。
 - 公司设备目录的旧值展示使用后端 `cache.updatedAt` 标注同步时间；`stale` 保留待更新提示，不能把同步时间解释为设备采样时间，准备中不能展示成空目录。后端本地同步实施入口为 `../iot-agent-backend/.scratch/local-data-sync/`。
 
+### 上游访问底线（强制）
+
+- 前端所有操作只读写后端，由后端本地事实提供数据；交互请求不得直接或经后端穿透访问客户上游，GET／只读请求也不例外。
+- 设备权限、范围、能力、控制绑定和状态核验只消费后端已有数据，不现场拉取上游；本地数据缺失或未就绪时明确返回相应状态，不补拉、不兜底穿透。
+- 只有既定后台同步与监控链路可以访问客户上游；诊断、验收、刷新、任务启停或“真实动作”不能作为新增例外。详细落点同时遵循 `../iot-agent-backend/AGENTS.md`，本底线优先于历史文档中的宽松约定。
+
 ### Git 规范
 
 - 开始任何跨目录迁移或批量修改前，先执行 `git status --short --branch`、`git log -5 --oneline` 和 `git diff --stat`，确认基线、分支和未提交内容；未提交内容不得直接当作可信基线。

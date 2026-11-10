@@ -77,7 +77,6 @@ export function createPlanManagement({
     } catch (cause) {
       if (!current(ticket, plan)) return;
       if (cause.data?.recovery?.plan) updatePlan(cause.data.recovery.plan);
-      state.error = cause.message || '状态更新失败，请刷新后重试';
       showAgentError(cause, { fallback: '状态更新失败' });
     } finally {
       if (ticket.sequence === sequence) state.busy = false;

@@ -50,3 +50,10 @@ test('任务范围变化与上游不可用、版本冲突分开处理', () => {
 	assert.notEqual(agentErrorText(scopeChanged), agentErrorText({ code: 'OBSERVATION_UPSTREAM_UNAVAILABLE' }));
 	assert.notEqual(agentErrorText(scopeChanged), agentErrorText({ code: 'VERSION_CONFLICT' }));
 });
+
+test('任务绑定变化不误报上游故障，真实授权读取故障仍按不可用提示', () => {
+	const changed = { status: 403, data: { code: 'TASK_DEVICE_AUTHORIZATION_UNAVAILABLE' } };
+	const offline = { status: 503, data: { code: 'TASK_DEVICE_AUTHORIZATION_UNAVAILABLE' } };
+	assert.equal(agentErrorText(changed), agentErrorText({ code: 'TASK_DEVICE_UNAVAILABLE' }));
+	assert.notEqual(agentErrorText(changed), agentErrorText(offline));
+});

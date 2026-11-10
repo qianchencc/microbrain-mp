@@ -110,9 +110,9 @@ export function planPresentation(plan) {
     nextAt: plan?.nextCheckpointAt || plan?.nextAt,
     nextLabel: hasCheckpoints ? '下一次检查' : '下一次执行',
     nextNote: paused
-      ? '已暂停 · 历史结果保留'
+      ? '已暂停'
       : ended
-        ? '已结束 · 历史结果保留'
+        ? '已结束'
         : enabled && !plan.nextAt && !plan.nextCheckpointAt
           ? '下一次安排待更新'
           : '',
