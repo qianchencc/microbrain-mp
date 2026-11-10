@@ -24,7 +24,7 @@ const artwork = Object.freeze({
     key: 'lighting-generic',
     code: 'LGT',
     label: '照明 / 设备',
-    src: null,
+    src: '/static/device-art/lighting-grille-luminaire.png',
     variant: 'generic',
   }),
   'lighting-grille': Object.freeze({

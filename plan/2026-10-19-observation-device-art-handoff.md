@@ -79,3 +79,10 @@ One compact water-leak sensor assembly for commercial building monitoring: a sma
 - 公司、区域抽屉已保留分类字段；任务提案卡原先仅传 kind/name，现保留设备字段，避免丢失 subtype、visualKey 和 location 导致已有图片无法命中。
 - 运行选图冒烟：十张原图路径存在且选图正确，三个未知分类恢复中性兜底；任务提案烟感 subtype 场景修复前落兜底、修复后选中原烟感图。
 - `npm run test:agent`：301/301 通过；HBuilderX 微信开发编译完成，既有 check/detail、img 选择器及鸿蒙兼容提示保留。未完成本轮微信界面／真机验收，以上不替代前端证据。
+
+## 2026-11-10：照明开关复用物联页面原图
+
+- 按用户要求复用物联页面已有的产品图，不使用旧首页的 `/static/light.png` 灯泡图标，也不新增素材。
+- `lighting-generic` 改用既有 `lighting-grille-luminaire.png` 作为照明类别示意；保留「照明 / 设备」标签，不宣称开关的具体型号。灯带、格栅灯的原有匹配规则不变。
+- 选图冒烟确认普通照明开关、格栅灯、灯带、显式通用照明分类及非照明兜底；图片路径存在，Prettier 检查和微信开发编译通过。
+- 同一登录账号在微信开发者工具打开「物联助手 → 设备目录 → 照明」，卡片已实际显示产品图，见[前端截图](assets/2026-11-10-lighting-switch-existing-art.png)；「27楼展厅2」首项照明开关的原生图片节点也确认使用格栅灯图。该分组未单独截图，真机未验收。
