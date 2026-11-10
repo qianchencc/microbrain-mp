@@ -370,7 +370,6 @@ button::after {
   opacity: 0.65;
 }
 .calendar-task {
-  width: 100%;
   box-sizing: border-box;
   display: flex;
   align-items: center;
