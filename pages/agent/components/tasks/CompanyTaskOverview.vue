@@ -98,7 +98,7 @@
       <view
         v-if="!loading && !previewDays.length"
         class="agenda-state"
-        >近两个月暂无任务安排</view
+        >暂无任务安排</view
       >
       <view
         v-if="error && previewDays.length"
