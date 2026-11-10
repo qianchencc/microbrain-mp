@@ -1,0 +1,106 @@
+{
+  "raw": {
+    "window": {
+      "from": "2026-11-09T16:00:00Z",
+      "to": "2026-11-10T15:59:59.999Z"
+    },
+    "availableWindow": {
+      "from": "2026-10-08T09:00:00Z",
+      "to": "2026-11-10T12:00:00Z"
+    },
+    "resolution": "raw",
+    "readSamples": 21,
+    "readout": {
+      "metric": "温度",
+      "grain": "原始采样",
+      "value": "24",
+      "time": "2026-11-10 20:00"
+    }
+  },
+  "humidity": {
+    "window": {
+      "from": "2026-11-02T16:00:00Z",
+      "to": "2026-11-10T15:59:59.999Z"
+    },
+    "availableWindow": {
+      "from": "2026-10-08T09:00:00Z",
+      "to": "2026-11-10T12:00:00Z"
+    },
+    "resolution": "3h",
+    "readSamples": 189,
+    "readout": {
+      "metric": "湿度",
+      "grain": "3小时均值",
+      "value": "43.23",
+      "time": "2026-11-10 18:00–21:00",
+      "detail": "最低 42.2% · 最高 44.6% · 3条采样",
+      "latest": "44.6"
+    }
+  },
+  "future": {
+    "window": {
+      "from": "2026-11-02T16:00:00Z",
+      "to": "2026-11-10T15:59:59.999Z"
+    },
+    "availableWindow": {
+      "from": "2026-10-08T09:00:00Z",
+      "to": "2026-11-10T12:00:00Z"
+    },
+    "resolution": "3h",
+    "readSamples": 189,
+    "readout": {
+      "metric": "湿度",
+      "grain": "3小时均值",
+      "value": "—",
+      "time": "2026-11-10 21:00–00:00",
+      "detail": "该时段尚未开始",
+      "latest": "44.6"
+    }
+  },
+  "daily": {
+    "window": {
+      "from": "2026-10-07T16:00:00Z",
+      "to": "2026-11-10T15:59:59.999Z"
+    },
+    "availableWindow": {
+      "from": "2026-10-08T09:00:00Z",
+      "to": "2026-11-10T12:00:00Z"
+    },
+    "resolution": "day",
+    "readSamples": 799,
+    "readout": {
+      "metric": "温度",
+      "grain": "日均值",
+      "value": "23.46",
+      "time": "2026-11-10",
+      "detail": "最低 22°C · 最高 25.8°C · 21条采样",
+      "latest": "24"
+    }
+  },
+  "dateConstraint": {
+    "requested": "2026-09-10",
+    "start": "2026-10-08",
+    "actual": "2026-10-08",
+    "endMinimum": "2026-10-08"
+  },
+  "selectedDaily": {
+    "window": {
+      "from": "2026-10-07T16:00:00Z",
+      "to": "2026-11-10T15:59:59.999Z"
+    },
+    "availableWindow": {
+      "from": "2026-10-08T09:00:00Z",
+      "to": "2026-11-10T12:00:00Z"
+    },
+    "resolution": "day",
+    "readSamples": 799,
+    "readout": {
+      "metric": "温度",
+      "grain": "日均值",
+      "value": "26.75",
+      "time": "2026-10-08",
+      "detail": "最低 26.4°C · 最高 27.1°C · 8条采样",
+      "latest": "24"
+    }
+  }
+}

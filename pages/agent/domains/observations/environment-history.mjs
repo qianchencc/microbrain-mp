@@ -37,6 +37,11 @@ export function environmentChartPoints(report, key) {
   return environmentTrendPoints(report.samples || [], key);
 }
 
+export function environmentBucketState(bucket, key, now = Date.now()) {
+  if (Number.isFinite(bucket.values?.[key])) return 'available';
+  return Date.parse(bucket.from) > now ? 'future' : 'missing';
+}
+
 export function mergeEnvironmentHistory(previous, incoming) {
   if (incoming.resolution) {
     const complete = incoming.coverage?.complete === true;
@@ -157,8 +162,9 @@ export function environmentRangeLimits(from, today) {
   return { min: from, max: dateText(Math.min(dateMs(today), dateMs(from) + 179 * DAY_MS)) };
 }
 
-export function environmentDateRange(current, field, value, today) {
-  const from = field === 'from' ? (value > today ? today : value) : current.from;
+export function environmentDateRange(current, field, value, today, earliest) {
+  let from = field === 'from' ? (value > today ? today : value) : current.from;
+  if (earliest && from < earliest) from = earliest;
   const limits = environmentRangeLimits(from, today);
   const desiredEnd = field === 'to' ? value : current.to;
   return { from, to: desiredEnd < from ? from : desiredEnd > limits.max ? limits.max : desiredEnd };
@@ -189,10 +195,11 @@ const timeLabel = (ms) => {
   const p = shanghaiParts(ms);
   return `${pad2(p.hour)}:${pad2(p.minute)}`;
 };
-const axisLabel = (ms, dayScale, crossYear) => {
+const axisLabel = (ms, dayScale, crossYear, withTime) => {
   const p = shanghaiParts(ms);
   if (!dayScale) return timeLabel(ms);
-  return `${crossYear ? String(p.year).slice(2) + '/' : ''}${p.month}/${p.day}`;
+  const day = `${crossYear ? String(p.year).slice(2) + '/' : ''}${p.month}/${p.day}`;
+  return withTime ? `${day} ${timeLabel(ms)}` : day;
 };
 
 // Tick labels are laid out in physical pixels, independently of the number of chart points.
@@ -206,20 +213,19 @@ export function environmentTrendTicks(window, { width = 360, padLeft, padRight }
   const span = Math.max(1, end - start);
   const dayScale = span > DAY_MS;
   const crossYear = shanghaiParts(start).year !== shanghaiParts(end).year;
-  const maxTicks = Math.max(2, Math.min(6, Math.floor(plotWidth / (crossYear ? 60 : 48))));
+  const withTime = dayScale && span < 3 * DAY_MS;
+  const labelSpace = withTime ? (crossYear ? 100 : 86) : crossYear ? 70 : 56;
+  const maxTicks = Math.max(2, Math.min(6, Math.floor(plotWidth / labelSpace)));
   const candidateTimes = [];
-  if (dayScale && span > 45 * DAY_MS) {
-    const p = shanghaiParts(start);
-    for (let month = p.month; ; month++) {
-      const at = Date.UTC(p.year, month, 1) - SHANGHAI_OFFSET_MS;
-      if (at >= end) break;
+  if (dayScale && !withTime) {
+    for (
+      let at = Math.ceil((start + SHANGHAI_OFFSET_MS) / DAY_MS) * DAY_MS - SHANGHAI_OFFSET_MS;
+      at < end;
+      at += DAY_MS
+    )
       if (at > start) candidateTimes.push(at);
-    }
   } else {
-    const steps = dayScale
-      ? [1, 2, 3, 7, 14, 30].map((days) => days * DAY_MS)
-      : [15 * 60e3, 30 * 60e3, 36e5, 2 * 36e5, 3 * 36e5, 6 * 36e5, 12 * 36e5];
-    const step = steps.find((value) => span / value <= maxTicks - 1) || steps.at(-1);
+    const step = span <= 6 * 36e5 ? 15 * 60e3 : 36e5;
     for (
       let at = Math.ceil((start + SHANGHAI_OFFSET_MS) / step) * step - SHANGHAI_OFFSET_MS;
       at < end;
@@ -228,9 +234,9 @@ export function environmentTrendTicks(window, { width = 360, padLeft, padRight }
       if (at > start) candidateTimes.push(at);
   }
   const tickOf = (at, edge) => {
-    const label = axisLabel(at, dayScale, crossYear);
+    const label = axisLabel(at, dayScale, crossYear, withTime);
     const x = leftPad + ((at - start) / span) * plotWidth;
-    const textWidth = label.length * 6;
+    const textWidth = label.length * 7;
     const labelLeft = edge === 'start' ? x : edge === 'end' ? x - textWidth : x - textWidth / 2;
     return {
       at,

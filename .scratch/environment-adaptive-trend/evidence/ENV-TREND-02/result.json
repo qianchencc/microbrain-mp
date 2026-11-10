@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-10",
+  "scope": "Environment history sheet; not an application-wide meter calendar change",
+  "status": "passed_for_observed_native_cases",
+  "implementation": {
+    "bounds": "Authorized local MIN/MAX(recorded_at), independent of selected window; no cross-scope or meter fallback",
+    "readout": "Selected raw sample or aggregate mean drives the main number; raw latest and original peak remain separate",
+    "layout": "Details above graph; question action in scroll content; no hidden selected footer",
+    "axis": "Width-aware evenly distributed business-date/hour candidates",
+    "emptyBuckets": "Past missing, future not-started and valid zero are distinct; no jump to another valid bucket"
+  },
+  "nativeCases": [
+    {"id":"ENV-RANGE-01","status":"passed","expected":"No date earlier than available history","observed":{"availableFrom":"2026-10-08T09:00:00Z","nativePickerStart":"2026-10-08","attemptedChange":"2026-09-10","actualStart":"2026-10-08"},"evidence":"observations.json"},
+    {"id":"ENV-RAW-01","status":"passed","observed":"21 original samples; latest 24°C at 20:00; hour labels 00:00/08:00/16:00/23:59; complete visible card and action","screenshot":"raw-day.jpg"},
+    {"id":"ENV-DAY-01","status":"passed","observed":"799 original records projected to daily means across 10/08–11/10, without pre-history whitespace","screenshot":"daily-latest.jpg"},
+    {"id":"ENV-SELECT-01","status":"passed","observed":{"date":"2026-10-08","mean":26.75,"minimum":26.4,"maximum":27.1,"validSamples":8,"rawLatest":24,"originalPeak":30},"screenshot":"daily-selected.jpg"},
+    {"id":"ENV-HUM-01","status":"passed","observed":{"grain":"3h","metric":"humidity","mean":43.23,"minimum":42.2,"maximum":44.6,"validSamples":3,"rawLatest":44.6},"screenshot":"humidity-three-hour.jpg"},
+    {"id":"ENV-FUTURE-01","status":"passed","observed":"Selecting the future 21:00–24:00 bucket displays an unavailable number and 该时段尚未开始; it is not counted as missing and does not jump to 18:00–21:00","screenshot":"future-window.jpg"}
+  ],
+  "engineering": {
+    "frontendFocusedTests":{"passed":15,"failed":0},
+    "backendHistoryTests":{"passed":24,"failed":0,"includes":"Empty requested window still returns authorized full-history bounds; unrelated older scope excluded; no interactive upstream calls"},
+    "boundaries":"passed; 188 source files",
+    "wechatDevelopmentCompile":"passed; pre-existing uniCloud/sourcemap/img/Harmony warnings remain",
+    "selectedEmptyBucketGeometry":"One-off renderer smoke passed; no NaN/Infinity in SVG geometry",
+    "formats":"Changed frontend files formatted"
+  },
+  "runtime": {
+    "port":3381,
+    "artifact":"var/environment-history-bounds-20261110-202653/backend.jar",
+    "sha256":"872760b36bb39562a0176dac1cbb131eb08f90731ca9fd3466c92b5c1b658b12",
+    "scope":"Only JdbcEnvironmentHistory owner and nested class entries replaced; other archive entry content unchanged",
+    "nodeAndConfiguration":"preserved",
+    "recoveryPoint":"Private database/config backups retained outside tracked source"
+  },
+  "verificationLimits": ["Physical device not tested", "320px native viewport, 200% zoom and screen reader not tested", "Rendered contrast ratio not measured", "180-day boundary covered by deterministic regressions; current live history spans only 34 calendar dates", "A truly empty authorized live scope was unavailable; empty requested windows and cross-scope bounds were exercised in isolated H2 fixtures"],
+  "automation": "Registered screenshot tool plus public miniprogram-automator controls for nested components; retained connection during screenshots; no setData, mocked APIs or direct business-method calls",
+  "safety": {"accountSwitch":false,"productionDeployment":false,"deviceControl":false,"taskOrPlanCreation":false,"notificationSend":false,"mockDataForAcceptance":false}
+}

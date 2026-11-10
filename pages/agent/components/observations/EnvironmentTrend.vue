@@ -9,21 +9,35 @@
         selectedId = '';
       "
     />
-    <view class="hero"
-      ><view
-        ><text class="hlabel">{{ metric?.label || '观测' }} · 最新采样</text
-        ><text class="number"
-          >{{ latest?.value ?? '—' }}<text class="unit">{{ metric?.unit || '' }}</text></text
-        ></view
-      ><view class="peak"
-        ><text>原始峰值 {{ metric?.peak?.value ?? '—' }}{{ metric?.unit || '' }}</text
-        ><text>{{ metric?.peak ? fmtDateTime(metric.peak.at) : '暂无有效采样' }}</text></view
-      ></view
+    <view class="hero">
+      <view class="reading">
+        <text class="hlabel">{{ metric?.label || '观测' }} · {{ resolutionText }}</text>
+        <text class="number"
+          >{{ focus?.values[metricKey] ?? '—'
+          }}<text class="unit">{{ metric?.unit || '' }}</text></text
+        >
+        <text class="reading-time">{{ focusTime || '暂无有效采样' }}</text>
+      </view>
+      <view class="peak">
+        <text>原始峰值 {{ metric?.peak?.value ?? '—' }}{{ metric?.unit || '' }}</text>
+        <text>{{ metric?.peak ? fmtDateTime(metric.peak.at) : '暂无有效采样' }}</text>
+      </view>
+    </view>
+    <text
+      v-if="focusDetail"
+      class="point-summary"
+      >{{ focusDetail }}</text
     >
     <text
-      v-if="windowText"
+      v-if="showLatest"
+      class="latest-fact"
+    >
+      最新采样 {{ latest.value }}{{ metric?.unit || '' }} · {{ fmtShanghaiDateTime(latest.at) }}
+    </text>
+    <text
+      v-if="showWindow && windowText"
       class="window"
-      >{{ windowText }} · {{ resolutionText }}</text
+      >{{ windowText }}</text
     >
     <view
       class="plot"
@@ -47,17 +61,7 @@
       class="quality"
       >{{ qualityNotice }}</text
     >
-    <view class="foot"
-      ><text>{{ selected ? selectedTime : '点击图形查看' + resolutionText }}</text
-      ><text>{{
-        selected ? (selected.values[metricKey] ?? '缺测') + (metric?.unit || '') : coverageLine
-      }}</text></view
-    >
-    <text
-      v-if="selectedDetail"
-      class="selected-detail"
-      >{{ selectedDetail }}</text
-    >
+    <text class="data-note">{{ coverageLine }} · 点图查看{{ resolutionText }}</text>
   </view>
 </template>
 <script setup>
@@ -67,13 +71,17 @@ import {
   fmtShanghaiDateTime,
   environmentSampleIdentity,
   environmentChartPoints,
+  environmentBucketState,
   environmentHistoryNotice,
   environmentWindowLabel,
   environmentTrendTicks,
 } from '../../lib/observations.mjs';
 import { trendLineChart } from '../../lib/energy.mjs';
 import SlidingSegments from '../shared/SlidingSegments.vue';
-const props = defineProps({ report: { type: Object, required: true } });
+const props = defineProps({
+  report: { type: Object, required: true },
+  showWindow: { type: Boolean, default: true },
+});
 const metricKey = ref('temp'),
   selectedId = ref('');
 const metric = computed(
@@ -91,7 +99,6 @@ watch(
 );
 const pointIdentity = (point) =>
   point.from ? `${point.from}/${point.to}` : environmentSampleIdentity(point);
-const pointTime = (point) => point.at || point.recordedAt;
 const chartPoints = computed(() => environmentChartPoints(props.report, metricKey.value));
 const selected = computed(
   () => chartPoints.value.find((point) => pointIdentity(point.ref) === selectedId.value)?.ref
@@ -99,16 +106,19 @@ const selected = computed(
 const points = computed(() =>
   chartPoints.value.filter((point) => point.value !== null).map((point) => point.ref)
 );
+const focus = computed(() => selected.value || points.value.at(-1));
 const resolutionText = computed(
   () =>
     ({ day: '日均值', '3h': '3小时均值', raw: '原始采样' })[props.report.resolution] || '原始采样'
 );
 const qualityNotice = computed(() => {
   const notes = [environmentHistoryNotice(props.report)];
+  const now = Date.now();
   const empty = (props.report.buckets || []).filter(
-    (bucket) => !bucket.metrics?.[metricKey.value]?.count
+    (bucket) => environmentBucketState(bucket, metricKey.value, now) === 'missing'
   ).length;
-  if (empty) notes.push(`${empty}个时段无有效采样，已断开显示`);
+  if (empty)
+    notes.push(`${empty}${props.report.resolution === 'day' ? '天' : '个时段'}缺测，折线已断开`);
   return notes.filter(Boolean).join('；');
 });
 const latest = computed(() => {
@@ -116,19 +126,28 @@ const latest = computed(() => {
   if (raw) return raw;
   if (props.report.resolution && props.report.resolution !== 'raw') return null;
   const last = points.value.at(-1);
-  return last ? { value: last.values[metricKey.value] } : null;
+  return last ? { value: last.values[metricKey.value], at: last.recordedAt } : null;
 });
-const selectedTime = computed(() =>
-  selected.value?.from
-    ? fmtShanghaiDateTime(selected.value.from) +
-      (props.report.resolution === 'day' ? ' 日均' : ' 起3小时')
-    : fmtDateTime(selected.value?.recordedAt)
+const showLatest = computed(
+  () =>
+    latest.value &&
+    ((props.report.resolution && props.report.resolution !== 'raw') || selected.value)
 );
-const selectedDetail = computed(() => {
-  const detail = selected.value?.metrics?.[metricKey.value];
+const focusTime = computed(() => {
+  const point = focus.value;
+  if (!point) return '';
+  const from = fmtShanghaiDateTime(point.from || point.recordedAt);
+  if (props.report.resolution === 'day') return from.slice(0, 10);
+  if (point.to) return `${from}–${fmtShanghaiDateTime(point.to).slice(11, 16)}`;
+  return from;
+});
+const focusDetail = computed(() => {
+  const detail = focus.value?.metrics?.[metricKey.value];
   if (!detail) return '';
+  if (environmentBucketState(focus.value, metricKey.value) === 'future') return '该时段尚未开始';
+  if (!detail.count) return '该时段无有效采样';
   const unit = metric.value?.unit || '';
-  return `最低 ${detail.min}${unit} · 最高 ${detail.max}${unit} · ${detail.count}条有效采样`;
+  return `最低 ${detail.min}${unit} · 最高 ${detail.max}${unit} · ${detail.count}条采样`;
 });
 const range = computed(() => ({
   start: Date.parse(props.report.window.from),
@@ -148,7 +167,7 @@ const chart = computed(() =>
   trendLineChart(chartPoints.value, {
     from: range.value.start,
     to: range.value.start + range.value.duration,
-    selected: selected.value,
+    selected: focus.value,
   })
 );
 const windowText = computed(() => environmentWindowLabel(props.report.window));
@@ -170,7 +189,7 @@ function measurePlot() {
 onMounted(measurePlot);
 watch(() => props.report.window, measurePlot, { flush: 'post' });
 function selectPoint(event) {
-  if (!points.value.length) return;
+  if (!chartPoints.value.length) return;
   uni
     .createSelectorQuery()
     .in(instance)
@@ -178,13 +197,12 @@ function selectPoint(event) {
     .boundingClientRect((rect) => {
       if (!rect?.width) return;
       const x = ((event.detail.x - rect.left) / rect.width) * chart.value.width;
-      const nearest = points.value.reduce((best, item) =>
-        Math.abs(chart.value.xOf(pointTime(item)) - x) <
-        Math.abs(chart.value.xOf(pointTime(best)) - x)
+      const nearest = chartPoints.value.reduce((best, item) =>
+        Math.abs(chart.value.xOf(item.at) - x) < Math.abs(chart.value.xOf(best.at) - x)
           ? item
           : best
       );
-      selectedId.value = pointIdentity(nearest);
+      selectedId.value = pointIdentity(nearest.ref);
     })
     .exec();
 }
@@ -215,7 +233,7 @@ button::after {
   justify-content: space-between;
   align-items: flex-end;
   gap: 10px;
-  margin: 16px 0 10px;
+  margin: 12px 0 8px;
 }
 .hlabel {
   display: block;
@@ -241,10 +259,10 @@ button::after {
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
-  flex-shrink: 0;
-  color: var(--agent-text-muted);
+  max-width: 46%;
+  color: var(--agent-text-secondary);
   font-size: 11px;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 .plot {
   position: relative;
@@ -257,16 +275,16 @@ button::after {
 .window {
   display: block;
   margin: 12px 0 2px;
-  color: var(--agent-text-muted);
-  font-size: 10px;
+  color: var(--agent-text-secondary);
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 .axis-time {
   position: relative;
   min-height: 14px;
   margin-top: 2px;
-  color: var(--agent-text-muted);
-  font-size: 10px;
+  color: var(--agent-text-secondary);
+  font-size: 11px;
 }
 .axis-time text {
   position: absolute;
@@ -279,26 +297,29 @@ button::after {
 .axis-time .tick-end {
   transform: translateX(-100%);
 }
-.selected-detail {
-  display: block;
-  margin-top: 6px;
-  color: var(--agent-text-muted);
-  font-size: 10px;
+.reading {
+  min-width: 0;
 }
-.foot {
-  display: flex;
-  justify-content: space-between;
-  gap: $agent-space-small;
-  margin: 14px 0 0;
-  padding: 11px 0 0;
-  border-top: 1px solid var(--agent-line);
-  color: var(--agent-text-muted);
+.reading-time,
+.point-summary,
+.latest-fact,
+.data-note {
+  display: block;
+  color: var(--agent-text-secondary);
   font-size: 11px;
+  line-height: 1.5;
+}
+.point-summary,
+.latest-fact {
+  margin-top: 4px;
+}
+.data-note {
+  margin-top: 10px;
 }
 .quality {
   display: block;
   margin-top: $agent-space-small;
-  color: var(--agent-text-muted);
+  color: var(--agent-text-secondary);
   font-size: 11px;
   line-height: 1.5;
 }

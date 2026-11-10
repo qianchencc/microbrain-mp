@@ -41,6 +41,7 @@ export {
   environmentWindowLabel,
   environmentTrendTicks,
   environmentChartPoints,
+  environmentBucketState,
   environmentDateRange,
   environmentRangeLimits,
 } from '../domains/observations/environment-history.mjs';

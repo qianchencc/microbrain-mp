@@ -4,6 +4,7 @@ import {
   environmentDateRange,
   environmentRangeLimits,
   environmentChartPoints,
+  environmentBucketState,
   environmentTrendTicks,
   mergeEnvironmentHistory,
 } from '../pages/agent/lib/observations.mjs';
@@ -47,6 +48,43 @@ test('终点不越过今天，起点越过旧终点时终点跟随而非产生�
   });
 });
 
+test('起点以授权历史首日为下限，旧的空区间整体纠正到首日', () => {
+  const earliest = '2026-10-08';
+  assert.deepEqual(
+    environmentDateRange(
+      { from: '2026-03-10', to: '2026-09-05' },
+      'from',
+      '2026-03-10',
+      '2026-11-10',
+      earliest
+    ),
+    { from: earliest, to: earliest }
+  );
+  assert.deepEqual(
+    environmentDateRange(
+      { from: earliest, to: '2026-11-10' },
+      'from',
+      '2026-09-10',
+      '2026-11-10',
+      earliest
+    ),
+    { from: earliest, to: '2026-11-10' }
+  );
+});
+
+test('两个月窗口的刻度不会只剩月初，短跨日窗口的标签可区分日期和时刻', () => {
+  const ticks = environmentTrendTicks(
+    { from: '2026-09-10T00:00:00+08:00', to: '2026-11-10T23:59:59.999+08:00' },
+    { width: 300 }
+  );
+  assert.ok(ticks.length >= 4);
+  const short = environmentTrendTicks(
+    { from: '2026-11-09T00:00:00+08:00', to: '2026-11-10T23:59:59.999+08:00' },
+    { width: 318 }
+  );
+  assert.equal(new Set(short.map((t) => t.label)).size, short.length);
+});
+
 test('跨月横轴根据实际宽度避让并保留首尾日期', () => {
   const window = { from: '2026-06-10T00:00:00+08:00', to: '2026-11-10T23:59:59.999+08:00' };
   for (const width of [240, 318, 430]) {
@@ -88,5 +126,22 @@ test('聚合趋势保留服务端原始峰值和覆盖，空日断开且不把�
   assert.deepEqual(
     environmentChartPoints(report, 'temp').map((p) => p.value),
     [22, null, 24]
+  );
+});
+
+test('未来时段不冒充缺测，真实缺测与合法零值分别保留', () => {
+  const now = Date.parse('2026-11-10T20:00:00+08:00');
+  const point = (from, value) => ({ from, values: { temp: value } });
+  assert.equal(
+    environmentBucketState(point('2026-11-10T21:00:00+08:00', null), 'temp', now),
+    'future'
+  );
+  assert.equal(
+    environmentBucketState(point('2026-11-10T18:00:00+08:00', null), 'temp', now),
+    'missing'
+  );
+  assert.equal(
+    environmentBucketState(point('2026-11-10T18:00:00+08:00', 0), 'temp', now),
+    'available'
   );
 });
