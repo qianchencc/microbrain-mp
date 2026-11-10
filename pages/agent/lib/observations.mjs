@@ -40,4 +40,7 @@ export {
   environmentHistoryNotice,
   environmentWindowLabel,
   environmentTrendTicks,
+  environmentChartPoints,
+  environmentDateRange,
+  environmentRangeLimits,
 } from '../domains/observations/environment-history.mjs';

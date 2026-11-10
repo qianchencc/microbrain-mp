@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-10",
+  "feature": "environment-adaptive-trend",
+  "expected": {
+    "maxShanghaiCalendarDaysInclusive": 180,
+    "startChange": "Preserve a legal end; otherwise move end into [start, min(today, start+179 days)]",
+    "resolution": {"1-2 days": "raw", "3-14 days": "3h mean", "15-180 days": "daily mean"},
+    "missing": "Independent metric counts; null means break the line; no interpolation or zero filling",
+    "summary": "Raw latest valid sample and original peak, not aggregate means",
+    "axis": "Width-aware labels with anchored first and last dates",
+    "selection": "Aggregate mean, raw minimum/maximum and valid sample count"
+  },
+  "engineering": {
+    "frontendFocusedTests": {"passed": 12, "failed": 0, "command": "node --test test/agent-environment-range.test.mjs test/agent-environment-history.test.mjs test/agent-environment-quote.test.mjs"},
+    "frontendBoundaries": "passed; 188 source files",
+    "wechatDevelopmentCompile": "passed; pre-existing uniCloud/sourcemap/img/Harmony warnings remain",
+    "backendHistoryTests": {"passed": 23, "failed": 0, "classes": ["EnvironmentTrendBehaviorTest", "EnvironmentHistoryBehaviorTest", "EnvironmentHistoryHttpContractTest"]},
+    "backendArchitecture": {"passed": 4, "failed": 0},
+    "coveredBoundaries": ["Shanghai midnight", "per-metric missing data", "empty days", "raw latest and peak", "2-day/raw and 3-day/3h", "180 accepted and 181 rejected", "legacy raw history beyond 180 days unchanged", "no interactive upstream request", "240/318/430px axis geometry", "start/end ordering and today ceiling"]
+  },
+  "runtime": {
+    "javaPort": 3381,
+    "artifact": "var/environment-trend-20261110-180329/backend.jar",
+    "sha256": "e8103c91899544edf580ff6aaa6832b33f91dc0ce732ac2678f168f167d75fe1",
+    "baselineArtifact": "var/office-focus-20261110-162546/backend-final.jar",
+    "scope": "8 feature-owned class entries; all other archive entries retain identical content",
+    "recoveryPoint": "Private MySQL dump and private configuration snapshot retained in artifact directory; not committed",
+    "safetyBeforeRestart": {"nodeActiveRuns": 0, "activeWriters": 0, "executingPhases": 0, "pendingPhases": 0},
+    "health": "ok",
+    "nodeAndPrivateConfiguration": "unchanged"
+  },
+  "frontendAcceptance": {
+    "status": "not_accepted",
+    "blocker": "WechatIDE login expired; simulator_screenshot returned APPID_ERROR: 需要重新登录",
+    "pendingTask": {"taskId": "login_2fab2b4b-1e82-4c3a-a20a-f7c810bfa104", "tool": "login", "type": "window", "status": "pending", "pollAttempts": 10, "resume": "Query this task before any new login request"},
+    "screenshots": [],
+    "remaining": ["Primary-account real 1-day/raw view", "Long-window daily chart and readable axis", "Start-date overflow follows end", "Tap daily point to inspect mean/min/max/count", "Native end-date picker maximum"]
+  },
+  "safety": {"productionDeployment": false, "deviceControl": false, "taskOrPlanCreation": false, "notificationSend": false, "mockDataForAcceptance": false}
+}

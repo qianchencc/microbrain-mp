@@ -26,7 +26,29 @@ export function environmentTrendPoints(samples, key) {
   }));
 }
 
+export function environmentChartPoints(report, key) {
+  if (report.resolution && report.resolution !== 'raw') {
+    return (report.buckets || []).map((bucket) => ({
+      at: bucket.at,
+      value: Number.isFinite(bucket.values?.[key]) ? bucket.values[key] : null,
+      ref: bucket,
+    }));
+  }
+  return environmentTrendPoints(report.samples || [], key);
+}
+
 export function mergeEnvironmentHistory(previous, incoming) {
+  if (incoming.resolution) {
+    const complete = incoming.coverage?.complete === true;
+    const count = incoming.coverage?.readSamples ?? 0;
+    return {
+      ...incoming,
+      samples: incoming.samples || [],
+      nextPage: null,
+      status: complete ? (count ? 'available' : 'empty') : 'partial',
+      coverageComplete: complete,
+    };
+  }
   const byIdentity = new Map();
   for (const sample of previous?.samples || [])
     byIdentity.set(environmentSampleIdentity(sample), sample);
@@ -128,6 +150,20 @@ const SHANGHAI_OFFSET_MS = 8 * 36e5;
 const DAY_MS = 864e5;
 const pad2 = (value) => String(value).padStart(2, '0');
 
+const dateMs = (value) => Date.parse(value + 'T00:00:00+08:00');
+const dateText = (ms) => new Date(ms + SHANGHAI_OFFSET_MS).toISOString().slice(0, 10);
+
+export function environmentRangeLimits(from, today) {
+  return { min: from, max: dateText(Math.min(dateMs(today), dateMs(from) + 179 * DAY_MS)) };
+}
+
+export function environmentDateRange(current, field, value, today) {
+  const from = field === 'from' ? (value > today ? today : value) : current.from;
+  const limits = environmentRangeLimits(from, today);
+  const desiredEnd = field === 'to' ? value : current.to;
+  return { from, to: desiredEnd < from ? from : desiredEnd > limits.max ? limits.max : desiredEnd };
+}
+
 const shanghaiParts = (ms) => {
   const d = new Date(ms + SHANGHAI_OFFSET_MS);
   return {
@@ -153,59 +189,78 @@ const timeLabel = (ms) => {
   const p = shanghaiParts(ms);
   return `${pad2(p.hour)}:${pad2(p.minute)}`;
 };
-const axisLabel = (ms, dayScale) => {
+const axisLabel = (ms, dayScale, crossYear) => {
   const p = shanghaiParts(ms);
-  const day = `${p.month}/${p.day}`;
   if (!dayScale) return timeLabel(ms);
-  return p.hour === 0 && p.minute === 0 ? day : `${day} ${timeLabel(ms)}`;
+  return `${crossYear ? String(p.year).slice(2) + '/' : ''}${p.month}/${p.day}`;
 };
 
-// x 轴刻度：跨天按北京日界每天一个刻度（窗口过长时隔天/隔周），
-// 短窗按均匀步长给 HH:mm；起止边界补刻度，间距过近的与相邻刻度合并。
-// 返回 [{ at, label }]，at 为毫秒时间戳，组件用图表 xOf 换算 left 百分比。
-export function environmentTrendTicks(window, { width = 360, padLeft = 32, padRight = 10 } = {}) {
-  const fromMs = Date.parse(window?.from || '');
-  const toMs = Date.parse(window?.to || '');
-  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) return [];
-  const start = Math.min(fromMs, toMs);
-  const end = Math.max(fromMs, toMs);
+// Tick labels are laid out in physical pixels, independently of the number of chart points.
+export function environmentTrendTicks(window, { width = 360, padLeft, padRight } = {}) {
+  const start = Date.parse(window?.from || '');
+  const end = Date.parse(window?.to || '');
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return [];
+  const leftPad = padLeft ?? (32 / 360) * width;
+  const rightPad = padRight ?? (10 / 360) * width;
+  const plotWidth = Math.max(1, width - leftPad - rightPad);
   const span = Math.max(1, end - start);
-  const plotWidth = Math.max(1, width - padLeft - padRight);
-  const xOf = (at) => padLeft + ((at - start) / span) * plotWidth;
-
-  const ticks = [];
-  const push = (at, label) => {
-    const last = ticks.at(-1);
-    if (last && Math.abs(xOf(at) - xOf(last.at)) < 18) {
-      if (label.length > last.label.length) last.label = label;
-      return;
+  const dayScale = span > DAY_MS;
+  const crossYear = shanghaiParts(start).year !== shanghaiParts(end).year;
+  const maxTicks = Math.max(2, Math.min(6, Math.floor(plotWidth / (crossYear ? 60 : 48))));
+  const candidateTimes = [];
+  if (dayScale && span > 45 * DAY_MS) {
+    const p = shanghaiParts(start);
+    for (let month = p.month; ; month++) {
+      const at = Date.UTC(p.year, month, 1) - SHANGHAI_OFFSET_MS;
+      if (at >= end) break;
+      if (at > start) candidateTimes.push(at);
     }
-    ticks.push({ at, label });
-  };
-
-  if (span <= DAY_MS) {
-    const target = 6;
-    const step =
-      [15 * 60e3, 30 * 60e3, 3600e3, 2 * 3600e3, 3 * 3600e3, 6 * 3600e3, 12 * 3600e3].find(
-        (candidate) => span / candidate <= target
-      ) || 12 * 3600e3;
-    const count = Math.max(1, Math.ceil(span / step));
-    for (let i = 0; i <= count; i += 1)
-      push(start + (span * i) / count, axisLabel(start + (span * i) / count, false));
   } else {
-    const dayScale = true;
-    const spanDays = span / DAY_MS;
-    const stepDays = spanDays <= 14 ? 1 : spanDays <= 45 ? 2 : 7;
-    const stepMs = stepDays * DAY_MS;
+    const steps = dayScale
+      ? [1, 2, 3, 7, 14, 30].map((days) => days * DAY_MS)
+      : [15 * 60e3, 30 * 60e3, 36e5, 2 * 36e5, 3 * 36e5, 6 * 36e5, 12 * 36e5];
+    const step = steps.find((value) => span / value <= maxTicks - 1) || steps.at(-1);
     for (
-      let t = Math.ceil((start + SHANGHAI_OFFSET_MS) / DAY_MS) * DAY_MS - SHANGHAI_OFFSET_MS;
-      t < end;
-      t += stepMs
+      let at = Math.ceil((start + SHANGHAI_OFFSET_MS) / step) * step - SHANGHAI_OFFSET_MS;
+      at < end;
+      at += step
     )
-      if (t > start) push(t, axisLabel(t, dayScale));
-    push(start, axisLabel(start, dayScale));
-    push(end, axisLabel(end, dayScale));
-    ticks.sort((a, b) => a.at - b.at);
+      if (at > start) candidateTimes.push(at);
   }
-  return ticks.map((tick) => ({ ...tick, left: (xOf(tick.at) / width) * 100 }));
+  const tickOf = (at, edge) => {
+    const label = axisLabel(at, dayScale, crossYear);
+    const x = leftPad + ((at - start) / span) * plotWidth;
+    const textWidth = label.length * 6;
+    const labelLeft = edge === 'start' ? x : edge === 'end' ? x - textWidth : x - textWidth / 2;
+    return {
+      at,
+      label,
+      left: (x / width) * 100,
+      edge,
+      labelLeft,
+      labelRight: labelLeft + textWidth,
+    };
+  };
+  const first = tickOf(start, 'start');
+  if (start === end) return [first];
+  const last = tickOf(end, 'end');
+  const ticks = [first];
+  const candidates = candidateTimes.map((at) => tickOf(at, 'center'));
+  for (let slot = 1; slot < maxTicks - 1; slot++) {
+    const target = start + (span * slot) / (maxTicks - 1);
+    const tick = candidates
+      .filter(
+        (candidate) =>
+          candidate.labelLeft >= ticks.at(-1).labelRight + 8 &&
+          candidate.labelRight + 8 <= last.labelLeft
+      )
+      .reduce(
+        (best, candidate) =>
+          !best || Math.abs(candidate.at - target) < Math.abs(best.at - target) ? candidate : best,
+        null
+      );
+    if (tick) ticks.push(tick);
+  }
+  ticks.push(last);
+  return ticks;
 }

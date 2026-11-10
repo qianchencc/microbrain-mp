@@ -98,33 +98,6 @@ test('环境历史窗口标签按上海时间展示，跨年保留年份', () =>
   assert.equal(environmentWindowLabel(null), '');
 });
 
-test('跨天窗口刻度按北京日界每天一个，不再逐日插 12:00', () => {
-  const ticks = environmentTrendTicks({
-    from: '2026-11-02T00:00:00+08:00',
-    to: '2026-11-08T20:50:00+08:00',
-  });
-  const labels = ticks.map((tick) => tick.label);
-  // 起点恰在北京日界：首尾刻度与日界刻度去重后 8 个
-  assert.deepEqual(labels, ['11/2', '11/3', '11/4', '11/5', '11/6', '11/7', '11/8', '11/8 20:50']);
-  assert.ok(ticks.length <= 10, `刻度过密: ${labels.join(',')}`);
-  // 刻度单调且首尾覆盖窗口边界
-  assert.ok(ticks[0].at <= Date.parse('2026-11-02T00:00:00+08:00'));
-  assert.ok(ticks.at(-1).at >= Date.parse('2026-11-08T20:50:00+08:00'));
-  for (let i = 1; i < ticks.length; i += 1) assert.ok(ticks[i].at > ticks[i - 1].at);
-});
-
-test('短窗刻度为均匀 HH:mm 且含起止', () => {
-  const ticks = environmentTrendTicks({
-    from: '2026-11-08T14:49:58+08:00',
-    to: '2026-11-08T20:49:58+08:00',
-  });
-  const labels = ticks.map((tick) => tick.label);
-  assert.equal(labels[0], '14:49');
-  assert.equal(labels.at(-1), '20:49');
-  assert.ok(labels.length >= 5 && labels.length <= 9);
-  assert.ok(labels.every((label) => /^\d{2}:\d{2}$/.test(label)));
-});
-
 test('刻度标签不随设备本地时区漂移：UTC 输入在任意时区结果一致', () => {
   const window = { from: '2026-11-01T16:00:00Z', to: '2026-11-08T12:50:00Z' };
   const ticks = environmentTrendTicks(window);

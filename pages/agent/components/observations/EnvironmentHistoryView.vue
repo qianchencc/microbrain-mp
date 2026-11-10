@@ -4,7 +4,7 @@
       <picker
         mode="date"
         :value="fromDate"
-        :end="toDate"
+        :end="today"
         @change="changeDate('from', $event.detail.value)"
         ><view class="rdate"
           >{{ fromDate
@@ -17,8 +17,8 @@
       <picker
         mode="date"
         :value="toDate"
-        :start="fromDate"
-        :end="today"
+        :start="dateLimits.min"
+        :end="dateLimits.max"
         @change="changeDate('to', $event.detail.value)"
         ><view class="rdate">{{ toDate }}</view></picker
       >
@@ -28,6 +28,7 @@
         color="var(--agent-text-muted)"
       />
     </view>
+    <text class="range-limit">最长180天</text>
     <scroll-view
       class="body"
       scroll-y
@@ -36,7 +37,7 @@
     >
       <view class="paper"
         ><EnvironmentTrend
-          v-if="report && report.samples.length"
+          v-if="report && (report.samples.length || report.coverage?.readSamples > 0)"
           :report="report"
         /><text
           v-else-if="!error"
@@ -75,7 +76,12 @@ import { getAgentStorageScope } from '@/utils/agent-session';
 import { showAgentError } from '@/utils/agent-error';
 import { useViewReads } from '../../lib/reads.mjs';
 import EnvironmentTrend from './EnvironmentTrend.vue';
-import { fmtDateTime, mergeEnvironmentHistory } from '../../lib/observations.mjs';
+import {
+  fmtDateTime,
+  mergeEnvironmentHistory,
+  environmentDateRange,
+  environmentRangeLimits,
+} from '../../lib/observations.mjs';
 const props = defineProps({ active: Boolean });
 defineEmits(['question']);
 const today = fmtDateTime(new Date().toISOString()).slice(0, 10);
@@ -84,6 +90,7 @@ const fromDate = ref(today),
   report = ref(null),
   loading = ref(false),
   error = ref('');
+const dateLimits = computed(() => environmentRangeLimits(fromDate.value, today));
 const emptyMessage = computed(() => {
   if (loading.value) return '正在读取站点历史';
   if (report.value?.cache?.lastError) return `${report.value.cache.lastError}，请稍后重试`;
@@ -110,6 +117,7 @@ async function load() {
         {
           from: fromDate.value + 'T00:00:00+08:00',
           to: toDate.value + 'T23:59:59.999+08:00',
+          resolution: 'auto',
         },
         options
       ),
@@ -136,8 +144,14 @@ async function load() {
   );
 }
 function changeDate(field, value) {
-  if (field === 'from') fromDate.value = value;
-  else toDate.value = value;
+  const range = environmentDateRange(
+    { from: fromDate.value, to: toDate.value },
+    field,
+    value,
+    today
+  );
+  fromDate.value = range.from;
+  toDate.value = range.to;
   invalidate();
   report.value = null;
   void load();
@@ -195,6 +209,12 @@ input {
   background: var(--agent-tint);
   font-size: 12px;
   color: var(--agent-text-secondary);
+}
+.range-limit {
+  display: block;
+  margin: -8px 20px 12px;
+  color: var(--agent-text-muted);
+  font-size: 10px;
 }
 .rdate {
   display: flex;

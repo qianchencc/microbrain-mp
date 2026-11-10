@@ -11,19 +11,19 @@
     />
     <view class="hero"
       ><view
-        ><text class="hlabel">{{ metric?.label || '观测' }}趋势</text
+        ><text class="hlabel">{{ metric?.label || '观测' }} · 最新采样</text
         ><text class="number"
           >{{ latest?.value ?? '—' }}<text class="unit">{{ metric?.unit || '' }}</text></text
         ></view
       ><view class="peak"
-        ><text>峰值 {{ metric?.peak?.value ?? '—' }}{{ metric?.unit || '' }}</text
+        ><text>原始峰值 {{ metric?.peak?.value ?? '—' }}{{ metric?.unit || '' }}</text
         ><text>{{ metric?.peak ? fmtDateTime(metric.peak.at) : '暂无有效采样' }}</text></view
       ></view
     >
     <text
       v-if="windowText"
       class="window"
-      >{{ windowText }}</text
+      >{{ windowText }} · {{ resolutionText }}</text
     >
     <view
       class="plot"
@@ -37,6 +37,7 @@
       ><text
         v-for="(tick, i) in axisTicks"
         :key="i"
+        :class="`tick-${tick.edge}`"
         :style="{ left: tick.left + '%' }"
         >{{ tick.label }}</text
       ></view
@@ -47,20 +48,25 @@
       >{{ qualityNotice }}</text
     >
     <view class="foot"
-      ><text>{{ selected ? fmtDateTime(selected.recordedAt) : '点击图形查看采样' }}</text
+      ><text>{{ selected ? selectedTime : '点击图形查看' + resolutionText }}</text
       ><text>{{
         selected ? (selected.values[metricKey] ?? '缺测') + (metric?.unit || '') : coverageLine
       }}</text></view
     >
+    <text
+      v-if="selectedDetail"
+      class="selected-detail"
+      >{{ selectedDetail }}</text
+    >
   </view>
 </template>
 <script setup>
-import { computed, getCurrentInstance, ref, watch } from 'vue';
+import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue';
 import {
   fmtDateTime,
   fmtShanghaiDateTime,
   environmentSampleIdentity,
-  environmentTrendPoints,
+  environmentChartPoints,
   environmentHistoryNotice,
   environmentWindowLabel,
   environmentTrendTicks,
@@ -83,17 +89,46 @@ watch(
       metricKey.value = list[0].key;
   }
 );
-const selected = computed(() =>
-  props.report.samples.find((item) => environmentSampleIdentity(item) === selectedId.value)
+const pointIdentity = (point) =>
+  point.from ? `${point.from}/${point.to}` : environmentSampleIdentity(point);
+const pointTime = (point) => point.at || point.recordedAt;
+const chartPoints = computed(() => environmentChartPoints(props.report, metricKey.value));
+const selected = computed(
+  () => chartPoints.value.find((point) => pointIdentity(point.ref) === selectedId.value)?.ref
 );
-const chartPoints = computed(() => environmentTrendPoints(props.report.samples, metricKey.value));
 const points = computed(() =>
   chartPoints.value.filter((point) => point.value !== null).map((point) => point.ref)
 );
-const qualityNotice = computed(() => environmentHistoryNotice(props.report));
+const resolutionText = computed(
+  () =>
+    ({ day: '日均值', '3h': '3小时均值', raw: '原始采样' })[props.report.resolution] || '原始采样'
+);
+const qualityNotice = computed(() => {
+  const notes = [environmentHistoryNotice(props.report)];
+  const empty = (props.report.buckets || []).filter(
+    (bucket) => !bucket.metrics?.[metricKey.value]?.count
+  ).length;
+  if (empty) notes.push(`${empty}个时段无有效采样，已断开显示`);
+  return notes.filter(Boolean).join('；');
+});
 const latest = computed(() => {
+  const raw = props.report.latest?.[metricKey.value];
+  if (raw) return raw;
+  if (props.report.resolution && props.report.resolution !== 'raw') return null;
   const last = points.value.at(-1);
   return last ? { value: last.values[metricKey.value] } : null;
+});
+const selectedTime = computed(() =>
+  selected.value?.from
+    ? fmtShanghaiDateTime(selected.value.from) +
+      (props.report.resolution === 'day' ? ' 日均' : ' 起3小时')
+    : fmtDateTime(selected.value?.recordedAt)
+);
+const selectedDetail = computed(() => {
+  const detail = selected.value?.metrics?.[metricKey.value];
+  if (!detail) return '';
+  const unit = metric.value?.unit || '';
+  return `最低 ${detail.min}${unit} · 最高 ${detail.max}${unit} · ${detail.count}条有效采样`;
 });
 const range = computed(() => ({
   start: Date.parse(props.report.window.from),
@@ -117,8 +152,23 @@ const chart = computed(() =>
   })
 );
 const windowText = computed(() => environmentWindowLabel(props.report.window));
-const axisTicks = computed(() => environmentTrendTicks(props.report.window));
+const plotWidth = ref(360);
+const axisTicks = computed(() =>
+  environmentTrendTicks(props.report.window, { width: plotWidth.value })
+);
 const instance = getCurrentInstance();
+function measurePlot() {
+  uni
+    .createSelectorQuery()
+    .in(instance)
+    .select('.plot')
+    .boundingClientRect((rect) => {
+      if (rect?.width > 0) plotWidth.value = rect.width;
+    })
+    .exec();
+}
+onMounted(measurePlot);
+watch(() => props.report.window, measurePlot, { flush: 'post' });
 function selectPoint(event) {
   if (!points.value.length) return;
   uni
@@ -129,12 +179,12 @@ function selectPoint(event) {
       if (!rect?.width) return;
       const x = ((event.detail.x - rect.left) / rect.width) * chart.value.width;
       const nearest = points.value.reduce((best, item) =>
-        Math.abs(chart.value.xOf(item.recordedAt) - x) <
-        Math.abs(chart.value.xOf(best.recordedAt) - x)
+        Math.abs(chart.value.xOf(pointTime(item)) - x) <
+        Math.abs(chart.value.xOf(pointTime(best)) - x)
           ? item
           : best
       );
-      selectedId.value = environmentSampleIdentity(nearest);
+      selectedId.value = pointIdentity(nearest);
     })
     .exec();
 }
@@ -222,6 +272,18 @@ button::after {
   position: absolute;
   transform: translateX(-50%);
   white-space: nowrap;
+}
+.axis-time .tick-start {
+  transform: none;
+}
+.axis-time .tick-end {
+  transform: translateX(-100%);
+}
+.selected-detail {
+  display: block;
+  margin-top: 6px;
+  color: var(--agent-text-muted);
+  font-size: 10px;
 }
 .foot {
   display: flex;
