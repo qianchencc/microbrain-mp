@@ -158,10 +158,6 @@
         v-if="answerComplete"
         class="reply-footer"
       >
-        <view
-          class="reply-end"
-          aria-hidden="true"
-        />
         <button
           class="reply-copy"
           hover-class="reply-copy--pressed"
@@ -460,16 +456,9 @@ input {
 .reply-footer {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 14px;
+  // 收回 rich-text 末段的 10px 尾距，图标贴近正文，点击范围仍为 40px。
+  margin-top: -10px;
   animation: reply-finish 180ms ease-out;
-}
-.reply-end {
-  width: 32px;
-  height: 2px;
-  flex-shrink: 0;
-  border-radius: 1px;
-  background: $agent-color-line;
 }
 .reply-copy {
   display: flex;
