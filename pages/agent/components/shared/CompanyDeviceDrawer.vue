@@ -24,43 +24,57 @@
       >
         <button
           class="ghead"
+          hover-class="none"
+          :aria-expanded="!collapsed.has(group.label)"
+          :aria-label="`${collapsed.has(group.label) ? '展开' : '收起'}${group.label}，${group.items.length}台设备`"
           @tap="toggle(group.label)"
-          ><text>{{ group.label }} · {{ group.items.length }}</text
-          ><text class="gcar">{{ collapsed.has(group.label) ? '›' : '⌄' }}</text></button
-        >
+          ><text class="gtitle">{{ group.label }}</text
+          ><text class="gcount">{{ group.items.length }} 台</text
+          ><image
+            class="gcaret"
+            :class="{ 'gcaret--up': !collapsed.has(group.label) }"
+            src="/static/chevron-down.svg"
+            aria-hidden="true"
+          />
+        </button>
         <view
-          v-if="!collapsed.has(group.label)"
-          class="dgrid"
+          class="greveal"
+          :class="{ 'greveal--open': !collapsed.has(group.label) }"
+          :aria-hidden="collapsed.has(group.label)"
         >
-          <view
-            v-for="device in group.items"
-            :key="device.kind + ':' + device.id"
-            class="dcard"
-          >
-            <view class="dart"
-              ><image
-                v-if="artOf(device).src"
-                :src="artOf(device).src"
-                mode="aspectFit" /><view
-                v-else-if="artOf(device).variant === 'video'"
-                class="art-cam"
-                ><view class="art-cam__lens" /></view
-              ><view
-                v-else-if="artOf(device).variant === 'observe'"
-                class="art-sensor" /><uni-icons
-                v-else
-                type="gear"
-                size="28"
-                color="var(--agent-text-faint)"
-            /></view>
-            <view class="dcopy">
-              <text class="dname">{{ device.name }}</text>
-              <text class="dloc">{{ locationText(device) }}</text>
-              <text
-                v-if="typeLabel(device)"
-                class="dstate"
-                >{{ typeLabel(device) }}</text
+          <view class="greveal-inner">
+            <view class="dgrid">
+              <view
+                v-for="device in group.items"
+                :key="device.kind + ':' + device.id"
+                class="dcard"
               >
+                <view class="dart"
+                  ><image
+                    v-if="artOf(device).src"
+                    :src="artOf(device).src"
+                    mode="aspectFit" /><view
+                    v-else-if="artOf(device).variant === 'video'"
+                    class="art-cam"
+                    ><view class="art-cam__lens" /></view
+                  ><view
+                    v-else-if="artOf(device).variant === 'observe'"
+                    class="art-sensor" /><uni-icons
+                    v-else
+                    type="gear"
+                    size="28"
+                    color="var(--agent-text-faint)"
+                /></view>
+                <view class="dcopy">
+                  <text class="dname">{{ device.name }}</text>
+                  <text class="dloc">{{ locationText(device) }}</text>
+                  <text
+                    v-if="typeLabel(device)"
+                    class="dstate"
+                    >{{ typeLabel(device) }}</text
+                  >
+                </view>
+              </view>
             </view>
           </view>
         </view>
@@ -218,17 +232,54 @@ button::after {
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 4px 2px;
-  margin-bottom: 8px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 8px 0;
+  margin-bottom: 0;
   text-align: left;
-  font-size: 11px;
+  font-size: $agent-font-size-compact;
   font-weight: 600;
-  color: var(--agent-text-secondary);
+  color: var(--agent-text-primary);
 }
-.gcar {
+.gtitle {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+.gcount {
+  flex-shrink: 0;
   margin-left: auto;
+  font-size: 11px;
+  font-weight: 400;
   color: var(--agent-text-muted);
-  font-size: 9px;
+}
+.gcaret {
+  display: block;
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  transition: transform 160ms ease;
+}
+.gcaret--up {
+  transform: rotate(180deg);
+}
+.greveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.greveal--open {
+  grid-template-rows: 1fr;
+}
+.greveal-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .greveal,
+  .gcaret {
+    transition: none;
+  }
 }
 .dgrid {
   display: grid;
