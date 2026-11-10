@@ -14,3 +14,6 @@ menu.sql
 
 # Word/Office 打开文档时的所有者锁文件，不是交付物
 ~$*
+
+# Internal-URI artifacts accidentally created as local paths; preserve locally.
+/local:/
