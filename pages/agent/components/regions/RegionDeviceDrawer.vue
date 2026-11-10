@@ -1,5 +1,6 @@
 <template>
   <DeviceSheet
+    ref="sheet"
     :open="open"
     expanded
     compact-header
@@ -288,6 +289,8 @@ import TaskIssueDetails from '../tasks/TaskIssueDetails.vue';
 import { isObservationKind, regionDeviceGroups } from '../../lib/region.mjs';
 import { createStateRefresh } from '../../lib/actions.mjs';
 
+const sheet = ref(null);
+defineExpose({ prepareNavigation: () => sheet.value?.prepareNavigation() });
 const issue = ref(null);
 const props = defineProps({
   open: Boolean,

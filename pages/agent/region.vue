@@ -45,7 +45,6 @@
         :bottom-pad="78"
         :calendar-marks="sampleMode ? sampleCalendarMarks : calendarMarks"
         :calendar-error="calendarError"
-        :max-date="maxDate"
         :items="items"
         :date="date"
         :start="windowStart || date"
@@ -162,6 +161,7 @@
       ></view
     >
     <RegionDeviceDrawer
+      ref="deviceDrawer"
       v-if="deviceDrawerMounted"
       @reference="referenceTask"
       :open="deviceDrawerOpen"
@@ -182,6 +182,7 @@
       "
     />
     <TaskDetailSheet
+      ref="taskDetail"
       v-if="taskDetailMounted"
       @reference="referenceTask"
       :open="Boolean(selectedTaskId)"
@@ -263,6 +264,8 @@ const deviceDrawerOpen = ref(false),
   deviceCount = ref(null);
 const deviceRefreshSignal = ref(0);
 const emptySampleTasks = Object.freeze([]);
+const deviceDrawer = ref(null),
+  taskDetail = ref(null);
 const selectedTaskId = ref(''),
   sampleDetail = ref(null),
   sampleDate = ref('');
@@ -288,7 +291,6 @@ const calendarMarks = ref([]),
 const now = ref(new Date().toISOString()),
   today = computed(() => localDate(now.value)),
   date = ref(localDate(now.value));
-const maxDate = computed(() => shiftDate(today.value, 7));
 const displayNow = computed(() => (sampleMode.value ? `${date.value}T14:52:00+08:00` : now.value));
 const items = computed(() =>
   regionTimelineItems(
@@ -333,9 +335,7 @@ function ensureWindow() {
   const end = windowStart.value ? shiftDate(windowStart.value, windowDays.value - 1) : '';
   if (!windowStart.value || date.value < windowStart.value || date.value > end) {
     windowStart.value = shiftDate(date.value, -WINDOW_LEAD);
-    let days = WINDOW_LEAD + 1 + WINDOW_TRAIL;
-    while (days > 1 && shiftDate(windowStart.value, days - 1) > maxDate.value) days--;
-    windowDays.value = days;
+    windowDays.value = WINDOW_LEAD + 1 + WINDOW_TRAIL;
     const keep = new Set(windowDates.value);
     dayTasks.value = Object.fromEntries(
       Object.entries(dayTasks.value).filter(([d]) => keep.has(d))
@@ -452,7 +452,6 @@ function extendTop() {
 function extendBottom() {
   if (!windowStart.value) return;
   const next = shiftDate(windowStart.value, windowDays.value);
-  if (next > maxDate.value) return;
   windowDays.value++;
   void loadDay(next, { silent: true });
 }
@@ -490,8 +489,13 @@ function openTask(item) {
   selectedTaskId.value = item.id;
   sampleDetail.value = sample;
 }
-function referenceTask(reference) {
+async function referenceTask(reference) {
   preserveComposerReference(getAgentStorageScope(), 'office', reference);
+  // 等待原生浮层 afterleave，再返回页面，避免 navigateBack 被浮层拦截。
+  await Promise.all([
+    taskDetail.value?.prepareNavigation(),
+    deviceDrawer.value?.prepareNavigation(),
+  ]);
   selectedTaskId.value = '';
   deviceDrawerOpen.value = false;
   returnToOfficeConversation();
@@ -536,7 +540,7 @@ async function load() {
       initialRegion = '';
     }
     if (initialDate) {
-      if (validCalendarDate(initialDate) && initialDate <= maxDate.value) date.value = initialDate;
+      if (validCalendarDate(initialDate)) date.value = initialDate;
       else {
         initialTaskId = '';
         uni.showToast({ title: '此安排超出当前可查看日期', icon: 'none' });

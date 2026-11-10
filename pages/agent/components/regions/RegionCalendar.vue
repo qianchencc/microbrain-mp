@@ -47,7 +47,7 @@
         <button
           class="month-arrow"
           :class="{ 'arrow-hidden': !expanded }"
-          :disabled="month >= maxDate.slice(0, 7)"
+          :disabled="Boolean(maxDate) && month >= maxDate.slice(0, 7)"
           aria-label="下个月"
           title="下个月"
           @tap="moveMonth(1)"
@@ -141,7 +141,10 @@ function setExpanded(value) {
 }
 function moveMonth(delta) {
   const next = shiftDate(`${month.value}-01`, delta < 0 ? -1 : 32).slice(0, 7);
-  if (next <= props.maxDate.slice(0, 7) && (!props.minDate || next >= props.minDate.slice(0, 7))) {
+  if (
+    (!props.maxDate || next <= props.maxDate.slice(0, 7)) &&
+    (!props.minDate || next >= props.minDate.slice(0, 7))
+  ) {
     month.value = next;
     setExpanded(true);
   }
@@ -150,9 +153,13 @@ const showToday = computed(
   () => props.date !== props.today || month.value !== props.today.slice(0, 7)
 );
 const todayInRange = computed(
-  () => props.today <= props.maxDate && (!props.minDate || props.today >= props.minDate)
+  () =>
+    (!props.maxDate || props.today <= props.maxDate) &&
+    (!props.minDate || props.today >= props.minDate)
 );
-const outOfRange = (day) => day > props.maxDate || (Boolean(props.minDate) && day < props.minDate);
+const outOfRange = (day) =>
+  (Boolean(props.maxDate) && day > props.maxDate) ||
+  (Boolean(props.minDate) && day < props.minDate);
 function select(day) {
   if (outOfRange(day)) return;
   month.value = day.slice(0, 7);

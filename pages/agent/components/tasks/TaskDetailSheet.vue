@@ -1,5 +1,6 @@
 <template>
   <DeviceSheet
+    ref="sheet"
     :open="open"
     :back="nativeBack"
     tall
@@ -59,6 +60,8 @@ const props = defineProps({
   sampleTask: Object,
   regionName: String,
 });
+const sheet = ref(null);
+defineExpose({ prepareNavigation: () => sheet.value?.prepareNavigation() });
 const content = ref(null),
   viewingReport = ref(false),
   navigation = ref({ title: '', canBack: false });

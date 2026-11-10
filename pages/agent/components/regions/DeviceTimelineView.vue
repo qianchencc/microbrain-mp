@@ -44,7 +44,6 @@
         focus-items
         :date="selectedDate"
         :now="displayNow"
-        :max-date="maxDate"
         :calendar-marks="marks"
         :calendar-error="calendarError"
         :items="items"
@@ -103,13 +102,7 @@ import { listDeviceCalendar, listDeviceTimeline } from '@/apis/agent/observation
 import { showAgentError } from '@/utils/agent-error';
 import { useViewReads } from '../../lib/reads.mjs';
 import { deviceTimelineItems, targetText } from '../../lib/tasks.mjs';
-import {
-  calendarWindow,
-  shiftDate,
-  localDate,
-  deviceSampleEvents,
-  regionSampleTaskDetail,
-} from '../../lib/region.mjs';
+import { calendarWindow, deviceSampleEvents, regionSampleTaskDetail } from '../../lib/region.mjs';
 import RegionTimeline from './RegionTimeline.vue';
 import TaskErrorNotice from '../tasks/TaskErrorNotice.vue';
 
@@ -127,7 +120,6 @@ const timeline = ref(null);
 defineExpose({ dismissCalendar: () => timeline.value?.dismissCalendar() || false });
 const selectedDate = ref(props.date),
   month = ref(props.date.slice(0, 7));
-const maxDate = computed(() => shiftDate(localDate(props.now), 7));
 const displayNow = computed(() =>
   props.sampleMode ? `${selectedDate.value}T14:52:00+08:00` : props.now
 );

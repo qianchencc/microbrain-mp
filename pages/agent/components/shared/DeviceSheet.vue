@@ -1,5 +1,6 @@
 <template>
   <NativeBackBoundary
+    ref="nativeBoundary"
     :active="open"
     :back="onNativeBack"
   />
@@ -78,6 +79,8 @@ const props = defineProps({
   back: Function,
 });
 const emit = defineEmits(['close']);
+const nativeBoundary = ref(null);
+defineExpose({ prepareNavigation: () => nativeBoundary.value?.prepareNavigation() });
 let closingRequest = false;
 async function requestClose() {
   if (!props.open || closingRequest) return;

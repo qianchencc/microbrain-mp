@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-10",
+  "changes": {
+    "reference": "办公室工作台引用任务先等待原生 page-container 的 afterleave，再返回办公室会话；沿用原引用存储，不自动发送。任务详情与设备抽屉共用 prepareNavigation。",
+    "calendar": "移除办公室及其设备日历的未来7天上限；共享日历允许不传 maxDate，其他明确传入上限的入口仍保留限制。月份、日期、深链及滚动窗口读取一致解锁，仍按月/按日向后端读取已有事实。"
+  },
+  "verification": {
+    "regressions": "node --test test/agent-navigation.test.mjs test/agent-task-calendar.test.mjs：14项通过。",
+    "compile": "HBuilderX 微信开发编译成功；保留既有 uniCloud、sourcemap、img选择器及鸿蒙兼容提示。",
+    "nativeReference": {
+      "action": "当前账号进入办公室工作台，打开真实照明操作记录，点击引用任务并询问。",
+      "beforeStack": ["pages/index/index", "pages/agent/index", "pages/agent/region"],
+      "afterStack": ["pages/index/index", "pages/agent/index"],
+      "visibleResult": "办公室会话输入框显示任务引用·照明操作记录。",
+      "screenshot": "reference-return.png"
+    },
+    "futureCalendar": {
+      "action": "展开办公室日历，点击下个月，再选择2026-12-25。",
+      "visibleResult": "12月完整日期可选，标题12月25日、2条记录；没有原先的7天灰置限制。",
+      "screenshots": ["future-month.png", "future-day.png"]
+    },
+    "limits": ["未做真机复验。", "设备抽屉路径共享原生释放机制，但本轮没有另走设备详情引用及设备日历截图验收。", "未发送对话、创建或取消任务、修改周期、下发控制。", "没有新增永久测试：现有Node回归不包含原生page-container事件，使用真实微信界面证明原始故障路径。"]
+  }
+}
