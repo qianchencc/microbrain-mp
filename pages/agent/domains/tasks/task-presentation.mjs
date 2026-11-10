@@ -87,10 +87,9 @@ export const taskResultLabel = (record) => taskStatusText(taskResultStatus(recor
 // A server capability is authoritative; nextAt alone is not a status.
 export function planPresentation(plan) {
   const status = plan?.status;
-  const enabled = status === 'enabled' && Boolean(plan.nextAt);
+  const enabled = status === 'enabled';
   const paused = status === 'paused' || status === 'disabled';
-  const ended =
-    status === 'ended' || status === 'deleted' || (status === 'enabled' && !plan.nextAt);
+  const ended = status === 'ended' || status === 'deleted';
   const canToggle =
     status === 'enabled' ? Boolean(plan.canPause) : status === 'paused' && Boolean(plan.canResume);
   const hasCheckpoints = (plan?.template?.phases || plan?.phases || []).some(
@@ -110,7 +109,13 @@ export function planPresentation(plan) {
             : '状态待确认',
     nextAt: plan?.nextCheckpointAt || plan?.nextAt,
     nextLabel: hasCheckpoints ? '下一次检查' : '下一次执行',
-    nextNote: paused ? '已暂停 · 历史结果保留' : ended ? '已结束 · 历史结果保留' : '',
+    nextNote: paused
+      ? '已暂停 · 历史结果保留'
+      : ended
+        ? '已结束 · 历史结果保留'
+        : enabled && !plan.nextAt && !plan.nextCheckpointAt
+          ? '下一次安排待更新'
+          : '',
     accessSummary:
       status === 'enabled' && plan.canPause
         ? '可暂停以后的安排；本次已安排的任务会继续'

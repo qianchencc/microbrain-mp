@@ -1,5 +1,4 @@
 import { planPresentation } from './task-presentation.mjs';
-import { taskTime } from './task-detail-view.mjs';
 import { showAgentError } from '../../../../utils/agent-error.mjs';
 
 // The view supplies its current identity and selection, not request epochs.
@@ -13,7 +12,7 @@ export function createPlanManagement({
   changed,
   createState = (value) => value,
 }) {
-  const state = createState({ busy: false, error: '', revision: 0 });
+  const state = createState({ busy: false, error: '' });
   let sequence = 0;
 
   function capture() {
@@ -45,27 +44,22 @@ export function createPlanManagement({
   function invalidate() {
     sequence += 1;
     state.busy = false;
-    state.revision += 1;
   }
 
   function clearError() {
     state.error = '';
   }
 
-  async function toggle(plan, enabled) {
-    if (state.busy || !plan?.planId || !planPresentation(plan).canToggle) return;
+  async function toggle(planId) {
+    if (state.busy) return;
+    const plan = readContext().plans.find((value) => value?.planId === planId);
+    if (!plan) return;
+    const presentation = planPresentation(plan);
+    if (!presentation.canToggle) return;
+    const enabled = !presentation.enabled;
     const ticket = capture();
-    const operation = enabled ? 'resume' : 'pause';
-    const title = enabled ? '继续执行' : '暂停周期任务';
-    const content = enabled
-      ? `下一次执行：${plan.resumeNextAt ? taskTime(plan.resumeNextAt) : '暂无以后的安排'}。继续前会重新核验设备权限，不补做过期安排。`
-      : '只暂停以后的安排；已经安排的本次任务会继续，已做的操作保持原样。';
-    const accepted = await confirm({ title, content, confirmText: title, destructive: !enabled });
     if (!current(ticket, plan)) return;
-    if (!accepted) {
-      state.revision += 1;
-      return;
-    }
+    const operation = enabled ? 'resume' : 'pause';
     state.busy = true;
     state.error = '';
     try {
@@ -78,13 +72,11 @@ export function createPlanManagement({
       );
       if (!current(ticket, plan)) return;
       if (result?.plan) updatePlan(result.plan);
-      state.revision += 1;
       changed(operation);
       notify(enabled ? '已继续执行' : '已暂停以后的安排');
     } catch (cause) {
       if (!current(ticket, plan)) return;
       if (cause.data?.recovery?.plan) updatePlan(cause.data.recovery.plan);
-      state.revision += 1;
       state.error = cause.message || '状态更新失败，请刷新后重试';
       showAgentError(cause, { fallback: '状态更新失败' });
     } finally {
@@ -126,7 +118,6 @@ export function createPlanManagement({
         }
       }
       if (!current(ticket)) return;
-      state.revision += 1;
       changed('pause-all');
       if (failures.length) {
         state.error = `已暂停${paused}项，${failures.length}项未暂停。\n\n${failures.join('\n\n')}`;

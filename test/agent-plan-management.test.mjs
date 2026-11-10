@@ -39,30 +39,17 @@ test('周期状态以服务端状态与能力为准，未来时间不把已删�
   assert.equal(tasks.planPresentation({ status: 'paused', canResume: false }).canToggle, false)
 })
 
-test('取消确认只复位开关；账户或页面变化后旧弹窗不能发送状态修改', async () => {
-  const first = fixture({ confirm: async () => false })
-  await first.manager.toggle(first.plan, false)
-  assert.deepEqual(first.writes, [])
-  assert.equal(first.manager.state.revision, 1)
-  const modal = deferred()
-  const second = fixture({ confirm: () => modal.promise })
-  const pending = second.manager.toggle(second.plan, false)
-  second.context.scope = 'account-b'
-  modal.resolve(true)
-  await pending
-  assert.deepEqual(second.writes, [])
-})
 
 test('暂停后只采用当前版本返回的计划；失效在途响应不污染新页面', async () => {
   const first = fixture()
-  await first.manager.toggle(first.plan, false)
+  await first.manager.toggle(first.plan.planId)
   assert.deepEqual(first.writes, [['plan-a', 3, 'pause', 'office', false]])
   assert.equal(first.context.plans[0].status, 'paused')
   assert.equal(first.manager.state.busy, false)
   assert.equal(first.changes.length, 1)
   const response = deferred()
   const second = fixture({ api: { setStatus: () => response.promise } })
-  const pending = second.manager.toggle(second.plan, false)
+  const pending = second.manager.toggle(second.plan.planId)
   await Promise.resolve()
   second.manager.invalidate()
   second.context.key = 'task-detail'
@@ -74,7 +61,7 @@ test('暂停后只采用当前版本返回的计划；失效在途响应不污�
 
 test('版本冲突采用权威恢复计划并保留错误，不把失败说成暂停成功', async () => {
   const f = fixture({ api: { setStatus: async () => { throw Object.assign(new Error('计划版本已变化'), { data: { recovery: { plan: { planId: 'plan-a', status: 'paused', version: 5 } } } }) } } })
-  await f.manager.toggle(f.plan, false)
+  await f.manager.toggle(f.plan.planId)
   assert.equal(f.context.plans[0].version, 5)
   assert.equal(f.manager.state.error, '计划版本已变化')
   assert.deepEqual(f.changes, [])
@@ -97,4 +84,51 @@ test('批量暂停保留不可管理计划与逐项失败，身份变更会停�
   await g.manager.pauseAll()
   assert.deepEqual(g.writes, ['plan-a'])
   assert.equal(g.context.plans[0].status, 'enabled')
+})
+
+test('单项启停直接提交，连续切换采用当前版本，缺少下次时间不改变已开启状态', async () => {
+ let dialogs = 0
+ let step = 0
+ const replies = [
+  { planId: 'plan-a', version: 4, status: 'paused', nextAt: null, canPause: false, canResume: true },
+  { planId: 'plan-a', version: 5, status: 'enabled', nextAt: null, canPause: true, canResume: false },
+  { planId: 'plan-a', version: 6, status: 'paused', nextAt: null, canPause: false, canResume: true },
+ ]
+ const f = fixture({
+  confirm: async () => { dialogs++; return true },
+  api: { setStatus: async (...args) => { f.writes.push(args); return { plan: replies[step++] } } },
+ })
+ await f.manager.toggle('plan-a')
+ assert.equal(f.context.plans[0].status, 'paused')
+ await f.manager.toggle('plan-a')
+ assert.equal(tasks.planPresentation(f.context.plans[0]).enabled, true)
+ assert.equal(tasks.planPresentation(f.context.plans[0]).statusText, '已开启')
+ await f.manager.toggle('plan-a')
+ assert.deepEqual(f.writes, [
+  ['plan-a', 3, 'pause', 'office', false],
+  ['plan-a', 4, 'resume', 'office', true],
+  ['plan-a', 5, 'pause', 'office', false],
+ ])
+ assert.equal(f.context.plans[0].version, 6)
+ assert.equal(f.context.plans[0].status, 'paused')
+ assert.equal(f.manager.state.busy, false)
+ assert.equal(dialogs, 0)
+})
+
+test('启停失败不改变后端状态，释放忙碌标记后可在同页重试', async () => {
+ let fail = true
+ const f = fixture({ api: { setStatus: async () => {
+  if (fail) { fail = false; throw new Error('连接中断') }
+  return { plan: { ...f.plan, version: 4, status: 'paused', canPause: false, canResume: true } }
+ } } })
+ await f.manager.toggle('plan-a')
+ assert.equal(f.context.plans[0].status, 'enabled')
+ assert.equal(f.context.plans[0].version, 3)
+ assert.equal(f.manager.state.busy, false)
+ assert.equal(f.manager.state.error, '连接中断')
+ await f.manager.toggle('plan-a')
+ assert.equal(f.context.plans[0].status, 'paused')
+ assert.equal(f.context.plans[0].version, 4)
+ assert.equal(f.manager.state.busy, false)
+ assert.equal(f.manager.state.error, '')
 })

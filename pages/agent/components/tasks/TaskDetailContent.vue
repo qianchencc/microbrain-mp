@@ -112,25 +112,12 @@
           class="plan-toggle-row"
         >
           <view class="plan-toggle-copy"><text class="plan-toggle-title">周期任务</text></view>
-          <view
-            v-if="!planCanToggle(plan)"
-            class="plan-switch-wrap plan-switch-wrap--disabled"
-            @tap.stop="explainPlanAccess(plan)"
-          >
-            <switch
-              :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`"
-              :checked="planIsEnabled(plan)"
-              :color="AGENT_COLORS.accentDeep"
-              disabled
-            />
-          </view>
-          <switch
-            v-else
-            :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`"
-            :checked="planIsEnabled(plan)"
-            :color="AGENT_COLORS.accentDeep"
-            :disabled="busy"
-            @change="togglePlanStatus(plan, $event.detail.value)"
+          <PlanStatusSwitch
+            :enabled="planIsEnabled(plan)"
+            :manageable="planCanToggle(plan)"
+            :busy="busy"
+            @toggle="togglePlanStatus(plan.planId)"
+            @unavailable="explainPlanAccess(plan)"
           />
         </view>
         <TaskErrorNotice
@@ -497,7 +484,7 @@
   </view>
 </template>
 <script setup>
-import { computed, nextTick, onUnmounted, reactive, ref, toRef, watch } from 'vue';
+import { computed, nextTick, onUnmounted, reactive, ref, watch } from 'vue';
 import {
   cancelTask,
   cancelTaskPlan,
@@ -520,6 +507,7 @@ import { showAgentError } from '@/utils/agent-error';
 import ObservationCard from '../observations/ObservationCard.vue';
 import TaskIssueDetails from './TaskIssueDetails.vue';
 import TaskErrorNotice from './TaskErrorNotice.vue';
+import PlanStatusSwitch from './PlanStatusSwitch.vue';
 import { AGENT_COLORS } from '../../styles/colors.js';
 
 const props = defineProps({
@@ -579,7 +567,6 @@ const planControls = createPlanManagement({
   notify: (title) => uni.showToast({ title, icon: 'none' }),
   changed: () => emit('changed'),
 });
-const planSwitchRevision = toRef(planControls.state, 'revision');
 const busy = computed(() => cancelling.value || planControls.state.busy);
 const actionError = computed({
   get: () => ownActionError.value || planControls.state.error,
@@ -662,8 +649,8 @@ function explainPlanAccess(value) {
   if (!value || ['ended', 'deleted'].includes(value.status)) return;
   uni.showToast({ title: '需使用创建者账号，且当前范围覆盖全部设备才能管理', icon: 'none' });
 }
-function togglePlanStatus(value, enabled) {
-  if (!cancelling.value) return planControls.toggle(value, enabled);
+function togglePlanStatus(planId) {
+  if (!cancelling.value) return planControls.toggle(planId);
 }
 async function cancelPeriod(scope) {
   if (cancelling.value) return;
@@ -1249,16 +1236,6 @@ button::after {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-.plan-switch-wrap {
-  min-width: 52px;
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-.plan-switch-wrap--disabled {
-  opacity: 0.72;
 }
 .plan-toggle-copy {
   min-width: 0;

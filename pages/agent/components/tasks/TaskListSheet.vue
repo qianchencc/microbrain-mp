@@ -332,27 +332,12 @@
                     color="var(--agent-text-faint)"
                   />
                 </button>
-                <view
-                  v-if="!planCanToggle(plan)"
-                  class="plan-switch-wrap plan-switch-wrap--disabled"
-                  @tap.stop="explainPlanAccess(plan)"
-                >
-                  <switch
-                    :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`"
-                    class="plan-switch"
-                    :checked="planIsEnabled(plan)"
-                    :color="AGENT_COLORS.accentDeep"
-                    disabled
-                  />
-                </view>
-                <switch
-                  v-else
-                  :key="`${planSwitchRevision}:${plan.planId}:${planIsEnabled(plan)}`"
-                  class="plan-switch"
-                  :checked="planIsEnabled(plan)"
-                  :color="AGENT_COLORS.accentDeep"
-                  :disabled="planBusy"
-                  @change.stop="togglePlanStatus(plan, $event.detail.value)"
+                <PlanStatusSwitch
+                  :enabled="planIsEnabled(plan)"
+                  :manageable="planCanToggle(plan)"
+                  :busy="planBusy"
+                  @toggle="togglePlanStatus(plan.planId)"
+                  @unavailable="explainPlanAccess(plan)"
                 />
               </view>
             </template>
@@ -470,25 +455,12 @@
             />
             <view class="plan-toggle-row">
               <view class="plan-toggle-copy"><text class="plan-toggle-title">周期任务</text></view>
-              <view
-                v-if="!planCanToggle(selectedPlan)"
-                class="plan-switch-wrap plan-switch-wrap--disabled"
-                @tap.stop="explainPlanAccess(selectedPlan)"
-              >
-                <switch
-                  :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`"
-                  :checked="planIsEnabled(selectedPlan)"
-                  :color="AGENT_COLORS.accentDeep"
-                  disabled
-                />
-              </view>
-              <switch
-                v-else
-                :key="`${planSwitchRevision}:${selectedPlan.planId}:${planIsEnabled(selectedPlan)}`"
-                :checked="planIsEnabled(selectedPlan)"
-                :color="AGENT_COLORS.accentDeep"
-                :disabled="planBusy"
-                @change="togglePlanStatus(selectedPlan, $event.detail.value)"
+              <PlanStatusSwitch
+                :enabled="planIsEnabled(selectedPlan)"
+                :manageable="planCanToggle(selectedPlan)"
+                :busy="planBusy"
+                @toggle="togglePlanStatus(selectedPlan.planId)"
+                @unavailable="explainPlanAccess(selectedPlan)"
               />
             </view>
             <view
@@ -603,6 +575,7 @@ import {
 import DeviceSheet from '../shared/DeviceSheet.vue';
 import RefreshButton from '../shared/RefreshButton.vue';
 import TaskErrorNotice from './TaskErrorNotice.vue';
+import PlanStatusSwitch from './PlanStatusSwitch.vue';
 import { showAgentError } from '@/utils/agent-error';
 import SlidingSegments from '../shared/SlidingSegments.vue';
 import TaskResultContent from './TaskResultContent.vue';
@@ -704,7 +677,6 @@ const planControls = createPlanManagement({
   },
 });
 const operationError = toRef(planControls.state, 'error');
-const planSwitchRevision = toRef(planControls.state, 'revision');
 const planBusy = computed(() => planLoading.value || planControls.state.busy);
 const stackedView = computed(() => props.source === 'company' && view.value === 'inbox');
 const sheetTitle = computed(() =>
@@ -858,8 +830,8 @@ function replacePlan(next) {
   plans.value = plans.value.map((plan) => (plan.planId === next.planId ? next : plan));
   if (selectedPlan.value?.planId === next.planId) selectedPlan.value = next;
 }
-function togglePlanStatus(plan, enabled) {
-  if (!planLoading.value) return planControls.toggle(plan, enabled);
+function togglePlanStatus(planId) {
+  if (!planLoading.value) return planControls.toggle(planId);
 }
 function pauseAllPlans() {
   if (!planLoading.value) return planControls.pauseAll();
@@ -1327,20 +1299,6 @@ button::after {
   color: $agent-color-text-muted;
   font-size: 11px;
   line-height: 1.45;
-}
-.plan-switch {
-  flex-shrink: 0;
-}
-.plan-switch-wrap {
-  flex-shrink: 0;
-  min-width: 52px;
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-.plan-switch-wrap--disabled {
-  opacity: 0.72;
 }
 .row-copy {
   min-width: 0;
