@@ -376,7 +376,6 @@ import {
   regionsLoading,
   regionsError,
   loadRegionFocus,
-  consumeComposePrefill,
 } from '../../lib/region-focus.mjs';
 // source: 'office' | 'company'；active: 宿主可见性（页面 onShow / 浮层展开），
 // false 等价页面 onHide——保留草稿、停轮询，但不中止在途流（收起≠销毁）。
@@ -1441,23 +1440,6 @@ function activate() {
   if (savedDraft !== null && !editingTurn.value) input.value = savedDraft;
   const savedReference = takeComposerReference(scope, props.source);
   if (savedReference !== undefined) composerReference.value = savedReference;
-  const prefillText = isCompany.value ? '' : consumeComposePrefill();
-  if (prefillText) {
-    if (!input.value.trim() && !editingTurn.value) input.value = prefillText;
-    else
-      uni.showModal({
-        title: '已有未发送内容',
-        content: '是否用当前区域的新建任务引导替换输入？原草稿可选择保留。',
-        confirmText: '替换输入',
-        cancelText: '保留草稿',
-        success: (result) => {
-          if (result.confirm) {
-            cancelEdit();
-            input.value = prefillText;
-          }
-        },
-      });
-  }
 }
 function deactivate() {
   preserveCurrentComposerDraft();

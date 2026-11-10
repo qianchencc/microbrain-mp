@@ -8,6 +8,4 @@ export {
   loadRegionFocus,
   selectFocusRegion,
   acknowledgeRegion,
-  queueComposePrefill,
-  consumeComposePrefill,
 } from '../domains/regions/region-focus.js';

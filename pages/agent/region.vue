@@ -219,7 +219,6 @@ import {
   focusRegionId,
   loadRegionFocus,
   selectFocusRegion,
-  queueComposePrefill,
 } from './lib/region-focus.mjs';
 import { localDate } from './lib/region.mjs';
 import { taskNeedsDetails } from './lib/tasks.mjs';
@@ -500,11 +499,10 @@ function referenceTask(reference) {
 function goBack() {
   backToParent('/pages/agent/index?source=office');
 }
-// 新建任务入口=回到对话：把当前区域固定为关注区域并预填含区域名的输入开头，真实创建仍走 Agent 确认流。
+// 新建任务入口回到当前关注区域的对话；真实创建仍走 Agent 确认流，不预填输入。
 function composeTask() {
   if (focusRegion.value) {
     selectFocusRegion(focusRegion.value.id);
-    queueComposePrefill(`在 ${focusRegion.value.name} 新建任务：`);
   }
   returnToOfficeConversation();
 }
