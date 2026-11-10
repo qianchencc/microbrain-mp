@@ -6,8 +6,13 @@
         :value="fromDate"
         :end="toDate"
         @change="changeDate('from', $event.detail.value)"
-        ><view class="rdate">{{ fromDate }}</view></picker
-      >
+        ><view class="rdate"
+          >{{ fromDate
+          }}<uni-icons
+            type="down"
+            size="10"
+            color="var(--agent-text-muted)" /></view
+      ></picker>
       <text class="rsep">至</text>
       <picker
         mode="date"
@@ -192,6 +197,9 @@ input {
   color: var(--agent-text-secondary);
 }
 .rdate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--agent-text-primary);
   font-weight: 550;
   font-variant-numeric: tabular-nums;
