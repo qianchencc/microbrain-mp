@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-10",
+  "configuration": {
+    "beforeRevision": 22,
+    "revision": 23,
+    "savedThrough": "console frontend textarea and Save configuration button",
+    "changedFields": {
+      "saved": [
+        "sharedInstructions"
+      ],
+      "active": [
+        "sharedInstructions"
+      ]
+    },
+    "otherSettingsUnchanged": true,
+    "rule": "设备检索只反映当前账号在本来源下可见或可操作的范围，不代表公司的完整设备接入情况。没有查到设备时仅描述当前账号和本次查询的范围，不能推断设备不存在、尚未接入或未配置。已明确无权限时说明“当前账号暂无相应设备的操作权限”，建议联系管理员确认或分配权限；普通条件无匹配说“当前可操作范围内未找到”，目录准备中或查询失败如实说明，不能一律归为无权限。无法完成操作时简短说明本次限制，不罗列无关设备类别，也不主动转问是否控制其他设备。",
+    "screenshot": "authorization-wording-20261110.webp"
+  },
+  "developmentEndpoints": {
+    "agentBaseUrl": "http://192.168.102.15:3381/api",
+    "videoApiBaseUrl": "http://192.168.102.15:3381/api",
+    "loginGatewayUnchanged": true,
+    "trialAndReleaseUnchanged": true,
+    "videoPlayerUnchanged": true
+  },
+  "verification": {
+    "threeEnvironmentRoutingSmoke": "passed",
+    "wechatDevelopmentCompile": "passed",
+    "restrictedAccountPostChangeReply": "not re-exercised by assistant"
+  }
+}
