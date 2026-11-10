@@ -2,7 +2,7 @@
   <rich-text
     class="answer"
     :nodes="rendered"
-    :selectable="true"
+    :user-select="true"
   />
 </template>
 <script setup>

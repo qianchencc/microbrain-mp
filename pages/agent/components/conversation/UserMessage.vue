@@ -3,7 +3,11 @@
     <view
       class="user-message"
       :class="{ 'user-message--editing': editing }"
-      ><text class="user-message__text">{{ content }}</text></view
+      ><text
+        class="user-message__text"
+        :user-select="true"
+        >{{ content }}</text
+      ></view
     >
     <view
       v-if="editing"
