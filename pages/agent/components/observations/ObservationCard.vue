@@ -280,15 +280,11 @@
             @tap="$emit('select-alert', { record: a, observedAt: observation.observedAt })"
           >
             <view class="alert-copy"
-              ><text class="anm"
-                >{{ a.deviceName
-                }}<text v-if="a.location && a.location !== a.deviceName">
-                  · {{ a.location }}</text
-                ></text
+              ><text class="anm">{{ a.deviceName }}</text
               ><text
-                v-if="a.recordedDeviceName && a.recordedDeviceName !== a.deviceName"
+                v-if="a.currentDevice?.location"
                 class="at"
-                >记录名称：{{ a.recordedDeviceName }}</text
+                >当前位置：{{ a.currentDevice.location }}</text
               ><text class="at">{{ fmtDateTime(a.occurredAt) || '记录时间未知' }}</text></view
             >
             <uni-icons

@@ -13,6 +13,11 @@
           ><text class="event-chip">{{ ledgerShort }}</text></view
         >
         <text class="event-name">{{ record.deviceName || '设备名称未提供' }}</text>
+        <view
+          v-if="record.currentDevice?.name && record.currentDevice.name !== record.deviceName"
+          class="event-field"
+          ><text>当前设备</text><text>{{ record.currentDevice.name }}</text></view
+        >
         <view class="event-field"
           ><text>{{ record.currentDevice ? '当前位置' : '此前位置' }}</text
           ><text>{{
@@ -24,22 +29,10 @@
         <view class="event-field"
           ><text>告警时间</text><text>{{ fmtDateTime(record.occurredAt) || '未提供' }}</text></view
         >
-        <view class="event-field"
-          ><text>台账来源</text
-          ><text>{{
-            record.ledger === 'gas'
-              ? '燃气台账'
-              : record.ledger === 'smoke'
-                ? '烟感台账'
-                : record.ledger === 'flooding'
-                  ? '水浸台账（含历史混表）'
-                  : '未提供'
-          }}</text></view
-        >
         <text
           v-if="fmtDateTime(observedAt)"
           class="event-observed"
-          >{{ verified ? '最新读取于' : '此前读取于' }} {{ fmtDateTime(observedAt) }}</text
+          >{{ verified ? '本次读取' : '此前读取' }} {{ fmtDateTime(observedAt) }}</text
         >
       </view>
       <view
@@ -89,7 +82,7 @@
             type="videocam"
             size="17"
             color="var(--agent-accent-deep)"
-          /><text>{{ cameraLoading ? '正在查找本端监控' : '按当前位置重新查找' }}</text></button
+          /><text>{{ cameraLoading ? '正在查找监控' : '重新查找监控' }}</text></button
         >
         <text
           v-if="cameraError || cameraNote"

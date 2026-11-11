@@ -1,0 +1,47 @@
+{
+  "case": "SAFETY-IDENTITY-01",
+  "date": "2026-11-11",
+  "environment": "微信开发者工具，开发构建，局域网后端3381",
+  "status": "原事件展示、当前资料分离、监控检索及回放表单已验收；实际录像播放未验收",
+  "gas": {
+    "eventTitle": "27楼茶水间燃气感应器",
+    "eventTime": "2026-10-16 11:12",
+    "currentDevice": "26楼未来智城办公区燃气感应器",
+    "currentLocation": "26楼未来智城办公区",
+    "camera": "监控-27楼茶水间",
+    "cameraCount": 1,
+    "playbackForm": "2026-10-16 10:57—11:27，上海时间",
+    "screenshots": ["gas-detail-corrected.png", "gas-playback-window.png"]
+  },
+  "smoke": {
+    "eventTitle": "27楼茶水间光电感烟探测器",
+    "eventTime": "2026-11-11 14:55",
+    "currentDevice": "26楼未来智城办公区光电感烟探测器",
+    "camera": "监控-27楼茶水间",
+    "cameraCount": 1,
+    "screenshot": "smoke-detail-corrected.png"
+  },
+  "water": {
+    "eventTitle": "水浸传感器",
+    "eventTime": "2026-10-28 10:46",
+    "currentDevice": "26楼未来智城办公区水浸感应器",
+    "cameraCount": 0,
+    "note": "原记录无地点线索，提示未找到候选；不使用当前26楼位置替代",
+    "screenshot": "water-detail-corrected.png"
+  },
+  "checks": {
+    "backend": {"command": "mvn -q test", "tests": 777, "passed": 747, "skipped": 30, "failures": 0, "errors": 0},
+    "frontend": {"tests": 388, "passed": 388, "failures": 0},
+    "boundaries": "193 source files passed",
+    "wechatCompile": "passed"
+  },
+  "deployment": {
+    "base": "var/allowlist-names-20261111-161611/backend.jar",
+    "release": "var/safety-identity-20261111-153405/backend-revised.jar",
+    "service": "SafetyEventRevised",
+    "port": 3381,
+    "unrelatedRuntimeEntries": "preserved"
+  },
+  "limits": ["未申请直播或录像流，未声称历史录像可播放", "未触发告警、设备控制、任务或通知", "未复验真机与智能体真实对话"],
+  "supersededEvidence": "同目录未列入以上screenshots的早期截图只记录修正过程，不作为当前验收结论"
+}
