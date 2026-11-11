@@ -22,10 +22,10 @@
         :model-value="filter"
         @update:model-value="filter = $event"
       />
-      <view class="inbox-tools"
-        ><text class="inbox-count">{{ unreadCount }} 条未读</text
+      <view
+        v-if="unreadCount || markingAll"
+        class="inbox-tools"
         ><button
-          v-if="unreadCount || markingAll"
           class="inbox-markall"
           :loading="markingAll"
           :disabled="markingAll"
@@ -586,10 +586,6 @@ button::after {
   align-items: center;
   gap: 14px;
   padding: 0 2px 12px;
-}
-.inbox-count {
-  color: $agent-color-text-muted;
-  font-size: 11px;
 }
 .inbox-markall {
   margin-left: auto;

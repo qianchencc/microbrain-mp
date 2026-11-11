@@ -129,12 +129,6 @@
           />
         </view>
         <TaskErrorNotice
-          v-if="plan?.pauseReason"
-          :message="plan.pauseReason"
-          summary="安排已暂停"
-          @details="showIssue"
-        />
-        <TaskErrorNotice
           v-if="actionError"
           :message="actionError"
           summary="这次操作未完成"

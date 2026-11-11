@@ -446,13 +446,11 @@
               ><text>创建人</text
               ><text>{{ selectedPlan.creator?.displayName?.trim() || '未记录' }}</text></view
             >
-            <text class="summary-note">{{ planAccessSummary(selectedPlan) }}</text>
-            <TaskErrorNotice
-              v-if="selectedPlan.pauseReason"
-              :message="selectedPlan.pauseReason"
-              summary="安排已暂停"
-              @details="showIssue"
-            />
+            <text
+              v-if="planAccessSummary(selectedPlan)"
+              class="summary-note"
+              >{{ planAccessSummary(selectedPlan) }}</text
+            >
             <view class="plan-toggle-row">
               <view class="plan-toggle-copy"><text class="plan-toggle-title">周期任务</text></view>
               <PlanStatusSwitch

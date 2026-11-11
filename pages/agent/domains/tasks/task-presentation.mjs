@@ -118,7 +118,7 @@ export function planPresentation(plan) {
       status === 'enabled' && plan.canPause
         ? '可暂停以后的安排；本次已安排的任务会继续'
         : status === 'paused' && plan.canResume
-          ? '继续前会重新检查设备权限'
+          ? ''
           : plan?.canManage
             ? '可取消本次或全部'
             : '当前账号仅可查看',
