@@ -112,6 +112,9 @@ const queryString = (query) =>
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join('&');
 
+export const getCompanyTaskAccess = (options) =>
+  ordinaryRead('/agent/company-task-access', 15000, options);
+
 export const createConversation = (source = 'office') =>
   request('/agent/conversations', 'POST', conversationSourceBody(source));
 export const getCompanyDashboard = (section, options) =>

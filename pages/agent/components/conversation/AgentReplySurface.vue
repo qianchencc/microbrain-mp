@@ -88,7 +88,7 @@
             @browse="$emit('browse')"
           />
         </template>
-        <template v-else-if="item.kind === 'task' && !readOnly">
+        <template v-else-if="item.kind === 'task' && !readOnly && tasksEnabled">
           <TaskChangeCard
             v-if="item.task.kind === 'change'"
             :change="item.task"
@@ -201,6 +201,7 @@ const props = defineProps({
   busy: Boolean,
   confirmingTaskId: { type: String, default: '' },
   readOnly: Boolean,
+  tasksEnabled: { type: Boolean, default: true },
   agentName: { type: String, default: '物联 Agent' },
 });
 // 回答失败只展示归并后的短文案；原文保留给 TaskErrorNotice 的「查看原因」。

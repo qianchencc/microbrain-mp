@@ -30,7 +30,11 @@
             v-else-if="!turns.length && isCompany"
             class="welcome"
             ><text>公司 Agent</text
-            ><view>查询公司环境、能耗和告警，安排定时简报或智慧空调任务。</view>
+            ><view>{{
+              tasksEnabled
+                ? '查询公司环境、能耗和告警，安排定时简报或智慧空调任务。'
+                : '查询公司环境、能耗、告警和监控。'
+            }}</view>
             <view class="welcome-sugg"
               ><button
                 v-for="s in companySuggestions"
@@ -93,6 +97,7 @@
               :busy="busy"
               :confirming-task-id="confirmingTaskId"
               :source="source"
+              :tasks-enabled="tasksEnabled"
               :agent-name="isCompany ? '公司 Agent' : '办公室 Agent'"
               @select-alert="openSafetyEvent"
               @browse-alerts="openSafetyHistory"
@@ -237,7 +242,7 @@
         @close="issue = null"
     /></DeviceSheet>
     <TaskListSheet
-      v-if="tasksMounted"
+      v-if="tasksMounted && tasksEnabled"
       :open="tasksOpen"
       :source="source"
       :refresh-key="taskRevision"
@@ -260,7 +265,7 @@
     <TaskDetailSheet
       v-if="companyTaskMounted"
       @reference="referenceTask"
-      :open="Boolean(companyTaskId || companyPlanId)"
+      :open="tasksEnabled && Boolean(companyTaskId || companyPlanId)"
       :task-id="companyTaskId"
       :plan-id="companyPlanId"
       :source="source"
@@ -379,7 +384,12 @@ import {
 } from '../../lib/region-focus.mjs';
 // source: 'office' | 'company'；active: 宿主可见性（页面 onShow / 浮层展开），
 // false 等价页面 onHide——保留草稿、停轮询，但不中止在途流（收起≠销毁）。
-const props = defineProps({ source: { type: String, default: 'office' }, active: Boolean });
+const props = defineProps({
+  source: { type: String, default: 'office' },
+  active: Boolean,
+  companyTasksEnabled: Boolean,
+});
+const tasksEnabled = computed(() => props.source !== 'company' || props.companyTasksEnabled);
 provideReadActivity(() => props.active);
 const emit = defineEmits([
   'status',
@@ -412,12 +422,12 @@ const isCompany = computed(() => props.source === 'company');
 const contextSourceScope = () => `${getAgentStorageScope()}:${props.source}`;
 // 空会话推荐入口：仅公司 Agent 欢迎区，点击 prefill 进输入框（同工作台「新建任务」），
 // 首个 turn 落位后随 welcome 分支一起消失，不占用会话中布局。
-const companySuggestions = [
+const companySuggestions = computed(() => [
   '统计一下最近能耗情况',
   '帮我看看最近夜间哪个场所耗电异常',
-  '帮我设个定时任务',
+  ...(tasksEnabled.value ? ['帮我设个定时任务'] : []),
   '帮我整理一下最近一周的告警并产出报告',
-];
+]);
 const selectedEvent = ref(null),
   eventOpen = ref(false),
   eventMounted = ref(false);
@@ -559,12 +569,22 @@ async function prewarmLists() {
   const outcome = await viewReads.run('prewarm', async (options) => {
     await readAgentNotifications({ source }, options);
     if (!options.isActive()) return;
+    if (!tasksEnabled.value) return;
     await readAgentTasks({ source, ...taskListRange(firstView) }, options);
-    if (!options.isActive()) return;
+    if (!options.isActive() || !tasksEnabled.value) return;
     await readAgentPlans({ source }, options);
   });
   if (outcome.status !== 'value') prewarmKey = '';
 }
+watch(tasksEnabled, (enabled) => {
+  prewarmKey = '';
+  if (!enabled) {
+    tasksOpen.value = false;
+    closeCompanyTask();
+  } else if (props.active && conversationId.value) {
+    void prewarmLists();
+  }
+});
 const draftScope = ref('');
 const input = ref('');
 const composerReference = ref(null);
@@ -879,6 +899,7 @@ function schedule() {
   clearTimeout(taskPollTimer);
   if (
     visible &&
+    tasksEnabled.value &&
     !disposed &&
     turns.value.some((turn) =>
       tasksOf(turn).some((task) =>
@@ -915,6 +936,7 @@ function schedule() {
     );
 }
 async function refreshScheduledTasks() {
+  if (!tasksEnabled.value) return;
   const active = turns.value
     .flatMap((turn) => tasksOf(turn))
     .filter((task) => ['scheduled', 'executing'].includes(String(task.status || '').toLowerCase()));
@@ -949,6 +971,7 @@ async function refreshScheduledTasks() {
   schedule();
 }
 watch(() => mutating.value || operations.state.busy, schedule);
+watch(tasksEnabled, schedule);
 watch(
   () =>
     turns.value
@@ -1269,6 +1292,7 @@ function confirmDraft(turn) {
   return operations.confirmDraft(turn);
 }
 function confirmTaskProposal(task) {
+  if (!tasksEnabled.value) return;
   issue.value = null;
   return operations.confirmTask(task);
 }
@@ -1276,6 +1300,7 @@ function discardTaskProposal(task) {
   return operations.discardTask(task);
 }
 function openTaskRegion(task) {
+  if (!tasksEnabled.value) return;
   const periodic =
     task?.planId || (task?.repeat && !task?.occurrence ? task?.taskId || task?.id : '');
   if (periodic && !task.occurrence) {
@@ -1477,13 +1502,13 @@ function openMenu() {
   openAgentMenu(
     {
       disabled: !conversationId.value,
-      tasksEnabled: true,
+      tasksEnabled: tasksEnabled.value,
       inboxEnabled: true,
       inboxUnreadCount: inboxUnreadCount.value,
     },
     (event) => {
       if (event === 'clear') clearHistory();
-      else if (event === 'open-tasks') tasksOpen.value = true;
+      else if (event === 'open-tasks' && tasksEnabled.value) tasksOpen.value = true;
       else if (event === 'open-inbox') openInbox();
     }
   );
@@ -1497,7 +1522,7 @@ defineExpose({
   prefill,
   applyContext,
   openTasks: () => {
-    tasksOpen.value = true;
+    if (tasksEnabled.value) tasksOpen.value = true;
   },
 });
 </script>

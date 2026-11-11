@@ -166,8 +166,14 @@
             </button>
           </view>
         </scroll-view>
-        <view class="section"><text>近期任务</text></view>
-        <view class="task-card"
+        <view
+          v-if="companyTasksEnabled"
+          class="section"
+          ><text>近期任务</text></view
+        >
+        <view
+          v-if="companyTasksEnabled"
+          class="task-card"
           ><CompanyTaskOverview
             :active="pageActive && !tasksOpen"
             :refresh-key="taskRevision"
@@ -177,7 +183,7 @@
       </view>
     </scroll-view>
     <TaskListSheet
-      v-if="tasksMounted"
+      v-if="tasksMounted && companyTasksEnabled && taskEntry.view !== 'inbox'"
       :open="tasksOpen"
       source="company"
       :initial-view="taskEntry.view"
@@ -188,6 +194,14 @@
       @reference="referenceTask"
       @changed="tasksChanged"
       @create="createTask"
+    />
+    <TaskInboxSheet
+      v-if="tasksMounted && taskEntry.view === 'inbox'"
+      :open="tasksOpen"
+      source="company"
+      @close="tasksOpen = false"
+      @reference="referenceTask"
+      @unread-count="syncSimpleUnread"
     />
     <DeviceSheet
       v-if="observationMounted"
@@ -301,6 +315,7 @@
     <CompanyAgentFloat
       ref="agentFloat"
       :page-active="pageActive"
+      :company-tasks-enabled="companyTasksEnabled"
       @tasks-changed="tasksChanged"
     />
   </view>
@@ -339,6 +354,8 @@ import {
 import { pm25Zone, humidityZone } from './lib/observations.mjs';
 import TaskListSheet from './components/tasks/TaskListSheet.vue';
 import CompanyTaskOverview from './components/tasks/CompanyTaskOverview.vue';
+import TaskInboxSheet from './components/tasks/TaskInboxSheet.vue';
+import { useCompanyTaskAccess } from './lib/company-task-access.mjs';
 import DeviceSheet from './components/shared/DeviceSheet.vue';
 import ObservationCard from './components/observations/ObservationCard.vue';
 import SafetyEventDetail from './components/observations/SafetyEventDetail.vue';
@@ -377,6 +394,7 @@ const tasksOpen = ref(false),
   taskRevision = ref(0),
   taskEntry = ref({ view: 'schedule', date: '', task: null });
 function openTaskSchedule(entry) {
+  if (entry?.view !== 'inbox' && !companyTasksEnabled.value) return;
   taskEntry.value = entry;
   tasksOpen.value = true;
 }
@@ -675,6 +693,10 @@ function observationBack() {
 const agentFloat = ref(null);
 const openingAgent = ref('');
 const pageActive = ref(false);
+const companyTasksEnabled = useCompanyTaskAccess(() => pageActive.value);
+watch(companyTasksEnabled, (enabled) => {
+  if (!enabled && taskEntry.value.view !== 'inbox') tasksOpen.value = false;
+});
 let pendingAgentOpen = null,
   latestAlertRequest = 0,
   latestAlertLoading = false;

@@ -1,0 +1,69 @@
+{
+  "date": "2026-11-11",
+  "feature": "公司任务白名单接入",
+  "status": "implemented-local; partial-real-UI-verification",
+  "engineering": {
+    "backend": {
+      "tests": 86,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "frontend": {
+      "passed": 386,
+      "skipped": 2,
+      "failed": 0
+    },
+    "frontendBoundaries": {
+      "passed": true,
+      "sourceFiles": 193
+    },
+    "miniappDevelopmentCompile": "passed",
+    "changedFileFormatting": "passed",
+    "adminBuild": "passed"
+  },
+  "behaviorProof": {
+    "committedMembershipAndRollback": "H2 public PhoneAllowlist contract",
+    "restartRestoresMembership": "H2 second store instance",
+    "businessLookupWithoutDatabaseReads": "eligibility still readable after fixture table dropped",
+    "unlistedAndOldCardHttpRequests": "403 COMPANY_TASKS_NOT_ALLOWED",
+    "revokedOldRunToolInvocation": "403 COMPANY_TASKS_NOT_ALLOWED",
+    "officeToolAvailability": "unchanged in contract",
+    "currentMainAccountEligibility": true
+  },
+  "realUI": {
+    "account": "existing main account; no account switch",
+    "observed": "final compiled dashboard displays existing environment/energy/device/safety content and the permitted task entry",
+    "screenshots": [
+      "dashboard-permitted.jpg"
+    ],
+    "notAccepted": [
+      "non-whitelisted real-account screen",
+      "real admin add/remove transition",
+      "new task creation/confirmation",
+      "real model task-proposal conversation",
+      "phone device"
+    ]
+  },
+  "localRuntime": {
+    "javaPort": 3381,
+    "javaPid": 33421,
+    "artifact": "var/company-task-access-20261111-151016/backend.jar",
+    "sha256": "87a82764e69d22ee08410c832cdc1d1c56f4403b81e8defa8978c5cce9818fc7",
+    "patchedClassEntries": 19,
+    "preservedArchiveEntries": 835,
+    "nodePid": 4208,
+    "nodeChanged": false,
+    "privateConfigurationChanged": false,
+    "rollbackArtifact": "var/safety-history-20261111-105230/backend-home-fix.jar",
+    "privateBackupDirectory": "var/company-task-access-20261111-151016"
+  },
+  "safety": {
+    "whitelistChanged": false,
+    "realTasksCreated": false,
+    "realControlsIssued": false,
+    "realNotificationsSent": false,
+    "productionDeployed": false
+  },
+  "scope": "single Java instance; updates through the existing admin API; no new permission table, token, Redis, polling or task cancellation"
+}

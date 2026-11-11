@@ -1,5 +1,6 @@
 // Tasks API entrypoint. Task, plan, calendar, and notification requests share index.js internals.
 export {
+  getCompanyTaskAccess,
   getTaskPlan,
   cancelTaskPlan,
   setTaskPlanStatus,
