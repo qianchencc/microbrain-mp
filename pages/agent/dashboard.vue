@@ -294,7 +294,7 @@
     >
       <CompanyDeviceDrawer
         class="event-host"
-        :devices="drawerDevices"
+        :directory="drawerDirectory"
         :kind="drawerKind"
       />
     </DeviceSheet>
@@ -306,7 +306,7 @@
   </view>
 </template>
 <script setup>
-import { computed, onMounted, reactive, ref, toRefs, watch } from 'vue';
+import { computed, onMounted, reactive, ref, shallowRef, toRefs, watch } from 'vue';
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app';
 import {
   pickAgentLaunch,
@@ -330,7 +330,12 @@ import { useViewReads } from './lib/reads.mjs';
 import AssistantNav from './components/shared/AssistantNav.vue';
 import { backToParent } from './lib/navigation.mjs';
 import { shiftDate, shanghaiToday } from './lib/energy.mjs';
-import { metricValue, directorySyncLabel, createCompanyOverview } from './lib/dashboard.mjs';
+import {
+  metricValue,
+  directorySyncLabel,
+  createCompanyOverview,
+  prepareCompanyDeviceDirectory,
+} from './lib/dashboard.mjs';
 import { pm25Zone, humidityZone } from './lib/observations.mjs';
 import TaskListSheet from './components/tasks/TaskListSheet.vue';
 import CompanyTaskOverview from './components/tasks/CompanyTaskOverview.vue';
@@ -482,6 +487,14 @@ const kindCounts = computed(() => {
   for (const device of catalogDevices.value) map[device.kind] = (map[device.kind] || 0) + 1;
   return map;
 });
+const drawerDirectory = shallowRef(null);
+watch(
+  catalogDevices,
+  (devices) => {
+    drawerDirectory.value = prepareCompanyDeviceDirectory(devices);
+  },
+  { immediate: true }
+);
 // drawerKind 'catalog' 为精简模式的全量目录入口；其余仍是单类设备抽屉。
 const drawerDevices = computed(() =>
   drawerKind.value === 'catalog'

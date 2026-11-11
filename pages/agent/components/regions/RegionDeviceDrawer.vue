@@ -39,53 +39,15 @@
             color="var(--agent-text-secondary)" /></button></view
     ></template>
     <template #header>
-      <view
+      <DeviceDirectoryControls
         v-if="depth === 0"
-        class="filter-header"
-        :class="{ searching }"
-      >
-        <view class="group-controls">
-          <button
-            v-for="mode in modes"
-            :key="mode.key"
-            class="group-mode"
-            :class="{ active: groupBy === mode.key }"
-            hover-class="group-mode--pressed"
-            @tap="groupBy = mode.key"
-            >{{ mode.label }}</button
-          >
-          <button
-            class="icon-button"
-            aria-label="搜索设备"
-            hover-class="icon-button--pressed"
-            @tap="openSearch"
-            ><image src="/static/search.svg"
-          /></button>
-          <view class="controls-spacer" />
-          <view class="count">{{ devices.length }} 台</view>
-        </view>
-        <view
-          class="search-controls"
-          :class="{ searching }"
-        >
-          <button
-            class="icon-button"
-            aria-label="返回全部设备"
-            hover-class="icon-button--pressed"
-            @tap="closeSearch"
-            ><image src="/static/back.svg"
-          /></button>
-          <view class="search-field"
-            ><image src="/static/search.svg" /><input
-              v-model="query"
-              placeholder="搜索名称、位置或状态"
-              placeholder-style="color:var(--agent-text-muted)"
-              confirm-type="search"
-              :focus="searchFocused"
-              :adjust-position="false"
-          /></view>
-        </view>
-      </view>
+        ref="directoryControls"
+        v-model:group-by="groupBy"
+        v-model:query="query"
+        :modes="modes"
+        :count="devices.length"
+        placeholder="搜索名称、位置或状态"
+      />
     </template>
     <TaskIssueDetails
       back-in-header
@@ -287,6 +249,7 @@ import { useViewReads } from '../../lib/reads.mjs';
 import DeviceSheet from '../shared/DeviceSheet.vue';
 import DeviceTimelineView from './DeviceTimelineView.vue';
 import DeviceObservationView from '../observations/DeviceObservationView.vue';
+import DeviceDirectoryControls from '../shared/DeviceDirectoryControls.vue';
 import TaskResultContent from '../tasks/TaskResultContent.vue';
 import TaskIssueDetails from '../tasks/TaskIssueDetails.vue';
 import { isObservationKind, regionDeviceGroups } from '../../lib/region.mjs';
@@ -333,9 +296,8 @@ const devices = ref([]),
 const error = ref(''),
   stateError = ref(''),
   groupBy = ref('kind'),
-  query = ref(''),
-  searching = ref(false),
-  searchFocused = ref(false);
+  query = ref('');
+const directoryControls = ref(null);
 const activeDeviceId = ref(''),
   activeTask = ref(null);
 const deviceTimeline = ref(null);
@@ -374,7 +336,6 @@ const reads = useViewReads(
   () => props.open,
   () => props.regionId
 );
-let focusTimer;
 let loadedRegionId = '',
   loadedScope = '',
   loadedAt = 0;
@@ -421,8 +382,7 @@ function backWithinDrawer() {
   if (depth.value === 2 && taskContent.value?.back()) return;
   if (depth.value === 1 && deviceTimeline.value?.dismissCalendar()) return;
   if (depth.value) pop();
-  else if (searching.value) closeSearch();
-  else emit('close');
+  else if (!directoryControls.value?.closeSearch()) emit('close');
 }
 function resetStack() {
   issue.value = null;
@@ -561,20 +521,6 @@ async function loadStates() {
 }
 const stateRefresh = createStateRefresh(loadStates);
 
-function openSearch() {
-  clearTimeout(focusTimer);
-  searching.value = true;
-  focusTimer = setTimeout(() => {
-    searchFocused.value = true;
-  }, 0);
-}
-function closeSearch() {
-  clearTimeout(focusTimer);
-  searchFocused.value = false;
-  searching.value = false;
-  query.value = '';
-}
-
 watch(
   () => props.regionId,
   () => {
@@ -598,7 +544,8 @@ watch(
       reads.invalidate();
       loading.value = false;
       stateLoading.value = false;
-      closeSearch();
+      directoryControls.value?.closeSearch();
+      query.value = '';
       groupBy.value = 'kind';
       collapsedGroups.value = [];
       resetStack();
@@ -614,7 +561,6 @@ watch(
 onBeforeUnmount(() => {
   stateRefresh.cancel();
   reads.invalidate();
-  clearTimeout(focusTimer);
   clearPaneTimer('device');
   clearPaneTimer('task');
 });
@@ -639,16 +585,6 @@ button {
 }
 button::after {
   border: 0;
-}
-.filter-header {
-  position: relative;
-  height: 50px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  border-top: 1px solid var(--agent-line);
-  border-bottom: 1px solid var(--agent-line);
-  overflow: hidden;
 }
 .header-actions {
   display: flex;
@@ -698,117 +634,6 @@ button::after {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-.group-controls {
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: $agent-space-small;
-  transition:
-    transform 200ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 140ms ease-out;
-}
-.search-controls {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  gap: $agent-space-small;
-  opacity: 0;
-  transform: translateX(22px);
-  pointer-events: none;
-  transition:
-    transform 200ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 140ms ease-out;
-}
-.filter-header.searching .group-controls {
-  opacity: 0;
-  transform: translateX(-22px);
-  pointer-events: none;
-}
-.filter-header.searching .search-controls {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
-.group-mode {
-  width: auto;
-  flex-shrink: 0;
-  height: 32px;
-  min-width: 44px;
-  padding: 0 13px;
-  border-radius: 16px;
-  background: var(--agent-tint);
-  color: var(--agent-text-secondary);
-  font-size: $agent-font-size-compact;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    background-color 180ms ease,
-    color 180ms ease,
-    transform 130ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-.group-mode.active {
-  background: $agent-color-accent;
-  color: #fff;
-}
-.group-mode--pressed,
-.icon-button--pressed {
-  transform: scale(0.95);
-}
-.icon-button {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--agent-line);
-  border-radius: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.icon-button image {
-  width: 14px;
-  height: 14px;
-}
-.controls-spacer {
-  flex: 1;
-  min-width: 0;
-}
-.count {
-  flex-shrink: 0;
-  white-space: nowrap;
-  font-size: 11px;
-  color: var(--agent-text-muted);
-}
-.search-field {
-  min-width: 0;
-  flex: 1;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--agent-line);
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  gap: $agent-space-small;
-  background: $agent-color-surface-page;
-}
-.search-field image {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-.search-field input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  font-size: 13px;
-  color: $agent-color-text-primary;
 }
 .drawer-content {
   min-height: 0;
@@ -1078,11 +903,8 @@ button::after {
   height: 28px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .group-controls,
-  .search-controls,
   .device-card,
   .nav-pane,
-  .group-mode,
   .state-lamp,
   .empty {
     transition: none;

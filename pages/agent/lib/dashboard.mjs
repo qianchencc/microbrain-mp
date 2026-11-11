@@ -11,3 +11,7 @@ export function directorySyncLabel(cache) {
   return `${stale ? '上次同步' : '同步于'} ${updated}${stale ? ' · 待更新' : ''}`;
 }
 export { createCompanyOverview } from '../domains/dashboard/company-overview.mjs';
+export {
+  prepareCompanyDeviceDirectory,
+  filterCompanyDeviceDirectory,
+} from '../domains/dashboard/company-device-directory.mjs';

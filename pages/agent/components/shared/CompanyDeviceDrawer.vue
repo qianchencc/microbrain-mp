@@ -1,16 +1,12 @@
 <template>
   <view class="cdrawer">
-    <view class="gmodes">
-      <button
-        v-for="mode in modes"
-        :key="mode.key"
-        class="gmode"
-        :class="{ active: groupBy === mode.key }"
-        @tap="groupBy = mode.key"
-        >{{ mode.label }}</button
-      >
-      <text class="gcount">{{ devices.length }} 台</text>
-    </view>
+    <DeviceDirectoryControls
+      ref="controls"
+      v-model:group-by="groupBy"
+      v-model:query="query"
+      :modes="modes"
+      :count="view.items.length"
+    />
     <scroll-view
       class="dscroll"
       scroll-y
@@ -46,19 +42,19 @@
             <view class="dgrid">
               <view
                 v-for="device in group.items"
-                :key="device.kind + ':' + device.id"
+                :key="device.key"
                 class="dcard"
               >
                 <view class="dart"
                   ><image
-                    v-if="artOf(device).src"
-                    :src="artOf(device).src"
+                    v-if="device.artwork.src"
+                    :src="device.artwork.src"
                     mode="aspectFit" /><view
-                    v-else-if="artOf(device).variant === 'video'"
+                    v-else-if="device.artwork.variant === 'video'"
                     class="art-cam"
                     ><view class="art-cam__lens" /></view
                   ><view
-                    v-else-if="artOf(device).variant === 'observe'"
+                    v-else-if="device.artwork.variant === 'observe'"
                     class="art-sensor" /><uni-icons
                     v-else
                     type="gear"
@@ -67,11 +63,11 @@
                 /></view>
                 <view class="dcopy">
                   <text class="dname">{{ device.name }}</text>
-                  <text class="dloc">{{ locationText(device) }}</text>
+                  <text class="dloc">{{ device.location }}</text>
                   <text
-                    v-if="typeLabel(device)"
+                    v-if="device.typeLabel"
                     class="dstate"
-                    >{{ typeLabel(device) }}</text
+                    >{{ device.typeLabel }}</text
                   >
                 </view>
               </view>
@@ -80,19 +76,20 @@
         </view>
       </view>
       <text
-        v-if="!devices.length"
+        v-if="!view.items.length"
         class="dempty"
-        >该类别下暂无设备</text
+        >{{ query.trim() ? '未找到匹配设备' : '该类别下暂无设备' }}</text
       >
       <view class="dtail" />
     </scroll-view>
   </view>
 </template>
 <script setup>
-import { computed, ref } from 'vue';
-import { resolveDeviceArtwork, safetySubtypeOfName } from '../../device-art/catalog.js';
+import { computed, ref, watch } from 'vue';
+import { filterCompanyDeviceDirectory } from '../../lib/dashboard.mjs';
+import DeviceDirectoryControls from './DeviceDirectoryControls.vue';
 
-const props = defineProps({ devices: { type: Array, default: () => [] }, kind: String });
+const props = defineProps({ directory: { type: Object, required: true }, kind: String });
 
 const modes = [
   { key: 'location', label: '位置' },
@@ -100,63 +97,20 @@ const modes = [
 ];
 const groupBy = ref('location');
 const collapsed = ref(new Set());
+const controls = ref(null),
+  query = ref('');
+const view = computed(() =>
+  filterCompanyDeviceDirectory(props.directory, { kind: props.kind, query: query.value })
+);
+const groups = computed(() => view.value.groups[groupBy.value]);
+watch(
+  () => props.kind,
+  () => {
+    controls.value?.closeSearch();
+    query.value = '';
+  }
+);
 
-const KIND_LABEL = {
-  environment: '环境传感器',
-  energy: '电表',
-  safety: '消防安全',
-  ac: '空调',
-  lighting: '照明',
-  access: '门禁',
-  video: '视频监控',
-};
-const SUBTYPE_LABEL = { gas: '燃气', smoke: '烟感', water: '水浸', flooding: '水浸' };
-// 先保留来源明确的位置；只有缺位置时才从设备名称推导空间分组。
-const TYPE_TAIL =
-  /(电表|水浸感应器|燃气感应器|光电感烟探测器|感应器|探测器|传感器|开关|智慧空调|空调|门禁|监控|摄像头|摄像机)$/u;
-function locationKey(device) {
-  if (device.location?.trim()) return device.location.trim();
-  const name = (device.name || '').trim();
-  const segs = name
-    .split('-')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (segs.length > 1) {
-    const rest = segs.slice(1);
-    return rest.length > 1 ? rest.slice(0, -1).join('-') : rest[0];
-  }
-  const stripped = name.replace(TYPE_TAIL, '').trim();
-  return stripped || '未标位置';
-}
-function typeLabel(device) {
-  if (device.kind === 'safety') {
-    const subtype = device.subtype || safetySubtypeOfName(device.name);
-    if (subtype) return SUBTYPE_LABEL[subtype] || subtype;
-  }
-  return KIND_LABEL[device.kind] || '设备';
-}
-// 设备图与区域抽屉共用 catalog；保留 subtype，消防设备按实际类别选图。
-function artOf(device) {
-  return resolveDeviceArtwork({
-    ...device,
-    deviceName: device.name,
-    location: device.location || device.name,
-  });
-}
-function locationText(device) {
-  if (device.location?.trim()) return device.location.trim();
-  const key = locationKey(device);
-  return key === device.name?.trim() ? '未标位置' : key;
-}
-const groups = computed(() => {
-  const map = new Map();
-  for (const device of props.devices) {
-    const key = groupBy.value === 'location' ? locationKey(device) : typeLabel(device);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(device);
-  }
-  return [...map.entries()].map(([label, items]) => ({ label, items }));
-});
 function toggle(label) {
   const next = new Set(collapsed.value);
   next.has(label) ? next.delete(label) : next.add(label);
@@ -187,30 +141,6 @@ button::after {
   flex-direction: column;
   color: var(--agent-text-primary);
   font-size: 13px;
-}
-.gmodes {
-  display: flex;
-  align-items: center;
-  gap: $agent-space-small;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--agent-line);
-  flex-shrink: 0;
-}
-.gmode {
-  height: 32px;
-  min-width: 44px;
-  padding: 0 13px;
-  border-radius: 16px;
-  background: var(--agent-tint);
-  color: var(--agent-text-secondary);
-  font-size: $agent-font-size-compact;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.gmode.active {
-  background: $agent-color-accent;
-  color: #fff;
 }
 .gcount {
   margin-left: auto;
