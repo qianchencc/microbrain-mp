@@ -15,24 +15,23 @@
       :show-scrollbar="false"
       @scrolltolower="load(false)"
     >
-      <SlidingSegments
-        class="inbox-tabs"
-        tone="glass"
-        :options="filters"
-        :model-value="filter"
-        @update:model-value="filter = $event"
-      />
-      <view
-        v-if="unreadCount || markingAll"
-        class="inbox-tools"
-        ><button
+      <view class="inbox-toolbar">
+        <SlidingSegments
+          class="inbox-tabs"
+          tone="glass"
+          :options="filters"
+          :model-value="filter"
+          @update:model-value="filter = $event"
+        />
+        <button
+          v-if="filter === 'all' && (unreadCount || markingAll)"
           class="inbox-markall"
           :loading="markingAll"
           :disabled="markingAll"
           @tap="markAllSeen"
           >{{ markingAll ? '正在标记…' : '全部已读' }}</button
-        ></view
-      >
+        >
+      </view>
       <view
         v-if="markAllError"
         class="markall-error"
@@ -578,20 +577,31 @@ button::after {
   box-sizing: border-box;
   padding: 0 18px 12px;
 }
-.inbox-tabs {
-  margin: 2px 0 12px;
-}
-.inbox-tools {
+.inbox-toolbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 2px 12px;
+  gap: $agent-space-small;
+  margin: 2px 0 12px;
+}
+.inbox-tabs {
+  flex: 1;
+  min-width: 0;
 }
 .inbox-markall {
-  margin-left: auto;
-  padding: 4px 2px;
-  color: $agent-color-accent;
-  font-size: 12px;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $agent-radius-small;
+  background: $agent-color-accent-faint;
+  color: $agent-color-accent-deep;
+  font-size: $agent-font-size-compact;
+  font-weight: 500;
+}
+.inbox-markall[disabled] {
+  opacity: 0.55;
 }
 .notification-card {
   position: relative;
