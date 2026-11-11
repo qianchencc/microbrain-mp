@@ -2,6 +2,7 @@
 export {
   fmtDateTime,
   fmtShanghaiDateTime,
+  hasDeviceState,
   stateObservationLabel,
   ageHint,
   videoOnline,

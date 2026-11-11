@@ -45,9 +45,9 @@
       >{{ historyNote }}</text
     >
     <text
-      v-if="stateError || stateObservationLabel(stateSnapshot)"
+      v-if="stateNote"
       class="note"
-      >{{ stateError || stateObservationLabel(stateSnapshot) }}</text
+      >{{ stateNote }}</text
     >
     <view class="rail-frame"
       ><scroll-view
@@ -165,6 +165,11 @@ const scopeOpen = ref(false),
   stateError = ref(''),
   stateLoading = ref(false);
 const states = computed(() => stateSnapshot.value?.states || {});
+const stateNote = computed(
+  () =>
+    stateError.value ||
+    stateObservationLabel(stateSnapshot.value, undefined, props.draft.actions || [])
+);
 const pending = computed(() => props.draft.status === 'PENDING_CONFIRMATION');
 // 执行中只认草案权威状态；终态文案以规范化 result.message 为准，旧记录按状态真实兜底。
 const notice = computed(() => executionNotice(props.draft, props.result));

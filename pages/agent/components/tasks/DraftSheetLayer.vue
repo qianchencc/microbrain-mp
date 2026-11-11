@@ -107,9 +107,9 @@
           </view>
         </view>
         <text
-          v-if="stateError || stateObservationLabel(stateSnapshot)"
+          v-if="stateNote"
           class="note"
-          >{{ stateError || stateObservationLabel(stateSnapshot) }}</text
+          >{{ stateNote }}</text
         >
         <view class="device-scroll-shell"
           ><scroll-view
@@ -306,6 +306,11 @@ const stateSnapshot = ref(null),
   parameterError = ref(''),
   windowWidth = ref(initialWindowWidth);
 const states = computed(() => stateSnapshot.value?.states || {});
+const stateNote = computed(
+  () =>
+    stateError.value ||
+    stateObservationLabel(stateSnapshot.value, undefined, props.draft?.actions || [])
+);
 const parameterEditor = ref(null),
   editorDirty = ref(false);
 function allowDiscard() {

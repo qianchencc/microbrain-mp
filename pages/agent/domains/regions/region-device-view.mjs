@@ -1,5 +1,10 @@
 import { resolveDeviceArtwork } from '../../device-art/catalog.js';
-import { stateObservationLabel, pm25Zone, humidityZone } from '../../lib/observations.mjs';
+import {
+  hasDeviceState,
+  stateObservationLabel,
+  pm25Zone,
+  humidityZone,
+} from '../../lib/observations.mjs';
 
 const kindNames = {
   lighting: '照明',
@@ -58,7 +63,7 @@ function shortDateTime(iso) {
 }
 
 function environmentDetail(reading) {
-  if (!reading || typeof reading !== 'object') return '读数未知';
+  if (!reading || typeof reading !== 'object') return '';
   const parts = [];
   if (finite(reading.temp) !== null) parts.push(`温度: ${reading.temp}°C`);
   if (finite(reading.humidity) !== null) {
@@ -71,29 +76,29 @@ function environmentDetail(reading) {
   }
   if (finite(reading.pm101) !== null) parts.push(`PM10: ${reading.pm101}µg/m³`);
   if (finite(reading.pm10) !== null) parts.push(`PM1.0: ${reading.pm10}µg/m³`);
-  const detail = parts.slice(0, 5).join(' · ') || '读数不全';
-  return reading.source === 'shadow' ? `${detail} · 平台影子` : detail;
+  const detail = parts.slice(0, 5).join(' · ');
+  return detail && reading.source === 'shadow' ? `${detail} · 平台影子` : detail;
 }
 
 function energyDetail(reading) {
-  if (!reading || typeof reading !== 'object') return '暂无读数';
+  if (!reading || typeof reading !== 'object') return '';
   const power = finite(reading.totalActivePower);
   const when = shortDateTime(reading.readTime);
   if (power !== null) return when ? `${power} kW · 读于 ${when}` : `${power} kW · 最新已知读数`;
-  return when ? `最新已知读数 · ${when}` : '读数不全';
+  return '';
 }
 
 function statePresentation(device, reading) {
+  if (!hasDeviceState(device.kind)) return { status: null, detail: '' };
   const value = reading?.state;
   // 观察类语义：在线/读数/台账，不套通用开-关。
   if (device.kind === 'video')
     return {
       status: value === true ? 'on' : value === false ? 'off' : 'unknown',
-      detail: value === true ? '在线' : value === false ? '离线' : '在线状态未知',
+      detail: value === true ? '在线' : value === false ? '离线' : '',
     };
   if (device.kind === 'environment') return { status: OBSERVE, detail: environmentDetail(value) };
   if (device.kind === 'energy') return { status: OBSERVE, detail: energyDetail(value) };
-  if (device.kind === 'safety') return { status: OBSERVE, detail: '无实时状态 · 仅告警台账' };
   const power =
     typeof value === 'boolean'
       ? value
@@ -107,12 +112,12 @@ function statePresentation(device, reading) {
   const status = power === true ? 'on' : power === false ? 'off' : 'unknown';
   const detail =
     device.kind === 'ac' && value && typeof value === 'object' && Number.isFinite(value.temperature)
-      ? `${power === false ? '关闭' : power === true ? '运行' : '状态未知'} · ${value.temperature}℃`
+      ? `${power === false ? '关闭 · ' : power === true ? '运行 · ' : ''}${value.temperature}℃`
       : power === true
         ? '开启'
         : power === false
           ? '关闭'
-          : '状态未知';
+          : '';
   return { status, detail };
 }
 
@@ -140,11 +145,13 @@ export function regionDeviceGroups(devices, readings, mode, query) {
         : mode === 'status'
           ? isObservationKind(device.kind)
             ? '仅观察'
-            : state.status === 'on'
-              ? '运行中'
-              : state.status === 'off'
-                ? '已关闭'
-                : '状态未知'
+            : state.status === null
+              ? kind
+              : state.status === 'on'
+                ? '运行中'
+                : state.status === 'off'
+                  ? '已关闭'
+                  : '状态未知'
           : kind;
     const art = resolveDeviceArtwork({ ...device, deviceName: device.name });
     if (!groups.has(group)) groups.set(group, []);
@@ -155,7 +162,7 @@ export function regionDeviceGroups(devices, readings, mode, query) {
       artwork: art.src,
       artVariant: art.variant,
       ...state,
-      stateNote: device.kind === 'safety' ? '' : stateObservationLabel(readings[device.id], device.id),
+      stateNote: state.detail ? stateObservationLabel(readings[device.id], device.id) : '',
       nameParts: highlightedParts(device.name, query),
       kindParts: highlightedParts(kind, query),
       locationParts: highlightedParts(location, query),

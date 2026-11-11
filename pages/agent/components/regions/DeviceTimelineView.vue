@@ -14,7 +14,16 @@
       <view class="hero-copy"
         ><text class="hero-name">{{ device.name }}</text
         ><text class="hero-location">{{ device.kindLabel }} · {{ device.location }}</text
-        ><text class="hero-state">{{ device.detail }}</text>
+        ><text
+          v-if="device.detail"
+          class="hero-state"
+          >{{ device.detail }}</text
+        >
+        <text
+          v-else-if="device.status === 'unknown'"
+          class="hero-state"
+          >暂无状态</text
+        >
         <text
           v-if="device.stateNote"
           class="hero-location"

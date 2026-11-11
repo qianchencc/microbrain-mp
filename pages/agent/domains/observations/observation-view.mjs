@@ -32,12 +32,25 @@ export function fmtShanghaiDateTime(iso) {
   return new Date(time + 8 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' ');
 }
 
-export function stateObservationLabel(snapshot, deviceId) {
+const STATE_KINDS = new Set(['lighting', 'ac', 'video', 'environment', 'energy']);
+export const hasDeviceState = (kind) => STATE_KINDS.has(kind);
+
+export function stateObservationLabel(snapshot, deviceId, devices) {
   if (!snapshot || snapshot.status === 'empty') return '';
+  let missingDeviceIds = snapshot.missingDeviceIds;
+  if (devices) {
+    const stateDeviceIds = new Set(
+      devices
+        .filter((device) => hasDeviceState(device.kind))
+        .map((device) => device.deviceId ?? device.id)
+    );
+    if (!stateDeviceIds.size) return '';
+    missingDeviceIds = missingDeviceIds?.filter((id) => stateDeviceIds.has(id));
+  }
   const status = String(snapshot.status || '').toLowerCase();
   if (status === 'unavailable' || snapshot.cache?.status === 'unavailable') return '状态暂不可用';
   const labels = [];
-  if (deviceId ? snapshot.missingDeviceIds?.includes(deviceId) : snapshot.missingDeviceIds?.length)
+  if (deviceId ? missingDeviceIds?.includes(deviceId) : missingDeviceIds?.length)
     labels.push(deviceId ? '本轮样本缺失' : '状态信息不完整');
   const sampledAt =
     snapshot.observedAtByDevice?.[deviceId] ?? snapshot.observedAt ?? snapshot.reportedAt;
@@ -65,7 +78,7 @@ export const videoStateText = (online) =>
 export function videoViewLabel(online, playerReady, fetching) {
   if (fetching) return '正在取流…';
   if (!playerReady) return '播放页接入中';
-  return online === true ? '查看画面' : online === false ? '已离线' : '状态未知';
+  return online === false ? '已离线' : '查看画面';
 }
 
 // PM2.5 国标分级（µg/m³）：≤35 优、≤75 良、≤115 轻度污染、更高按中度污染起。

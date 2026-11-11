@@ -185,6 +185,7 @@
                     type="gear"
                     size="28"
                     color="var(--agent-text-faint)" /><view
+                    v-if="device.status && device.detail"
                     class="state-lamp"
                     :class="device.status"
                 /></view>
@@ -211,7 +212,9 @@
                       >{{ part.text }}</text
                     ></text
                   >
-                  <text class="device-state"
+                  <text
+                    v-if="device.detail"
+                    class="device-state"
                     ><text
                       v-for="(part, index) in device.detailParts"
                       :key="index"

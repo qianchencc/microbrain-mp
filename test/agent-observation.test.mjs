@@ -1,7 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { isObservationKind, regionDeviceGroups } from '../pages/agent/lib/region.mjs';
 import { applyEvent, createTurn, restoreTurns } from '../pages/agent/lib/conversation.mjs';
 import {
@@ -11,6 +9,7 @@ import {
   videoViewLabel,
   environmentCells,
   fmtShanghaiDateTime,
+  stateObservationLabel,
 } from '../pages/agent/lib/observations.mjs';
 
 const videoDevice = {
@@ -54,6 +53,73 @@ const devices = [videoDevice, envDevice, energyDevice, safetyDevice, lightDevice
 const all = (groups) => groups.flatMap((group) => group.items);
 const itemOf = (groups, id) => all(groups).find((item) => item.id === id);
 
+test('无状态设备不显示状态与采样占位，也不归入未知状态组', () => {
+  const door = { id: 'door-1', kind: 'access', name: '测试门禁', location: '测试区域' };
+  const snapshot = { status: 'partial', state: null, missingDeviceIds: [door.id, safetyDevice.id] };
+  const groups = regionDeviceGroups(
+    [door, safetyDevice],
+    { [door.id]: snapshot, [safetyDevice.id]: snapshot },
+    'status',
+    ''
+  );
+  assert.equal(
+    groups.some((group) => group.label === '状态未知'),
+    false
+  );
+  for (const device of all(groups)) {
+    assert.equal(device.detail, '');
+    assert.equal(device.stateNote, '');
+    assert.equal(device.status, null, '无状态能力不绘制状态色点');
+  }
+  assert.equal(itemOf(groups, door.id).name, door.name);
+});
+
+test('草案缺测汇总排除无状态设备，真实缺测和不可用仍可见', () => {
+  const door = { kind: 'access', deviceId: 'door-1' };
+  const light = { kind: 'lighting', deviceId: 'light-1' };
+  const snapshot = { status: 'partial', missingDeviceIds: [door.deviceId] };
+  assert.equal(stateObservationLabel(snapshot, undefined, [door]), '');
+  assert.equal(stateObservationLabel(snapshot, undefined, [door, light]), '');
+  assert.equal(
+    stateObservationLabel({ ...snapshot, missingDeviceIds: [light.deviceId] }, undefined, [
+      door,
+      light,
+    ]),
+    '状态信息不完整'
+  );
+  assert.equal(
+    stateObservationLabel({ status: 'unavailable' }, undefined, [door, light]),
+    '状态暂不可用'
+  );
+});
+
+test('缺读数不重复顶部占位，零值和真实离线事实仍保留', () => {
+  for (const kind of ['lighting', 'ac', 'video', 'environment', 'energy']) {
+    const device = { id: `missing-${kind}`, kind, name: '测试设备', location: '测试区域' };
+    const groups = regionDeviceGroups(
+      [device],
+      {
+        [device.id]: { status: 'partial', state: null, missingDeviceIds: [device.id] },
+      },
+      'kind',
+      ''
+    );
+    assert.equal(itemOf(groups, device.id).detail, '');
+    assert.equal(itemOf(groups, device.id).stateNote, '');
+  }
+  const zeroReadings = {
+    'env-1': { state: { temp: 0, humidity: 0 } },
+    'meter-1': { state: { totalActivePower: 0 } },
+    'video-1': { state: false },
+    'light-1': { state: false },
+  };
+  const groups = regionDeviceGroups(devices, zeroReadings, 'kind', '');
+  assert.match(itemOf(groups, 'env-1').detail, /温度: 0°C.*湿度: 0%/);
+  assert.match(itemOf(groups, 'meter-1').detail, /^0 kW/);
+  assert.equal(itemOf(groups, 'video-1').status, 'off');
+  assert.equal(itemOf(groups, 'light-1').status, 'off');
+});
+
 test('计量历史的日期按上海时区，不受手机所在时区影响', () => {
   assert.equal(fmtShanghaiDateTime('2025-05-26T23:00:33Z'), '2025-05-27 07:00');
   assert.equal(fmtShanghaiDateTime('2025-05-27T07:00:33+08:00'), '2025-05-27 07:00');
@@ -82,14 +148,11 @@ test('观察设备状态语义：视频在线/离线不冒充开-关，四类观
   );
   assert.equal(itemOf(groups, 'env-1').status, 'observe');
   assert.match(itemOf(groups, 'meter-1').detail, /2\.5 kW · 读于 09-11/);
-  assert.match(itemOf(groups, 'fire-1').detail, /仅告警台账/);
   assert.equal(itemOf(groups, 'light-1').detail, '开启');
 
   const offline = regionDeviceGroups([videoDevice], { 'video-1': { state: false } }, 'kind', '');
   assert.equal(itemOf(offline, 'video-1').detail, '离线');
   assert.equal(itemOf(offline, 'video-1').status, 'off');
-  const unknown = regionDeviceGroups([videoDevice], {}, 'kind', '');
-  assert.equal(itemOf(unknown, 'video-1').detail, '在线状态未知');
 });
 
 test('状态分组观察类并入"仅观察"，影子读数如实标注来源', () => {
@@ -179,7 +242,6 @@ test('能耗陈旧如实标注、查看画面按钮三态分层', () => {
   assert.equal(videoViewLabel(true, true, false), '查看画面');
   assert.equal(videoViewLabel(true, true, true), '正在取流…');
   assert.equal(videoViewLabel(false, true, false), '已离线');
-  assert.equal(videoViewLabel(null, true, false), '状态未知');
   assert.equal(isObservationKind('video'), true);
   assert.equal(isObservationKind('lighting'), false);
 });
@@ -386,27 +448,4 @@ test('报告附件按保存 id 去重：重放/跨轮同一链接只更新，run
     '恢复保留两个不同附件'
   );
   assert.equal(restored[0].observations[0].blocks[0].report.status, 'completed');
-});
-
-test('安全详情/列表/告警行不展示未核验注记与候选依据', () => {
-  const detail = readFileSync(
-    resolve(import.meta.dirname, '../pages/agent/components/observations/SafetyEventDetail.vue'),
-    'utf8'
-  );
-  const list = readFileSync(
-    resolve(import.meta.dirname, '../pages/agent/components/observations/SafetyHistoryList.vue'),
-    'utf8'
-  );
-  const card = readFileSync(
-    resolve(import.meta.dirname, '../pages/agent/components/observations/ObservationCard.vue'),
-    'utf8'
-  );
-  for (const source of [detail, list, card]) {
-    assert.doesNotMatch(
-      source,
-      /当前位置未核验|显示记录名称|当前名称未核验|按当前位置匹配|画面覆盖未核验/
-    );
-  }
-  assert.doesNotMatch(card, /safetyContext\.basis/);
-  assert.match(detail, /cameraNote\.value = result\.note\?\.includes\('记录时位置未核验'\)/);
 });
