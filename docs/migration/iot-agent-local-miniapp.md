@@ -10,18 +10,24 @@ The selected local profile is:
 
 | traffic | origin |
 | --- | --- |
-| Agent | `http://127.0.0.1:3381/api` |
+| Agent | `http://192.168.102.19:3381/api` |
 | login / SSO / customer gateway | existing `https://ncim.577119.com` origins |
 | video player | `https://ncim.577119.com/owner/h5player/index.html` |
-| video API | `http://127.0.0.1:3381/api` — same Java backend as Agent |
+| video API | `http://192.168.102.19:3381/api` — same Java backend as Agent |
 
-2026-11-09 desktop network recovery: the running mini-program still selected an
+2026-11-11: Developer Tools now uses the current LAN address at the user's request.
+The existing Java backend already listens on all interfaces at port3381 and is reused without restart.
+Login, SSO, player hosting, trial and release are unchanged. The LAN address is DHCP-assigned; recheck it after changing networks.
+Verification: LAN `/healthz` returned `ok`; develop/trial/release routing smoke checks and WeChat development compilation passed.
+The official Developer Tools CLI opened the compiled project with URL checks already disabled. No real task or device operation was performed.
+
+Historical record (2026-11-09): the running mini-program still selected an
 old DHCP LAN address after the host changed networks. Both `develop.local` API
 entries now use `http://127.0.0.1:3381/api`; login, player hosting, trial/release
 and the backend process are unchanged. Recompilation restored the same-account
 company overview's environment, catalog, safety, notifications and energy reads.
 [Actual mini-program evidence](../../.scratch/local-endpoint-recovery/issues/01-stale-lan-endpoint.md).
-This loopback profile is for desktop Developer Tools, not a phone.
+That earlier loopback profile was for desktop Developer Tools, not a phone.
 
 The mini-program sends `Authorization: <customer token>` and `Tenantcode: <district.id>` on every Agent request. JSON requests add `content-type: application/json`; conversation streaming additionally requests `application/x-ndjson` behavior through the existing chunked `wx.request` path. Conversation `source` is a query parameter and is also sent in the create body. No page supplies credentials.
 
