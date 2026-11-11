@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-11",
+  "scope": "当前真实账号的微信开发者工具，公司安全台账日期边界与首页恢复；仅后台同步可采集上游",
+  "backend": {
+    "address": "http://192.168.102.19:3381/api",
+    "jarSha256": "cfa869898cc0354b5e522bc95f2816677bd93d6788acdc93ccb1a243eaed6508",
+    "preserved": "原固定后端中未涉及本轮的类、Node3382、私有配置及业务事实；只叠加本轮拥有的类和迁移资源",
+    "runtimeToolInspection": "已核对运行包的query_alerts：共用观测入口、完整游标分页和三类型汇总；默认最近30天，不等于首页全历史总数。未修改其既有工具定义。"
+  },
+  "rootCauses": [
+    "SafetyHistory继承ObservationAdapter导致专用台账Bean替代通用观测路由，首页多分区被错误送入安全读取器",
+    "默认截止时间使用真实时钟的纳秒精度，但台账窗口校验只接受毫秒，未传时间窗的读取报INVALID_SAFETY_QUERY",
+    "首页将带alerts错误的空摘要误显示为0条；旧摘要仅统计默认燃气首批，不能作为三类全历史总数"
+  ],
+  "realFrontend": {
+    "home": {"status": "passed", "screenshot": "home.jpg", "environmentTemperature": 23, "environmentHumidity": 46, "environmentPm25": 6, "energyYesterdayKWh": 132.95, "safetyTotal": 299, "catalogDevices": 332},
+    "gas": {"status": "passed", "screenshot": "gas.jpg", "displayedFrom": "2024-04-14", "displayedTo": "2026-11-11", "recordsVisible": true},
+    "smoke": {"status": "passed", "screenshot": "smoke.jpg", "displayedFrom": "2024-04-22", "displayedTo": "2026-11-11", "recordsVisible": true},
+    "water": {"status": "passed", "screenshot": "water.jpg", "displayedFrom": "2024-03-29", "displayedTo": "2026-11-11", "recordsVisible": true},
+    "pickerBindings": "燃气原生picker的start及endStart均为2024-04-14，endLimit为2026-11-11，已启用；分类切换通过实际原生事件处理器完成，未setData注入记录"
+  },
+  "supportingApiChecksNotAcceptance": {
+    "dashboard": {"httpStatus": 200, "total": 299, "previewCount": 50, "errors": []},
+    "gas": {"httpStatus": 200, "total": 251, "pageCount": 20, "earliest": "2024-04-14T11:06:38Z"},
+    "smoke": {"httpStatus": 200, "total": 37, "pageCount": 20, "earliest": "2024-04-22T08:11:55Z"},
+    "water": {"httpStatus": 200, "total": 11, "pageCount": 11, "earliest": "2024-03-29T15:41:46Z"}
+  },
+  "engineeringChecks": [
+    "后端最终定向10项通过：SafetyHistoryHttpContractTest、SafetyHistoryBehaviorTest、CompanyOfficeObservationAdapterContractTest；打包成功",
+    "前端最终定向7项通过：日期边界与公司概览行为；微信开发编译成功",
+    "实际Vue日期组件隔离烟测覆盖默认、约束、重置、切类、空边界及身份迟到响应",
+    "实际首页SFC计算分支隔离烟测覆盖失败空摘要不可用、真实空摘要、有效记录及无快照失败",
+    "隔离MySQL验证发布、来源修订、重复迁移、重启后离线读取及日期边界；临时数据库已删除",
+    "已有完整业务备份及独立恢复计数核对完成；本轮未删除业务历史或修改真实任务"
+  ],
+  "notAccepted": ["手机真机与上传后的开发版包", "系统日期选择器的触摸滚轮与读屏操作", "智能体真实对话端到端复验", "安全事件视频关联及回放"],
+  "sideEffects": "无设备控制、任务创建或启停、消息已读写入、通知发送、模型或私有配置变更"
+}

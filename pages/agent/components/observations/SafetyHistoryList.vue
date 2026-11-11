@@ -14,11 +14,13 @@
       <view class="dates"
         ><picker
           mode="date"
-          :value="fromDate || today"
+          :value="fromDate || earliest || today"
+          :start="earliest || undefined"
           :end="endDate"
+          :disabled="!earliest"
           @change="chooseDate('from', $event.detail.value)"
           ><view class="date-button"
-            >{{ fromDate || '不限开始日期' }}
+            >{{ fromDate || (boundsReady ? '暂无记录' : '读取中…') }}
             <uni-icons
               type="down"
               size="10"
@@ -27,7 +29,8 @@
         ><picker
           mode="date"
           :value="endDate"
-          :start="fromDate || undefined"
+          :start="fromDate || earliest || undefined"
+          :disabled="!earliest"
           :end="today"
           @change="chooseDate('end', $event.detail.value)"
           ><view class="date-button"
@@ -37,7 +40,7 @@
               size="10"
               color="var(--agent-text-muted)" /></view></picker
         ><button
-          v-if="fromDate"
+          v-if="customRange && earliest"
           class="reset"
           @tap="chooseDate('from', '')"
           >重置</button
@@ -89,9 +92,13 @@
               ? '正在读取历史记录'
               : error
                 ? '本次未取得记录'
-                : cursor
-                  ? '这一批没有可核实的匹配记录'
-                  : '所选期间没有可核实的记录'
+                : preparing
+                  ? '安全台账数据准备中'
+                  : boundsReady && !earliest
+                    ? '当前类别暂无告警记录'
+                    : cursor
+                      ? '这一批没有可核实的匹配记录'
+                      : '所选期间没有可核实的记录'
           }}</text
         >
       </view>
@@ -102,12 +109,12 @@
         >{{ error }}</text
       >
       <button
-        v-if="cursor || error"
+        v-if="cursor || error || preparing"
         class="more"
         :disabled="loading"
         hover-class="pressed"
-        @tap="load(Boolean(error && !records.length), Boolean(error))"
-        >{{ loading ? '正在读取…' : error ? '重试读取' : '查看更多记录' }}</button
+        @tap="load(Boolean(error || preparing) && !records.length, Boolean(error || preparing))"
+        >{{ loading ? '正在读取…' : error || preparing ? '重试读取' : '查看更多记录' }}</button
       >
       <text
         v-else-if="loading"
@@ -122,7 +129,11 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { listSafetyHistory } from '@/apis/agent/observations';
 import { getAgentStorageScope } from '@/utils/agent-session';
-import { fmtDateTime } from '../../lib/observations.mjs';
+import {
+  fmtDateTime,
+  fmtShanghaiDateTime,
+  safetyHistoryDateRange,
+} from '../../lib/observations.mjs';
 import { showAgentError } from '@/utils/agent-error';
 import { useViewReads } from '../../lib/reads.mjs';
 
@@ -133,11 +144,15 @@ const types = [
   { type: 'smoke', label: '烟感' },
   { type: 'water', label: '水浸' },
 ];
-const today = fmtDateTime(new Date().toISOString()).slice(0, 10);
+const today = fmtShanghaiDateTime(new Date().toISOString()).slice(0, 10);
 const type = ref('gas'),
   fromDate = ref(''),
   endDate = ref(today),
   scrollTop = ref(0);
+const earliest = ref(''),
+  boundsReady = ref(false),
+  customRange = ref(false),
+  preparing = ref(false);
 const records = ref([]),
   observedAt = ref(''),
   cursor = ref(null),
@@ -154,7 +169,7 @@ function invalidate() {
   reads.invalidate();
   loading.value = false;
 }
-function reset() {
+function reset(clearBounds = false) {
   invalidate();
   records.value = [];
   cursor.value = null;
@@ -162,10 +177,18 @@ function reset() {
   error.value = '';
   scrollTop.value = 0;
   window = null;
+  preparing.value = false;
+  if (clearBounds) {
+    earliest.value = '';
+    boundsReady.value = false;
+    customRange.value = false;
+    fromDate.value = '';
+    endDate.value = today;
+  }
 }
 async function load(first = true, force = false) {
   if (!props.active || !visible || loading.value) return;
-  await reads.run(
+  const outcome = await reads.run(
     'history',
     async (options) => {
       const identity = getAgentStorageScope();
@@ -174,6 +197,9 @@ async function load(first = true, force = false) {
         cursor.value = null;
         window = null;
         scope = identity;
+        earliest.value = '';
+        boundsReady.value = false;
+        customRange.value = false;
       }
       const refreshCount = first ? Math.max(20, records.value.length) : 20;
       const query = {
@@ -181,7 +207,7 @@ async function load(first = true, force = false) {
         limit: 20,
         from:
           first || !window
-            ? fromDate.value
+            ? customRange.value && fromDate.value
               ? `${fromDate.value}T00:00:00+08:00`
               : undefined
             : window.from,
@@ -205,6 +231,11 @@ async function load(first = true, force = false) {
         error.value = '';
       },
       data: ({ result, refreshed }) => {
+        preparing.value = result.status === 'preparing' || result.cache?.status === 'preparing';
+        if (preparing.value) return;
+        earliest.value = fmtShanghaiDateTime(result.availableWindow?.from).slice(0, 10);
+        if (earliest.value > today) earliest.value = '';
+        boundsReady.value = true;
         const existing = first ? [] : records.value;
         const seen = new Set(
           existing.map((record) => record.ledger + ':' + record.eventId + ':' + record.deviceId)
@@ -223,6 +254,8 @@ async function load(first = true, force = false) {
         records.value = [];
         cursor.value = null;
         observedAt.value = '';
+        earliest.value = '';
+        boundsReady.value = false;
         window = null;
       },
       error: (cause) => {
@@ -240,22 +273,47 @@ async function load(first = true, force = false) {
       },
     }
   );
+  if (outcome.status === 'value' && !preparing.value) {
+    const range = safetyHistoryDateRange(
+      { from: fromDate.value, to: endDate.value },
+      customRange.value ? 'current' : 'reset',
+      '',
+      earliest.value,
+      today
+    );
+    const changedEnd = range.to !== endDate.value;
+    fromDate.value = range.from;
+    endDate.value = range.to;
+    if (changedEnd) {
+      reset();
+      void load();
+    }
+  }
 }
 function chooseType(next) {
   if (type.value === next) return;
   type.value = next;
-  reset();
+  reset(true);
   void load();
 }
 function chooseDate(field, value) {
-  if (field === 'from') fromDate.value = value;
-  else endDate.value = value;
+  if (!earliest.value) return;
+  const range = safetyHistoryDateRange(
+    { from: fromDate.value, to: endDate.value },
+    value ? field : 'reset',
+    value,
+    earliest.value,
+    today
+  );
+  customRange.value = Boolean(value);
+  fromDate.value = range.from;
+  endDate.value = range.to;
   reset();
   void load();
 }
 function resume() {
   if (props.active) {
-    if (scope !== getAgentStorageScope()) reset();
+    if (scope !== getAgentStorageScope()) reset(true);
     void load();
   }
 }

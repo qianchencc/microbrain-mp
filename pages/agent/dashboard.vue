@@ -575,7 +575,7 @@ const environment = computed(
 // 有旧数据时刷新失败只提示、不隐藏台账；仅在没有可用台账时才显示不可用。
 const alertsUnavailable = computed(
   () =>
-    !snapshot.value?.alerts &&
+    !snapshot.value?.alerts?.records?.length &&
     (Boolean(sectionErrors.value.alerts) ||
       Boolean(snapshot.value?.errors?.some((row) => row.area === 'alerts')))
 );

@@ -24,7 +24,11 @@ export {
   acDotOf,
   acInspectionMeta,
 } from '../domains/observations/observation-view.mjs';
-export { safetyEventReference, referenceTitle } from '../domains/observations/safety-event.mjs';
+export {
+  safetyEventReference,
+  referenceTitle,
+  safetyHistoryDateRange,
+} from '../domains/observations/safety-event.mjs';
 export {
   defaultPlaybackDates,
   playbackWindowDates,

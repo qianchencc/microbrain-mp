@@ -29,3 +29,12 @@ export function referenceTitle(reference) {
     }[reference?.type] || '记录引用'
   );
 }
+
+export function safetyHistoryDateRange(current, field, value, earliest, today) {
+  if (!earliest || earliest > today) return { from: '', to: today };
+  let from = field === 'reset' ? earliest : field === 'from' ? value : current.from || earliest;
+  let to = field === 'reset' ? today : field === 'end' ? value : current.to || today;
+  from = from < earliest ? earliest : from > today ? today : from;
+  to = to < from ? from : to > today ? today : to;
+  return { from, to };
+}
