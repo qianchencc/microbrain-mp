@@ -426,7 +426,7 @@ const companySuggestions = computed(() => [
   '统计一下最近能耗情况',
   '帮我看看最近夜间哪个场所耗电异常',
   ...(tasksEnabled.value ? ['帮我设个定时任务'] : []),
-  '帮我整理一下最近一周的告警并产出报告',
+  '帮我整理一下最近一周的告警',
 ]);
 const selectedEvent = ref(null),
   eventOpen = ref(false),
