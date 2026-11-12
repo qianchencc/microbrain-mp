@@ -27,17 +27,19 @@
             ><view>正在恢复对话…</view></view
           >
           <view
-            v-else-if="!turns.length && isCompany"
+            v-else-if="!turns.length"
             class="welcome"
-            ><text>公司 Agent</text
+            ><text>{{ isCompany ? '公司 Agent' : '办公室 Agent' }}</text
             ><view>{{
-              tasksEnabled
-                ? '查询公司环境、能耗和告警，安排定时简报或智慧空调任务。'
-                : '查询公司环境、能耗、告警和监控。'
+              !isCompany
+                ? '告诉我位置、设备和需要的操作。'
+                : tasksEnabled
+                  ? '查询公司环境、能耗和告警，安排定时简报或智慧空调任务。'
+                  : '查询公司环境、能耗、告警和监控。'
             }}</view>
             <view class="welcome-sugg"
               ><button
-                v-for="s in companySuggestions"
+                v-for="s in isCompany ? companySuggestions : officeSuggestions"
                 :key="s"
                 class="sugg-chip"
                 hover-class="sugg-chip--pressed"
@@ -45,11 +47,6 @@
                 >{{ s }}</button
               ></view
             ></view
-          >
-          <view
-            v-else-if="!turns.length"
-            class="welcome"
-            ><text>办公室 Agent</text><view>告诉我位置、设备和需要的操作。</view></view
           >
           <view
             v-for="(turn, turnIndex) in turns"
@@ -420,7 +417,7 @@ function openRegion(region) {
 const conversationId = ref('');
 const isCompany = computed(() => props.source === 'company');
 const contextSourceScope = () => `${getAgentStorageScope()}:${props.source}`;
-// 空会话推荐入口：仅公司 Agent 欢迎区，点击 prefill 进输入框（同工作台「新建任务」），
+// 空会话推荐入口：公司与办公室共用胶囊，点击仅 prefill 进输入框。
 // 首个 turn 落位后随 welcome 分支一起消失，不占用会话中布局。
 const companySuggestions = computed(() => [
   '统计一下最近能耗情况',
@@ -428,6 +425,7 @@ const companySuggestions = computed(() => [
   ...(tasksEnabled.value ? ['帮我设个定时任务'] : []),
   '帮我整理一下最近一周的告警',
 ]);
+const officeSuggestions = ['开一下灯', '调整一下空调温度', '当前办公室设备全关'];
 const selectedEvent = ref(null),
   eventOpen = ref(false),
   eventMounted = ref(false);
