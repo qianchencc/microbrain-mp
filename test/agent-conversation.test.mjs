@@ -2,6 +2,28 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createTurn, applyEvent, restoreTurns, restartTurn, mergeTaskDetail } from '../pages/agent/lib/conversation.mjs'
 
+test('草案失败原因在修正和恢复重放时保留，修正成功不继承失败状态', () => {
+	const events = [
+		{ type: 'run.started' },
+		{ type: 'tool.started', tool: 'propose_action_draft' },
+		{ type: 'tool.completed', tool: 'propose_action_draft', status: 'failed', summary: '本步骤未完成', details: { error: '操作清单中的设备引用无效，尚未生成确认单' } },
+		{ type: 'tool.started', tool: 'propose_action_draft' },
+	]
+	const turn = createTurn('fixture-turn', '关闭测试办公室设备')
+	for (const event of events) applyEvent(turn, event)
+	assert.equal(turn.activities[0].status, 'failed')
+	assert.equal(turn.activities[0].summary, events[2].details.error)
+	assert.equal(turn.activities[1].status, 'running')
+	assert.notEqual(turn.activities[1].summary, turn.activities[0].summary)
+	assert.ok(turn.activities[1].summary)
+	const completion = { type: 'tool.completed', tool: 'propose_action_draft', status: 'completed' }
+	applyEvent(turn, completion)
+	assert.equal(turn.activities[1].status, 'completed')
+	assert.equal(turn.activities[1].summary, '')
+	const [restored] = restoreTurns([{ id: turn.id, content: turn.content, events: [...events, completion, { type: 'run.completed' }] }])
+	assert.deepEqual(restored.activities, turn.activities)
+})
+
 test('告警引用固定在原轮，恢复和编辑重试不替换成后来的引用', () => {
 	for (const reference of [{ type: 'customer_alert', content: '客户告警A：展示厅水浸' }, { type: 'safety_event', ledger: 'gas', eventId: 'event-a', deviceId: 'device-a', label: '燃气记录' }]) {
 	const turn = restoreTurns([{ id: 'turn-a', content: '如何处理？', events: [

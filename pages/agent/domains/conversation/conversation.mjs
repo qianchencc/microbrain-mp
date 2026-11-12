@@ -131,7 +131,15 @@ export function applyEvent(turn, event, turns = [turn]) {
       invocationId: event.invocationId,
       label: event.label,
       status: 'running',
-      summary: '',
+      summary:
+        ['propose_action_draft', 'propose_lighting_draft'].includes(event.tool) &&
+        turn.activities.some(
+          (activity) =>
+            ['propose_action_draft', 'propose_lighting_draft'].includes(activity.tool) &&
+            activity.status === 'failed'
+        )
+          ? '正在修正操作清单…'
+          : '',
     });
   }
   if (event.type === 'tool.completed') {
@@ -153,7 +161,10 @@ export function applyEvent(turn, event, turns = [turn]) {
       } else {
         Object.assign(item, {
           status: event.status || 'completed',
-          summary: event.summary || '',
+          summary:
+            event.status === 'failed' && typeof event.details?.error === 'string'
+              ? event.details.error.trim() || event.summary || ''
+              : event.summary || '',
           label: event.label || item.label,
           details: event.details,
         });
