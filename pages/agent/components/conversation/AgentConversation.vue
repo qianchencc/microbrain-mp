@@ -425,7 +425,7 @@ const companySuggestions = computed(() => [
   ...(tasksEnabled.value ? ['帮我设个定时任务'] : []),
   '帮我整理一下最近一周的告警',
 ]);
-const officeSuggestions = ['开一下灯', '调整一下空调温度', '当前办公室设备全关'];
+const officeSuggestions = ['开一下灯', '调整一下空调温度', '当前关注的场所设备全关'];
 const selectedEvent = ref(null),
   eventOpen = ref(false),
   eventMounted = ref(false);
