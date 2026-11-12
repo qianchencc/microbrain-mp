@@ -5,6 +5,7 @@ const labels = {
   executing: '进行中',
   completed: '已结束',
   verified: '已完成',
+  accepted: '调温指令已下发',
   observed: '已检查',
   partial: '部分完成',
   failed: '未完成',
@@ -22,7 +23,7 @@ export const taskStatusText = (status) =>
 export const taskNeedsDetails = (status) =>
   ['failed', 'partial', 'missed', 'interrupted'].includes(status);
 export const taskStatusTone = (status) =>
-  ['verified', 'satisfied', 'observed'].includes(status)
+  ['accepted', 'verified', 'satisfied', 'observed'].includes(status)
     ? 'ok'
     : status === 'executing'
       ? 'active'
@@ -37,6 +38,7 @@ const DISPATCHED = new Set(['dispatched', 'unconfirmed', 'unknown', 'unavailable
 export function deviceResultView(device) {
   const { outcome } = device;
   if (outcome === 'verified') return { text: '已完成', tone: 'ok', settled: true };
+  if (outcome === 'accepted') return { text: '调温指令已下发', tone: 'ok', settled: true };
   if (outcome === 'satisfied') return { text: '', tone: 'ok', settled: true };
   if (outcome === 'observed') return { text: '已检查', tone: 'ok', settled: true };
   if (outcome === 'pending') return { text: '未开始', tone: 'wait', settled: false };
@@ -47,7 +49,7 @@ export function deviceResultView(device) {
 
 // 面向非专业读者的一句话说明：只写已发生的事实，回传缺失不再追加不确定说明。
 export function deviceResultReason(device) {
-  if (['satisfied', 'verified', 'observed'].includes(device.outcome)) return '';
+  if (['accepted', 'satisfied', 'verified', 'observed'].includes(device.outcome)) return '';
   const known = {
     unconfirmed: '',
     unknown: '',
@@ -74,6 +76,11 @@ export function taskResultStatus(record) {
   const phaseDevices = (record.phases || []).flatMap((phase) => phase.devices || []);
   const devices = phaseDevices.length ? phaseDevices : record.devices || [];
   if (devices.some((device) => DISPATCHED.has(device.outcome))) return 'dispatched';
+  if (
+    devices.some((device) => device.outcome === 'accepted') &&
+    devices.every((device) => deviceResultView(device).settled)
+  )
+    return 'accepted';
   return devices.length && devices.every((device) => deviceResultView(device).settled)
     ? 'verified'
     : 'completed';

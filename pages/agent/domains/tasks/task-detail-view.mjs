@@ -247,17 +247,19 @@ export function energyImpactView(impact, devices, reportPhases) {
         value: `≈ ${impact.value}`,
         unit: impact.unit,
         label: `预计减少用电 · 估算值 · 约 ¥${impact.cost?.value ?? '—'}`,
-        footnote: `基于 ${impact.coverage?.adjusted ?? impact.deviceCount ?? 0} 台实际调节设备的调前温度、经验比例和执行时长估算`,
+        footnote: `基于 ${impact.coverage?.adjusted ?? impact.deviceCount ?? 0} 台已下发调温指令设备，按各检查点调前温度和有效时段估算`,
       },
       facts: [
-        { value: `${devices?.adjusted ?? impact.coverage?.adjusted ?? 0} 台`, label: '实际调节' },
+        { value: `${devices?.adjusted ?? impact.coverage?.adjusted ?? 0} 台`, label: '调温已下发' },
         { value: `${devices?.satisfied ?? 0} 台`, label: '无需调整' },
         { value: `${impact.baseline?.target ?? '—'}℃`, label: '统一目标' },
       ],
       basisTitle: '估算依据',
-      formula: `${impact.deviceCount ?? '—'} 台 × ${impact.baseline?.averageRise ?? '—'}℃ × ${rate}% × ${impact.assumptions?.powerKw ?? '—'}kW${hours ? ` × ${hours}h` : ''} ≈ ${product ?? impact.value} 度`,
+      formula: Number.isFinite(impact.degreeHours)
+        ? `各检查点温差 × 有效小时合计 ${impact.degreeHours}℃·h × ${rate}% × ${impact.assumptions?.powerKw ?? '—'}kW ≈ ${impact.value} 度`
+        : `${impact.deviceCount ?? '—'} 台 × ${impact.baseline?.averageRise ?? '—'}℃ × ${rate}% × ${impact.assumptions?.powerKw ?? '—'}kW${hours ? ` × ${hours}h` : ''} ≈ ${product ?? impact.value} 度`,
       notes: [
-        `采用调前平均 ${impact.baseline?.averageSetpoint ?? '—'}℃、每升高 1℃ 约节电 ${rate}% 的经验参数；这是估算，不代表已实测节电`,
+        `每升高 1℃ 约节电 ${rate}%，按不重叠的检查区间累计；这是估算，不代表已实测节电`,
         `估算窗口 · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}（上海时间）${missing ? ` · 其中 ${missing} 台缺少调前温度未参与` : ''}`,
       ],
       devices: acReportDeviceRows(
@@ -280,7 +282,7 @@ export function energyImpactView(impact, devices, reportPhases) {
       },
       facts: [
         { value: `${devices.total || 0} 台`, label: '纳入范围' },
-        { value: `${devices.adjusted || 0} 台`, label: '实际调节' },
+        { value: `${devices.adjusted || 0} 台`, label: '调温已下发' },
         { value: `${devices.satisfied || 0} 台`, label: '无需调整' },
       ],
       basisTitle: '已确认的执行事实',
@@ -309,7 +311,7 @@ export function taskExecutionSummaryView(summary, reportPhases) {
       : '',
     devicesText: [
       Number.isFinite(devices.total) ? `涉及${devices.total}台设备` : '设备数量未提供',
-      devices.adjusted > 0 ? `其中${devices.adjusted}台曾调整温度` : '',
+      devices.adjusted > 0 ? `其中${devices.adjusted}台已下发调温指令` : '',
     ]
       .filter(Boolean)
       .join(' · '),
@@ -472,6 +474,7 @@ function linkProgress(phase, next) {
   if (
     [
       'verified',
+      'accepted',
       'satisfied',
       'completed',
       'partial',

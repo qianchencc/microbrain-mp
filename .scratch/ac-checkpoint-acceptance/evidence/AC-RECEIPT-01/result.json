@@ -1,0 +1,427 @@
+{
+  "postDispatchReads": 0,
+  "simulatedHttpCommands": 2,
+  "isolated": true,
+  "task": {
+    "id": "smoke",
+    "agentSource": "company",
+    "label": "隔离验收：调温指令",
+    "status": "completed",
+    "version": 2,
+    "interval": {
+      "startsAt": "2026-11-12T02:00:00Z",
+      "endsAt": "2026-11-12T02:30:00Z"
+    },
+    "executionActive": false,
+    "report": {
+      "generatedAt": "2026-11-12T02:30:00Z",
+      "outcome": "completed",
+      "interval": {
+        "startsAt": "2026-11-12T02:00:00Z",
+        "endsAt": "2026-11-12T02:30:00Z"
+      },
+      "phases": [
+        {
+          "id": "p0",
+          "at": "2026-11-12T02:00:00Z",
+          "status": "completed",
+          "failureReason": null,
+          "observations": [
+            {
+              "type": "ac_inspection",
+              "mode": "adjust_to_26",
+              "observedAt": "2026-11-12T02:00:00Z",
+              "criteria": {
+                "power": "on",
+                "mode": "cool",
+                "setpoint": {
+                  "operator": "lt",
+                  "value": 27
+                }
+              },
+              "estimateUntil": "2026-11-12T02:15:00Z",
+              "devices": [
+                {
+                  "deviceId": "ac-demo",
+                  "name": "隔离验收空调",
+                  "location": "",
+                  "power": "on",
+                  "mode": "cool",
+                  "setpoint": 26.0,
+                  "reportedAt": null,
+                  "observedAt": "2026-11-12T02:00:00Z",
+                  "disposition": "adjusted",
+                  "reason": "调温指令已下发",
+                  "outcome": "accepted"
+                }
+              ]
+            }
+          ],
+          "devices": [
+            {
+              "id": "ac-demo",
+              "kind": "ac",
+              "name": "隔离验收空调",
+              "location": "",
+              "target": {
+                "temperature": 27.0
+              },
+              "outcome": "accepted",
+              "details": {
+                "deviceId": "ac-demo",
+                "kind": "ac",
+                "name": "隔离验收空调",
+                "location": "",
+                "outcome": "accepted",
+                "disposition": "adjusted",
+                "reason": "调温指令已下发",
+                "observed": {
+                  "temperature": 26.0,
+                  "power": "on",
+                  "mode": "cool"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "p1",
+          "at": "2026-11-12T02:15:00Z",
+          "status": "completed",
+          "failureReason": null,
+          "observations": [
+            {
+              "type": "ac_inspection",
+              "mode": "adjust_to_26",
+              "observedAt": "2026-11-12T02:15:00Z",
+              "criteria": {
+                "power": "on",
+                "mode": "cool",
+                "setpoint": {
+                  "operator": "lt",
+                  "value": 27
+                }
+              },
+              "estimateUntil": "2026-11-12T02:30:00Z",
+              "devices": [
+                {
+                  "deviceId": "ac-demo",
+                  "name": "隔离验收空调",
+                  "location": "",
+                  "power": "on",
+                  "mode": "cool",
+                  "setpoint": 26.5,
+                  "reportedAt": null,
+                  "observedAt": "2026-11-12T02:15:00Z",
+                  "disposition": "adjusted",
+                  "reason": "调温指令已下发",
+                  "outcome": "accepted"
+                }
+              ]
+            }
+          ],
+          "devices": [
+            {
+              "id": "ac-demo",
+              "kind": "ac",
+              "name": "隔离验收空调",
+              "location": "",
+              "target": {
+                "temperature": 27.0
+              },
+              "outcome": "accepted",
+              "details": {
+                "deviceId": "ac-demo",
+                "kind": "ac",
+                "name": "隔离验收空调",
+                "location": "",
+                "outcome": "accepted",
+                "disposition": "adjusted",
+                "reason": "调温指令已下发",
+                "observed": {
+                  "temperature": 26.5,
+                  "power": "on",
+                  "mode": "cool"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "checkpoints": 2,
+        "devices": {
+          "total": 1,
+          "adjusted": 1,
+          "satisfied": 0,
+          "skipped": 0,
+          "failed": 0,
+          "unknown": 0,
+          "unverified": 0
+        },
+        "energyImpact": {
+          "status": "estimated",
+          "basis": "assumption",
+          "estimated": true,
+          "from": "2026-11-12T02:00:00Z",
+          "to": "2026-11-12T02:30:00Z",
+          "deviceCount": 1,
+          "checkpointCount": 2,
+          "degreeHours": 0.375,
+          "value": 0.07,
+          "unit": "度",
+          "cost": {
+            "unit": "元",
+            "value": 0.05
+          },
+          "baseline": {
+            "averageSetpoint": 26.3,
+            "target": 27.0,
+            "averageRise": 0.8
+          },
+          "assumptions": {
+            "ratePerDegree": 0.07,
+            "powerKw": 2.5,
+            "pricePerKwh": 0.8
+          },
+          "coverage": {
+            "estimated": 1,
+            "adjusted": 1
+          },
+          "reason": "按各检查点调温指令、调前温度与不重叠时段估算，非电表实测"
+        }
+      }
+    },
+    "regionIds": [],
+    "createdAt": "2026-11-12T02:00:00Z",
+    "updatedAt": "2026-11-12T02:30:00Z",
+    "creator": {
+      "displayName": ""
+    },
+    "source": {
+      "type": "scheduled",
+      "draftId": null,
+      "conversationId": null
+    },
+    "canCancel": false,
+    "phases": [
+      {
+        "id": "p0",
+        "at": "2026-11-12T02:00:00Z",
+        "status": "completed",
+        "startedAt": "2026-11-12T02:00:00Z",
+        "endedAt": "2026-11-12T02:00:01Z",
+        "failureReason": null,
+        "read": {
+          "ac": {
+            "mode": "adjust_to_26",
+            "target": 27,
+            "cadenceMinutes": 15
+          }
+        },
+        "observations": [
+          {
+            "type": "ac_inspection",
+            "mode": "adjust_to_26",
+            "observedAt": "2026-11-12T02:00:00Z",
+            "criteria": {
+              "power": "on",
+              "mode": "cool",
+              "setpoint": {
+                "operator": "lt",
+                "value": 27
+              }
+            },
+            "estimateUntil": "2026-11-12T02:15:00Z",
+            "devices": [
+              {
+                "deviceId": "ac-demo",
+                "name": "隔离验收空调",
+                "location": "",
+                "power": "on",
+                "mode": "cool",
+                "setpoint": 26.0,
+                "reportedAt": null,
+                "observedAt": "2026-11-12T02:00:00Z",
+                "disposition": "adjusted",
+                "reason": "调温指令已下发",
+                "outcome": "accepted"
+              }
+            ]
+          }
+        ],
+        "devices": [
+          {
+            "id": "ac-demo",
+            "kind": "ac",
+            "name": "隔离验收空调",
+            "location": "",
+            "target": {
+              "temperature": 27.0
+            },
+            "outcome": "accepted",
+            "details": {
+              "deviceId": "ac-demo",
+              "kind": "ac",
+              "name": "隔离验收空调",
+              "location": "",
+              "outcome": "accepted",
+              "disposition": "adjusted",
+              "reason": "调温指令已下发",
+              "observed": {
+                "temperature": 26.0,
+                "power": "on",
+                "mode": "cool"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "p1",
+        "at": "2026-11-12T02:15:00Z",
+        "status": "completed",
+        "startedAt": "2026-11-12T02:15:00Z",
+        "endedAt": "2026-11-12T02:30:00Z",
+        "failureReason": null,
+        "read": {
+          "ac": {
+            "mode": "adjust_to_26",
+            "target": 27,
+            "cadenceMinutes": 15
+          }
+        },
+        "observations": [
+          {
+            "type": "ac_inspection",
+            "mode": "adjust_to_26",
+            "observedAt": "2026-11-12T02:15:00Z",
+            "criteria": {
+              "power": "on",
+              "mode": "cool",
+              "setpoint": {
+                "operator": "lt",
+                "value": 27
+              }
+            },
+            "estimateUntil": "2026-11-12T02:30:00Z",
+            "devices": [
+              {
+                "deviceId": "ac-demo",
+                "name": "隔离验收空调",
+                "location": "",
+                "power": "on",
+                "mode": "cool",
+                "setpoint": 26.5,
+                "reportedAt": null,
+                "observedAt": "2026-11-12T02:15:00Z",
+                "disposition": "adjusted",
+                "reason": "调温指令已下发",
+                "outcome": "accepted"
+              }
+            ]
+          }
+        ],
+        "devices": [
+          {
+            "id": "ac-demo",
+            "kind": "ac",
+            "name": "隔离验收空调",
+            "location": "",
+            "target": {
+              "temperature": 27.0
+            },
+            "outcome": "accepted",
+            "details": {
+              "deviceId": "ac-demo",
+              "kind": "ac",
+              "name": "隔离验收空调",
+              "location": "",
+              "outcome": "accepted",
+              "disposition": "adjusted",
+              "reason": "调温指令已下发",
+              "observed": {
+                "temperature": 26.5,
+                "power": "on",
+                "mode": "cool"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "localPreDispatchReads": 5,
+  "notificationSummary": {
+    "checkpoints": 2,
+    "devices": {
+      "total": 1,
+      "adjusted": 1,
+      "satisfied": 0,
+      "skipped": 0,
+      "failed": 0,
+      "unknown": 0,
+      "unverified": 0
+    },
+    "energyImpact": {
+      "status": "estimated",
+      "basis": "assumption",
+      "estimated": true,
+      "from": "2026-11-12T02:00:00Z",
+      "to": "2026-11-12T02:30:00Z",
+      "deviceCount": 1,
+      "checkpointCount": 2,
+      "degreeHours": 0.375,
+      "value": 0.07,
+      "unit": "度",
+      "cost": {
+        "unit": "元",
+        "value": 0.05
+      },
+      "baseline": {
+        "averageSetpoint": 26.3,
+        "target": 27.0,
+        "averageRise": 0.8
+      },
+      "assumptions": {
+        "ratePerDegree": 0.07,
+        "powerKw": 2.5,
+        "pricePerKwh": 0.8
+      },
+      "coverage": {
+        "estimated": 1,
+        "adjusted": 1
+      },
+      "reason": "按各检查点调温指令、调前温度与不重叠时段估算，非电表实测"
+    }
+  },
+  "backendTests": {
+    "tests": 791,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 30
+  },
+  "frontendTests": {
+    "tests": 390,
+    "passed": 388,
+    "skipped": 2,
+    "failed": 0
+  },
+  "wechatBuild": "compiled",
+  "uiEvidence": "actual production report template fragment and projection rendered in Chrome at 390px; calculation disclosure clicked; not full native WeChat acceptance",
+  "deployment": {
+    "api": "http://192.168.102.20:3381/api",
+    "pid": 55465,
+    "changedJarEntries": 16,
+    "sha256": "578fd930bac53bfb3d910908dbe1d25057b79372fe521d859e68323f0ccdf32a",
+    "health": "loopback and LAN 200",
+    "uniqueKey": [
+      "task_id",
+      "phase_id",
+      "device_id"
+    ],
+    "oldReservationPreserved": true,
+    "historicalReservationsSeeded": 1
+  },
+  "businessAcceptance": "not accepted: no real device control, task creation or notification writes performed; original task results not rewritten"
+}

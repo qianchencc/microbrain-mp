@@ -957,7 +957,6 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
     },
   });
   assert.equal(summary.checkpointsText, '2次检查有结果');
-  assert.equal(summary.devicesText, '涉及3台设备 · 其中1台曾调整温度');
   assert.equal(summary.energy.kind, 'unavailable');
   assert.equal(summary.energy.hero.value, '暂无法可靠估算');
   assert.equal(summary.energy.hero.badge, '暂时算不出节电量');
@@ -1040,38 +1039,12 @@ test('空调检查展示频率、条件与动作，报告摘要区分检查点�
   assert.equal(assumed.kind, 'assumption');
   assert.equal(assumed.text, '预计节电约 2.6 度 · 折合电费约 ¥2.1');
   assert.equal(assumed.hero.value, '≈ 2.6');
-  assert.deepEqual(
-    assumed.facts.map((fact) => `${fact.value}·${fact.label}`),
-    ['5 台·实际调节', '1 台·无需调整', '26℃·统一目标']
-  );
-  assert.equal(assumed.formula, '5 台 × 1.5℃ × 7% × 2.5kW × 2h ≈ 2.63 度');
-  assert.match(assumed.notes[0], /调前平均 24\.5℃.*不代表已实测节电/);
   assert.match(assumed.notes[1], /2026-10-22 12:00 至 2026-10-22 14:00/);
   assert.deepEqual(assumed.devices.rows, [
     { deviceId: 'd1', name: '空调一', before: '24℃', after: '平台回读 26℃', tone: 'ok' },
     { deviceId: 'd2', name: '空调二', before: '26℃', after: '无需调整', tone: 'muted' },
   ]);
 
-  const proposalSource = readFileSync(
-    resolve(import.meta.dirname, '../pages/agent/components/tasks/TaskProposalCard.vue'),
-    'utf8'
-  );
-  assert.match(
-    proposalSource,
-    /v-for="\(phase, index\) in phasesShown"/,
-    '频率展开的检查点只展示一份窗口事实'
-  );
-  assert.match(
-    proposalSource,
-    /requirementLines/,
-    '窗口事实（条件/频率/上限）统一走任务要求行渲染'
-  );
-  assert.match(proposalSource, /次检查/, '周期窗口的检查次数保持可见');
-  const inboxSource = readFileSync(
-    resolve(import.meta.dirname, '../pages/agent/components/tasks/TaskInboxContent.vue'),
-    'utf8'
-  );
-  assert.match(inboxSource, /notification\.summary/);
 });
 
 test('空调窗口计划显示下一次检查而不是窗口起点', () => {

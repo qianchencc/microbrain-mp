@@ -90,6 +90,18 @@ test('已下发结果只显示已下发，不带重复说明；无需调整不�
   assert.equal(deviceResultReason(unconfirmed), '');
 });
 
+test('调温受理是已结束的指令结果，未知和拒绝仍不成为成功', () => {
+  assert.equal(deviceResultView({ outcome: 'accepted' }).settled, true);
+  assert.equal(deviceResultView({ outcome: 'accepted' }).tone, 'ok');
+  assert.equal(deviceResultView({ outcome: 'unconfirmed' }).settled, false);
+  assert.equal(deviceResultView({ outcome: 'rejected' }).settled, false);
+  const task = {
+    status: 'completed',
+    phases: [{ id: 'phase', status: 'completed', devices: [{ id: 'ac', outcome: 'accepted' }] }],
+  };
+  assert.equal(taskDetailView(task).phases[0].devices[0].resultTone, 'ok');
+});
+
 test('同一任务在详情与日程使用普通词，待确认结果不会变成完成', () => {
   const device = (outcome) => ({
     id: outcome,
