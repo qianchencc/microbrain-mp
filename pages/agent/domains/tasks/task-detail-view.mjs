@@ -259,7 +259,7 @@ export function energyImpactView(impact, devices, reportPhases) {
         ? `各检查点温差 × 有效小时合计 ${impact.degreeHours}℃·h × ${rate}% × ${impact.assumptions?.powerKw ?? '—'}kW ≈ ${impact.value} 度`
         : `${impact.deviceCount ?? '—'} 台 × ${impact.baseline?.averageRise ?? '—'}℃ × ${rate}% × ${impact.assumptions?.powerKw ?? '—'}kW${hours ? ` × ${hours}h` : ''} ≈ ${product ?? impact.value} 度`,
       notes: [
-        `每升高 1℃ 约节电 ${rate}%，按不重叠的检查区间累计；这是估算，不代表已实测节电`,
+        `每升高 1℃ 约节电 ${rate}%，按不重叠的检查区间累计`,
         `估算窗口 · ${taskTime(impact.from)} 至 ${taskTime(impact.to)}（上海时间）${missing ? ` · 其中 ${missing} 台缺少调前温度未参与` : ''}`,
       ],
       devices: acReportDeviceRows(

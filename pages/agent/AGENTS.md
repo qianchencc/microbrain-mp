@@ -69,7 +69,7 @@
 - 环境历史合页与选中身份统一经`domains/observations/environment-history.mjs`：来源ID不足以唯一标识样本，须保留时间、代码及缺ID命名空间。未知时间不画成当前点，明确null值保留为曲线断点，分页未完/缺行/质量异常不得被合页改成完整。只有完整覆盖且确实无样本才显示无采样；实际错误与质量原因可提示，不追加后台更新注记。工程/微信验收边界见后端`.scratch/local-data-sync/issues/06-environment-history.md`。
 - 工作台只在真实时间轴成功返回且完成视图更新后调用 `acknowledgeRegion`；加载失败、样例模式、隐藏页面或被新请求替代的结果不得清除异常提示。
 - `TaskDetailContent` 根节点是 `height:0;flex:1` 的 scroll-view，必须经宿主类（`content-host`/`task-content-host`，`flex:1;min-height:0;display:flex`）挂进 flex 容器；直接放进普通容器会塌成 0 高、详情空白（2026-09-28 抽屉栈重构踩过）。抽屉内 列表→设备→任务 三级导航栈见 `plan/2026-09-28-region-chrome-nav-motion.md`。
-- 条件调温任务以控制回执 `accepted` 完成，显示“调温指令已下发”，不等待回读、不写成“已达到目标”；普通即时控制仍沿原回读口径。报告及通知的 `report.summary.energyImpact` 由后端按每个检查点的调前温度、目标和不重叠有效时段估算，前端不补数字。估算标记与非实测说明常驻；计算说明展开公式。未下发／无需调整不计节电，缺基线或有效时长保留不可估算原因；旧任务结果不追改。完整规则见后端 `.scratch/agent-business-recovery/task-lifecycle.md` 的“条件调温”。
+- 条件调温任务以控制回执 `accepted` 完成，显示“调温指令已下发”，不等待回读、不写成“已达到目标”；普通即时控制仍沿原回读口径。报告及通知的 `report.summary.energyImpact` 由后端按每个检查点的调前温度、目标和不重叠有效时段估算，前端不补数字。估算标记常驻；计算说明展开公式，不重复追加“这是估算，不代表已实测节电”。未下发／无需调整不计节电，缺基线或有效时长保留不可估算原因；旧任务结果不追改。完整规则见后端 `.scratch/agent-business-recovery/task-lifecycle.md` 的“条件调温”。
 
 - Company 正式入口位于 A 仪表盘底部；从仪表盘进入两端对话后返回总览，两端同级入口统一位于总览，会话菜单只负责会话操作。路由 source 仅在页面创建时固定，API 显式传递，本端恢复拒绝错来源。Company 不消费 Office 区域/任务/播放入口。见 `plan/2026-10-03-company-readonly-handoff.md`（仓库根）。
 - 微信页面卸载会销毁页面包的模块级内存；跨来源导航草稿须放 app globalData，并按 getAgentStorageScope() + source 分区，身份变化清空，不保存长期凭据。Company 返回后重进必须做真实输入/点击验收，纯 helper 断言不能证明此行为。
