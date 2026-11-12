@@ -1,0 +1,18 @@
+{
+  "date": "2026-11-12",
+  "case": "FIRE-SOURCE-02",
+  "scope": "告警当前名称及安装位置统一智慧消防，不混用物联网引擎",
+  "environment": "真实微信开发者工具，开发版，局域网3381",
+  "verified": [
+    {"ledger": "water", "name": "水浸传感器", "location": "27楼茶水间", "screenshot": "water.png"},
+    {"ledger": "smoke", "name": "26楼未来智城光电感烟探测器", "location": "27楼茶水间光电感烟探测器", "screenshot": "smoke.png"},
+    {"ledger": "gas", "name": "27楼茶水间燃气感应器", "location": "27楼茶水间燃气感应器", "screenshot": "gas.png"}
+  ],
+  "backendTests": {"command": "mvn -q test", "total": 781, "passed": 751, "skipped": 30, "failed": 0, "errors": 0},
+  "regression": "消防目录与物联网引擎返回不同名称／地址，修复前失败，修复后列表、详情、最新记录均采用消防资料；普通读取不上游，租户授权不扩大",
+  "release": "var/fire-source-20261112/backend.jar",
+  "runtimeBasePreserved": "var/sync-storage-20261112-093244/backend.jar",
+  "service": "FireSourceBackend",
+  "limits": ["不改变监控候选匹配算法", "未取流、触发告警、修改设备或任务", "不承诺上游历史名称是事发快照", "未新增本地历史位置推断或快照", "前端生产代码未变；未重新编译或上传前端包"],
+  "customerResponseNote": "../../../../docs/research/2026-11-12-fire-alarm-response-feedback.md"
+}

@@ -16,7 +16,7 @@
 - 环境历史「向公司 Agent 询问此期间」附结构化`environment_window`引用（`from`/`to`取服务端报告窗口，客户端只带展示`label`），输入区显示引用条；发送时Runtime按当前Company授权重读同一窗口，不信任客户端样本，也不把引用当操作授权。空草稿仍预填问题，已有草稿只询问是否替换、不清掉引用；Office、无时区或反向窗口分别400。电表历史仍是提示词，不在同一改动内。见`plan/2026-10-27-environment-history-quote-reference.md`。
 - 客户告警跳转的alertPrompt只进入Company；草稿与引用分开保存，编辑/重试用原turn.reference，当前输入的新引用保持不动。run.started携带原引用供恢复；入口与验收边界见 `plan/2026-10-04-customer-alert-reference-handoff.md`，客户正式回调契约仍待对接。
 - 安全台账结构化引用与上述自由文本桥分开：事件身份是 ledger＋eventId，并核对 deviceId；共用 SafetyEventDetail 即时展示带读取时间的快照，稳定身份可立即引用，后台更新不阻塞按钮；发送消息时 Runtime 再按当前目录核验记录，引用本身不代表核验成功或控制授权。仪表盘保留列表节点，返回详情用显式 display:none/block；首次挂载必须触发读取。网络错误保留标注过的旧快照，401/404 清理记录并禁用引用，迟到响应核对 requestId/身份/active。现行行为见 `plan/2026-10-08-independent-reads-lan-handoff.md`。
-- 安全台账事件与当前设备资料分开（2026-11-11）：标题使用上游事件`deviceName`，`recordedDeviceName`保留原名；`currentDevice`由后端在安全授权后关联完整目录。当前名称不同时独立标为“当前设备”，位置标为“当前位置”，不能把它拼成原事件内容。监控使用原记录名称／地点线索在视频授权内查候选；不得用当前位置替代，也不得因没有预存历史快照直接封死。回放取原事件时间，直播是当前画面；候选不是已核实的历史关联。摄像头查询返回的同事件资料同步详情，真实错误及`cameraError/cameraNote`重置成对维护，不追加未知状态等次级占位。
+- 告警资料统一智慧消防（2026-11-12）：标题`deviceName`及`recordedDeviceName`来自消防告警接口同步值，历史名称会随上游更名更新，不能视为事发快照。`currentDevice`只取消防设备目录当前名称／安装地址，不混用物联网引擎；名称不同时标“当前设备”，位置标“当前位置”，不称事发位置。监控仍按告警响应名称查视频候选、回放取原时间；不保证历史地点还原。摄像头查询返回同事件资料同步详情，真实错误及`cameraError/cameraNote`重置成对维护，不增加未知状态占位。
 
 - 微信分块事件的 `data` 是 `ArrayBuffer`，中文 UTF-8 字节可能跨 chunk；所有 NDJSON 解析继续复用 `apis/agent/ndjson.mjs`。
 - 正文事件是 `message.delta`（增量，后端已合并，带 `phase`）+ `message.completed`（权威终稿）+ `message.reclassified`；终稿覆盖累积文本。`phase:'draft'` 的增量以过程权重实时落在答复位（`draftText` 条目），无工具调用时由 completed 原地沉淀为终稿色，带工具调用时由 reclassified 折叠为处理记录里的「检索思路」行——已渲染内容不删除、不移位、不重打。一轮答复按事件序渲染为有序条目流（`turn.items`：正文/草稿/观察卡/操作卡/任务卡），卡片可先落位、终稿随后；`tool.started` 对旧协议无 phase 的未收正文同样折叠为思路行而非丢弃。
